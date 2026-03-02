@@ -64,22 +64,6 @@ export async function createOrder(
   try {
     const { cliente_id, vendedor_id, detalles } = req.body;
 
-    // expected body:
-    // {
-    //   "cliente_id": uuid,
-    //   "vendedor_id": uuid, // optional
-    //   "detalles": [
-    //     {
-    //       "producto_id": 1,
-    //       "costo_unitario": 100
-    //     },
-    //     {
-    //       "producto_id": 2,
-    //       "costo_unitario": 50
-    //     }
-    //   ]
-    // }
-
     if (!cliente_id || detalles.length === 0) {
       return res.status(400).json({
         message: "cliente_id and detalles are required",
@@ -103,6 +87,9 @@ export async function createOrder(
       0,
     );
 
+    // Use a transaction to ensure atomicity
+    // This will create the compra and all related detalleCompra entries in one go
+    // If any part fails, the entire transaction will be rolled back
     const order = await prisma.$transaction(async (tx) => {
       const compra = await tx.compra.create({
         data: {
@@ -202,7 +189,15 @@ export async function getOrderById(
             id: true,
           },
         },
-        pagos: true,
+        pagos: {
+          select: {
+            id: true,
+            cantidad: true,
+            estado: true,
+            fecha_pago: true,
+            metodo_pago: true,
+          },
+        },
       },
       omit: {
         cliente_id: true,

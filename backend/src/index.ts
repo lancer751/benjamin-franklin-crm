@@ -11,6 +11,7 @@ import enrollmentRoutes from "./routes/enrollment.route"
 import webhookRoutes from "./routes/webhook.route"
 import customerRoutes from "./routes/customer.route"
 import orderRoutes from "./routes/order.route"
+import productRoutes from "./routes/product.route"
 import paymentRoutes from "./routes/payment.route"
 import dashboardRoutes from "./routes/dashboard.route"
 import reportRoutes from "./routes/report.route"
@@ -31,6 +32,7 @@ app.use("/api/customers", customerRoutes)
 app.use("/api/courses", courseRoutes)
 app.use("/api/enrollment", enrollmentRoutes)
 
+app.use("/api/products", productRoutes)
 // Payment webhook (no admin auth — validated by signature)
 app.use("/api/webhooks", webhookRoutes)
 
