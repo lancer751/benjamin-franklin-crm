@@ -2,15 +2,15 @@ import express from "express";
 import { prisma } from "./config/connection";
 import dotevn from "dotenv"
 import cors from "cors"
-
+import nodemailer from "nodemailer"
 // Existing routes
 import userRoutes from "./routes/user.route"
 import courseRoutes from "./routes/course.route"
 import enrollmentRoutes from "./routes/enrollment.route"
-import customerRoutes from "./routes/customer.route"
-
 // New routes
 import webhookRoutes from "./routes/webhook.route"
+import customerRoutes from "./routes/customer.route"
+import orderRoutes from "./routes/order.route"
 import paymentRoutes from "./routes/payment.route"
 import dashboardRoutes from "./routes/dashboard.route"
 import reportRoutes from "./routes/report.route"
@@ -34,6 +34,9 @@ app.use("/api/enrollment", enrollmentRoutes)
 // Payment webhook (no admin auth — validated by signature)
 app.use("/api/webhooks", webhookRoutes)
 
+// Order management
+app.use("/api/orders", orderRoutes)
+
 // Admin payment registration
 app.use("/api/payments", paymentRoutes)
 
@@ -43,6 +46,16 @@ app.use("/api/reports", reportRoutes)
 
 // Dev/simulation endpoints (disable in production if needed)
 app.use("/api/dev", devRoutes)
+
+export const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.ethereal.email",
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: false,
+    auth: {
+        user: process.env.SMTP_USER || "ntgxltiwmeozkzp5@ethereal.email",
+        pass: process.env.SMTP_PASS || "ayd5NtbEM1gBn3D78p"
+    }
+})
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`)
