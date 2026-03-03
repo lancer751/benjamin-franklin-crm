@@ -4,6 +4,8 @@ import {
   Enrollment,
   CourseStudent,
   CourseWithStats,
+  PaymentTransaction,
+  ManagedCourse,
 } from "./types";
 
 // ─────────────────────────────────────────────────────────────
@@ -334,3 +336,40 @@ export function getCoursesWithStats(): CourseWithStats[] {
 
 // Re-export COURSES for EnrollPage backward compat
 export const COURSES = mockCourses.map((c) => ({ id: String(c.id), name: c.name }));
+
+// ─────────────────────────────────────────────────────────────
+// PAYMENT TRANSACTIONS — mock Culqi data
+// ─────────────────────────────────────────────────────────────
+const methods: PaymentTransaction["paymentMethod"][] = ["CARD", "YAPE", "TRANSFER", "CASH"];
+const statuses: PaymentTransaction["paymentStatus"][] = ["PAID", "PENDING", "FAILED", "REFUNDED"];
+
+export const mockPayments: PaymentTransaction[] = mockEnrollments.map((e, i) => {
+  const rng = (e.studentId * 7 + e.courseId * 13 + i) % 100;
+  const status = rng < 65 ? "PAID" : rng < 80 ? "PENDING" : rng < 92 ? "FAILED" : "REFUNDED";
+  const method = methods[(e.studentId + e.courseId) % methods.length];
+  const amount = [149.90, 199.90, 249.90, 99.90, 179.90, 299.90][e.courseId - 1] ?? 149.90;
+  return {
+    id: i + 1,
+    enrollmentId: e.id,
+    studentId: e.studentId,
+    courseId: e.courseId,
+    transactionId: `CQ-${(1000000 + e.id * 1234 + i * 567).toString(36).toUpperCase()}`,
+    paymentMethod: method,
+    paymentStatus: status,
+    amount,
+    currency: "PEN" as const,
+    paymentDate: e.createdAt,
+    createdAt: e.createdAt,
+  };
+});
+
+// ─────────────────────────────────────────────────────────────
+// MANAGED COURSES — course management with price/status
+// ─────────────────────────────────────────────────────────────
+export const mockManagedCourses: ManagedCourse[] = mockCourses.map((c, i) => ({
+  ...c,
+  price: [149.90, 199.90, 249.90, 99.90, 179.90, 299.90][i] ?? 149.90,
+  currency: "PEN" as const,
+  status: i === 4 ? "INACTIVE" : "ACTIVE",
+  imageUrl: null,
+}));

@@ -82,6 +82,39 @@ export interface CourseWithStats extends Course {
 }
 
 // ──────────────────────────────────────────────
+// Payment types (Culqi mock)
+// ──────────────────────────────────────────────
+export type PaymentMethod = "CARD" | "YAPE" | "TRANSFER" | "CASH";
+export type PaymentStatus = "PAID" | "PENDING" | "FAILED" | "REFUNDED";
+export type Currency = "PEN" | "USD";
+
+export interface PaymentTransaction {
+  id: number;
+  enrollmentId: number;
+  studentId: number;
+  courseId: number;
+  transactionId: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  amount: number;
+  currency: Currency;
+  paymentDate: string;
+  createdAt: string;
+}
+
+// ──────────────────────────────────────────────
+// Course management extensions
+// ──────────────────────────────────────────────
+export type CourseStatus = "ACTIVE" | "INACTIVE";
+
+export interface ManagedCourse extends Course {
+  price: number;
+  currency: Currency;
+  status: CourseStatus;
+  imageUrl: string | null;
+}
+
+// ──────────────────────────────────────────────
 // Legacy alias kept for backward-compat (EnrollPage)
 // ──────────────────────────────────────────────
 export const COURSES: { id: string; name: string }[] = [];
