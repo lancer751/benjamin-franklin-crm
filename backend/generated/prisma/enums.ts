@@ -9,16 +9,49 @@
 * 🟢 You can import this file directly.
 */
 
-export const EnrollmentStatus = {
-  PENDING: 'PENDING',
-  WAITING_LIST: 'WAITING_LIST',
-  APPROVED: 'APPROVED',
-  ENROLLED: 'ENROLLED',
-  REJECTED: 'REJECTED',
-  CANCELLED: 'CANCELLED',
-  DROPPED: 'DROPPED',
-  COMPLETED: 'COMPLETED',
-  SUSPENDED: 'SUSPENDED'
+export const CursoStatus = {
+  activo: 'activo',
+  inactivo: 'inactivo'
 } as const
 
-export type EnrollmentStatus = (typeof EnrollmentStatus)[keyof typeof EnrollmentStatus]
+export type CursoStatus = (typeof CursoStatus)[keyof typeof CursoStatus]
+
+
+export const MetodoPago = {
+  efectivo: 'efectivo',
+  transferencia: 'transferencia',
+  pos: 'pos',
+  online: 'online',
+  yape: 'yape'
+} as const
+
+export type MetodoPago = (typeof MetodoPago)[keyof typeof MetodoPago]
+
+
+export const CompraEstado = {
+  pendiente: 'pendiente',
+  pagado: 'pagado',
+  cancelado: 'cancelado',
+  reembolsado: 'reembolsado'
+} as const
+
+export type CompraEstado = (typeof CompraEstado)[keyof typeof CompraEstado]
+
+
+export const PagoEstado = {
+  pendiente: 'pendiente',
+  confirmado: 'confirmado',
+  rechazado: 'rechazado',
+  reembolsado: 'reembolsado'
+} as const
+
+export type PagoEstado = (typeof PagoEstado)[keyof typeof PagoEstado]
+
+
+export const MatriculaEstado = {
+  activo: 'activo',
+  retirado: 'retirado',
+  completado: 'completado'
+} as const
+
+export type MatriculaEstado = (typeof MatriculaEstado)[keyof typeof MatriculaEstado]

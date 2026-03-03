@@ -1,38 +1,119 @@
 import type { Request, Response } from "express";
-import { fetchCoursesFromMoodle } from "../helpers/course.helper";
-import type { Course } from "../../generated/prisma/browser";
+import { prisma } from "../config/connection";
 
+export async function getCourses(req: Request, res: Response) {
+  const page = Math.max(1, Number(req.query.page ?? 1));
+  const limit = Math.min(200, Number(req.query.limit ?? 20)); // prevent abusive large limits
+  const skip = (page - 1) * limit;
+  const offset = skip + limit;
 
-interface CourseResults {
-    data: Course[],
-    page: number,
-    limit: number,
-    total: number,
-    hasMore: boolean
+  try {
+    const courses = await prisma.curso.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: limit,
+    });
+    const total = await prisma.curso.count();
+
+    return res.json({
+      data: courses,
+      page,
+      limit,
+      total,
+      hasMore: offset < total,
+    });
+  } catch (error) {
+    console.error("getCourses failed:", error);
+    return res.status(500).json({ error: "Failed to get courses" });
+  }
 }
 
-export async function getCourses(req: Request, res: Response): Promise<Response<CourseResults> | Response<{ error: string }>> {
-    const page = Math.max(1, Number(req.query.page ?? 1));
-    const limit = Math.min(200, Number(req.query.limit ?? 20)); // prevent abusive large limits
-    const skip = (page - 1) * limit;
-    const offset = skip + limit;
+export async function getCourseById(req: Request, res: Response) {
+  const courseId = req.params.id;
+  if (!courseId || typeof courseId !== "string") {
+    return res.status(400).json({ error: "Invalid course ID" });
+  }
 
-    try {
-        const moodleCourses = await fetchCoursesFromMoodle()
-        const courses = moodleCourses.slice(skip, offset)
-        const totalCourses = moodleCourses.length
-
-        return res.status(200).json({
-            data: courses,
-            page,
-            limit,
-            total: totalCourses,
-            hasMore: (skip + courses.length) < totalCourses
-        })
-    } catch (error) {
-        console.error("getCourses failed:", error);
-        return res.status(500).json({ error: "Failed to get courses" });
+  try {
+    const course = await prisma.curso.findUnique({
+      where: { id: courseId },
+    });
+    if (!course) {
+      return res.status(404).json({ error: "Course not found" });
     }
+    return res.json(course);
+  } catch (error) {
+    console.error("getCourseById failed:", error);
+    return res.status(500).json({ error: "Failed to get course" });
+  }
+}
+
+export async function createCourse(req: Request, res: Response) {
+  try {
+    const { nombre, descripcion, duracion_semanas } = req.body;
+
+    if (!nombre || !duracion_semanas) {
+      return res
+        .status(400)
+        .json({ error: "nombre and duracion_semanas are required" });
+    }
+
+    const curso = await prisma.curso.create({
+      data: {
+        nombre,
+        descripcion: descripcion ?? null,
+        duracion_semanas: Number(duracion_semanas),
+        status: "activo",
+      },
+      include: { ediciones: true },
+    });
+
+    return res
+      .status(201)
+      .json({ message: "Course created successfully", curso });
+  } catch (error) {
+    console.error("[COURSE] createCourse failed:", error);
+    return res.status(500).json({ error: "Failed to create course" });
+  }
+}
+
+export async function updateCourse(req: Request, res: Response) {
+  const courseId = req.params.id;
+  const { nombre, descripcion, duracion_semanas, edicion } = req.body;
+
+  if (!courseId || typeof courseId !== "string") {
+    return res.status(400).json({ error: "Invalid course ID" });
+  }
+
+  try {
+    const existingCourse = await prisma.curso.findUnique({
+      where: { id: courseId },
+      include: { ediciones: true },
+    });
+
+    if (!existingCourse) {
+      return res.status(404).json({ error: "Course not found" });
+    }
+
+    const updatedCourse = await prisma.curso.update({
+      where: { id: courseId },
+      data: {
+        nombre: nombre,
+        descripcion: descripcion,
+        duracion_semanas: Number(duracion_semanas),
+        ...(edicion ? { ediciones: { update: edicion } } : {}),
+      },
+    });
+    return res.json({
+      message: "Course updated successfully",
+      course: updatedCourse,
+    });
+  } catch (error) {
+    console.error("Error in updateCourse:", error);
+    return res.status(500).json({ error: "Failed to update course" });
+  }
 }
 
 // export async function syncMoodleCourses(req: Request, res: Response) {

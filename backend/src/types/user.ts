@@ -37,3 +37,14 @@ export interface Student extends RawUserMoodle {
 }
 
 export type NewStudent = Pick<MoodleUser, "id" | "username" | "email" | "firstname" | "lastname"> & { "password": string }
+
+export type EnrollmentRequest = {
+    userid: number;
+    courseid: number;
+    roleid?: number; // Optional, defaults to 5 (student role)
+};
+
+export type CreateAndEnrollRequest = Omit<NewStudent, "id"> & {
+    courseid: number;
+    roleid?: number; // Optional, defaults to 5 (student role)
+};

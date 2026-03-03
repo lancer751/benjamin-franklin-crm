@@ -8,7 +8,15 @@
  *
  * 🟢 You can import this file directly.
  */
-export type * from './models/Student.ts'
-export type * from './models/Course.ts'
-export type * from './models/Enrollment.ts'
+export type * from './models/Role.ts'
+export type * from './models/Usuario.ts'
+export type * from './models/Cliente.ts'
+export type * from './models/Curso.ts'
+export type * from './models/Modalidad.ts'
+export type * from './models/Edicion.ts'
+export type * from './models/Producto.ts'
+export type * from './models/Compra.ts'
+export type * from './models/DetalleCompra.ts'
+export type * from './models/Pago.ts'
+export type * from './models/Matricula.ts'
 export type * from './commonInputTypes.ts'

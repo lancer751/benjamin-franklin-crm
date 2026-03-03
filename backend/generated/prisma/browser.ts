@@ -18,17 +18,57 @@ export { Prisma }
 export * as $Enums from './enums.ts'
 export * from './enums.ts';
 /**
- * Model Student
+ * Model Role
  * 
  */
-export type Student = Prisma.StudentModel
+export type Role = Prisma.RoleModel
 /**
- * Model Course
+ * Model Usuario
  * 
  */
-export type Course = Prisma.CourseModel
+export type Usuario = Prisma.UsuarioModel
 /**
- * Model Enrollment
+ * Model Cliente
  * 
  */
-export type Enrollment = Prisma.EnrollmentModel
+export type Cliente = Prisma.ClienteModel
+/**
+ * Model Curso
+ * 
+ */
+export type Curso = Prisma.CursoModel
+/**
+ * Model Modalidad
+ * 
+ */
+export type Modalidad = Prisma.ModalidadModel
+/**
+ * Model Edicion
+ * 
+ */
+export type Edicion = Prisma.EdicionModel
+/**
+ * Model Producto
+ * 
+ */
+export type Producto = Prisma.ProductoModel
+/**
+ * Model Compra
+ * 
+ */
+export type Compra = Prisma.CompraModel
+/**
+ * Model DetalleCompra
+ * 
+ */
+export type DetalleCompra = Prisma.DetalleCompraModel
+/**
+ * Model Pago
+ * 
+ */
+export type Pago = Prisma.PagoModel
+/**
+ * Model Matricula
+ * 
+ */
+export type Matricula = Prisma.MatriculaModel

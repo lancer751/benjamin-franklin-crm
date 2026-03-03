@@ -13,71 +13,190 @@ datasource db {
   provider = "mysql"
 }
 
-enum EnrollmentStatus {
-  PENDING
-  WAITING_LIST
-  APPROVED
-  ENROLLED
-  REJECTED
-  CANCELLED
-  DROPPED
-  COMPLETED
-  SUSPENDED
+enum CursoStatus {
+  activo
+  inactivo
 }
 
-// --------------------------------------
-// Models
-// --------------------------------------
+enum MetodoPago {
+  efectivo
+  transferencia
+  pos
+  online
+  yape
+}
 
-model Student {
-  id          Int              @id @default(autoincrement())
-  moodleId    Int?             @unique // ID from Moodle
-  firstName   String           @db.VarChar(100)
-  lastName    String           @db.VarChar(100)
-  fullName    String           @db.VarChar(100)
-  dni         String?          @unique @db.VarChar(20)
-  phone       String?          @db.VarChar(20)
-  username    String           @unique @db.VarChar(100)
-  password    String?          @db.VarChar(255) // hashed password recommended
-  email       String           @unique @db.VarChar(255)
-  status      EnrollmentStatus @default(PENDING)
-  // Relations
-  enrollments Enrollment[]
+enum CompraEstado {
+  pendiente
+  pagado
+  cancelado
+  reembolsado
+}
+
+enum PagoEstado {
+  pendiente
+  confirmado
+  rechazado
+  reembolsado
+}
+
+enum MatriculaEstado {
+  activo
+  retirado
+  completado
+}
+
+// db models
+model Role {
+  id          String    @id @default(uuid()) @db.Char(36)
+  nombre      String    @unique
+  descripcion String?
+  is_active   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  usuarios    Usuario[]
+}
+
+model Usuario {
+  id               String  @id @default(uuid()) @db.Char(36)
+  nombre           String
+  apellido_paterno String
+  apellido_materno String?
+  email            String  @unique
+  telefono         String?
+  role_id          String
+  is_active        Boolean @default(true)
+  password         String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([firstName, lastName])
-  @@index([status])
+  role    Role     @relation(fields: [role_id], references: [id])
+  compras Compra[] @relation("VendedorCompras")
 }
 
-model Course {
-  id             Int     @id @default(autoincrement())
-  name           String  @db.VarChar(150)
-  moodleCourseId Int     @unique // ID from Moodle
-  description    String? @db.Text
-
-  // Relations
-  enrollments Enrollment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Enrollment {
-  id Int @id @default(autoincrement())
-
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  studentId Int
-
-  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  courseId Int
-
-  status EnrollmentStatus @default(PENDING)
+model Cliente {
+  id               String  @id @default(uuid()) @db.Char(36)
+  nombre           String
+  apellido_paterno String
+  apellido_materno String
+  telefono         String? @db.Char(9)
+  email            String  @unique
+  dni              String  @unique @db.Char(8)
+  moodle_user_id   Int?    @unique
+  credentials_sent Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([studentId, courseId]) // Prevent duplicate enrollments
-  @@index([status])
+  compras    Compra[]
+  matriculas Matricula[]
+}
+
+model Curso {
+  id               String      @id @default(uuid()) @db.Char(36)
+  nombre           String
+  descripcion      String?
+  status           CursoStatus @default(activo)
+  duracion_semanas Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ediciones Edicion[]
+}
+
+model Modalidad {
+  id     String @id @default(uuid()) @db.Char(36)
+  nombre String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ediciones Edicion[]
+}
+
+model Edicion {
+  id                 String    @id @default(uuid()) @db.Char(36)
+  curso_id           String
+  fecha_inicio       DateTime? @db.Date
+  fecha_finalizacion DateTime? @db.Date
+  modalidad_id       String
+  moodle_course_id   String?   @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  curso      Curso       @relation(fields: [curso_id], references: [id])
+  modalidad  Modalidad   @relation(fields: [modalidad_id], references: [id])
+  productos  Producto[]
+  matriculas Matricula[]
+}
+
+model Producto {
+  id         String  @id @default(uuid()) @db.Char(36)
+  edicion_id String
+  precio     Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  edicion       Edicion         @relation(fields: [edicion_id], references: [id])
+  detalleCompra DetalleCompra[]
+}
+
+model Compra {
+  id           String       @id @default(uuid()) @db.Char(36)
+  cliente_id   String
+  vendedor_id  String?
+  costo_total  Decimal      @db.Decimal(10, 2)
+  estado_order CompraEstado
+  numero_order String       @unique @db.Char(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cliente  Cliente  @relation(fields: [cliente_id], references: [id])
+  vendedor Usuario? @relation("VendedorCompras", fields: [vendedor_id], references: [id])
+
+  detalles DetalleCompra[]
+  pagos    Pago[]
+}
+
+model DetalleCompra {
+  id             String   @id @default(uuid()) @db.Char(36)
+  producto_id    String
+  costo_unitario Decimal  @db.Decimal(10, 2)
+  compra_id      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  producto Producto @relation(fields: [producto_id], references: [id])
+  compra   Compra   @relation(fields: [compra_id], references: [id])
+}
+
+model Pago {
+  id                 String     @id @default(uuid()) @db.Char(36)
+  orden_id           String
+  cantidad           Decimal    @db.Decimal(10, 2)
+  estado             PagoEstado
+  codigo_transaccion String?     @unique
+  fecha_pago         DateTime
+  metodo_pago        MetodoPago
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  compra Compra @relation(fields: [orden_id], references: [id])
+}
+
+model Matricula {
+  id         String          @id @default(uuid()) @db.Char(36)
+  cliente_id String
+  edicion_id String
+  estado     MatriculaEstado
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  cliente    Cliente         @relation(fields: [cliente_id], references: [id])
+  edicion    Edicion         @relation(fields: [edicion_id], references: [id])
 }

@@ -28,9 +28,11 @@ export * from "./enums.ts"
  * Type-safe database client for TypeScript
  * @example
  * ```
- * const prisma = new PrismaClient()
- * // Fetch zero or more Students
- * const students = await prisma.student.findMany()
+ * const prisma = new PrismaClient({
+ *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
+ * })
+ * // Fetch zero or more Roles
+ * const roles = await prisma.role.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -40,17 +42,57 @@ export type PrismaClient<LogOpts extends Prisma.LogLevel = never, OmitOpts exten
 export { Prisma }
 
 /**
- * Model Student
+ * Model Role
  * 
  */
-export type Student = Prisma.StudentModel
+export type Role = Prisma.RoleModel
 /**
- * Model Course
+ * Model Usuario
  * 
  */
-export type Course = Prisma.CourseModel
+export type Usuario = Prisma.UsuarioModel
 /**
- * Model Enrollment
+ * Model Cliente
  * 
  */
-export type Enrollment = Prisma.EnrollmentModel
+export type Cliente = Prisma.ClienteModel
+/**
+ * Model Curso
+ * 
+ */
+export type Curso = Prisma.CursoModel
+/**
+ * Model Modalidad
+ * 
+ */
+export type Modalidad = Prisma.ModalidadModel
+/**
+ * Model Edicion
+ * 
+ */
+export type Edicion = Prisma.EdicionModel
+/**
+ * Model Producto
+ * 
+ */
+export type Producto = Prisma.ProductoModel
+/**
+ * Model Compra
+ * 
+ */
+export type Compra = Prisma.CompraModel
+/**
+ * Model DetalleCompra
+ * 
+ */
+export type DetalleCompra = Prisma.DetalleCompraModel
+/**
+ * Model Pago
+ * 
+ */
+export type Pago = Prisma.PagoModel
+/**
+ * Model Matricula
+ * 
+ */
+export type Matricula = Prisma.MatriculaModel

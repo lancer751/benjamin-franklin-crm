@@ -51,9 +51,17 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  Student: 'Student',
-  Course: 'Course',
-  Enrollment: 'Enrollment'
+  Role: 'Role',
+  Usuario: 'Usuario',
+  Cliente: 'Cliente',
+  Curso: 'Curso',
+  Modalidad: 'Modalidad',
+  Edicion: 'Edicion',
+  Producto: 'Producto',
+  Compra: 'Compra',
+  DetalleCompra: 'DetalleCompra',
+  Pago: 'Pago',
+  Matricula: 'Matricula'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -72,47 +80,151 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
-export const StudentScalarFieldEnum = {
+export const RoleScalarFieldEnum = {
   id: 'id',
-  moodleId: 'moodleId',
-  firstName: 'firstName',
-  lastName: 'lastName',
-  fullName: 'fullName',
-  dni: 'dni',
-  phone: 'phone',
-  username: 'username',
-  password: 'password',
+  nombre: 'nombre',
+  descripcion: 'descripcion',
+  is_active: 'is_active',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RoleScalarFieldEnum = (typeof RoleScalarFieldEnum)[keyof typeof RoleScalarFieldEnum]
+
+
+export const UsuarioScalarFieldEnum = {
+  id: 'id',
+  nombre: 'nombre',
+  apellido_paterno: 'apellido_paterno',
+  apellido_materno: 'apellido_materno',
   email: 'email',
-  status: 'status',
+  telefono: 'telefono',
+  role_id: 'role_id',
+  is_active: 'is_active',
+  password: 'password',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
-export type StudentScalarFieldEnum = (typeof StudentScalarFieldEnum)[keyof typeof StudentScalarFieldEnum]
+export type UsuarioScalarFieldEnum = (typeof UsuarioScalarFieldEnum)[keyof typeof UsuarioScalarFieldEnum]
 
 
-export const CourseScalarFieldEnum = {
+export const ClienteScalarFieldEnum = {
   id: 'id',
-  name: 'name',
-  moodleCourseId: 'moodleCourseId',
-  description: 'description',
+  nombre: 'nombre',
+  apellido_paterno: 'apellido_paterno',
+  apellido_materno: 'apellido_materno',
+  telefono: 'telefono',
+  email: 'email',
+  dni: 'dni',
+  moodle_user_id: 'moodle_user_id',
+  credentials_sent: 'credentials_sent',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
-export type CourseScalarFieldEnum = (typeof CourseScalarFieldEnum)[keyof typeof CourseScalarFieldEnum]
+export type ClienteScalarFieldEnum = (typeof ClienteScalarFieldEnum)[keyof typeof ClienteScalarFieldEnum]
 
 
-export const EnrollmentScalarFieldEnum = {
+export const CursoScalarFieldEnum = {
   id: 'id',
-  studentId: 'studentId',
-  courseId: 'courseId',
+  nombre: 'nombre',
+  descripcion: 'descripcion',
   status: 'status',
+  duracion_semanas: 'duracion_semanas',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
-export type EnrollmentScalarFieldEnum = (typeof EnrollmentScalarFieldEnum)[keyof typeof EnrollmentScalarFieldEnum]
+export type CursoScalarFieldEnum = (typeof CursoScalarFieldEnum)[keyof typeof CursoScalarFieldEnum]
+
+
+export const ModalidadScalarFieldEnum = {
+  id: 'id',
+  nombre: 'nombre',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ModalidadScalarFieldEnum = (typeof ModalidadScalarFieldEnum)[keyof typeof ModalidadScalarFieldEnum]
+
+
+export const EdicionScalarFieldEnum = {
+  id: 'id',
+  curso_id: 'curso_id',
+  fecha_inicio: 'fecha_inicio',
+  fecha_finalizacion: 'fecha_finalizacion',
+  modalidad_id: 'modalidad_id',
+  moodle_course_id: 'moodle_course_id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EdicionScalarFieldEnum = (typeof EdicionScalarFieldEnum)[keyof typeof EdicionScalarFieldEnum]
+
+
+export const ProductoScalarFieldEnum = {
+  id: 'id',
+  edicion_id: 'edicion_id',
+  precio: 'precio',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProductoScalarFieldEnum = (typeof ProductoScalarFieldEnum)[keyof typeof ProductoScalarFieldEnum]
+
+
+export const CompraScalarFieldEnum = {
+  id: 'id',
+  cliente_id: 'cliente_id',
+  vendedor_id: 'vendedor_id',
+  costo_total: 'costo_total',
+  estado_order: 'estado_order',
+  numero_order: 'numero_order',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CompraScalarFieldEnum = (typeof CompraScalarFieldEnum)[keyof typeof CompraScalarFieldEnum]
+
+
+export const DetalleCompraScalarFieldEnum = {
+  id: 'id',
+  producto_id: 'producto_id',
+  costo_unitario: 'costo_unitario',
+  compra_id: 'compra_id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DetalleCompraScalarFieldEnum = (typeof DetalleCompraScalarFieldEnum)[keyof typeof DetalleCompraScalarFieldEnum]
+
+
+export const PagoScalarFieldEnum = {
+  id: 'id',
+  orden_id: 'orden_id',
+  cantidad: 'cantidad',
+  estado: 'estado',
+  codigo_transaccion: 'codigo_transaccion',
+  fecha_pago: 'fecha_pago',
+  metodo_pago: 'metodo_pago',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PagoScalarFieldEnum = (typeof PagoScalarFieldEnum)[keyof typeof PagoScalarFieldEnum]
+
+
+export const MatriculaScalarFieldEnum = {
+  id: 'id',
+  cliente_id: 'cliente_id',
+  edicion_id: 'edicion_id',
+  estado: 'estado',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MatriculaScalarFieldEnum = (typeof MatriculaScalarFieldEnum)[keyof typeof MatriculaScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -131,24 +243,110 @@ export const NullsOrder = {
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
-export const StudentOrderByRelevanceFieldEnum = {
-  firstName: 'firstName',
-  lastName: 'lastName',
-  fullName: 'fullName',
-  dni: 'dni',
-  phone: 'phone',
-  username: 'username',
-  password: 'password',
-  email: 'email'
+export const RoleOrderByRelevanceFieldEnum = {
+  id: 'id',
+  nombre: 'nombre',
+  descripcion: 'descripcion'
 } as const
 
-export type StudentOrderByRelevanceFieldEnum = (typeof StudentOrderByRelevanceFieldEnum)[keyof typeof StudentOrderByRelevanceFieldEnum]
+export type RoleOrderByRelevanceFieldEnum = (typeof RoleOrderByRelevanceFieldEnum)[keyof typeof RoleOrderByRelevanceFieldEnum]
 
 
-export const CourseOrderByRelevanceFieldEnum = {
-  name: 'name',
-  description: 'description'
+export const UsuarioOrderByRelevanceFieldEnum = {
+  id: 'id',
+  nombre: 'nombre',
+  apellido_paterno: 'apellido_paterno',
+  apellido_materno: 'apellido_materno',
+  email: 'email',
+  telefono: 'telefono',
+  role_id: 'role_id',
+  password: 'password'
 } as const
 
-export type CourseOrderByRelevanceFieldEnum = (typeof CourseOrderByRelevanceFieldEnum)[keyof typeof CourseOrderByRelevanceFieldEnum]
+export type UsuarioOrderByRelevanceFieldEnum = (typeof UsuarioOrderByRelevanceFieldEnum)[keyof typeof UsuarioOrderByRelevanceFieldEnum]
+
+
+export const ClienteOrderByRelevanceFieldEnum = {
+  id: 'id',
+  nombre: 'nombre',
+  apellido_paterno: 'apellido_paterno',
+  apellido_materno: 'apellido_materno',
+  telefono: 'telefono',
+  email: 'email',
+  dni: 'dni'
+} as const
+
+export type ClienteOrderByRelevanceFieldEnum = (typeof ClienteOrderByRelevanceFieldEnum)[keyof typeof ClienteOrderByRelevanceFieldEnum]
+
+
+export const CursoOrderByRelevanceFieldEnum = {
+  id: 'id',
+  nombre: 'nombre',
+  descripcion: 'descripcion'
+} as const
+
+export type CursoOrderByRelevanceFieldEnum = (typeof CursoOrderByRelevanceFieldEnum)[keyof typeof CursoOrderByRelevanceFieldEnum]
+
+
+export const ModalidadOrderByRelevanceFieldEnum = {
+  id: 'id',
+  nombre: 'nombre'
+} as const
+
+export type ModalidadOrderByRelevanceFieldEnum = (typeof ModalidadOrderByRelevanceFieldEnum)[keyof typeof ModalidadOrderByRelevanceFieldEnum]
+
+
+export const EdicionOrderByRelevanceFieldEnum = {
+  id: 'id',
+  curso_id: 'curso_id',
+  modalidad_id: 'modalidad_id',
+  moodle_course_id: 'moodle_course_id'
+} as const
+
+export type EdicionOrderByRelevanceFieldEnum = (typeof EdicionOrderByRelevanceFieldEnum)[keyof typeof EdicionOrderByRelevanceFieldEnum]
+
+
+export const ProductoOrderByRelevanceFieldEnum = {
+  id: 'id',
+  edicion_id: 'edicion_id'
+} as const
+
+export type ProductoOrderByRelevanceFieldEnum = (typeof ProductoOrderByRelevanceFieldEnum)[keyof typeof ProductoOrderByRelevanceFieldEnum]
+
+
+export const CompraOrderByRelevanceFieldEnum = {
+  id: 'id',
+  cliente_id: 'cliente_id',
+  vendedor_id: 'vendedor_id',
+  numero_order: 'numero_order'
+} as const
+
+export type CompraOrderByRelevanceFieldEnum = (typeof CompraOrderByRelevanceFieldEnum)[keyof typeof CompraOrderByRelevanceFieldEnum]
+
+
+export const DetalleCompraOrderByRelevanceFieldEnum = {
+  id: 'id',
+  producto_id: 'producto_id',
+  compra_id: 'compra_id'
+} as const
+
+export type DetalleCompraOrderByRelevanceFieldEnum = (typeof DetalleCompraOrderByRelevanceFieldEnum)[keyof typeof DetalleCompraOrderByRelevanceFieldEnum]
+
+
+export const PagoOrderByRelevanceFieldEnum = {
+  id: 'id',
+  orden_id: 'orden_id',
+  codigo_transaccion: 'codigo_transaccion'
+} as const
+
+export type PagoOrderByRelevanceFieldEnum = (typeof PagoOrderByRelevanceFieldEnum)[keyof typeof PagoOrderByRelevanceFieldEnum]
+
+
+export const MatriculaOrderByRelevanceFieldEnum = {
+  id: 'id',
+  cliente_id: 'cliente_id',
+  edicion_id: 'edicion_id'
+} as const
+
+export type MatriculaOrderByRelevanceFieldEnum = (typeof MatriculaOrderByRelevanceFieldEnum)[keyof typeof MatriculaOrderByRelevanceFieldEnum]
 
