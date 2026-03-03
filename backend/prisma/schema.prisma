@@ -18,6 +18,14 @@ enum CursoStatus {
   inactivo
 }
 
+enum MetodoPago {
+  efectivo
+  transferencia
+  pos
+  online
+  yape
+}
+
 enum CompraEstado {
   pendiente
   pagado
@@ -72,9 +80,9 @@ model Cliente {
   nombre           String
   apellido_paterno String
   apellido_materno String
-  telefono         String?
+  telefono         String? @db.Char(9)
   email            String  @unique
-  dni              String  @unique
+  dni              String  @unique @db.Char(8)
   moodle_user_id   Int?    @unique
   credentials_sent Boolean @default(false)
 
@@ -95,8 +103,7 @@ model Curso {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ediciones  Edicion[]
-  matriculas Matricula[]
+  ediciones Edicion[]
 }
 
 model Modalidad {
@@ -120,9 +127,10 @@ model Edicion {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  curso     Curso      @relation(fields: [curso_id], references: [id])
-  modalidad Modalidad  @relation(fields: [modalidad_id], references: [id])
-  productos Producto[]
+  curso      Curso       @relation(fields: [curso_id], references: [id])
+  modalidad  Modalidad   @relation(fields: [modalidad_id], references: [id])
+  productos  Producto[]
+  matriculas Matricula[]
 }
 
 model Producto {
@@ -143,6 +151,7 @@ model Compra {
   vendedor_id  String?
   costo_total  Decimal      @db.Decimal(10, 2)
   estado_order CompraEstado
+  numero_order String       @unique @db.Char(10)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -155,13 +164,12 @@ model Compra {
 }
 
 model DetalleCompra {
-  id             String  @id @default(uuid()) @db.Char(36)
+  id             String   @id @default(uuid()) @db.Char(36)
   producto_id    String
-  costo_unitario Decimal @db.Decimal(10, 2)
+  costo_unitario Decimal  @db.Decimal(10, 2)
   compra_id      String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   producto Producto @relation(fields: [producto_id], references: [id])
   compra   Compra   @relation(fields: [compra_id], references: [id])
@@ -172,9 +180,9 @@ model Pago {
   orden_id           String
   cantidad           Decimal    @db.Decimal(10, 2)
   estado             PagoEstado
-  codigo_transaccion String?    @unique
-  fecha_pago         DateTime?
-  metodo_pago        String
+  codigo_transaccion String?     @unique
+  fecha_pago         DateTime
+  metodo_pago        MetodoPago
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -183,13 +191,12 @@ model Pago {
 }
 
 model Matricula {
-  id                   String          @id @default(uuid()) @db.Char(36)
-  cliente_id           String
-  curso_id             String
-  moodle_enrollment_id String?         @unique
-  estado               MatriculaEstado
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
-  cliente              Cliente         @relation(fields: [cliente_id], references: [id])
-  curso                Curso           @relation(fields: [curso_id], references: [id])
+  id         String          @id @default(uuid()) @db.Char(36)
+  cliente_id String
+  edicion_id String
+  estado     MatriculaEstado
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  cliente    Cliente         @relation(fields: [cliente_id], references: [id])
+  edicion    Edicion         @relation(fields: [edicion_id], references: [id])
 }

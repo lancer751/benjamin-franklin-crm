@@ -1,10 +1,11 @@
 import express from "express";
-import { registerManualPayment } from "../controllers/payment.controller";
-import { adminMiddleware } from "../middleware/admin.middleware";
+import { getPaymentById, getPayments, registerManualPayment } from "../controllers/payment.controller";
 
 const router = express.Router();
 
 // POST /payments/manual  — admin only
-router.post("/manual", adminMiddleware, registerManualPayment);
+router.get("/", getPayments);
+router.get("/:id", getPaymentById);
+router.post("/manual", registerManualPayment);
 
 export default router;

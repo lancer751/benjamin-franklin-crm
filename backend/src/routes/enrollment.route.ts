@@ -1,7 +1,8 @@
 import express from "express";
-import { createAndEnrollStudent } from "../controllers/enroll.controller";
+import { getEnrollmentById, getEnrollments } from "../controllers/enrollment.controller";
 const router = express.Router();
 
-router.post("/", createAndEnrollStudent)
+router.get("/", getEnrollments)
+router.get("/:id", getEnrollmentById)
 
 export default router;

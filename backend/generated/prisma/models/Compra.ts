@@ -40,6 +40,7 @@ export type CompraMinAggregateOutputType = {
   vendedor_id: string | null
   costo_total: runtime.Decimal | null
   estado_order: $Enums.CompraEstado | null
+  numero_order: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -50,6 +51,7 @@ export type CompraMaxAggregateOutputType = {
   vendedor_id: string | null
   costo_total: runtime.Decimal | null
   estado_order: $Enums.CompraEstado | null
+  numero_order: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -60,6 +62,7 @@ export type CompraCountAggregateOutputType = {
   vendedor_id: number
   costo_total: number
   estado_order: number
+  numero_order: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -80,6 +83,7 @@ export type CompraMinAggregateInputType = {
   vendedor_id?: true
   costo_total?: true
   estado_order?: true
+  numero_order?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -90,6 +94,7 @@ export type CompraMaxAggregateInputType = {
   vendedor_id?: true
   costo_total?: true
   estado_order?: true
+  numero_order?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -100,6 +105,7 @@ export type CompraCountAggregateInputType = {
   vendedor_id?: true
   costo_total?: true
   estado_order?: true
+  numero_order?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -197,6 +203,7 @@ export type CompraGroupByOutputType = {
   vendedor_id: string | null
   costo_total: runtime.Decimal
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt: Date
   updatedAt: Date
   _count: CompraCountAggregateOutputType | null
@@ -230,6 +237,7 @@ export type CompraWhereInput = {
   vendedor_id?: Prisma.StringNullableFilter<"Compra"> | string | null
   costo_total?: Prisma.DecimalFilter<"Compra"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFilter<"Compra"> | $Enums.CompraEstado
+  numero_order?: Prisma.StringFilter<"Compra"> | string
   createdAt?: Prisma.DateTimeFilter<"Compra"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Compra"> | Date | string
   cliente?: Prisma.XOR<Prisma.ClienteScalarRelationFilter, Prisma.ClienteWhereInput>
@@ -244,6 +252,7 @@ export type CompraOrderByWithRelationInput = {
   vendedor_id?: Prisma.SortOrderInput | Prisma.SortOrder
   costo_total?: Prisma.SortOrder
   estado_order?: Prisma.SortOrder
+  numero_order?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   cliente?: Prisma.ClienteOrderByWithRelationInput
@@ -255,6 +264,7 @@ export type CompraOrderByWithRelationInput = {
 
 export type CompraWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  numero_order?: string
   AND?: Prisma.CompraWhereInput | Prisma.CompraWhereInput[]
   OR?: Prisma.CompraWhereInput[]
   NOT?: Prisma.CompraWhereInput | Prisma.CompraWhereInput[]
@@ -268,7 +278,7 @@ export type CompraWhereUniqueInput = Prisma.AtLeast<{
   vendedor?: Prisma.XOR<Prisma.UsuarioNullableScalarRelationFilter, Prisma.UsuarioWhereInput> | null
   detalles?: Prisma.DetalleCompraListRelationFilter
   pagos?: Prisma.PagoListRelationFilter
-}, "id">
+}, "id" | "numero_order">
 
 export type CompraOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -276,6 +286,7 @@ export type CompraOrderByWithAggregationInput = {
   vendedor_id?: Prisma.SortOrderInput | Prisma.SortOrder
   costo_total?: Prisma.SortOrder
   estado_order?: Prisma.SortOrder
+  numero_order?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.CompraCountOrderByAggregateInput
@@ -294,6 +305,7 @@ export type CompraScalarWhereWithAggregatesInput = {
   vendedor_id?: Prisma.StringNullableWithAggregatesFilter<"Compra"> | string | null
   costo_total?: Prisma.DecimalWithAggregatesFilter<"Compra"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoWithAggregatesFilter<"Compra"> | $Enums.CompraEstado
+  numero_order?: Prisma.StringWithAggregatesFilter<"Compra"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Compra"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Compra"> | Date | string
 }
@@ -302,6 +314,7 @@ export type CompraCreateInput = {
   id?: string
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
   cliente: Prisma.ClienteCreateNestedOneWithoutComprasInput
@@ -316,6 +329,7 @@ export type CompraUncheckedCreateInput = {
   vendedor_id?: string | null
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
   detalles?: Prisma.DetalleCompraUncheckedCreateNestedManyWithoutCompraInput
@@ -326,6 +340,7 @@ export type CompraUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   cliente?: Prisma.ClienteUpdateOneRequiredWithoutComprasNestedInput
@@ -340,6 +355,7 @@ export type CompraUncheckedUpdateInput = {
   vendedor_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   detalles?: Prisma.DetalleCompraUncheckedUpdateManyWithoutCompraNestedInput
@@ -352,6 +368,7 @@ export type CompraCreateManyInput = {
   vendedor_id?: string | null
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -360,6 +377,7 @@ export type CompraUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -370,6 +388,7 @@ export type CompraUncheckedUpdateManyInput = {
   vendedor_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -396,6 +415,7 @@ export type CompraCountOrderByAggregateInput = {
   vendedor_id?: Prisma.SortOrder
   costo_total?: Prisma.SortOrder
   estado_order?: Prisma.SortOrder
+  numero_order?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -410,6 +430,7 @@ export type CompraMaxOrderByAggregateInput = {
   vendedor_id?: Prisma.SortOrder
   costo_total?: Prisma.SortOrder
   estado_order?: Prisma.SortOrder
+  numero_order?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -420,6 +441,7 @@ export type CompraMinOrderByAggregateInput = {
   vendedor_id?: Prisma.SortOrder
   costo_total?: Prisma.SortOrder
   estado_order?: Prisma.SortOrder
+  numero_order?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -553,6 +575,7 @@ export type CompraCreateWithoutVendedorInput = {
   id?: string
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
   cliente: Prisma.ClienteCreateNestedOneWithoutComprasInput
@@ -565,6 +588,7 @@ export type CompraUncheckedCreateWithoutVendedorInput = {
   cliente_id: string
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
   detalles?: Prisma.DetalleCompraUncheckedCreateNestedManyWithoutCompraInput
@@ -606,6 +630,7 @@ export type CompraScalarWhereInput = {
   vendedor_id?: Prisma.StringNullableFilter<"Compra"> | string | null
   costo_total?: Prisma.DecimalFilter<"Compra"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFilter<"Compra"> | $Enums.CompraEstado
+  numero_order?: Prisma.StringFilter<"Compra"> | string
   createdAt?: Prisma.DateTimeFilter<"Compra"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Compra"> | Date | string
 }
@@ -614,6 +639,7 @@ export type CompraCreateWithoutClienteInput = {
   id?: string
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
   vendedor?: Prisma.UsuarioCreateNestedOneWithoutComprasInput
@@ -626,6 +652,7 @@ export type CompraUncheckedCreateWithoutClienteInput = {
   vendedor_id?: string | null
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
   detalles?: Prisma.DetalleCompraUncheckedCreateNestedManyWithoutCompraInput
@@ -662,6 +689,7 @@ export type CompraCreateWithoutDetallesInput = {
   id?: string
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
   cliente: Prisma.ClienteCreateNestedOneWithoutComprasInput
@@ -675,6 +703,7 @@ export type CompraUncheckedCreateWithoutDetallesInput = {
   vendedor_id?: string | null
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
   pagos?: Prisma.PagoUncheckedCreateNestedManyWithoutCompraInput
@@ -700,6 +729,7 @@ export type CompraUpdateWithoutDetallesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   cliente?: Prisma.ClienteUpdateOneRequiredWithoutComprasNestedInput
@@ -713,6 +743,7 @@ export type CompraUncheckedUpdateWithoutDetallesInput = {
   vendedor_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   pagos?: Prisma.PagoUncheckedUpdateManyWithoutCompraNestedInput
@@ -722,6 +753,7 @@ export type CompraCreateWithoutPagosInput = {
   id?: string
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
   cliente: Prisma.ClienteCreateNestedOneWithoutComprasInput
@@ -735,6 +767,7 @@ export type CompraUncheckedCreateWithoutPagosInput = {
   vendedor_id?: string | null
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
   detalles?: Prisma.DetalleCompraUncheckedCreateNestedManyWithoutCompraInput
@@ -760,6 +793,7 @@ export type CompraUpdateWithoutPagosInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   cliente?: Prisma.ClienteUpdateOneRequiredWithoutComprasNestedInput
@@ -773,6 +807,7 @@ export type CompraUncheckedUpdateWithoutPagosInput = {
   vendedor_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   detalles?: Prisma.DetalleCompraUncheckedUpdateManyWithoutCompraNestedInput
@@ -783,6 +818,7 @@ export type CompraCreateManyVendedorInput = {
   cliente_id: string
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -791,6 +827,7 @@ export type CompraUpdateWithoutVendedorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   cliente?: Prisma.ClienteUpdateOneRequiredWithoutComprasNestedInput
@@ -803,6 +840,7 @@ export type CompraUncheckedUpdateWithoutVendedorInput = {
   cliente_id?: Prisma.StringFieldUpdateOperationsInput | string
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   detalles?: Prisma.DetalleCompraUncheckedUpdateManyWithoutCompraNestedInput
@@ -814,6 +852,7 @@ export type CompraUncheckedUpdateManyWithoutVendedorInput = {
   cliente_id?: Prisma.StringFieldUpdateOperationsInput | string
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -823,6 +862,7 @@ export type CompraCreateManyClienteInput = {
   vendedor_id?: string | null
   costo_total: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order: $Enums.CompraEstado
+  numero_order: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -831,6 +871,7 @@ export type CompraUpdateWithoutClienteInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   vendedor?: Prisma.UsuarioUpdateOneWithoutComprasNestedInput
@@ -843,6 +884,7 @@ export type CompraUncheckedUpdateWithoutClienteInput = {
   vendedor_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   detalles?: Prisma.DetalleCompraUncheckedUpdateManyWithoutCompraNestedInput
@@ -854,6 +896,7 @@ export type CompraUncheckedUpdateManyWithoutClienteInput = {
   vendedor_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   costo_total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado_order?: Prisma.EnumCompraEstadoFieldUpdateOperationsInput | $Enums.CompraEstado
+  numero_order?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -904,6 +947,7 @@ export type CompraSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   vendedor_id?: boolean
   costo_total?: boolean
   estado_order?: boolean
+  numero_order?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   cliente?: boolean | Prisma.ClienteDefaultArgs<ExtArgs>
@@ -921,11 +965,12 @@ export type CompraSelectScalar = {
   vendedor_id?: boolean
   costo_total?: boolean
   estado_order?: boolean
+  numero_order?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type CompraOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "cliente_id" | "vendedor_id" | "costo_total" | "estado_order" | "createdAt" | "updatedAt", ExtArgs["result"]["compra"]>
+export type CompraOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "cliente_id" | "vendedor_id" | "costo_total" | "estado_order" | "numero_order" | "createdAt" | "updatedAt", ExtArgs["result"]["compra"]>
 export type CompraInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   cliente?: boolean | Prisma.ClienteDefaultArgs<ExtArgs>
   vendedor?: boolean | Prisma.Compra$vendedorArgs<ExtArgs>
@@ -948,6 +993,7 @@ export type $CompraPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     vendedor_id: string | null
     costo_total: runtime.Decimal
     estado_order: $Enums.CompraEstado
+    numero_order: string
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["compra"]>
@@ -1328,6 +1374,7 @@ export interface CompraFieldRefs {
   readonly vendedor_id: Prisma.FieldRef<"Compra", 'String'>
   readonly costo_total: Prisma.FieldRef<"Compra", 'Decimal'>
   readonly estado_order: Prisma.FieldRef<"Compra", 'CompraEstado'>
+  readonly numero_order: Prisma.FieldRef<"Compra", 'String'>
   readonly createdAt: Prisma.FieldRef<"Compra", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Compra", 'DateTime'>
 }

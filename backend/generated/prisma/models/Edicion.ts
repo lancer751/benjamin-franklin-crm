@@ -209,6 +209,7 @@ export type EdicionWhereInput = {
   curso?: Prisma.XOR<Prisma.CursoScalarRelationFilter, Prisma.CursoWhereInput>
   modalidad?: Prisma.XOR<Prisma.ModalidadScalarRelationFilter, Prisma.ModalidadWhereInput>
   productos?: Prisma.ProductoListRelationFilter
+  matriculas?: Prisma.MatriculaListRelationFilter
 }
 
 export type EdicionOrderByWithRelationInput = {
@@ -223,6 +224,7 @@ export type EdicionOrderByWithRelationInput = {
   curso?: Prisma.CursoOrderByWithRelationInput
   modalidad?: Prisma.ModalidadOrderByWithRelationInput
   productos?: Prisma.ProductoOrderByRelationAggregateInput
+  matriculas?: Prisma.MatriculaOrderByRelationAggregateInput
   _relevance?: Prisma.EdicionOrderByRelevanceInput
 }
 
@@ -241,6 +243,7 @@ export type EdicionWhereUniqueInput = Prisma.AtLeast<{
   curso?: Prisma.XOR<Prisma.CursoScalarRelationFilter, Prisma.CursoWhereInput>
   modalidad?: Prisma.XOR<Prisma.ModalidadScalarRelationFilter, Prisma.ModalidadWhereInput>
   productos?: Prisma.ProductoListRelationFilter
+  matriculas?: Prisma.MatriculaListRelationFilter
 }, "id" | "moodle_course_id">
 
 export type EdicionOrderByWithAggregationInput = {
@@ -281,6 +284,7 @@ export type EdicionCreateInput = {
   curso: Prisma.CursoCreateNestedOneWithoutEdicionesInput
   modalidad: Prisma.ModalidadCreateNestedOneWithoutEdicionesInput
   productos?: Prisma.ProductoCreateNestedManyWithoutEdicionInput
+  matriculas?: Prisma.MatriculaCreateNestedManyWithoutEdicionInput
 }
 
 export type EdicionUncheckedCreateInput = {
@@ -293,6 +297,7 @@ export type EdicionUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   productos?: Prisma.ProductoUncheckedCreateNestedManyWithoutEdicionInput
+  matriculas?: Prisma.MatriculaUncheckedCreateNestedManyWithoutEdicionInput
 }
 
 export type EdicionUpdateInput = {
@@ -305,6 +310,7 @@ export type EdicionUpdateInput = {
   curso?: Prisma.CursoUpdateOneRequiredWithoutEdicionesNestedInput
   modalidad?: Prisma.ModalidadUpdateOneRequiredWithoutEdicionesNestedInput
   productos?: Prisma.ProductoUpdateManyWithoutEdicionNestedInput
+  matriculas?: Prisma.MatriculaUpdateManyWithoutEdicionNestedInput
 }
 
 export type EdicionUncheckedUpdateInput = {
@@ -317,6 +323,7 @@ export type EdicionUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   productos?: Prisma.ProductoUncheckedUpdateManyWithoutEdicionNestedInput
+  matriculas?: Prisma.MatriculaUncheckedUpdateManyWithoutEdicionNestedInput
 }
 
 export type EdicionCreateManyInput = {
@@ -506,6 +513,20 @@ export type EdicionUpdateOneRequiredWithoutProductosNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.EdicionUpdateToOneWithWhereWithoutProductosInput, Prisma.EdicionUpdateWithoutProductosInput>, Prisma.EdicionUncheckedUpdateWithoutProductosInput>
 }
 
+export type EdicionCreateNestedOneWithoutMatriculasInput = {
+  create?: Prisma.XOR<Prisma.EdicionCreateWithoutMatriculasInput, Prisma.EdicionUncheckedCreateWithoutMatriculasInput>
+  connectOrCreate?: Prisma.EdicionCreateOrConnectWithoutMatriculasInput
+  connect?: Prisma.EdicionWhereUniqueInput
+}
+
+export type EdicionUpdateOneRequiredWithoutMatriculasNestedInput = {
+  create?: Prisma.XOR<Prisma.EdicionCreateWithoutMatriculasInput, Prisma.EdicionUncheckedCreateWithoutMatriculasInput>
+  connectOrCreate?: Prisma.EdicionCreateOrConnectWithoutMatriculasInput
+  upsert?: Prisma.EdicionUpsertWithoutMatriculasInput
+  connect?: Prisma.EdicionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EdicionUpdateToOneWithWhereWithoutMatriculasInput, Prisma.EdicionUpdateWithoutMatriculasInput>, Prisma.EdicionUncheckedUpdateWithoutMatriculasInput>
+}
+
 export type EdicionCreateWithoutCursoInput = {
   id?: string
   fecha_inicio?: Date | string | null
@@ -515,6 +536,7 @@ export type EdicionCreateWithoutCursoInput = {
   updatedAt?: Date | string
   modalidad: Prisma.ModalidadCreateNestedOneWithoutEdicionesInput
   productos?: Prisma.ProductoCreateNestedManyWithoutEdicionInput
+  matriculas?: Prisma.MatriculaCreateNestedManyWithoutEdicionInput
 }
 
 export type EdicionUncheckedCreateWithoutCursoInput = {
@@ -526,6 +548,7 @@ export type EdicionUncheckedCreateWithoutCursoInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   productos?: Prisma.ProductoUncheckedCreateNestedManyWithoutEdicionInput
+  matriculas?: Prisma.MatriculaUncheckedCreateNestedManyWithoutEdicionInput
 }
 
 export type EdicionCreateOrConnectWithoutCursoInput = {
@@ -577,6 +600,7 @@ export type EdicionCreateWithoutModalidadInput = {
   updatedAt?: Date | string
   curso: Prisma.CursoCreateNestedOneWithoutEdicionesInput
   productos?: Prisma.ProductoCreateNestedManyWithoutEdicionInput
+  matriculas?: Prisma.MatriculaCreateNestedManyWithoutEdicionInput
 }
 
 export type EdicionUncheckedCreateWithoutModalidadInput = {
@@ -588,6 +612,7 @@ export type EdicionUncheckedCreateWithoutModalidadInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   productos?: Prisma.ProductoUncheckedCreateNestedManyWithoutEdicionInput
+  matriculas?: Prisma.MatriculaUncheckedCreateNestedManyWithoutEdicionInput
 }
 
 export type EdicionCreateOrConnectWithoutModalidadInput = {
@@ -625,6 +650,7 @@ export type EdicionCreateWithoutProductosInput = {
   updatedAt?: Date | string
   curso: Prisma.CursoCreateNestedOneWithoutEdicionesInput
   modalidad: Prisma.ModalidadCreateNestedOneWithoutEdicionesInput
+  matriculas?: Prisma.MatriculaCreateNestedManyWithoutEdicionInput
 }
 
 export type EdicionUncheckedCreateWithoutProductosInput = {
@@ -636,6 +662,7 @@ export type EdicionUncheckedCreateWithoutProductosInput = {
   moodle_course_id?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  matriculas?: Prisma.MatriculaUncheckedCreateNestedManyWithoutEdicionInput
 }
 
 export type EdicionCreateOrConnectWithoutProductosInput = {
@@ -663,6 +690,7 @@ export type EdicionUpdateWithoutProductosInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   curso?: Prisma.CursoUpdateOneRequiredWithoutEdicionesNestedInput
   modalidad?: Prisma.ModalidadUpdateOneRequiredWithoutEdicionesNestedInput
+  matriculas?: Prisma.MatriculaUpdateManyWithoutEdicionNestedInput
 }
 
 export type EdicionUncheckedUpdateWithoutProductosInput = {
@@ -674,6 +702,71 @@ export type EdicionUncheckedUpdateWithoutProductosInput = {
   moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  matriculas?: Prisma.MatriculaUncheckedUpdateManyWithoutEdicionNestedInput
+}
+
+export type EdicionCreateWithoutMatriculasInput = {
+  id?: string
+  fecha_inicio?: Date | string | null
+  fecha_finalizacion?: Date | string | null
+  moodle_course_id?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  curso: Prisma.CursoCreateNestedOneWithoutEdicionesInput
+  modalidad: Prisma.ModalidadCreateNestedOneWithoutEdicionesInput
+  productos?: Prisma.ProductoCreateNestedManyWithoutEdicionInput
+}
+
+export type EdicionUncheckedCreateWithoutMatriculasInput = {
+  id?: string
+  curso_id: string
+  fecha_inicio?: Date | string | null
+  fecha_finalizacion?: Date | string | null
+  modalidad_id: string
+  moodle_course_id?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  productos?: Prisma.ProductoUncheckedCreateNestedManyWithoutEdicionInput
+}
+
+export type EdicionCreateOrConnectWithoutMatriculasInput = {
+  where: Prisma.EdicionWhereUniqueInput
+  create: Prisma.XOR<Prisma.EdicionCreateWithoutMatriculasInput, Prisma.EdicionUncheckedCreateWithoutMatriculasInput>
+}
+
+export type EdicionUpsertWithoutMatriculasInput = {
+  update: Prisma.XOR<Prisma.EdicionUpdateWithoutMatriculasInput, Prisma.EdicionUncheckedUpdateWithoutMatriculasInput>
+  create: Prisma.XOR<Prisma.EdicionCreateWithoutMatriculasInput, Prisma.EdicionUncheckedCreateWithoutMatriculasInput>
+  where?: Prisma.EdicionWhereInput
+}
+
+export type EdicionUpdateToOneWithWhereWithoutMatriculasInput = {
+  where?: Prisma.EdicionWhereInput
+  data: Prisma.XOR<Prisma.EdicionUpdateWithoutMatriculasInput, Prisma.EdicionUncheckedUpdateWithoutMatriculasInput>
+}
+
+export type EdicionUpdateWithoutMatriculasInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  curso?: Prisma.CursoUpdateOneRequiredWithoutEdicionesNestedInput
+  modalidad?: Prisma.ModalidadUpdateOneRequiredWithoutEdicionesNestedInput
+  productos?: Prisma.ProductoUpdateManyWithoutEdicionNestedInput
+}
+
+export type EdicionUncheckedUpdateWithoutMatriculasInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  curso_id?: Prisma.StringFieldUpdateOperationsInput | string
+  fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  modalidad_id?: Prisma.StringFieldUpdateOperationsInput | string
+  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  productos?: Prisma.ProductoUncheckedUpdateManyWithoutEdicionNestedInput
 }
 
 export type EdicionCreateManyCursoInput = {
@@ -695,6 +788,7 @@ export type EdicionUpdateWithoutCursoInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   modalidad?: Prisma.ModalidadUpdateOneRequiredWithoutEdicionesNestedInput
   productos?: Prisma.ProductoUpdateManyWithoutEdicionNestedInput
+  matriculas?: Prisma.MatriculaUpdateManyWithoutEdicionNestedInput
 }
 
 export type EdicionUncheckedUpdateWithoutCursoInput = {
@@ -706,6 +800,7 @@ export type EdicionUncheckedUpdateWithoutCursoInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   productos?: Prisma.ProductoUncheckedUpdateManyWithoutEdicionNestedInput
+  matriculas?: Prisma.MatriculaUncheckedUpdateManyWithoutEdicionNestedInput
 }
 
 export type EdicionUncheckedUpdateManyWithoutCursoInput = {
@@ -737,6 +832,7 @@ export type EdicionUpdateWithoutModalidadInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   curso?: Prisma.CursoUpdateOneRequiredWithoutEdicionesNestedInput
   productos?: Prisma.ProductoUpdateManyWithoutEdicionNestedInput
+  matriculas?: Prisma.MatriculaUpdateManyWithoutEdicionNestedInput
 }
 
 export type EdicionUncheckedUpdateWithoutModalidadInput = {
@@ -748,6 +844,7 @@ export type EdicionUncheckedUpdateWithoutModalidadInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   productos?: Prisma.ProductoUncheckedUpdateManyWithoutEdicionNestedInput
+  matriculas?: Prisma.MatriculaUncheckedUpdateManyWithoutEdicionNestedInput
 }
 
 export type EdicionUncheckedUpdateManyWithoutModalidadInput = {
@@ -767,10 +864,12 @@ export type EdicionUncheckedUpdateManyWithoutModalidadInput = {
 
 export type EdicionCountOutputType = {
   productos: number
+  matriculas: number
 }
 
 export type EdicionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   productos?: boolean | EdicionCountOutputTypeCountProductosArgs
+  matriculas?: boolean | EdicionCountOutputTypeCountMatriculasArgs
 }
 
 /**
@@ -790,6 +889,13 @@ export type EdicionCountOutputTypeCountProductosArgs<ExtArgs extends runtime.Typ
   where?: Prisma.ProductoWhereInput
 }
 
+/**
+ * EdicionCountOutputType without action
+ */
+export type EdicionCountOutputTypeCountMatriculasArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MatriculaWhereInput
+}
+
 
 export type EdicionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -803,6 +909,7 @@ export type EdicionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   curso?: boolean | Prisma.CursoDefaultArgs<ExtArgs>
   modalidad?: boolean | Prisma.ModalidadDefaultArgs<ExtArgs>
   productos?: boolean | Prisma.Edicion$productosArgs<ExtArgs>
+  matriculas?: boolean | Prisma.Edicion$matriculasArgs<ExtArgs>
   _count?: boolean | Prisma.EdicionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["edicion"]>
 
@@ -824,6 +931,7 @@ export type EdicionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   curso?: boolean | Prisma.CursoDefaultArgs<ExtArgs>
   modalidad?: boolean | Prisma.ModalidadDefaultArgs<ExtArgs>
   productos?: boolean | Prisma.Edicion$productosArgs<ExtArgs>
+  matriculas?: boolean | Prisma.Edicion$matriculasArgs<ExtArgs>
   _count?: boolean | Prisma.EdicionCountOutputTypeDefaultArgs<ExtArgs>
 }
 
@@ -833,6 +941,7 @@ export type $EdicionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     curso: Prisma.$CursoPayload<ExtArgs>
     modalidad: Prisma.$ModalidadPayload<ExtArgs>
     productos: Prisma.$ProductoPayload<ExtArgs>[]
+    matriculas: Prisma.$MatriculaPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1186,6 +1295,7 @@ export interface Prisma__EdicionClient<T, Null = never, ExtArgs extends runtime.
   curso<T extends Prisma.CursoDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CursoDefaultArgs<ExtArgs>>): Prisma.Prisma__CursoClient<runtime.Types.Result.GetResult<Prisma.$CursoPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   modalidad<T extends Prisma.ModalidadDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ModalidadDefaultArgs<ExtArgs>>): Prisma.Prisma__ModalidadClient<runtime.Types.Result.GetResult<Prisma.$ModalidadPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   productos<T extends Prisma.Edicion$productosArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Edicion$productosArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProductoPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  matriculas<T extends Prisma.Edicion$matriculasArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Edicion$matriculasArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MatriculaPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1587,6 +1697,30 @@ export type Edicion$productosArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.ProductoScalarFieldEnum | Prisma.ProductoScalarFieldEnum[]
+}
+
+/**
+ * Edicion.matriculas
+ */
+export type Edicion$matriculasArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Matricula
+   */
+  select?: Prisma.MatriculaSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Matricula
+   */
+  omit?: Prisma.MatriculaOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MatriculaInclude<ExtArgs> | null
+  where?: Prisma.MatriculaWhereInput
+  orderBy?: Prisma.MatriculaOrderByWithRelationInput | Prisma.MatriculaOrderByWithRelationInput[]
+  cursor?: Prisma.MatriculaWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MatriculaScalarFieldEnum | Prisma.MatriculaScalarFieldEnum[]
 }
 
 /**

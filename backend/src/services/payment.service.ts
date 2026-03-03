@@ -2,32 +2,37 @@
 // Handles webhook validation (simulated), payment registration (Pago),
 // idempotency (duplicate transaction code check), and Compra status update.
 
+import type { Decimal } from "@prisma/client/runtime/client";
 import { prisma } from "../config/connection";
-import { enrollClientFromCompra } from "./enrollment.service";
 import {
-    sendPaymentConfirmedEmail,
-    sendPaymentRejectedEmail,
-    sendManualPaymentRegisteredEmail,
+  sendPaymentConfirmedEmail,
+  sendPaymentRejectedEmail,
+  sendManualPaymentRegisteredEmail,
 } from "./email.service";
+import type { Pago } from "../../generated/prisma/client";
 
-export type PaymentMethod = "efectivo" | "transferencia" | "pos" | "online" | "otro";
+export type PaymentMethod =
+  | "efectivo"
+  | "transferencia"
+  | "pos"
+  | "online"
+  | "yape";
 export type PaymentStatus = "confirmado" | "rechazado" | "pendiente";
 
 export interface ProcessPaymentOptions {
-    compraId: string;
-    amount: number;
-    method: PaymentMethod;
-    status: PaymentStatus;
-    transactionCode?: string; // required for online/webhook payments
-    isManual?: boolean;
+  compraId: string;
+  insertedAmount: Decimal;
+  method: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  transactionCode?: string; // required for online/webhook payments
+  isManual?: boolean;
 }
 
 export interface ProcessPaymentResult {
-    success: boolean;
-    pagoId?: string;
-    isDuplicate?: boolean;
-    enrollmentResults?: Array<{ success: boolean; alreadyEnrolled?: boolean; matriculaId?: string; error?: string }>;
-    error?: string;
+  success: boolean;
+  paymentData?: Pago;
+  isDuplicate?: boolean;
+  error?: string;
 }
 
 /**
@@ -35,104 +40,81 @@ export interface ProcessPaymentResult {
  * Returns true if the signature looks valid (always true in simulation).
  */
 export function validateWebhookSignature(
-    _payload: unknown,
-    _signature: string
+  _payload: unknown,
+  _signature: string,
 ): boolean {
-    // In production: compare HMAC-SHA256 of payload with secret key.
-    // For MVP: always return true (simulated).
-    return true;
+  // In production: compare HMAC-SHA256 of payload with secret key.
+  // For MVP: always return true (simulated).
+  return true;
 }
 
 /**
  * Core payment processing function used by both webhook and manual routes.
  */
 export async function processPayment(
-    options: ProcessPaymentOptions
+  options: ProcessPaymentOptions,
 ): Promise<ProcessPaymentResult> {
-    const { compraId, amount, method, status, transactionCode, isManual } = options;
+  const { compraId, insertedAmount, method, paymentStatus, transactionCode, isManual } =
+    options;
 
-    // 1. Validate the order exists
-    const compra = await prisma.compra.findUnique({
-        where: { id: compraId },
-        include: { cliente: true },
+  // 1. Validate the order exists
+  const compra = await prisma.compra.findUnique({
+    where: { id: compraId },
+    include: { cliente: true },
+  });
+
+  if (!compra) {
+    return { success: false, error: `Compra ${compraId} not found` };
+  }
+
+  if(insertedAmount < compra.costo_total || insertedAmount > compra.costo_total) {
+    return { success: false, error: "Amount is not equal to the total cost of the order" };
+  }
+
+  // 4. Create Pago + update Compra in a transaction
+  const pago = await prisma.$transaction(async (tx) => {
+    const newPago = await tx.pago.create({
+      data: {
+        orden_id: compraId,
+        cantidad: insertedAmount,
+        estado: paymentStatus,
+        codigo_transaccion: transactionCode ?? null,
+        metodo_pago: method,
+        fecha_pago: paymentStatus === "confirmado" ? new Date() : null,
+      },
     });
 
-    if (!compra) {
-        return { success: false, error: `Compra ${compraId} not found` };
-    }
-
-    // 2. Idempotency — prevent duplicate transaction codes
-    if (transactionCode) {
-        const duplicate = await prisma.pago.findUnique({
-            where: { codigo_transaccion: transactionCode },
-        });
-        if (duplicate) {
-            console.log(`⚠️ [PAYMENT] Duplicate transaction code: ${transactionCode}`);
-            return { success: true, isDuplicate: true, pagoId: duplicate.id };
-        }
-    }
-
-    // 3. Map status to Prisma enum
-    const estadoPago =
-        status === "confirmado"
-            ? "confirmado"
-            : status === "rechazado"
-                ? "rechazado"
-                : "pendiente";
-
-    const estadoCompra =
-        status === "confirmado"
-            ? "pagado"
-            : status === "rechazado"
-                ? "cancelado"
-                : "pendiente";
-
-    // 4. Create Pago + update Compra in a transaction
-    const pago = await prisma.$transaction(async (tx) => {
-        const newPago = await tx.pago.create({
-            data: {
-                orden_id: compraId,
-                cantidad: amount,
-                estado: estadoPago as "confirmado" | "rechazado" | "pendiente" | "reembolsado",
-                codigo_transaccion: transactionCode ?? null,
-                metodo_pago: method,
-                fecha_pago: status === "confirmado" ? new Date() : null,
-            },
-        });
-
-        await tx.compra.update({
-            where: { id: compraId },
-            data: { estado_order: estadoCompra as "pagado" | "cancelado" | "pendiente" | "reembolsado" },
-        });
-
-        return newPago;
+    await tx.compra.update({
+      where: { id: compraId },
+      data: {
+        estado_order: "pagado",
+      },
     });
 
-    const clientName = `${compra.cliente.nombre} ${compra.cliente.apellido_paterno}`;
-    const clientEmail = compra.cliente.email;
+    return newPago;
+  });
 
-    // 5. Post-payment actions
-    if (status === "confirmado") {
-        // Send payment confirmed email
-        sendPaymentConfirmedEmail(
-            clientEmail,
-            clientName,
-            amount,
-            transactionCode ?? pago.id
-        );
+  const clientName = `${compra.cliente.nombre} ${compra.cliente.apellido_paterno}`;
+  const clientEmail = compra.cliente.email;
 
-        if (isManual) {
-            sendManualPaymentRegisteredEmail(clientEmail, clientName, amount, method);
-        }
+  // 5. Post-payment actions
+  if (paymentStatus === "confirmado") {
+    // Send payment confirmed email
+    sendPaymentConfirmedEmail(
+      clientEmail,
+      clientName,
+      insertedAmount,
+      transactionCode ?? pago.id,
+    );
 
-        // Enroll client in all courses from this order
-        const enrollmentResults = await enrollClientFromCompra(compraId);
-        return { success: true, pagoId: pago.id, enrollmentResults };
+    if (isManual) {
+      sendManualPaymentRegisteredEmail(clientEmail, clientName, insertedAmount, method);
     }
+  }
 
-    if (status === "rechazado") {
-        sendPaymentRejectedEmail(clientEmail, clientName, amount);
-    }
+  if (paymentStatus === "rechazado") {
+    sendPaymentRejectedEmail(clientEmail, clientName, insertedAmount);
+  }
 
-    return { success: true, pagoId: pago.id };
+  return { success: true, paymentData: pago };
 }

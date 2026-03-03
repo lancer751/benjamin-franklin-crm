@@ -1279,6 +1279,7 @@ export const CompraScalarFieldEnum = {
   vendedor_id: 'vendedor_id',
   costo_total: 'costo_total',
   estado_order: 'estado_order',
+  numero_order: 'numero_order',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1316,8 +1317,7 @@ export type PagoScalarFieldEnum = (typeof PagoScalarFieldEnum)[keyof typeof Pago
 export const MatriculaScalarFieldEnum = {
   id: 'id',
   cliente_id: 'cliente_id',
-  curso_id: 'curso_id',
-  moodle_enrollment_id: 'moodle_enrollment_id',
+  edicion_id: 'edicion_id',
   estado: 'estado',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -1416,7 +1416,8 @@ export type ProductoOrderByRelevanceFieldEnum = (typeof ProductoOrderByRelevance
 export const CompraOrderByRelevanceFieldEnum = {
   id: 'id',
   cliente_id: 'cliente_id',
-  vendedor_id: 'vendedor_id'
+  vendedor_id: 'vendedor_id',
+  numero_order: 'numero_order'
 } as const
 
 export type CompraOrderByRelevanceFieldEnum = (typeof CompraOrderByRelevanceFieldEnum)[keyof typeof CompraOrderByRelevanceFieldEnum]
@@ -1434,8 +1435,7 @@ export type DetalleCompraOrderByRelevanceFieldEnum = (typeof DetalleCompraOrderB
 export const PagoOrderByRelevanceFieldEnum = {
   id: 'id',
   orden_id: 'orden_id',
-  codigo_transaccion: 'codigo_transaccion',
-  metodo_pago: 'metodo_pago'
+  codigo_transaccion: 'codigo_transaccion'
 } as const
 
 export type PagoOrderByRelevanceFieldEnum = (typeof PagoOrderByRelevanceFieldEnum)[keyof typeof PagoOrderByRelevanceFieldEnum]
@@ -1444,8 +1444,7 @@ export type PagoOrderByRelevanceFieldEnum = (typeof PagoOrderByRelevanceFieldEnu
 export const MatriculaOrderByRelevanceFieldEnum = {
   id: 'id',
   cliente_id: 'cliente_id',
-  curso_id: 'curso_id',
-  moodle_enrollment_id: 'moodle_enrollment_id'
+  edicion_id: 'edicion_id'
 } as const
 
 export type MatriculaOrderByRelevanceFieldEnum = (typeof MatriculaOrderByRelevanceFieldEnum)[keyof typeof MatriculaOrderByRelevanceFieldEnum]
@@ -1510,6 +1509,13 @@ export type EnumCompraEstadoFieldRefInput<$PrismaModel> = FieldRefInputType<$Pri
  * Reference to a field of type 'PagoEstado'
  */
 export type EnumPagoEstadoFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PagoEstado'>
+    
+
+
+/**
+ * Reference to a field of type 'MetodoPago'
+ */
+export type EnumMetodoPagoFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MetodoPago'>
     
 
 

@@ -270,6 +270,13 @@ export type EnumPagoEstadoFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumPagoEstadoFilter<$PrismaModel> | $Enums.PagoEstado
 }
 
+export type EnumMetodoPagoFilter<$PrismaModel = never> = {
+  equals?: $Enums.MetodoPago | Prisma.EnumMetodoPagoFieldRefInput<$PrismaModel>
+  in?: $Enums.MetodoPago[]
+  notIn?: $Enums.MetodoPago[]
+  not?: Prisma.NestedEnumMetodoPagoFilter<$PrismaModel> | $Enums.MetodoPago
+}
+
 export type EnumPagoEstadoWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.PagoEstado | Prisma.EnumPagoEstadoFieldRefInput<$PrismaModel>
   in?: $Enums.PagoEstado[]
@@ -278,6 +285,16 @@ export type EnumPagoEstadoWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPagoEstadoFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPagoEstadoFilter<$PrismaModel>
+}
+
+export type EnumMetodoPagoWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.MetodoPago | Prisma.EnumMetodoPagoFieldRefInput<$PrismaModel>
+  in?: $Enums.MetodoPago[]
+  notIn?: $Enums.MetodoPago[]
+  not?: Prisma.NestedEnumMetodoPagoWithAggregatesFilter<$PrismaModel> | $Enums.MetodoPago
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumMetodoPagoFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumMetodoPagoFilter<$PrismaModel>
 }
 
 export type EnumMatriculaEstadoFilter<$PrismaModel = never> = {
@@ -570,6 +587,13 @@ export type NestedEnumPagoEstadoFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumPagoEstadoFilter<$PrismaModel> | $Enums.PagoEstado
 }
 
+export type NestedEnumMetodoPagoFilter<$PrismaModel = never> = {
+  equals?: $Enums.MetodoPago | Prisma.EnumMetodoPagoFieldRefInput<$PrismaModel>
+  in?: $Enums.MetodoPago[]
+  notIn?: $Enums.MetodoPago[]
+  not?: Prisma.NestedEnumMetodoPagoFilter<$PrismaModel> | $Enums.MetodoPago
+}
+
 export type NestedEnumPagoEstadoWithAggregatesFilter<$PrismaModel = never> = {
   equals?: $Enums.PagoEstado | Prisma.EnumPagoEstadoFieldRefInput<$PrismaModel>
   in?: $Enums.PagoEstado[]
@@ -578,6 +602,16 @@ export type NestedEnumPagoEstadoWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumPagoEstadoFilter<$PrismaModel>
   _max?: Prisma.NestedEnumPagoEstadoFilter<$PrismaModel>
+}
+
+export type NestedEnumMetodoPagoWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.MetodoPago | Prisma.EnumMetodoPagoFieldRefInput<$PrismaModel>
+  in?: $Enums.MetodoPago[]
+  notIn?: $Enums.MetodoPago[]
+  not?: Prisma.NestedEnumMetodoPagoWithAggregatesFilter<$PrismaModel> | $Enums.MetodoPago
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumMetodoPagoFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumMetodoPagoFilter<$PrismaModel>
 }
 
 export type NestedEnumMatriculaEstadoFilter<$PrismaModel = never> = {

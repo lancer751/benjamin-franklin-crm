@@ -17,6 +17,17 @@ export const CursoStatus = {
 export type CursoStatus = (typeof CursoStatus)[keyof typeof CursoStatus]
 
 
+export const MetodoPago = {
+  efectivo: 'efectivo',
+  transferencia: 'transferencia',
+  pos: 'pos',
+  online: 'online',
+  yape: 'yape'
+} as const
+
+export type MetodoPago = (typeof MetodoPago)[keyof typeof MetodoPago]
+
+
 export const CompraEstado = {
   pendiente: 'pendiente',
   pagado: 'pagado',

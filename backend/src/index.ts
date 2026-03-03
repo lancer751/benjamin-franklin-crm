@@ -30,7 +30,7 @@ app.use(cors())
 app.use("/api/users", userRoutes)
 app.use("/api/customers", customerRoutes)
 app.use("/api/courses", courseRoutes)
-app.use("/api/enrollment", enrollmentRoutes)
+app.use("/api/enrollments", enrollmentRoutes)
 
 app.use("/api/products", productRoutes)
 // Payment webhook (no admin auth — validated by signature)

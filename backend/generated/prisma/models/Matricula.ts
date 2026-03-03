@@ -27,8 +27,7 @@ export type AggregateMatricula = {
 export type MatriculaMinAggregateOutputType = {
   id: string | null
   cliente_id: string | null
-  curso_id: string | null
-  moodle_enrollment_id: string | null
+  edicion_id: string | null
   estado: $Enums.MatriculaEstado | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -37,8 +36,7 @@ export type MatriculaMinAggregateOutputType = {
 export type MatriculaMaxAggregateOutputType = {
   id: string | null
   cliente_id: string | null
-  curso_id: string | null
-  moodle_enrollment_id: string | null
+  edicion_id: string | null
   estado: $Enums.MatriculaEstado | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -47,8 +45,7 @@ export type MatriculaMaxAggregateOutputType = {
 export type MatriculaCountAggregateOutputType = {
   id: number
   cliente_id: number
-  curso_id: number
-  moodle_enrollment_id: number
+  edicion_id: number
   estado: number
   createdAt: number
   updatedAt: number
@@ -59,8 +56,7 @@ export type MatriculaCountAggregateOutputType = {
 export type MatriculaMinAggregateInputType = {
   id?: true
   cliente_id?: true
-  curso_id?: true
-  moodle_enrollment_id?: true
+  edicion_id?: true
   estado?: true
   createdAt?: true
   updatedAt?: true
@@ -69,8 +65,7 @@ export type MatriculaMinAggregateInputType = {
 export type MatriculaMaxAggregateInputType = {
   id?: true
   cliente_id?: true
-  curso_id?: true
-  moodle_enrollment_id?: true
+  edicion_id?: true
   estado?: true
   createdAt?: true
   updatedAt?: true
@@ -79,8 +74,7 @@ export type MatriculaMaxAggregateInputType = {
 export type MatriculaCountAggregateInputType = {
   id?: true
   cliente_id?: true
-  curso_id?: true
-  moodle_enrollment_id?: true
+  edicion_id?: true
   estado?: true
   createdAt?: true
   updatedAt?: true
@@ -162,8 +156,7 @@ export type MatriculaGroupByArgs<ExtArgs extends runtime.Types.Extensions.Intern
 export type MatriculaGroupByOutputType = {
   id: string
   cliente_id: string
-  curso_id: string
-  moodle_enrollment_id: string | null
+  edicion_id: string
   estado: $Enums.MatriculaEstado
   createdAt: Date
   updatedAt: Date
@@ -193,48 +186,44 @@ export type MatriculaWhereInput = {
   NOT?: Prisma.MatriculaWhereInput | Prisma.MatriculaWhereInput[]
   id?: Prisma.StringFilter<"Matricula"> | string
   cliente_id?: Prisma.StringFilter<"Matricula"> | string
-  curso_id?: Prisma.StringFilter<"Matricula"> | string
-  moodle_enrollment_id?: Prisma.StringNullableFilter<"Matricula"> | string | null
+  edicion_id?: Prisma.StringFilter<"Matricula"> | string
   estado?: Prisma.EnumMatriculaEstadoFilter<"Matricula"> | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFilter<"Matricula"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Matricula"> | Date | string
   cliente?: Prisma.XOR<Prisma.ClienteScalarRelationFilter, Prisma.ClienteWhereInput>
-  curso?: Prisma.XOR<Prisma.CursoScalarRelationFilter, Prisma.CursoWhereInput>
+  edicion?: Prisma.XOR<Prisma.EdicionScalarRelationFilter, Prisma.EdicionWhereInput>
 }
 
 export type MatriculaOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   cliente_id?: Prisma.SortOrder
-  curso_id?: Prisma.SortOrder
-  moodle_enrollment_id?: Prisma.SortOrderInput | Prisma.SortOrder
+  edicion_id?: Prisma.SortOrder
   estado?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   cliente?: Prisma.ClienteOrderByWithRelationInput
-  curso?: Prisma.CursoOrderByWithRelationInput
+  edicion?: Prisma.EdicionOrderByWithRelationInput
   _relevance?: Prisma.MatriculaOrderByRelevanceInput
 }
 
 export type MatriculaWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  moodle_enrollment_id?: string
   AND?: Prisma.MatriculaWhereInput | Prisma.MatriculaWhereInput[]
   OR?: Prisma.MatriculaWhereInput[]
   NOT?: Prisma.MatriculaWhereInput | Prisma.MatriculaWhereInput[]
   cliente_id?: Prisma.StringFilter<"Matricula"> | string
-  curso_id?: Prisma.StringFilter<"Matricula"> | string
+  edicion_id?: Prisma.StringFilter<"Matricula"> | string
   estado?: Prisma.EnumMatriculaEstadoFilter<"Matricula"> | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFilter<"Matricula"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Matricula"> | Date | string
   cliente?: Prisma.XOR<Prisma.ClienteScalarRelationFilter, Prisma.ClienteWhereInput>
-  curso?: Prisma.XOR<Prisma.CursoScalarRelationFilter, Prisma.CursoWhereInput>
-}, "id" | "moodle_enrollment_id">
+  edicion?: Prisma.XOR<Prisma.EdicionScalarRelationFilter, Prisma.EdicionWhereInput>
+}, "id">
 
 export type MatriculaOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   cliente_id?: Prisma.SortOrder
-  curso_id?: Prisma.SortOrder
-  moodle_enrollment_id?: Prisma.SortOrderInput | Prisma.SortOrder
+  edicion_id?: Prisma.SortOrder
   estado?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -249,8 +238,7 @@ export type MatriculaScalarWhereWithAggregatesInput = {
   NOT?: Prisma.MatriculaScalarWhereWithAggregatesInput | Prisma.MatriculaScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Matricula"> | string
   cliente_id?: Prisma.StringWithAggregatesFilter<"Matricula"> | string
-  curso_id?: Prisma.StringWithAggregatesFilter<"Matricula"> | string
-  moodle_enrollment_id?: Prisma.StringNullableWithAggregatesFilter<"Matricula"> | string | null
+  edicion_id?: Prisma.StringWithAggregatesFilter<"Matricula"> | string
   estado?: Prisma.EnumMatriculaEstadoWithAggregatesFilter<"Matricula"> | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Matricula"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Matricula"> | Date | string
@@ -258,19 +246,17 @@ export type MatriculaScalarWhereWithAggregatesInput = {
 
 export type MatriculaCreateInput = {
   id?: string
-  moodle_enrollment_id?: string | null
   estado: $Enums.MatriculaEstado
   createdAt?: Date | string
   updatedAt?: Date | string
   cliente: Prisma.ClienteCreateNestedOneWithoutMatriculasInput
-  curso: Prisma.CursoCreateNestedOneWithoutMatriculasInput
+  edicion: Prisma.EdicionCreateNestedOneWithoutMatriculasInput
 }
 
 export type MatriculaUncheckedCreateInput = {
   id?: string
   cliente_id: string
-  curso_id: string
-  moodle_enrollment_id?: string | null
+  edicion_id: string
   estado: $Enums.MatriculaEstado
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -278,19 +264,17 @@ export type MatriculaUncheckedCreateInput = {
 
 export type MatriculaUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_enrollment_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumMatriculaEstadoFieldUpdateOperationsInput | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   cliente?: Prisma.ClienteUpdateOneRequiredWithoutMatriculasNestedInput
-  curso?: Prisma.CursoUpdateOneRequiredWithoutMatriculasNestedInput
+  edicion?: Prisma.EdicionUpdateOneRequiredWithoutMatriculasNestedInput
 }
 
 export type MatriculaUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   cliente_id?: Prisma.StringFieldUpdateOperationsInput | string
-  curso_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_enrollment_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  edicion_id?: Prisma.StringFieldUpdateOperationsInput | string
   estado?: Prisma.EnumMatriculaEstadoFieldUpdateOperationsInput | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -299,8 +283,7 @@ export type MatriculaUncheckedUpdateInput = {
 export type MatriculaCreateManyInput = {
   id?: string
   cliente_id: string
-  curso_id: string
-  moodle_enrollment_id?: string | null
+  edicion_id: string
   estado: $Enums.MatriculaEstado
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -308,7 +291,6 @@ export type MatriculaCreateManyInput = {
 
 export type MatriculaUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_enrollment_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumMatriculaEstadoFieldUpdateOperationsInput | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -317,8 +299,7 @@ export type MatriculaUpdateManyMutationInput = {
 export type MatriculaUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   cliente_id?: Prisma.StringFieldUpdateOperationsInput | string
-  curso_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_enrollment_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  edicion_id?: Prisma.StringFieldUpdateOperationsInput | string
   estado?: Prisma.EnumMatriculaEstadoFieldUpdateOperationsInput | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -343,8 +324,7 @@ export type MatriculaOrderByRelevanceInput = {
 export type MatriculaCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   cliente_id?: Prisma.SortOrder
-  curso_id?: Prisma.SortOrder
-  moodle_enrollment_id?: Prisma.SortOrder
+  edicion_id?: Prisma.SortOrder
   estado?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -353,8 +333,7 @@ export type MatriculaCountOrderByAggregateInput = {
 export type MatriculaMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   cliente_id?: Prisma.SortOrder
-  curso_id?: Prisma.SortOrder
-  moodle_enrollment_id?: Prisma.SortOrder
+  edicion_id?: Prisma.SortOrder
   estado?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -363,8 +342,7 @@ export type MatriculaMaxOrderByAggregateInput = {
 export type MatriculaMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   cliente_id?: Prisma.SortOrder
-  curso_id?: Prisma.SortOrder
-  moodle_enrollment_id?: Prisma.SortOrder
+  edicion_id?: Prisma.SortOrder
   estado?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -412,45 +390,45 @@ export type MatriculaUncheckedUpdateManyWithoutClienteNestedInput = {
   deleteMany?: Prisma.MatriculaScalarWhereInput | Prisma.MatriculaScalarWhereInput[]
 }
 
-export type MatriculaCreateNestedManyWithoutCursoInput = {
-  create?: Prisma.XOR<Prisma.MatriculaCreateWithoutCursoInput, Prisma.MatriculaUncheckedCreateWithoutCursoInput> | Prisma.MatriculaCreateWithoutCursoInput[] | Prisma.MatriculaUncheckedCreateWithoutCursoInput[]
-  connectOrCreate?: Prisma.MatriculaCreateOrConnectWithoutCursoInput | Prisma.MatriculaCreateOrConnectWithoutCursoInput[]
-  createMany?: Prisma.MatriculaCreateManyCursoInputEnvelope
+export type MatriculaCreateNestedManyWithoutEdicionInput = {
+  create?: Prisma.XOR<Prisma.MatriculaCreateWithoutEdicionInput, Prisma.MatriculaUncheckedCreateWithoutEdicionInput> | Prisma.MatriculaCreateWithoutEdicionInput[] | Prisma.MatriculaUncheckedCreateWithoutEdicionInput[]
+  connectOrCreate?: Prisma.MatriculaCreateOrConnectWithoutEdicionInput | Prisma.MatriculaCreateOrConnectWithoutEdicionInput[]
+  createMany?: Prisma.MatriculaCreateManyEdicionInputEnvelope
   connect?: Prisma.MatriculaWhereUniqueInput | Prisma.MatriculaWhereUniqueInput[]
 }
 
-export type MatriculaUncheckedCreateNestedManyWithoutCursoInput = {
-  create?: Prisma.XOR<Prisma.MatriculaCreateWithoutCursoInput, Prisma.MatriculaUncheckedCreateWithoutCursoInput> | Prisma.MatriculaCreateWithoutCursoInput[] | Prisma.MatriculaUncheckedCreateWithoutCursoInput[]
-  connectOrCreate?: Prisma.MatriculaCreateOrConnectWithoutCursoInput | Prisma.MatriculaCreateOrConnectWithoutCursoInput[]
-  createMany?: Prisma.MatriculaCreateManyCursoInputEnvelope
+export type MatriculaUncheckedCreateNestedManyWithoutEdicionInput = {
+  create?: Prisma.XOR<Prisma.MatriculaCreateWithoutEdicionInput, Prisma.MatriculaUncheckedCreateWithoutEdicionInput> | Prisma.MatriculaCreateWithoutEdicionInput[] | Prisma.MatriculaUncheckedCreateWithoutEdicionInput[]
+  connectOrCreate?: Prisma.MatriculaCreateOrConnectWithoutEdicionInput | Prisma.MatriculaCreateOrConnectWithoutEdicionInput[]
+  createMany?: Prisma.MatriculaCreateManyEdicionInputEnvelope
   connect?: Prisma.MatriculaWhereUniqueInput | Prisma.MatriculaWhereUniqueInput[]
 }
 
-export type MatriculaUpdateManyWithoutCursoNestedInput = {
-  create?: Prisma.XOR<Prisma.MatriculaCreateWithoutCursoInput, Prisma.MatriculaUncheckedCreateWithoutCursoInput> | Prisma.MatriculaCreateWithoutCursoInput[] | Prisma.MatriculaUncheckedCreateWithoutCursoInput[]
-  connectOrCreate?: Prisma.MatriculaCreateOrConnectWithoutCursoInput | Prisma.MatriculaCreateOrConnectWithoutCursoInput[]
-  upsert?: Prisma.MatriculaUpsertWithWhereUniqueWithoutCursoInput | Prisma.MatriculaUpsertWithWhereUniqueWithoutCursoInput[]
-  createMany?: Prisma.MatriculaCreateManyCursoInputEnvelope
+export type MatriculaUpdateManyWithoutEdicionNestedInput = {
+  create?: Prisma.XOR<Prisma.MatriculaCreateWithoutEdicionInput, Prisma.MatriculaUncheckedCreateWithoutEdicionInput> | Prisma.MatriculaCreateWithoutEdicionInput[] | Prisma.MatriculaUncheckedCreateWithoutEdicionInput[]
+  connectOrCreate?: Prisma.MatriculaCreateOrConnectWithoutEdicionInput | Prisma.MatriculaCreateOrConnectWithoutEdicionInput[]
+  upsert?: Prisma.MatriculaUpsertWithWhereUniqueWithoutEdicionInput | Prisma.MatriculaUpsertWithWhereUniqueWithoutEdicionInput[]
+  createMany?: Prisma.MatriculaCreateManyEdicionInputEnvelope
   set?: Prisma.MatriculaWhereUniqueInput | Prisma.MatriculaWhereUniqueInput[]
   disconnect?: Prisma.MatriculaWhereUniqueInput | Prisma.MatriculaWhereUniqueInput[]
   delete?: Prisma.MatriculaWhereUniqueInput | Prisma.MatriculaWhereUniqueInput[]
   connect?: Prisma.MatriculaWhereUniqueInput | Prisma.MatriculaWhereUniqueInput[]
-  update?: Prisma.MatriculaUpdateWithWhereUniqueWithoutCursoInput | Prisma.MatriculaUpdateWithWhereUniqueWithoutCursoInput[]
-  updateMany?: Prisma.MatriculaUpdateManyWithWhereWithoutCursoInput | Prisma.MatriculaUpdateManyWithWhereWithoutCursoInput[]
+  update?: Prisma.MatriculaUpdateWithWhereUniqueWithoutEdicionInput | Prisma.MatriculaUpdateWithWhereUniqueWithoutEdicionInput[]
+  updateMany?: Prisma.MatriculaUpdateManyWithWhereWithoutEdicionInput | Prisma.MatriculaUpdateManyWithWhereWithoutEdicionInput[]
   deleteMany?: Prisma.MatriculaScalarWhereInput | Prisma.MatriculaScalarWhereInput[]
 }
 
-export type MatriculaUncheckedUpdateManyWithoutCursoNestedInput = {
-  create?: Prisma.XOR<Prisma.MatriculaCreateWithoutCursoInput, Prisma.MatriculaUncheckedCreateWithoutCursoInput> | Prisma.MatriculaCreateWithoutCursoInput[] | Prisma.MatriculaUncheckedCreateWithoutCursoInput[]
-  connectOrCreate?: Prisma.MatriculaCreateOrConnectWithoutCursoInput | Prisma.MatriculaCreateOrConnectWithoutCursoInput[]
-  upsert?: Prisma.MatriculaUpsertWithWhereUniqueWithoutCursoInput | Prisma.MatriculaUpsertWithWhereUniqueWithoutCursoInput[]
-  createMany?: Prisma.MatriculaCreateManyCursoInputEnvelope
+export type MatriculaUncheckedUpdateManyWithoutEdicionNestedInput = {
+  create?: Prisma.XOR<Prisma.MatriculaCreateWithoutEdicionInput, Prisma.MatriculaUncheckedCreateWithoutEdicionInput> | Prisma.MatriculaCreateWithoutEdicionInput[] | Prisma.MatriculaUncheckedCreateWithoutEdicionInput[]
+  connectOrCreate?: Prisma.MatriculaCreateOrConnectWithoutEdicionInput | Prisma.MatriculaCreateOrConnectWithoutEdicionInput[]
+  upsert?: Prisma.MatriculaUpsertWithWhereUniqueWithoutEdicionInput | Prisma.MatriculaUpsertWithWhereUniqueWithoutEdicionInput[]
+  createMany?: Prisma.MatriculaCreateManyEdicionInputEnvelope
   set?: Prisma.MatriculaWhereUniqueInput | Prisma.MatriculaWhereUniqueInput[]
   disconnect?: Prisma.MatriculaWhereUniqueInput | Prisma.MatriculaWhereUniqueInput[]
   delete?: Prisma.MatriculaWhereUniqueInput | Prisma.MatriculaWhereUniqueInput[]
   connect?: Prisma.MatriculaWhereUniqueInput | Prisma.MatriculaWhereUniqueInput[]
-  update?: Prisma.MatriculaUpdateWithWhereUniqueWithoutCursoInput | Prisma.MatriculaUpdateWithWhereUniqueWithoutCursoInput[]
-  updateMany?: Prisma.MatriculaUpdateManyWithWhereWithoutCursoInput | Prisma.MatriculaUpdateManyWithWhereWithoutCursoInput[]
+  update?: Prisma.MatriculaUpdateWithWhereUniqueWithoutEdicionInput | Prisma.MatriculaUpdateWithWhereUniqueWithoutEdicionInput[]
+  updateMany?: Prisma.MatriculaUpdateManyWithWhereWithoutEdicionInput | Prisma.MatriculaUpdateManyWithWhereWithoutEdicionInput[]
   deleteMany?: Prisma.MatriculaScalarWhereInput | Prisma.MatriculaScalarWhereInput[]
 }
 
@@ -460,17 +438,15 @@ export type EnumMatriculaEstadoFieldUpdateOperationsInput = {
 
 export type MatriculaCreateWithoutClienteInput = {
   id?: string
-  moodle_enrollment_id?: string | null
   estado: $Enums.MatriculaEstado
   createdAt?: Date | string
   updatedAt?: Date | string
-  curso: Prisma.CursoCreateNestedOneWithoutMatriculasInput
+  edicion: Prisma.EdicionCreateNestedOneWithoutMatriculasInput
 }
 
 export type MatriculaUncheckedCreateWithoutClienteInput = {
   id?: string
-  curso_id: string
-  moodle_enrollment_id?: string | null
+  edicion_id: string
   estado: $Enums.MatriculaEstado
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -508,61 +484,57 @@ export type MatriculaScalarWhereInput = {
   NOT?: Prisma.MatriculaScalarWhereInput | Prisma.MatriculaScalarWhereInput[]
   id?: Prisma.StringFilter<"Matricula"> | string
   cliente_id?: Prisma.StringFilter<"Matricula"> | string
-  curso_id?: Prisma.StringFilter<"Matricula"> | string
-  moodle_enrollment_id?: Prisma.StringNullableFilter<"Matricula"> | string | null
+  edicion_id?: Prisma.StringFilter<"Matricula"> | string
   estado?: Prisma.EnumMatriculaEstadoFilter<"Matricula"> | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFilter<"Matricula"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Matricula"> | Date | string
 }
 
-export type MatriculaCreateWithoutCursoInput = {
+export type MatriculaCreateWithoutEdicionInput = {
   id?: string
-  moodle_enrollment_id?: string | null
   estado: $Enums.MatriculaEstado
   createdAt?: Date | string
   updatedAt?: Date | string
   cliente: Prisma.ClienteCreateNestedOneWithoutMatriculasInput
 }
 
-export type MatriculaUncheckedCreateWithoutCursoInput = {
+export type MatriculaUncheckedCreateWithoutEdicionInput = {
   id?: string
   cliente_id: string
-  moodle_enrollment_id?: string | null
   estado: $Enums.MatriculaEstado
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
-export type MatriculaCreateOrConnectWithoutCursoInput = {
+export type MatriculaCreateOrConnectWithoutEdicionInput = {
   where: Prisma.MatriculaWhereUniqueInput
-  create: Prisma.XOR<Prisma.MatriculaCreateWithoutCursoInput, Prisma.MatriculaUncheckedCreateWithoutCursoInput>
+  create: Prisma.XOR<Prisma.MatriculaCreateWithoutEdicionInput, Prisma.MatriculaUncheckedCreateWithoutEdicionInput>
 }
 
-export type MatriculaCreateManyCursoInputEnvelope = {
-  data: Prisma.MatriculaCreateManyCursoInput | Prisma.MatriculaCreateManyCursoInput[]
+export type MatriculaCreateManyEdicionInputEnvelope = {
+  data: Prisma.MatriculaCreateManyEdicionInput | Prisma.MatriculaCreateManyEdicionInput[]
   skipDuplicates?: boolean
 }
 
-export type MatriculaUpsertWithWhereUniqueWithoutCursoInput = {
+export type MatriculaUpsertWithWhereUniqueWithoutEdicionInput = {
   where: Prisma.MatriculaWhereUniqueInput
-  update: Prisma.XOR<Prisma.MatriculaUpdateWithoutCursoInput, Prisma.MatriculaUncheckedUpdateWithoutCursoInput>
-  create: Prisma.XOR<Prisma.MatriculaCreateWithoutCursoInput, Prisma.MatriculaUncheckedCreateWithoutCursoInput>
+  update: Prisma.XOR<Prisma.MatriculaUpdateWithoutEdicionInput, Prisma.MatriculaUncheckedUpdateWithoutEdicionInput>
+  create: Prisma.XOR<Prisma.MatriculaCreateWithoutEdicionInput, Prisma.MatriculaUncheckedCreateWithoutEdicionInput>
 }
 
-export type MatriculaUpdateWithWhereUniqueWithoutCursoInput = {
+export type MatriculaUpdateWithWhereUniqueWithoutEdicionInput = {
   where: Prisma.MatriculaWhereUniqueInput
-  data: Prisma.XOR<Prisma.MatriculaUpdateWithoutCursoInput, Prisma.MatriculaUncheckedUpdateWithoutCursoInput>
+  data: Prisma.XOR<Prisma.MatriculaUpdateWithoutEdicionInput, Prisma.MatriculaUncheckedUpdateWithoutEdicionInput>
 }
 
-export type MatriculaUpdateManyWithWhereWithoutCursoInput = {
+export type MatriculaUpdateManyWithWhereWithoutEdicionInput = {
   where: Prisma.MatriculaScalarWhereInput
-  data: Prisma.XOR<Prisma.MatriculaUpdateManyMutationInput, Prisma.MatriculaUncheckedUpdateManyWithoutCursoInput>
+  data: Prisma.XOR<Prisma.MatriculaUpdateManyMutationInput, Prisma.MatriculaUncheckedUpdateManyWithoutEdicionInput>
 }
 
 export type MatriculaCreateManyClienteInput = {
   id?: string
-  curso_id: string
-  moodle_enrollment_id?: string | null
+  edicion_id: string
   estado: $Enums.MatriculaEstado
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -570,17 +542,15 @@ export type MatriculaCreateManyClienteInput = {
 
 export type MatriculaUpdateWithoutClienteInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_enrollment_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumMatriculaEstadoFieldUpdateOperationsInput | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  curso?: Prisma.CursoUpdateOneRequiredWithoutMatriculasNestedInput
+  edicion?: Prisma.EdicionUpdateOneRequiredWithoutMatriculasNestedInput
 }
 
 export type MatriculaUncheckedUpdateWithoutClienteInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  curso_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_enrollment_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  edicion_id?: Prisma.StringFieldUpdateOperationsInput | string
   estado?: Prisma.EnumMatriculaEstadoFieldUpdateOperationsInput | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -588,44 +558,39 @@ export type MatriculaUncheckedUpdateWithoutClienteInput = {
 
 export type MatriculaUncheckedUpdateManyWithoutClienteInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  curso_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_enrollment_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  edicion_id?: Prisma.StringFieldUpdateOperationsInput | string
   estado?: Prisma.EnumMatriculaEstadoFieldUpdateOperationsInput | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type MatriculaCreateManyCursoInput = {
+export type MatriculaCreateManyEdicionInput = {
   id?: string
   cliente_id: string
-  moodle_enrollment_id?: string | null
   estado: $Enums.MatriculaEstado
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
-export type MatriculaUpdateWithoutCursoInput = {
+export type MatriculaUpdateWithoutEdicionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_enrollment_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumMatriculaEstadoFieldUpdateOperationsInput | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   cliente?: Prisma.ClienteUpdateOneRequiredWithoutMatriculasNestedInput
 }
 
-export type MatriculaUncheckedUpdateWithoutCursoInput = {
+export type MatriculaUncheckedUpdateWithoutEdicionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   cliente_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_enrollment_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumMatriculaEstadoFieldUpdateOperationsInput | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type MatriculaUncheckedUpdateManyWithoutCursoInput = {
+export type MatriculaUncheckedUpdateManyWithoutEdicionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   cliente_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_enrollment_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   estado?: Prisma.EnumMatriculaEstadoFieldUpdateOperationsInput | $Enums.MatriculaEstado
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -636,13 +601,12 @@ export type MatriculaUncheckedUpdateManyWithoutCursoInput = {
 export type MatriculaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   cliente_id?: boolean
-  curso_id?: boolean
-  moodle_enrollment_id?: boolean
+  edicion_id?: boolean
   estado?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   cliente?: boolean | Prisma.ClienteDefaultArgs<ExtArgs>
-  curso?: boolean | Prisma.CursoDefaultArgs<ExtArgs>
+  edicion?: boolean | Prisma.EdicionDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["matricula"]>
 
 
@@ -650,30 +614,28 @@ export type MatriculaSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
 export type MatriculaSelectScalar = {
   id?: boolean
   cliente_id?: boolean
-  curso_id?: boolean
-  moodle_enrollment_id?: boolean
+  edicion_id?: boolean
   estado?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type MatriculaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "cliente_id" | "curso_id" | "moodle_enrollment_id" | "estado" | "createdAt" | "updatedAt", ExtArgs["result"]["matricula"]>
+export type MatriculaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "cliente_id" | "edicion_id" | "estado" | "createdAt" | "updatedAt", ExtArgs["result"]["matricula"]>
 export type MatriculaInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   cliente?: boolean | Prisma.ClienteDefaultArgs<ExtArgs>
-  curso?: boolean | Prisma.CursoDefaultArgs<ExtArgs>
+  edicion?: boolean | Prisma.EdicionDefaultArgs<ExtArgs>
 }
 
 export type $MatriculaPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Matricula"
   objects: {
     cliente: Prisma.$ClientePayload<ExtArgs>
-    curso: Prisma.$CursoPayload<ExtArgs>
+    edicion: Prisma.$EdicionPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     cliente_id: string
-    curso_id: string
-    moodle_enrollment_id: string | null
+    edicion_id: string
     estado: $Enums.MatriculaEstado
     createdAt: Date
     updatedAt: Date
@@ -1018,7 +980,7 @@ readonly fields: MatriculaFieldRefs;
 export interface Prisma__MatriculaClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   cliente<T extends Prisma.ClienteDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ClienteDefaultArgs<ExtArgs>>): Prisma.Prisma__ClienteClient<runtime.Types.Result.GetResult<Prisma.$ClientePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  curso<T extends Prisma.CursoDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CursoDefaultArgs<ExtArgs>>): Prisma.Prisma__CursoClient<runtime.Types.Result.GetResult<Prisma.$CursoPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  edicion<T extends Prisma.EdicionDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EdicionDefaultArgs<ExtArgs>>): Prisma.Prisma__EdicionClient<runtime.Types.Result.GetResult<Prisma.$EdicionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1050,8 +1012,7 @@ export interface Prisma__MatriculaClient<T, Null = never, ExtArgs extends runtim
 export interface MatriculaFieldRefs {
   readonly id: Prisma.FieldRef<"Matricula", 'String'>
   readonly cliente_id: Prisma.FieldRef<"Matricula", 'String'>
-  readonly curso_id: Prisma.FieldRef<"Matricula", 'String'>
-  readonly moodle_enrollment_id: Prisma.FieldRef<"Matricula", 'String'>
+  readonly edicion_id: Prisma.FieldRef<"Matricula", 'String'>
   readonly estado: Prisma.FieldRef<"Matricula", 'MatriculaEstado'>
   readonly createdAt: Prisma.FieldRef<"Matricula", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Matricula", 'DateTime'>

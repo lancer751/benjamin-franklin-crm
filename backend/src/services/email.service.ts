@@ -1,6 +1,8 @@
 // Simulated email service — no real emails are sent.
 // Emails are logged to the console and stored in memory.
 
+import type { Decimal } from "@prisma/client/runtime/client";
+
 export interface SimulatedEmail {
     id: string;
     to: string;
@@ -49,7 +51,7 @@ export function clearAllEmails(): void {
 
 // Convenience helpers for each email type
 
-export function sendPaymentConfirmedEmail(to: string, clientName: string, amount: number, transactionCode: string) {
+export function sendPaymentConfirmedEmail(to: string, clientName: string, amount: Decimal, transactionCode: string) {
     return sendEmail(
         to,
         "Pago confirmado — Gracias por tu compra",
@@ -58,7 +60,7 @@ export function sendPaymentConfirmedEmail(to: string, clientName: string, amount
     );
 }
 
-export function sendPaymentRejectedEmail(to: string, clientName: string, amount: number) {
+export function sendPaymentRejectedEmail(to: string, clientName: string, amount: Decimal) {
     return sendEmail(
         to,
         "Pago rechazado",
@@ -76,7 +78,7 @@ export function sendEnrollmentSuccessEmail(to: string, clientName: string, cours
     );
 }
 
-export function sendManualPaymentRegisteredEmail(to: string, clientName: string, amount: number, method: string) {
+export function sendManualPaymentRegisteredEmail(to: string, clientName: string, amount: Decimal, method: string) {
     return sendEmail(
         to,
         "Pago manual registrado",
