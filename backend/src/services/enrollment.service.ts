@@ -21,36 +21,35 @@ export interface EnrollResult {
  */
 export async function enrollClientInCourse(
   clienteId: string,
-  cursoId: string,
+  edicion_id: string,
 ): Promise<EnrollResult> {
   try {
     // 1. Check for duplicate enrollment
     const existing = await prisma.matricula.findFirst({
-      where: { cliente_id: clienteId, curso_id: cursoId },
+      where: { cliente_id: clienteId },
     });
 
     if (existing) {
       console.log(
-        `⚠️ [ENROLLMENT] Cliente ${clienteId} is already enrolled in course ${cursoId}`,
+        `⚠️ [ENROLLMENT] Cliente ${clienteId} is already enrolled in course ${edicion_id}`,
       );
       return { success: true, alreadyEnrolled: true, matriculaId: existing.id };
     }
 
     // 2. Fetch client + course info for emails and Moodle
-    const [cliente, curso] = await Promise.all([
+    const [cliente, edicion] = await Promise.all([
       prisma.cliente.findUnique({ where: { id: clienteId } }),
-      prisma.curso.findUnique({
-        where: { id: cursoId },
-        include: { ediciones: { take: 1 } },
+      prisma.edicion.findUnique({
+        where: { id: edicion_id },
       }),
     ]);
 
     if (!cliente)
       return { success: false, error: `Cliente ${clienteId} not found` };
-    if (!curso) return { success: false, error: `Curso ${cursoId} not found` };
+    if (!edicion) return { success: false, error: `Curso ${edicion_id} not found` };
 
     // 3. Simulate Moodle enrollment
-    const moodleCourseId = curso.ediciones[0]?.moodle_course_id ?? null;
+    const moodleCourseId = edicion.id ?? null;
     const moodleResult = await simulateMoodleEnrollment(
       cliente.email,
       moodleCourseId,
@@ -60,9 +59,8 @@ export async function enrollClientInCourse(
     const matricula = await prisma.matricula.create({
       data: {
         cliente_id: clienteId,
-        curso_id: cursoId,
+        edicion_id: edicion_id,
         estado: "activo",
-        moodle_enrollment_id: moodleResult.moodleEnrollmentId ?? null,
       },
     });
 
@@ -74,7 +72,7 @@ export async function enrollClientInCourse(
     );
 
     console.log(
-      `✅ [ENROLLMENT] Matricula ${matricula.id} created for cliente ${clienteId} in curso ${cursoId}`,
+      `✅ [ENROLLMENT] Matricula ${matricula.id} created for cliente ${clienteId} in curso ${edicion_id}`,
     );
 
     return { success: true, matriculaId: matricula.id };
@@ -114,8 +112,8 @@ export async function enrollClientFromCompra(
 
   const results: EnrollResult[] = [];
   for (const detalle of compra.detalles) {
-    const cursoId = detalle.producto.edicion.curso_id;
-    const result = await enrollClientInCourse(compra.cliente_id, cursoId);
+    const edicion_id = detalle.producto.edicion.id;
+    const result = await enrollClientInCourse(compra.cliente_id, edicion_id);
     results.push(result);
   }
 

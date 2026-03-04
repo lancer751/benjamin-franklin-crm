@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma } from "../config/connection";
+import { createNewModdleStudent, enrolledStudentInMoodleCourse } from "../services/moodle.service";
 
 export async function getEnrollments(req: Request, res: Response) {
   try {
@@ -97,6 +98,101 @@ export async function getEnrollmentById(req: Request, res: Response) {
     return res.status(200).json(formattedEnrollment);
   } catch (error) {
     console.error("[ENROLLMENT] getEnrollmentById failed:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function generateEnrollment(req: Request, res: Response) {
+  const { cliente_id, edicion_id } = req.body;
+
+  if (!cliente_id || !edicion_id) {
+    return res
+      .status(400)
+      .json({ error: "cliente_id and edicion_id are required" });
+  }
+
+  if(typeof cliente_id !== "string" || typeof edicion_id !== "string"){
+    return res
+      .status(400)
+      .json({ error: "invalid input for cliente_id and edicion_id" });
+  }
+
+  try {
+    const cliente = await prisma.cliente.findUnique({
+      where: { id: cliente_id },
+      select: {
+        nombre: true,
+        apellido_paterno: true,
+        apellido_materno: true,
+        dni: true,
+        email: true,
+        moodle_user_id: true,
+      },
+    });
+
+    const edicion = await prisma.edicion.findUnique({
+      where: { id: edicion_id },
+      select: { moodle_course_id: true },
+    });
+
+    if (!cliente || !edicion) {
+      return res.status(400).json({ error: "edicion or cliente not found" });
+    }
+
+    if (!edicion.moodle_course_id) {
+      return res
+        .status(400)
+        .json({ error: "No moddle_course_id associated to this edition" });
+    }
+
+    // it's better to make a query over the pago table
+    const orderWasPaid = await prisma.compra.findFirst({where: {
+      cliente_id,
+      estado_order: "pagado",
+      AND: {
+        detalles: {
+          some: {
+            producto: {
+              edicion_id
+            }
+          }
+        }
+      }
+    }})
+
+    if(!orderWasPaid) {
+      return res.status(400).json({ error: "You can't enroll a client has not paid his order." });
+    }
+
+    if (cliente.moodle_user_id === null) {
+      const newModdleStudent = await createNewModdleStudent({
+        firstname: cliente.nombre,
+        lastname: `${cliente.apellido_paterno} ${cliente.apellido_materno}`,
+        email: cliente.email,
+        username: cliente.dni,
+        password: "password123",
+      });
+
+      await prisma.cliente.update({
+        where: {id: cliente_id},
+        data: {
+          moodle_user_id: newModdleStudent?.data?.id
+        }
+      })
+      console.log(newModdleStudent)
+    }
+
+    if (cliente.moodle_user_id !== null) {
+      const isAlreadyEnrolledInEdition = await enrolledStudentInMoodleCourse(
+        cliente.moodle_user_id,
+        edicion.moodle_course_id,
+      );
+      console.log(isAlreadyEnrolledInEdition)
+    }
+
+
+  } catch (error) {
+    console.error("[ENROLLMENT] createEnrollment failed:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

@@ -70,6 +70,7 @@ export async function getProductById(req: Request, res: Response) {
     const formattedProduct = {
       id: existingProduct.id,
       coursename: existingProduct.edicion.curso.nombre,
+      edicion_id: existingProduct.edicion.id,
       modalidad: existingProduct.edicion.modalidad.nombre,
       precio: existingProduct.precio,
       fecha_inicio: existingProduct.edicion.fecha_inicio,
@@ -156,7 +157,7 @@ export async function updateProduct(req: Request, res: Response) {
     fecha_inicio,
     fecha_finalizacion,
     modalidad_id,
-    moodle_course_id,
+    moddle_course_id,
   } = req.body;
 
   if (!id || typeof id !== "string") {
@@ -167,15 +168,27 @@ export async function updateProduct(req: Request, res: Response) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
+  if (isNaN(Number(moddle_course_id))) {
+    return res.status(400).json({ message: "Invalid moddle_course_id" });
+  }
+
   try {
     const existingProduct = await prisma.producto.findUnique({
       where: { id },
+    });
+
+    const existingModalidad = await prisma.modalidad.findUnique({
+      where: { id: modalidad_id },
     });
 
     if (!existingProduct) {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    if (!existingModalidad) {
+      return res.status(404).json({ message: "Modalidad not found" });
+    }
+    console.log(moddle_course_id);
     const updatedProduct = await prisma.producto.update({
       where: { id },
       data: {
@@ -188,10 +201,7 @@ export async function updateProduct(req: Request, res: Response) {
             fecha_finalizacion: fecha_finalizacion
               ? new Date(fecha_finalizacion)
               : null,
-            moodle_course_id:
-              moodle_course_id && moodle_course_id.length > 0
-                ? moodle_course_id
-                : null,
+            moodle_course_id: Number(moddle_course_id),
           },
         },
       },

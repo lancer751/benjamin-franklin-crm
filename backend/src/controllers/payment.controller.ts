@@ -101,3 +101,40 @@ export async function registerManualPayment(
     return res.status(500).json({ error: "Internal server error" });
   }
 }
+
+export async function updatePaymentStatus(req: Request, res: Response){
+  const {id} = req.params
+  const { paymentStatus } = req.body
+
+  if (!id || typeof id !== "string") {
+    return res.status(400).json({ error: "Payment ID is required" });
+  }
+
+  if (!paymentStatus || typeof paymentStatus !== "string") {
+    return res.status(400).json({ error: "Payment status is required" });
+  }
+
+  const allowedStatuses = ["confirmado", "rechazado", "pendiente"];
+  if (!allowedStatuses.includes(paymentStatus)) {
+    return res.status(400).json({
+      error: `Invalid status. Allowed: ${allowedStatuses.join(", ")}`,
+    });
+  }
+
+  try {
+      const payment = await prisma.pago.findUnique({ where: { id } });
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+
+      const updatedPayment = await prisma.pago.update({
+        where: {id},
+        data: { estado: paymentStatus as "confirmado" | "rechazado" | "pendiente" },
+      })
+
+      return res.status(200).json(updatedPayment);
+  } catch (error) {
+    console.error("updatePaymentStatus failed:", error);
+    return res.status(500).json({ error: "Internal server error" });    
+  }
+}

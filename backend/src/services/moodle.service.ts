@@ -4,28 +4,31 @@
 import axios, { AxiosError } from "axios";
 import type { MoodleUser, NewStudent } from "../types/user";
 import { MOODLE_TOKEN, MOODLE_URL } from "../config/connection";
-import type { MoodleErrorResponse } from "../types/moodle";
+import type {
+  EnrolledStudentsPerCourse,
+  MoodleErrorResponse,
+} from "../types/moodle";
 
 export interface MoodleEnrollResult {
-    success: boolean;
-    moodleEnrollmentId?: string;
-    error?: string;
+  success: boolean;
+  moodleEnrollmentId?: string;
+  error?: string;
 }
 
 export async function simulateMoodleEnrollment(
-    clientEmail: string,
-    moodleCourseId: string | null
+  clientEmail: string,
+  moodleCourseId: string | null,
 ): Promise<MoodleEnrollResult> {
-    // Simulate a short async delay (as if calling a real API)
-    await new Promise((res) => setTimeout(res, 50));
+  // Simulate a short async delay (as if calling a real API)
+  await new Promise((res) => setTimeout(res, 50));
 
-    const simulatedEnrollmentId = `moodle_enroll_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const simulatedEnrollmentId = `moodle_enroll_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-    console.log(
-        `🎓 [MOODLE SIMULATED] Enrolled ${clientEmail} into Moodle course ID "${moodleCourseId ?? "N/A"}". Enrollment ID: ${simulatedEnrollmentId}`
-    );
+  console.log(
+    `🎓 [MOODLE SIMULATED] Enrolled ${clientEmail} into Moodle course ID "${moodleCourseId ?? "N/A"}". Enrollment ID: ${simulatedEnrollmentId}`,
+  );
 
-    return { success: true, moodleEnrollmentId: simulatedEnrollmentId };
+  return { success: true, moodleEnrollmentId: simulatedEnrollmentId };
 }
 
 type CreateStudentResult =
@@ -33,10 +36,10 @@ type CreateStudentResult =
       success: true;
       data: Pick<MoodleUser, "id" | "username">;
     }
-  | { success: false; error: string };
+  | { success: false; error: string, data?: MoodleUser };
 
-export async function getMoodleStudentByEmail(
-  email: string,
+export async function getModdleStudentById(
+  id: number,
 ): Promise<
   | { success: true; users: MoodleUser[]; warnings: [] }
   | { success: false; error: string }
@@ -49,8 +52,8 @@ export async function getMoodleStudentByEmail(
           wstoken: MOODLE_TOKEN,
           wsfunction: "core_user_get_users",
           moodlewsrestformat: "json",
-          "criteria[0][key]": "email",
-          "criteria[0][value]": `${email}`,
+          "criteria[0][key]": "id",
+          "criteria[0][value]": `${id}`,
         },
         timeout: 30_000,
       },
@@ -82,12 +85,12 @@ export async function getMoodleStudentByEmail(
     }
     return {
       success: false,
-      error: "Unexpected error while getting student by email.",
+      error: "Unexpected error while getting student by id.",
     };
   }
 }
 
-export async function createNewStudentModdle(
+export async function createNewModdleStudent(
   data: Omit<NewStudent, "id">,
 ): Promise<CreateStudentResult> {
   try {
@@ -96,19 +99,9 @@ export async function createNewStudentModdle(
       !data.email ||
       !data.firstname ||
       !data.lastname ||
-      !data.password ||
-      !data.username
+      !data.username 
     ) {
       return { success: false, error: "Missing required student fields" };
-    }
-
-    // Checking if student already exits
-    const existingStudent = await getMoodleStudentByEmail(data.email);
-    if (existingStudent.success && existingStudent.users.length > 0) {
-      return {
-        success: false,
-        error: `The student ${data.username} already exists`,
-      };
     }
 
     // Build Moodle request params
@@ -172,6 +165,35 @@ export async function createNewStudentModdle(
     return {
       success: false,
       error: "Unexpected error while creating student.",
+    };
+  }
+}
+
+export async function enrolledStudentInMoodleCourse(
+  studentId: number,
+  courseId: number,
+) {
+  try {
+    const enrolledStudentsPerCourse =
+      await axios.get<EnrolledStudentsPerCourse[]>(MOODLE_URL, {
+        params: {
+          wstoken: MOODLE_TOKEN,
+          wsfunction: "core_enrol_get_enrolled_users",
+          moodlewsrestformat: "json",
+          "criteria[0][value]": `${courseId}`,
+        },
+        timeout: 30_000,
+      });
+
+      const enrolledStudent = enrolledStudentsPerCourse.data.find(student => student.id === studentId)
+
+      console.log(enrolledStudent)
+      return Boolean(enrolledStudent) 
+    } catch (error) {
+    console.error("Error in fetch studentEnrolledInCourse", error);
+    return {
+      success: false,
+      error: "Unexpected error while getting student by course",
     };
   }
 }
