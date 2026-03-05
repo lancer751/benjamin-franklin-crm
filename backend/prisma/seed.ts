@@ -101,7 +101,7 @@ async function main() {
         modalidad_id: faker.helpers.arrayElement(modalidades).id,
         fecha_inicio: fechaInicio,
         fecha_finalizacion: fechaFin,
-        moodle_course_id: faker.string.uuid(),
+        moodle_course_id: null,
       },
     });
 
