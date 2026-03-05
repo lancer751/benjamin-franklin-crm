@@ -122,7 +122,7 @@ model Edicion {
   fecha_inicio       DateTime? @db.Date
   fecha_finalizacion DateTime? @db.Date
   modalidad_id       String
-  moodle_course_id   String?   @unique
+  moodle_course_id   Int?   @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -181,7 +181,7 @@ model Pago {
   cantidad           Decimal    @db.Decimal(10, 2)
   estado             PagoEstado
   codigo_transaccion String?     @unique
-  fecha_pago         DateTime
+  fecha_pago         DateTime?
   metodo_pago        MetodoPago
 
   createdAt DateTime @default(now())

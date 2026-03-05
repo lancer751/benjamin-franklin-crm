@@ -5,6 +5,7 @@ import {
   processPayment,
   validateWebhookSignature,
 } from "../services/payment.service";
+import { Decimal } from "@prisma/client/runtime/client";
 
 /**
  * POST /webhooks/payment
@@ -28,9 +29,9 @@ export async function handlePaymentWebhook(req: Request, res: Response) {
 
     const result = await processPayment({
       compraId: orderId,
-      amount: Number(amount),
+      insertedAmount: Decimal(amount),
       method: "online",
-      status,
+      paymentStatus: status,
       transactionCode,
       isManual: false,
     });
@@ -39,17 +40,10 @@ export async function handlePaymentWebhook(req: Request, res: Response) {
       return res.status(400).json({ error: result.error });
     }
 
-    if (result.isDuplicate) {
-      return res.status(200).json({
-        message: "Duplicate transaction — already processed",
-        pagoId: result.pagoId,
-      });
-    }
-
     return res.status(200).json({
       message: "Payment processed successfully",
-      pagoId: result.pagoId,
-      enrollmentResults: result.enrollmentResults,
+      pagoId: result.paymentData?.id,
+      status: result.paymentData?.estado,
     });
   } catch (error) {
     console.error("[WEBHOOK] handlePaymentWebhook failed:", error);

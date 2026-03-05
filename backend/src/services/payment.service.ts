@@ -43,6 +43,8 @@ export function validateWebhookSignature(
   _payload: unknown,
   _signature: string,
 ): boolean {
+  console.log(_payload)
+  console.log(_signature)
   // In production: compare HMAC-SHA256 of payload with secret key.
   // For MVP: always return true (simulated).
   return true;
@@ -100,7 +102,7 @@ export async function processPayment(
   // 5. Post-payment actions
   if (paymentStatus === "confirmado") {
     // Send payment confirmed email
-    sendPaymentConfirmedEmail(
+    await sendPaymentConfirmedEmail(
       clientEmail,
       clientName,
       insertedAmount,
@@ -108,12 +110,12 @@ export async function processPayment(
     );
 
     if (isManual) {
-      sendManualPaymentRegisteredEmail(clientEmail, clientName, insertedAmount, method);
+      await sendManualPaymentRegisteredEmail(clientEmail, clientName, insertedAmount, method);
     }
   }
 
   if (paymentStatus === "rechazado") {
-    sendPaymentRejectedEmail(clientEmail, clientName, insertedAmount);
+    await sendPaymentRejectedEmail(clientEmail, clientName, insertedAmount);
   }
 
   return { success: true, paymentData: pago };

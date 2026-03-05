@@ -1398,8 +1398,7 @@ export type ModalidadOrderByRelevanceFieldEnum = (typeof ModalidadOrderByRelevan
 export const EdicionOrderByRelevanceFieldEnum = {
   id: 'id',
   curso_id: 'curso_id',
-  modalidad_id: 'modalidad_id',
-  moodle_course_id: 'moodle_course_id'
+  modalidad_id: 'modalidad_id'
 } as const
 
 export type EdicionOrderByRelevanceFieldEnum = (typeof EdicionOrderByRelevanceFieldEnum)[keyof typeof EdicionOrderByRelevanceFieldEnum]

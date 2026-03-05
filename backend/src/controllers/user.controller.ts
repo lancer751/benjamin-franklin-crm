@@ -14,7 +14,7 @@ export async function getAllUsers(req: Request, res: Response) {
         role: true,
       },
     });
-    return res.json(users);
+    return res.status(200).json(users);
   } catch (error) {
     console.error("Error fetching users:", error);
     return res.status(500).json({ error: "Failed to fetch users" });

@@ -20,8 +20,18 @@ export type EdicionModel = runtime.Types.Result.DefaultSelection<Prisma.$Edicion
 
 export type AggregateEdicion = {
   _count: EdicionCountAggregateOutputType | null
+  _avg: EdicionAvgAggregateOutputType | null
+  _sum: EdicionSumAggregateOutputType | null
   _min: EdicionMinAggregateOutputType | null
   _max: EdicionMaxAggregateOutputType | null
+}
+
+export type EdicionAvgAggregateOutputType = {
+  moodle_course_id: number | null
+}
+
+export type EdicionSumAggregateOutputType = {
+  moodle_course_id: number | null
 }
 
 export type EdicionMinAggregateOutputType = {
@@ -30,7 +40,7 @@ export type EdicionMinAggregateOutputType = {
   fecha_inicio: Date | null
   fecha_finalizacion: Date | null
   modalidad_id: string | null
-  moodle_course_id: string | null
+  moodle_course_id: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -41,7 +51,7 @@ export type EdicionMaxAggregateOutputType = {
   fecha_inicio: Date | null
   fecha_finalizacion: Date | null
   modalidad_id: string | null
-  moodle_course_id: string | null
+  moodle_course_id: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -58,6 +68,14 @@ export type EdicionCountAggregateOutputType = {
   _all: number
 }
 
+
+export type EdicionAvgAggregateInputType = {
+  moodle_course_id?: true
+}
+
+export type EdicionSumAggregateInputType = {
+  moodle_course_id?: true
+}
 
 export type EdicionMinAggregateInputType = {
   id?: true
@@ -131,6 +149,18 @@ export type EdicionAggregateArgs<ExtArgs extends runtime.Types.Extensions.Intern
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: EdicionAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: EdicionSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: EdicionMinAggregateInputType
@@ -161,6 +191,8 @@ export type EdicionGroupByArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   _count?: EdicionCountAggregateInputType | true
+  _avg?: EdicionAvgAggregateInputType
+  _sum?: EdicionSumAggregateInputType
   _min?: EdicionMinAggregateInputType
   _max?: EdicionMaxAggregateInputType
 }
@@ -171,10 +203,12 @@ export type EdicionGroupByOutputType = {
   fecha_inicio: Date | null
   fecha_finalizacion: Date | null
   modalidad_id: string
-  moodle_course_id: string | null
+  moodle_course_id: number | null
   createdAt: Date
   updatedAt: Date
   _count: EdicionCountAggregateOutputType | null
+  _avg: EdicionAvgAggregateOutputType | null
+  _sum: EdicionSumAggregateOutputType | null
   _min: EdicionMinAggregateOutputType | null
   _max: EdicionMaxAggregateOutputType | null
 }
@@ -203,7 +237,7 @@ export type EdicionWhereInput = {
   fecha_inicio?: Prisma.DateTimeNullableFilter<"Edicion"> | Date | string | null
   fecha_finalizacion?: Prisma.DateTimeNullableFilter<"Edicion"> | Date | string | null
   modalidad_id?: Prisma.StringFilter<"Edicion"> | string
-  moodle_course_id?: Prisma.StringNullableFilter<"Edicion"> | string | null
+  moodle_course_id?: Prisma.IntNullableFilter<"Edicion"> | number | null
   createdAt?: Prisma.DateTimeFilter<"Edicion"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Edicion"> | Date | string
   curso?: Prisma.XOR<Prisma.CursoScalarRelationFilter, Prisma.CursoWhereInput>
@@ -230,7 +264,7 @@ export type EdicionOrderByWithRelationInput = {
 
 export type EdicionWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  moodle_course_id?: string
+  moodle_course_id?: number
   AND?: Prisma.EdicionWhereInput | Prisma.EdicionWhereInput[]
   OR?: Prisma.EdicionWhereInput[]
   NOT?: Prisma.EdicionWhereInput | Prisma.EdicionWhereInput[]
@@ -256,8 +290,10 @@ export type EdicionOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.EdicionCountOrderByAggregateInput
+  _avg?: Prisma.EdicionAvgOrderByAggregateInput
   _max?: Prisma.EdicionMaxOrderByAggregateInput
   _min?: Prisma.EdicionMinOrderByAggregateInput
+  _sum?: Prisma.EdicionSumOrderByAggregateInput
 }
 
 export type EdicionScalarWhereWithAggregatesInput = {
@@ -269,7 +305,7 @@ export type EdicionScalarWhereWithAggregatesInput = {
   fecha_inicio?: Prisma.DateTimeNullableWithAggregatesFilter<"Edicion"> | Date | string | null
   fecha_finalizacion?: Prisma.DateTimeNullableWithAggregatesFilter<"Edicion"> | Date | string | null
   modalidad_id?: Prisma.StringWithAggregatesFilter<"Edicion"> | string
-  moodle_course_id?: Prisma.StringNullableWithAggregatesFilter<"Edicion"> | string | null
+  moodle_course_id?: Prisma.IntNullableWithAggregatesFilter<"Edicion"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Edicion"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Edicion"> | Date | string
 }
@@ -278,7 +314,7 @@ export type EdicionCreateInput = {
   id?: string
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   curso: Prisma.CursoCreateNestedOneWithoutEdicionesInput
@@ -293,7 +329,7 @@ export type EdicionUncheckedCreateInput = {
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
   modalidad_id: string
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   productos?: Prisma.ProductoUncheckedCreateNestedManyWithoutEdicionInput
@@ -304,7 +340,7 @@ export type EdicionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   curso?: Prisma.CursoUpdateOneRequiredWithoutEdicionesNestedInput
@@ -319,7 +355,7 @@ export type EdicionUncheckedUpdateInput = {
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   modalidad_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   productos?: Prisma.ProductoUncheckedUpdateManyWithoutEdicionNestedInput
@@ -332,7 +368,7 @@ export type EdicionCreateManyInput = {
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
   modalidad_id: string
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -341,7 +377,7 @@ export type EdicionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -352,7 +388,7 @@ export type EdicionUncheckedUpdateManyInput = {
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   modalidad_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -384,6 +420,10 @@ export type EdicionCountOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
 }
 
+export type EdicionAvgOrderByAggregateInput = {
+  moodle_course_id?: Prisma.SortOrder
+}
+
 export type EdicionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   curso_id?: Prisma.SortOrder
@@ -404,6 +444,10 @@ export type EdicionMinOrderByAggregateInput = {
   moodle_course_id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type EdicionSumOrderByAggregateInput = {
+  moodle_course_id?: Prisma.SortOrder
 }
 
 export type EdicionScalarRelationFilter = {
@@ -531,7 +575,7 @@ export type EdicionCreateWithoutCursoInput = {
   id?: string
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   modalidad: Prisma.ModalidadCreateNestedOneWithoutEdicionesInput
@@ -544,7 +588,7 @@ export type EdicionUncheckedCreateWithoutCursoInput = {
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
   modalidad_id: string
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   productos?: Prisma.ProductoUncheckedCreateNestedManyWithoutEdicionInput
@@ -586,7 +630,7 @@ export type EdicionScalarWhereInput = {
   fecha_inicio?: Prisma.DateTimeNullableFilter<"Edicion"> | Date | string | null
   fecha_finalizacion?: Prisma.DateTimeNullableFilter<"Edicion"> | Date | string | null
   modalidad_id?: Prisma.StringFilter<"Edicion"> | string
-  moodle_course_id?: Prisma.StringNullableFilter<"Edicion"> | string | null
+  moodle_course_id?: Prisma.IntNullableFilter<"Edicion"> | number | null
   createdAt?: Prisma.DateTimeFilter<"Edicion"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Edicion"> | Date | string
 }
@@ -595,7 +639,7 @@ export type EdicionCreateWithoutModalidadInput = {
   id?: string
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   curso: Prisma.CursoCreateNestedOneWithoutEdicionesInput
@@ -608,7 +652,7 @@ export type EdicionUncheckedCreateWithoutModalidadInput = {
   curso_id: string
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   productos?: Prisma.ProductoUncheckedCreateNestedManyWithoutEdicionInput
@@ -645,7 +689,7 @@ export type EdicionCreateWithoutProductosInput = {
   id?: string
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   curso: Prisma.CursoCreateNestedOneWithoutEdicionesInput
@@ -659,7 +703,7 @@ export type EdicionUncheckedCreateWithoutProductosInput = {
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
   modalidad_id: string
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   matriculas?: Prisma.MatriculaUncheckedCreateNestedManyWithoutEdicionInput
@@ -685,7 +729,7 @@ export type EdicionUpdateWithoutProductosInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   curso?: Prisma.CursoUpdateOneRequiredWithoutEdicionesNestedInput
@@ -699,7 +743,7 @@ export type EdicionUncheckedUpdateWithoutProductosInput = {
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   modalidad_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matriculas?: Prisma.MatriculaUncheckedUpdateManyWithoutEdicionNestedInput
@@ -709,7 +753,7 @@ export type EdicionCreateWithoutMatriculasInput = {
   id?: string
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   curso: Prisma.CursoCreateNestedOneWithoutEdicionesInput
@@ -723,7 +767,7 @@ export type EdicionUncheckedCreateWithoutMatriculasInput = {
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
   modalidad_id: string
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   productos?: Prisma.ProductoUncheckedCreateNestedManyWithoutEdicionInput
@@ -749,7 +793,7 @@ export type EdicionUpdateWithoutMatriculasInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   curso?: Prisma.CursoUpdateOneRequiredWithoutEdicionesNestedInput
@@ -763,7 +807,7 @@ export type EdicionUncheckedUpdateWithoutMatriculasInput = {
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   modalidad_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   productos?: Prisma.ProductoUncheckedUpdateManyWithoutEdicionNestedInput
@@ -774,7 +818,7 @@ export type EdicionCreateManyCursoInput = {
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
   modalidad_id: string
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -783,7 +827,7 @@ export type EdicionUpdateWithoutCursoInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   modalidad?: Prisma.ModalidadUpdateOneRequiredWithoutEdicionesNestedInput
@@ -796,7 +840,7 @@ export type EdicionUncheckedUpdateWithoutCursoInput = {
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   modalidad_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   productos?: Prisma.ProductoUncheckedUpdateManyWithoutEdicionNestedInput
@@ -808,7 +852,7 @@ export type EdicionUncheckedUpdateManyWithoutCursoInput = {
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   modalidad_id?: Prisma.StringFieldUpdateOperationsInput | string
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -818,7 +862,7 @@ export type EdicionCreateManyModalidadInput = {
   curso_id: string
   fecha_inicio?: Date | string | null
   fecha_finalizacion?: Date | string | null
-  moodle_course_id?: string | null
+  moodle_course_id?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -827,7 +871,7 @@ export type EdicionUpdateWithoutModalidadInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   curso?: Prisma.CursoUpdateOneRequiredWithoutEdicionesNestedInput
@@ -840,7 +884,7 @@ export type EdicionUncheckedUpdateWithoutModalidadInput = {
   curso_id?: Prisma.StringFieldUpdateOperationsInput | string
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   productos?: Prisma.ProductoUncheckedUpdateManyWithoutEdicionNestedInput
@@ -852,7 +896,7 @@ export type EdicionUncheckedUpdateManyWithoutModalidadInput = {
   curso_id?: Prisma.StringFieldUpdateOperationsInput | string
   fecha_inicio?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   fecha_finalizacion?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  moodle_course_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  moodle_course_id?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -949,7 +993,7 @@ export type $EdicionPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     fecha_inicio: Date | null
     fecha_finalizacion: Date | null
     modalidad_id: string
-    moodle_course_id: string | null
+    moodle_course_id: number | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["edicion"]>
@@ -1330,7 +1374,7 @@ export interface EdicionFieldRefs {
   readonly fecha_inicio: Prisma.FieldRef<"Edicion", 'DateTime'>
   readonly fecha_finalizacion: Prisma.FieldRef<"Edicion", 'DateTime'>
   readonly modalidad_id: Prisma.FieldRef<"Edicion", 'String'>
-  readonly moodle_course_id: Prisma.FieldRef<"Edicion", 'String'>
+  readonly moodle_course_id: Prisma.FieldRef<"Edicion", 'Int'>
   readonly createdAt: Prisma.FieldRef<"Edicion", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Edicion", 'DateTime'>
 }

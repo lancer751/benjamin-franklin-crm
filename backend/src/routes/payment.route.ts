@@ -1,5 +1,5 @@
 import express from "express";
-import { getPaymentById, getPayments, registerManualPayment } from "../controllers/payment.controller";
+import { getPaymentById, getPayments, registerManualPayment, updatePaymentStatus } from "../controllers/payment.controller";
 
 const router = express.Router();
 
@@ -7,5 +7,6 @@ const router = express.Router();
 router.get("/", getPayments);
 router.get("/:id", getPaymentById);
 router.post("/manual", registerManualPayment);
+router.put("/manual/:id", updatePaymentStatus);
 
 export default router;

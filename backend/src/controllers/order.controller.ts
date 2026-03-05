@@ -2,6 +2,7 @@ import { prisma } from "../config/connection";
 import type { Request, Response } from "express";
 import type { CreateOrderDTO } from "../types/order.type";
 import { CompraEstado } from "../../generated/prisma/enums";
+import { faker } from "@faker-js/faker";
 
 export async function getOrders(req: Request, res: Response) {
   try {
@@ -96,6 +97,7 @@ export async function createOrder(
           cliente_id,
           vendedor_id: vendedor_id ?? null,
           costo_total,
+          numero_order: faker.string.alphanumeric(10).toUpperCase(),
           estado_order: CompraEstado.pendiente,
         },
       });
