@@ -1,4 +1,10 @@
-import { Prisma, CompraEstado, PagoEstado, MetodoPago, MatriculaEstado } from "../generated/prisma/client";
+import {
+  Prisma,
+  CompraEstado,
+  PagoEstado,
+  MetodoPago,
+  MatriculaEstado,
+} from "../generated/prisma/client";
 import { prisma } from "../src/config/connection";
 import { faker } from "@faker-js/faker";
 
@@ -31,7 +37,7 @@ async function main() {
     }),
   ]);
 
-  const ventasRole = roles.find(r => r.nombre === "ventas")!;
+  const ventasRole = roles.find((r) => r.nombre === "ventas")!;
 
   /* =======================================================
      USUARIOS (VENDEDORES)
@@ -49,8 +55,8 @@ async function main() {
           password: "hashedpassword",
           role_id: ventasRole.id,
         },
-      })
-    )
+      }),
+    ),
   );
 
   /* =======================================================
@@ -109,7 +115,7 @@ async function main() {
       data: {
         edicion_id: edicion.id,
         precio: new Prisma.Decimal(
-          faker.number.float({ min: 200, max: 1500, fractionDigits: 2 })
+          faker.number.float({ min: 200, max: 1500, fractionDigits: 2 }),
         ),
       },
     });
@@ -118,7 +124,7 @@ async function main() {
   }
 
   /* =======================================================
-     CLIENTES
+     20 CLIENTES
   ======================================================= */
 
   const clientes = await Promise.all(
@@ -131,65 +137,69 @@ async function main() {
           telefono: `9${faker.string.numeric(8)}`,
           email: faker.internet.email().toLowerCase(),
           dni: faker.string.numeric(8),
-          credentials_sent: faker.datatype.boolean(),
+          credentials_sent: false,
         },
-      })
-    )
+      }),
+    ),
   );
 
   /* =======================================================
      COMPRAS + DETALLES + PAGOS + MATRICULAS
   ======================================================= */
 
-  for (let i = 0; i < 15; i++) {
-    const cliente = faker.helpers.arrayElement(clientes);
-    const vendedor = faker.helpers.arrayElement(vendedores);
-    const { producto, edicion } = faker.helpers.arrayElement(productos);
+  if (process.env.NODE_ENV !== "production") {
+    for (let i = 0; i < 15; i++) {
+      const cliente = faker.helpers.arrayElement(clientes);
+      const vendedor = faker.helpers.arrayElement(vendedores);
+      const { producto, edicion } = faker.helpers.arrayElement(productos);
 
-    const estadoCompra = faker.helpers.arrayElement(Object.values(CompraEstado));
-    const precio = producto.precio;
+      const estadoCompra = faker.helpers.arrayElement(
+        Object.values(CompraEstado),
+      );
+      const precio = producto.precio;
 
-    const compra = await prisma.compra.create({
-      data: {
-        cliente_id: cliente.id,
-        vendedor_id: vendedor.id,
-        costo_total: precio,
-        estado_order: estadoCompra,
-        numero_order: generateOrderNumber(),
-      },
-    });
-
-    await prisma.detalleCompra.create({
-      data: {
-        producto_id: producto.id,
-        compra_id: compra.id,
-        costo_unitario: precio,
-      },
-    });
-
-    const estadoPago = faker.helpers.arrayElement(Object.values(PagoEstado));
-    const metodo = faker.helpers.arrayElement(Object.values(MetodoPago));
-
-    await prisma.pago.create({
-      data: {
-        orden_id: compra.id,
-        cantidad: precio,
-        estado: estadoPago,
-        metodo_pago: metodo,
-        codigo_transaccion: faker.string.alphanumeric(12).toUpperCase(),
-        fecha_pago: faker.date.recent(),
-      },
-    });
-
-    // If paid → create matrícula
-    if (estadoCompra === "pagado") {
-      await prisma.matricula.create({
+      const compra = await prisma.compra.create({
         data: {
           cliente_id: cliente.id,
-          edicion_id: edicion.id,
-          estado: MatriculaEstado.activo,
+          vendedor_id: vendedor.id,
+          costo_total: precio,
+          estado_order: estadoCompra,
+          numero_order: generateOrderNumber(),
         },
       });
+
+      await prisma.detalleCompra.create({
+        data: {
+          producto_id: producto.id,
+          compra_id: compra.id,
+          costo_unitario: precio,
+        },
+      });
+
+      const estadoPago = faker.helpers.arrayElement(Object.values(PagoEstado));
+      const metodo = faker.helpers.arrayElement(Object.values(MetodoPago));
+
+      await prisma.pago.create({
+        data: {
+          orden_id: compra.id,
+          cantidad: precio,
+          estado: estadoPago,
+          metodo_pago: metodo,
+          codigo_transaccion: faker.string.alphanumeric(12).toUpperCase(),
+          fecha_pago: faker.date.recent(),
+        },
+      });
+
+      // If paid → create matrícula
+      if (estadoCompra === "pagado") {
+        await prisma.matricula.create({
+          data: {
+            cliente_id: cliente.id,
+            edicion_id: edicion.id,
+            estado: MatriculaEstado.activo,
+          },
+        });
+      }
     }
   }
 

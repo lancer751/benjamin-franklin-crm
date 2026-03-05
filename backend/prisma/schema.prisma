@@ -181,7 +181,7 @@ model Pago {
   cantidad           Decimal    @db.Decimal(10, 2)
   estado             PagoEstado
   codigo_transaccion String?     @unique
-  fecha_pago         DateTime
+  fecha_pago         DateTime?
   metodo_pago        MetodoPago
 
   createdAt DateTime @default(now())

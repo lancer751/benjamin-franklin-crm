@@ -29,6 +29,7 @@ export async function getProducts(req: Request, res: Response) {
       id: pr.id,
       precio: pr.precio,
       coursename: pr.edicion.curso.nombre,
+      edicion_id: pr.edicion_id,
       duracion_semanas: pr.edicion.curso.duracion_semanas,
       modalidad: pr.edicion.modalidad.nombre,
       fecha_inicio: pr.edicion.fecha_inicio,
@@ -101,6 +102,8 @@ export async function createProduct(req: Request, res: Response) {
   if (!precio || !curso_id || !modalidad_id) {
     return res.status(400).json({ message: "Missing required fields" });
   }
+
+  // Create a product and a Edition in the same query
   try {
     const product = await prisma.producto.create({
       data: {
@@ -134,6 +137,7 @@ export async function createProduct(req: Request, res: Response) {
       id: product.id,
       precio: product.precio,
       coursename: product.edicion.curso.nombre,
+      edicion_id: product.edicion_id,
       duracion_semanas: product.edicion.curso.duracion_semanas,
       modalidad: product.edicion.modalidad.nombre,
       fecha_inicio: product.edicion.fecha_inicio,

@@ -209,7 +209,7 @@ export type PagoGroupByOutputType = {
   cantidad: runtime.Decimal
   estado: $Enums.PagoEstado
   codigo_transaccion: string | null
-  fecha_pago: Date
+  fecha_pago: Date | null
   metodo_pago: $Enums.MetodoPago
   createdAt: Date
   updatedAt: Date
@@ -244,7 +244,7 @@ export type PagoWhereInput = {
   cantidad?: Prisma.DecimalFilter<"Pago"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoFilter<"Pago"> | $Enums.PagoEstado
   codigo_transaccion?: Prisma.StringNullableFilter<"Pago"> | string | null
-  fecha_pago?: Prisma.DateTimeFilter<"Pago"> | Date | string
+  fecha_pago?: Prisma.DateTimeNullableFilter<"Pago"> | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoFilter<"Pago"> | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeFilter<"Pago"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Pago"> | Date | string
@@ -257,7 +257,7 @@ export type PagoOrderByWithRelationInput = {
   cantidad?: Prisma.SortOrder
   estado?: Prisma.SortOrder
   codigo_transaccion?: Prisma.SortOrderInput | Prisma.SortOrder
-  fecha_pago?: Prisma.SortOrder
+  fecha_pago?: Prisma.SortOrderInput | Prisma.SortOrder
   metodo_pago?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -274,7 +274,7 @@ export type PagoWhereUniqueInput = Prisma.AtLeast<{
   orden_id?: Prisma.StringFilter<"Pago"> | string
   cantidad?: Prisma.DecimalFilter<"Pago"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoFilter<"Pago"> | $Enums.PagoEstado
-  fecha_pago?: Prisma.DateTimeFilter<"Pago"> | Date | string
+  fecha_pago?: Prisma.DateTimeNullableFilter<"Pago"> | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoFilter<"Pago"> | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeFilter<"Pago"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Pago"> | Date | string
@@ -287,7 +287,7 @@ export type PagoOrderByWithAggregationInput = {
   cantidad?: Prisma.SortOrder
   estado?: Prisma.SortOrder
   codigo_transaccion?: Prisma.SortOrderInput | Prisma.SortOrder
-  fecha_pago?: Prisma.SortOrder
+  fecha_pago?: Prisma.SortOrderInput | Prisma.SortOrder
   metodo_pago?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -307,7 +307,7 @@ export type PagoScalarWhereWithAggregatesInput = {
   cantidad?: Prisma.DecimalWithAggregatesFilter<"Pago"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoWithAggregatesFilter<"Pago"> | $Enums.PagoEstado
   codigo_transaccion?: Prisma.StringNullableWithAggregatesFilter<"Pago"> | string | null
-  fecha_pago?: Prisma.DateTimeWithAggregatesFilter<"Pago"> | Date | string
+  fecha_pago?: Prisma.DateTimeNullableWithAggregatesFilter<"Pago"> | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoWithAggregatesFilter<"Pago"> | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Pago"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Pago"> | Date | string
@@ -318,7 +318,7 @@ export type PagoCreateInput = {
   cantidad: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado: $Enums.PagoEstado
   codigo_transaccion?: string | null
-  fecha_pago: Date | string
+  fecha_pago?: Date | string | null
   metodo_pago: $Enums.MetodoPago
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -331,7 +331,7 @@ export type PagoUncheckedCreateInput = {
   cantidad: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado: $Enums.PagoEstado
   codigo_transaccion?: string | null
-  fecha_pago: Date | string
+  fecha_pago?: Date | string | null
   metodo_pago: $Enums.MetodoPago
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -342,7 +342,7 @@ export type PagoUpdateInput = {
   cantidad?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoFieldUpdateOperationsInput | $Enums.PagoEstado
   codigo_transaccion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  fecha_pago?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  fecha_pago?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoFieldUpdateOperationsInput | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -355,7 +355,7 @@ export type PagoUncheckedUpdateInput = {
   cantidad?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoFieldUpdateOperationsInput | $Enums.PagoEstado
   codigo_transaccion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  fecha_pago?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  fecha_pago?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoFieldUpdateOperationsInput | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -367,7 +367,7 @@ export type PagoCreateManyInput = {
   cantidad: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado: $Enums.PagoEstado
   codigo_transaccion?: string | null
-  fecha_pago: Date | string
+  fecha_pago?: Date | string | null
   metodo_pago: $Enums.MetodoPago
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -378,7 +378,7 @@ export type PagoUpdateManyMutationInput = {
   cantidad?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoFieldUpdateOperationsInput | $Enums.PagoEstado
   codigo_transaccion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  fecha_pago?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  fecha_pago?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoFieldUpdateOperationsInput | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -390,7 +390,7 @@ export type PagoUncheckedUpdateManyInput = {
   cantidad?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoFieldUpdateOperationsInput | $Enums.PagoEstado
   codigo_transaccion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  fecha_pago?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  fecha_pago?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoFieldUpdateOperationsInput | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -511,7 +511,7 @@ export type PagoCreateWithoutCompraInput = {
   cantidad: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado: $Enums.PagoEstado
   codigo_transaccion?: string | null
-  fecha_pago: Date | string
+  fecha_pago?: Date | string | null
   metodo_pago: $Enums.MetodoPago
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -522,7 +522,7 @@ export type PagoUncheckedCreateWithoutCompraInput = {
   cantidad: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado: $Enums.PagoEstado
   codigo_transaccion?: string | null
-  fecha_pago: Date | string
+  fecha_pago?: Date | string | null
   metodo_pago: $Enums.MetodoPago
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -563,7 +563,7 @@ export type PagoScalarWhereInput = {
   cantidad?: Prisma.DecimalFilter<"Pago"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoFilter<"Pago"> | $Enums.PagoEstado
   codigo_transaccion?: Prisma.StringNullableFilter<"Pago"> | string | null
-  fecha_pago?: Prisma.DateTimeFilter<"Pago"> | Date | string
+  fecha_pago?: Prisma.DateTimeNullableFilter<"Pago"> | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoFilter<"Pago"> | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeFilter<"Pago"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Pago"> | Date | string
@@ -574,7 +574,7 @@ export type PagoCreateManyCompraInput = {
   cantidad: runtime.Decimal | runtime.DecimalJsLike | number | string
   estado: $Enums.PagoEstado
   codigo_transaccion?: string | null
-  fecha_pago: Date | string
+  fecha_pago?: Date | string | null
   metodo_pago: $Enums.MetodoPago
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -585,7 +585,7 @@ export type PagoUpdateWithoutCompraInput = {
   cantidad?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoFieldUpdateOperationsInput | $Enums.PagoEstado
   codigo_transaccion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  fecha_pago?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  fecha_pago?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoFieldUpdateOperationsInput | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -596,7 +596,7 @@ export type PagoUncheckedUpdateWithoutCompraInput = {
   cantidad?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoFieldUpdateOperationsInput | $Enums.PagoEstado
   codigo_transaccion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  fecha_pago?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  fecha_pago?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoFieldUpdateOperationsInput | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -607,7 +607,7 @@ export type PagoUncheckedUpdateManyWithoutCompraInput = {
   cantidad?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   estado?: Prisma.EnumPagoEstadoFieldUpdateOperationsInput | $Enums.PagoEstado
   codigo_transaccion?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  fecha_pago?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  fecha_pago?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metodo_pago?: Prisma.EnumMetodoPagoFieldUpdateOperationsInput | $Enums.MetodoPago
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -658,7 +658,7 @@ export type $PagoPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     cantidad: runtime.Decimal
     estado: $Enums.PagoEstado
     codigo_transaccion: string | null
-    fecha_pago: Date
+    fecha_pago: Date | null
     metodo_pago: $Enums.MetodoPago
     createdAt: Date
     updatedAt: Date

@@ -3,7 +3,6 @@
 // Moodle simulation + email notifications.
 
 import { prisma } from "../config/connection";
-import { simulateMoodleEnrollment } from "./moodle.service";
 import { sendEnrollmentSuccessEmail } from "./email.service";
 
 export interface EnrollResult {
@@ -41,6 +40,11 @@ export async function enrollClientInCourse(
       prisma.cliente.findUnique({ where: { id: clienteId } }),
       prisma.edicion.findUnique({
         where: { id: edicion_id },
+        select: {
+          curso: {
+            select: { nombre: true}
+          }
+        }
       }),
     ]);
 
@@ -49,11 +53,6 @@ export async function enrollClientInCourse(
     if (!edicion) return { success: false, error: `Curso ${edicion_id} not found` };
 
     // 3. Simulate Moodle enrollment
-    const moodleCourseId = edicion.id ?? null;
-    const moodleResult = await simulateMoodleEnrollment(
-      cliente.email,
-      moodleCourseId,
-    );
 
     // 4. Create Matricula record inside a transaction
     const matricula = await prisma.matricula.create({
@@ -68,7 +67,7 @@ export async function enrollClientInCourse(
     sendEnrollmentSuccessEmail(
       cliente.email,
       `${cliente.nombre} ${cliente.apellido_paterno}`,
-      curso.nombre,
+      edicion.curso.nombre,
     );
 
     console.log(
