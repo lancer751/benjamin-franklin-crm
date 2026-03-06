@@ -1,5 +1,5 @@
 import { spawn } from "child_process";
-const child = spawn("npx", ["vite", "--host", "::", "--port", "8080"], {
+const child = spawn("node_modules/.bin/vite", ["--host", "::", "--port", "8080"], {
   cwd: "./frontend",
   stdio: "inherit",
   shell: true,
