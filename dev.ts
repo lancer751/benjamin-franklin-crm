@@ -1,5 +1,5 @@
 import { spawn } from "child_process";
-const child = spawn("bunx", ["--bun", "vite"], {
+const child = spawn("npx", ["--no-install", "vite", "--host", "::", "--port", "8080"], {
   cwd: "./frontend",
   stdio: "inherit",
   shell: true,
