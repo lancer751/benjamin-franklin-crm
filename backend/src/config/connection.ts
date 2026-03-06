@@ -24,4 +24,16 @@ export const adapter = new PrismaMariaDb({
 });
 
 const prisma = new PrismaClient({ adapter });
+
+export function prismaDBConnection() {
+  prisma
+    .$connect()
+    .then(() => {
+      console.log("Connected to the database");
+    })
+    .catch((error) => {
+      console.error("Error connecting to the database:", error);
+    });
+}
+
 export { prisma };

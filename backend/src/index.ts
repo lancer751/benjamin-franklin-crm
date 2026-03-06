@@ -14,6 +14,7 @@ import productRoutes from "./routes/product.route";
 import paymentRoutes from "./routes/payment.route";
 import dashboardRoutes from "./routes/dashboard.route";
 import reportRoutes from "./routes/report.route";
+import { prismaDBConnection } from "./config/connection";
 
 dotevn.config();
 const app = express();
@@ -48,6 +49,8 @@ export const emailTransporter = nodemailer.createTransport({
   },
   tls: { rejectUnauthorized: false }
 });
+
+prismaDBConnection()
 
 app.get('/', (req, res) => {
   res.json({ message: 'Hello the API was deployed successfully!' });
