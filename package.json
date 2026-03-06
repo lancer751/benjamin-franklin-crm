@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start:frontend": "cd frontend && bun dev",
+    "dev": "npx tsx dev.ts",
     "build:dev": "cd frontend && npx vite build --mode development",
     "start:backend": "cd backend && bun dev"
   },
@@ -16,7 +15,6 @@
   "dependencies": {
     "autoprefixer": "^10.4.24",
     "axios": "^1.13.6",
-    "backend": "^0.0.0",
     "postcss": "^8.5.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
