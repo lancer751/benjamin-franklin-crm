@@ -1,6 +1,6 @@
-# Moodle Enrollment Manager - Backend API
+# Moodle Enrollment Manager — Backend API
 
-A comprehensive course enrollment and payment management system that seamlessly integrates with Moodle, handling customer orders, payments, student enrollments, and administrative reporting.
+A course enrollment and payment management system that integrates with Moodle, handling customer orders, payments, student enrollments, and administrative reporting.
 
 ## Table of Contents
 
@@ -14,21 +14,23 @@ A comprehensive course enrollment and payment management system that seamlessly 
 - [Business Logic](#business-logic)
 - [Example Usage](#example-usage)
 - [Development Tools](#development-tools)
+- [Error Handling](#error-handling)
+- [Deployment](#deployment)
 
 ---
 
 ## Project Overview
 
-The Moodle Enrollment Manager is a production-ready backend system designed to manage the complete student enrollment lifecycle:
+The Moodle Enrollment Manager is a backend system designed to manage the complete student enrollment lifecycle:
 
-- **Order Management**: Create and track customer purchases for course products
-- **Payment Processing**: Accept payments through multiple methods (cash, bank transfer, online, POS, Yape)
-- **Enrollment Integration**: Automatically enroll students in their purchased courses within Moodle
-- **Admin Dashboard**: Real-time visibility into payments and sales metrics
-- **Email Notifications**: Automated email confirmations for payments and enrollments
-- **Reporting**: Comprehensive sales and enrollment analytics with filtering
+- **Order Management** — Create and track customer purchases for course products
+- **Payment Processing** — Accept payments through multiple methods (cash, bank transfer, online, POS, Yape)
+- **Enrollment Integration** — Automatically enroll students in their purchased courses within Moodle
+- **Admin Dashboard** — Real-time visibility into payments and sales metrics
+- **Email Notifications** — Automated email confirmations for payments and enrollments
+- **Reporting** — Sales and enrollment analytics with filtering
 
-The system is built for a Spanish-language education market (Peruvian context based on currency and terminology) and provides both REST API endpoints and webhook support for payment gateway integration.
+The system is built for a Spanish-language education market (Peruvian context) and exposes REST API endpoints plus a webhook for payment gateway integration.
 
 ### Key Features
 
@@ -37,38 +39,37 @@ The system is built for a Spanish-language education market (Peruvian context ba
 - ✅ Multiple payment method support with state tracking
 - ✅ Role-based access control (admin/seller roles)
 - ✅ Real-time payment dashboard
-- ✅ Sales and enrollment reports with date/course/payment method filtering
-- ✅ Development/simulation mode for testing
-- ✅ Duplicate payment detection and recovery
-- ✅ Simulated email notifications (console logging)
+- ✅ Sales and enrollment reports with date/course/payment-method filtering
+- ✅ Duplicate payment detection and prevention
 
 ---
 
 ## Tech Stack
 
 **Runtime & Framework**
-- [Node.js](https://nodejs.org/) - via Bun runtime
-- [Express.js](https://expressjs.com/) v5.2.1 - HTTP server
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [Node.js](https://nodejs.org/) with [Bun](https://bun.sh/) as package manager
+- [Express.js](https://expressjs.com/) v5.2.1 — HTTP server
+- [TypeScript](https://www.typescriptlang.org/) — Type safety
 
 **Database & ORM**
-- [MySQL](https://www.mysql.com/) - Relational database
-- [Prisma](https://www.prisma.io/) v7.4.2 - ORM with migrations
-- [@prisma/adapter-mariadb](https://www.prisma.io/docs/orm/reference/adapter-mariadb) - MariaDB adapter
+- [MySQL](https://www.mysql.com/) — Relational database
+- [Prisma](https://www.prisma.io/) v7.4.2 — ORM with migrations
+- [@prisma/adapter-mariadb](https://www.prisma.io/docs/orm/reference/adapter-mariadb) — MariaDB/MySQL adapter
 
 **Authentication & Security**
-- [bcrypt](https://github.com/kelektiv/node.bcrypt.js) v6.0.0 - Password hashing
-- JWT support for admin authentication
+- [bcrypt](https://github.com/kelektiv/node.bcrypt.js) v6.0.0 — Password hashing
+- Shared-secret admin guard (`x-admin-secret` header)
 
 **Integration & Communication**
-- [axios](https://axios-http.com/) v1.13.5 - HTTP client for Moodle API
-- [nodemailer](https://nodemailer.com/) v8.0.1 - Email sending (SMTP configured)
-- [cors](https://github.com/expressjs/cors) v2.8.5 - Cross-origin support
+- [axios](https://axios-http.com/) v1.13.5 — HTTP client for Moodle REST API
+- [nodemailer](https://nodemailer.com/) v8.0.1 — Email sending via SMTP
+- [cors](https://github.com/expressjs/cors) v2.8.6 — Cross-origin support
+- [qs](https://github.com/ljharb/qs) v6.15.0 — Query-string serialization for Moodle payloads
 
 **Development Tools**
-- [tsx](https://github.com/esbuild-kit/tsx) v4.21.0 - TypeScript execution
-- [ESLint](https://eslint.org/) - Code linting
-- [@faker-js/faker](https://fakerjs.dev/) v10.3.0 - Database seeding
+- [tsx](https://github.com/esbuild-kit/tsx) v4.21.0 — TypeScript execution with watch mode
+- [ESLint](https://eslint.org/) v10 — Code linting
+- [@faker-js/faker](https://fakerjs.dev/) v10.3.0 — Database seeding
 
 ---
 
@@ -76,35 +77,35 @@ The system is built for a Spanish-language education market (Peruvian context ba
 
 ### Prerequisites
 
-- **Node.js** 18+ (or Bun 1.3.8+)
+- **Node.js** 18+ or **Bun** 1.x
 - **MySQL 8.0** or **MariaDB 10.5+**
-- **npm**, **yarn**, or **bun** package manager
+- **bun** (recommended) or **npm** / **yarn**
 
-### Step 1: Clone & Install Dependencies
+### Step 1: Install Dependencies
 
 ```bash
 cd backend
-npm install
-# or
 bun install
+# or
+npm install
 ```
 
 ### Step 2: Configure Environment Variables
 
-Create a `.env.local` file in the `backend/` directory with the following variables:
+Create a `.env` file in the `backend/` directory (you can copy from `.env.local`):
 
 ```dotenv
 # Database Configuration
-DATABASE_URL=mysql://user:password@localhost:3306/moodle_enrollment
+DATABASE_URL=mysql://user:password@localhost:3306/bfedu_db
 DATABASE_HOST=localhost
 DATABASE_PORT=3306
 DATABASE_USER=your_db_user
 DATABASE_PASSWORD=your_db_password
-DATABASE_NAME=moodle_enrollment
+DATABASE_NAME=bfedu_db
 
-# Server Configuration
-PORT=3000
-HOST=localhost
+# Server
+PORT=5000
+HOST=https://your-moodle-host.com
 
 # Moodle Integration
 MOODLE_URL=https://your-moodle-domain.com/webservice/rest/server.php
@@ -112,62 +113,60 @@ MOODLE_TOKEN=your_moodle_api_token
 MOODLE_PASSWORD_CHANGE_PATH=/login/change_password.php
 
 # Email Configuration (SMTP)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-FROM_EMAIL=noreply@yourcompany.com
+SMTP_HOST=mail.yourcompany.com
+SMTP_PORT=465
+SMTP_USER=soporte@yourcompany.com
+SMTP_PASS=your_smtp_password
 
-# Admin Authentication
+# Admin Authentication (shared secret guard)
 ADMIN_SECRET=your_super_secret_admin_key
 
-# Payment Gateway (Optional — simulated in MVP)
+# Payment Gateway Webhook Signature
 PAYMENT_WEBHOOK_SECRET=webhook_secret_key
 
-# JWT Configuration (Optional)
+# JWT (future use)
 JWT_SECRET=your_jwt_secret_key
 ```
 
 ### Step 3: Set Up the Database
 
-Initialize Prisma and create the database schema:
-
 ```bash
 # Generate Prisma Client
+bunx prisma generate
+# or
 npx prisma generate
 
 # Run migrations
-npx prisma migrate dev --name init
+bunx prisma migrate dev --name init
 
-# (Optional) Seed database with sample data
-npx prisma db seed
+# (Optional) Seed with sample data
+bun run seeding
 ```
 
 ### Step 4: Start the Server
 
-**Development Mode** (with auto-reload):
+**Development** (auto-reload):
 ```bash
-npm run dev
-# or
 bun run dev
+# or
+npm run dev
 ```
 
-**Production Mode** (compiled):
+**Production** (compiled):
 ```bash
 npm run build
 node dist/index.js
 ```
 
-The server will start on `http://localhost:3000` (or your configured PORT).
+The server starts on `http://localhost:5000` (or your configured `PORT`).
 
 ### Verification
 
-Check that the server is running by visiting:
-```
-http://localhost:3000/api/courses
+```bash
+curl http://localhost:5000/api/courses
 ```
 
-You should receive a JSON response with courses or an empty array.
+You should receive a JSON array of courses (or an empty array on a fresh database).
 
 ---
 
@@ -178,233 +177,235 @@ You should receive a JSON response with courses or an empty array.
 ```
 backend/
 ├── src/
-│   ├── index.ts                 # Express app setup & route mounting
+│   ├── index.ts                        # Express app setup & route mounting
 │   ├── config/
-│   │   └── connection.ts        # Database & external API configuration
-│   ├── controllers/             # HTTP request handlers
-│   │   ├── user.controller.ts          # Admin user management
+│   │   └── connection.ts               # Prisma client instance
+│   ├── controllers/                    # HTTP request handlers (10 files)
+│   │   ├── user.controller.ts          # Internal user (admin/seller) management
 │   │   ├── customer.controller.ts      # Customer (Cliente) CRUD
-│   │   ├── course.controller.ts        # Course management
-│   │   ├── product.controller.ts       # Product (with edition) CRUD
+│   │   ├── course.controller.ts        # Course & edition management
+│   │   ├── product.controller.ts       # Product (priced edition) CRUD
 │   │   ├── order.controller.ts         # Order (Compra) creation & retrieval
-│   │   ├── payment.controller.ts       # Payment registration (admin)
-│   │   ├── enrollment.controller.ts    # Enrollment (Matricula) retrieval
-│   │   ├── webhook.controller.ts       # Payment gateway webhook handler
-│   │   ├── dashboard.controller.ts     # Payment dashboard
-│   │   ├── report.controller.ts        # Sales & enrollment reports
-│   │   └── dev.controller.ts           # Development/simulation endpoints
-│   ├── services/                # Core business logic
+│   │   ├── payment.controller.ts       # Manual payment registration
+│   │   ├── enrollment.controller.ts    # Enrollment (Matricula) retrieval & update
+│   │   ├── webhook.controller.ts       # Online payment gateway webhook
+│   │   ├── dashboard.controller.ts     # Payment dashboard summary
+│   │   └── report.controller.ts        # Sales & enrollment reports
+│   ├── services/                       # Core business logic (4 files)
+│   │   ├── enrollment.service.ts       # Enrollment orchestration
 │   │   ├── payment.service.ts          # Payment processing & state transitions
-│   │   ├── enrollment.service.ts       # Student enrollment orchestration
-│   │   ├── email.service.ts            # Email notifications (simulated)
-│   │   └── moodle.service.ts           # Moodle API integration
-│   ├── helpers/
-│   │   └── moodle.helper.ts            # Moodle REST API utilities
+│   │   ├── moodle.service.ts           # Moodle API integration
+│   │   └── email.service.ts            # Email notifications via SMTP
+│   ├── helpers/                        # Utility functions (3 files)
+│   │   ├── course.helper.ts            # Course/edition query helpers
+│   │   ├── moodle.helper.ts            # Moodle REST API formatting utilities
+│   │   └── user.helper.ts              # User query & credential helpers
 │   ├── middleware/
-│   │   └── admin.middleware.ts         # Admin authentication (JWT/secret key)
-│   ├── routes/                  # API endpoint definitions
-│   │   ├── user.route.ts        → /api/users
-│   │   ├── customer.route.ts    → /api/customers
-│   │   ├── course.route.ts      → /api/courses
-│   │   ├── product.route.ts     → /api/products
-│   │   ├── order.route.ts       → /api/orders
-│   │   ├── payment.route.ts     → /api/payments
-│   │   ├── enrollment.route.ts  → /api/enrollments
-│   │   ├── webhook.route.ts     → /api/webhooks
-│   │   ├── dashboard.route.ts   → /api/dashboard
-│   │   ├── report.route.ts      → /api/reports
-│   │   └── dev.route.ts         → /api/dev
-│   ├── types/                   # TypeScript interfaces & types
-│   │   ├── user.ts
-│   │   ├── order.type.ts
-│   │   ├── course.ts
-│   │   ├── moodle.ts
-│   │   └── ...
-│   └── model/                   # (Reserved for future use)
+│   │   └── admin.middleware.ts         # Admin shared-secret guard
+│   ├── routes/                         # API endpoint definitions (10 files)
+│   │   ├── user.route.ts       → /api/users
+│   │   ├── customer.route.ts   → /api/customers
+│   │   ├── course.route.ts     → /api/courses
+│   │   ├── product.route.ts    → /api/products
+│   │   ├── order.route.ts      → /api/orders
+│   │   ├── payment.route.ts    → /api/payments
+│   │   ├── enrollment.route.ts → /api/enrollments
+│   │   ├── webhook.route.ts    → /api/webhooks
+│   │   ├── dashboard.route.ts  → /api/dashboard
+│   │   └── report.route.ts     → /api/reports
+│   └── types/                          # TypeScript interfaces & enums (4 files)
+│       ├── user.ts
+│       ├── course.ts
+│       ├── moodle.ts
+│       └── order.type.ts
 ├── prisma/
-│   ├── schema.prisma            # Database schema & models
-│   ├── seed.ts                  # Database seeding script
-│   └── migrations/              # Prisma migration history
+│   ├── schema.prisma                   # Database schema & models
+│   ├── seed.ts                         # Seeding script (faker-based)
+│   └── migrations/                     # Prisma migration history
 ├── generated/
-│   └── prisma/                  # Auto-generated Prisma Client types
+│   └── prisma/                         # Auto-generated Prisma Client
+├── dist/                               # Compiled output (tsc)
 ├── package.json
 ├── tsconfig.json
 ├── eslint.config.ts
+├── prisma.config.ts
 └── README.md
 ```
 
-### Request/Response Flow
+### Request / Response Flow
 
 ```
 HTTP Request
     ↓
-Express Router (route/*.ts)
+Express Router (routes/*.ts)
     ↓
-Controller (controllers/*.ts)
+[adminMiddleware — if protected]
     ↓
-Service (services/*.ts) — Business Logic
+Controller (controllers/*.ts)  — parse input, validate, return response
     ↓
-Prisma Client → Database
+Service (services/*.ts)        — business logic, transactions, external calls
     ↓
-Response (JSON)
+Prisma Client → MySQL Database
+    ↓
+JSON Response
 ```
 
 ### Module Responsibilities
 
 | Module | Purpose |
 |--------|---------|
-| **Controllers** | Parse HTTP requests, validate input, call services, return responses |
-| **Services** | Implement business logic, database transactions, external API calls |
-| **Helpers** | Utility functions (Moodle API formatting, queries, etc.) |
+| **Controllers** | Parse HTTP requests, validate input, call services, return JSON responses |
+| **Services** | Business logic, database transactions, Moodle API calls, email dispatch |
+| **Helpers** | Reusable utility functions (query builders, API payload formatters) |
 | **Middleware** | Authenticate & authorize requests before reaching controllers |
-| **Routes** | Define HTTP endpoint paths and link to controllers |
-
-### Authentication Strategy
-
-**Current Implementation** (Simple):
-- Admin endpoints are protected by the `adminMiddleware`
-- Expects header: `x-admin-secret: <ADMIN_SECRET>`
-- Compares against `ADMIN_SECRET` environment variable
-
-**Recommended Upgrade** (Production):
-- Replace with JWT tokens signed with `JWT_SECRET`
-- Include user roles (admin, seller, customer) in token payload
-- Validate token signature and expiration on protected routes
+| **Routes** | Map HTTP verbs + paths to controllers |
+| **Types** | Shared TypeScript interfaces and enums |
 
 ---
 
 ## Database Overview
 
+### Entity Relationships
+
+```
+Role ──< Usuario (admin / seller accounts)
+                    │
+                    │ vendedor_id (optional)
+                    ▼
+Cliente ──────────< Compra >──────────< DetalleCompra >──── Producto
+   │                  │                                          │
+   │                  └────────────< Pago                       │
+   │                                                            ▼
+   └─────────────────────────────────────────────── Edicion >── Curso
+                                                       │         │
+   Matricula <──────────────────────────────── Edicion │    Modalidad
+```
+
 ### Core Models
 
-#### Usuario (Internal User)
-Represents admin and seller accounts in the system.
+#### Role
+System roles for internal users.
 
-```typescript
-{
-  id: UUID,                   // Unique identifier
-  nombre: string,             // First name
-  apellido_paterno: string,   // Paternal surname
-  apellido_materno: string,   // Maternal surname
-  email: string,              // Unique email
-  telefono: string,           // Phone number
-  role_id: UUID,              // Foreign key to Role
-  is_active: boolean,         // Account status
-  password: string,           // Hashed password (bcrypt)
-  createdAt: DateTime,
-  updatedAt: DateTime
-}
-```
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `nombre` | String | Unique role name |
+| `descripcion` | String? | Optional description |
+| `is_active` | Boolean | Default `true` |
+
+#### Usuario (Internal User)
+Admin and seller accounts.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `nombre` | String | First name |
+| `apellido_paterno` | String | Paternal surname |
+| `apellido_materno` | String? | Maternal surname (optional) |
+| `email` | String | Unique |
+| `telefono` | String? | Phone number |
+| `role_id` | UUID | FK → Role |
+| `is_active` | Boolean | Account status |
+| `password` | String | bcrypt-hashed |
 
 #### Cliente (Customer)
-Represents external students/clients who purchase courses.
+External students / purchasers.
 
-```typescript
-{
-  id: UUID,
-  nombre: string,
-  apellido_paterno: string,
-  apellido_materno: string,
-  telefono: string,           // 9-digit Peruvian format
-  email: string,              // Unique
-  dni: string,                // National ID (8 digits, unique)
-  moodle_user_id: number,     // Moodle user ID (optional)
-  credentials_sent: boolean,  // Moodle credentials sent flag
-  createdAt: DateTime,
-  updatedAt: DateTime
-}
-```
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `nombre` | String | First name |
+| `apellido_paterno` | String | Paternal surname |
+| `apellido_materno` | String | Maternal surname |
+| `telefono` | Char(9)? | Peruvian mobile format |
+| `email` | String | Unique |
+| `dni` | Char(8) | National ID, unique |
+| `moodle_user_id` | Int? | Linked Moodle user ID |
+| `credentials_sent` | Boolean | Whether Moodle credentials were emailed |
 
 #### Curso (Course)
-Master course information.
+Master course catalogue.
 
-```typescript
-{
-  id: UUID,
-  nombre: string,             // Course name
-  descripcion: string,        // Course description
-  status: CursoStatus,        // activo | inactivo
-  duracion_semanas: number,   // Duration in weeks
-  createdAt: DateTime,
-  updatedAt: DateTime
-}
-```
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `nombre` | String | Course name |
+| `descripcion` | String? | Description |
+| `status` | CursoStatus | `activo` \| `inactivo` |
+| `duracion_semanas` | Int | Duration in weeks |
+
+#### Modalidad
+Delivery modality (e.g. online, presencial, híbrido).
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `nombre` | String | Unique modality name |
 
 #### Edicion (Course Edition)
-A specific offering of a course (time-bound, mode-bound).
+A specific, time-bound offering of a course with a defined modality and an optional Moodle mapping.
 
-```typescript
-{
-  id: UUID,
-  curso_id: UUID,
-  fecha_inicio: Date,         // Start date (optional)
-  fecha_finalizacion: Date,   // End date (optional)
-  modalidad_id: UUID,         // online, presencial, hybrid
-  moodle_course_id: string,   // Moodle course ID (optional)
-  createdAt: DateTime,
-  updatedAt: DateTime
-}
-```
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `curso_id` | UUID | FK → Curso |
+| `fecha_inicio` | Date? | Start date |
+| `fecha_finalizacion` | Date? | End date |
+| `modalidad_id` | UUID | FK → Modalidad |
+| `moodle_course_id` | Int? | Moodle course ID (unique) |
 
 #### Producto (Product)
-A priced course edition (for sale).
+A priced edition available for sale.
 
-```typescript
-{
-  id: UUID,
-  edicion_id: UUID,
-  precio: Decimal(10,2),      // Price in S/ (Peruvian sol)
-  createdAt: DateTime,
-  updatedAt: DateTime
-}
-```
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `edicion_id` | UUID | FK → Edicion |
+| `precio` | Decimal(10,2) | Price in S/ (Peruvian sol) |
 
 #### Compra (Order)
-A customer's purchase containing one or more products.
+A customer's purchase grouping one or more products.
 
-```typescript
-{
-  id: UUID,
-  cliente_id: UUID,
-  vendedor_id: UUID (nullable), // Seller (optional)
-  costo_total: Decimal(10,2),
-  estado_order: CompraEstado, // pendiente → pagado → (cancelado|reembolsado)
-  numero_order: string,       // Unique order number (10 chars)
-  createdAt: DateTime,
-  updatedAt: DateTime
-}
-```
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `cliente_id` | UUID | FK → Cliente |
+| `vendedor_id` | UUID? | FK → Usuario (optional) |
+| `costo_total` | Decimal(10,2) | Total amount |
+| `estado_order` | CompraEstado | Order state |
+| `numero_order` | Char(10) | Unique order number |
+
+#### DetalleCompra (Order Line Item)
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `compra_id` | UUID | FK → Compra |
+| `producto_id` | UUID | FK → Producto |
+| `costo_unitario` | Decimal(10,2) | Unit price at time of purchase |
 
 #### Pago (Payment)
-Individual payment transactions for an order.
+Individual payment transactions linked to an order.
 
-```typescript
-{
-  id: UUID,
-  orden_id: UUID,             // Foreign key to Compra
-  cantidad: Decimal(10,2),    // Amount paid
-  estado: PagoEstado,         // pendiente | confirmado | rechazado | reembolsado
-  codigo_transaccion: string, // Transaction code from payment gateway
-  fecha_pago: DateTime,       // Payment timestamp
-  metodo_pago: MetodoPago,    // Payment method
-  createdAt: DateTime,
-  updatedAt: DateTime
-}
-```
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `orden_id` | UUID | FK → Compra |
+| `cantidad` | Decimal(10,2) | Amount paid |
+| `estado` | PagoEstado | Payment state |
+| `codigo_transaccion` | String? | Gateway transaction code (unique) |
+| `fecha_pago` | DateTime? | Payment timestamp |
+| `metodo_pago` | MetodoPago | Payment method |
 
 #### Matricula (Enrollment)
-Represents a student's enrollment in a course edition.
+A student's enrollment in a specific course edition.
 
-```typescript
-{
-  id: UUID,
-  cliente_id: UUID,
-  edicion_id: UUID,
-  estado: MatriculaEstado,    // activo | retirado | completado
-  createdAt: DateTime,
-  updatedAt: DateTime
-}
-```
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Primary key |
+| `cliente_id` | UUID | FK → Cliente |
+| `edicion_id` | UUID | FK → Edicion |
+| `estado` | MatriculaEstado | Enrollment state |
 
 ### Enums
 
@@ -420,12 +421,12 @@ Represents a student's enrollment in a course edition.
 
 ## Authentication & Authorization
 
-### Admin Middleware
+### Admin Middleware (`admin.middleware.ts`)
 
-Admin-protected endpoints require the `x-admin-secret` header:
+Admin-protected endpoints require the `x-admin-secret` header. The value must match the `ADMIN_SECRET` environment variable (or the default `"admin-secret-key"` if not set).
 
 ```
-Header: x-admin-secret = <ADMIN_SECRET from .env>
+x-admin-secret: <ADMIN_SECRET>
 ```
 
 **Protected Endpoints:**
@@ -433,125 +434,168 @@ Header: x-admin-secret = <ADMIN_SECRET from .env>
 - `PUT /api/courses/:id` — Update course
 - `POST /api/payments/manual` — Register manual payment
 
+> **Note:** This is a simple shared-secret guard designed for MVP use. Replace with JWT-based authentication (using `JWT_SECRET`) before going to production.
+
 ---
 
 ## API Documentation
 
-All endpoints are prefixed with `/api` and return JSON responses.
+All endpoints are prefixed with `/api` and return JSON.
 
-### User Management `/api/users`
+### Users `/api/users`
 
-**GET /api/users** — List all users
-**GET /api/users/:id** — Get user by ID
-**POST /api/users** — Create user (admin only)
-**PUT /api/users/:id** — Update user (admin only)
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/users` | List all internal users |
+| `GET` | `/api/users/:id` | Get user by ID |
+| `POST` | `/api/users` | Create a new user |
+| `PUT` | `/api/users/:id` | Update a user |
 
-### Customer Management `/api/customers`
+---
 
-**GET /api/customers** — List all customers
-**GET /api/customers/:id** — Get customer by ID
-**POST /api/customers** — Create customer
-**PUT /api/customers/:id** — Update customer
+### Customers `/api/customers`
 
-### Course Management `/api/courses`
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/customers` | List all customers |
+| `GET` | `/api/customers/:id` | Get customer by ID |
+| `POST` | `/api/customers` | Create a new customer |
+| `PUT` | `/api/customers/:id` | Update customer data |
 
-**GET /api/courses** — List courses (paginated)
-**GET /api/courses/:id** — Get course by ID
-**POST /api/courses** — Create course (admin only)
-**PUT /api/courses/:id** — Update course (admin only)
+---
 
-### Product Management `/api/products`
+### Courses `/api/courses`
 
-**GET /api/products** — List all products
-**GET /api/products/:id** — Get product by ID
-**POST /api/products** — Create product with edition
-**PUT /api/products/:id** — Update product
+| Method | Path | Protection | Description |
+|--------|------|-----------|-------------|
+| `GET` | `/api/courses` | — | List all courses |
+| `GET` | `/api/courses/:id` | — | Get course by ID (includes editions) |
+| `POST` | `/api/courses` | Admin | Create a new course |
+| `PUT` | `/api/courses/:id` | Admin | Update a course |
 
-### Order Management `/api/orders`
+---
 
-**GET /api/orders** — List all orders
-**GET /api/orders/:id** — Get complete order with line items and payments
-**POST /api/orders** — Create order (Compra)
-**PUT /api/orders/:id** — Update order status/vendor
+### Products `/api/products`
 
-### Payment Management `/api/payments`
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/products` | List all products |
+| `GET` | `/api/products/:id` | Get product by ID |
+| `POST` | `/api/products` | Create a product (with edition) |
+| `PUT` | `/api/products/:id` | Update a product |
 
-**GET /api/payments** — List payments
-**GET /api/payments/:id** — Get payment by ID
-**POST /api/payments/manual** — Register manual payment (admin only)
+---
 
-### Payment Webhooks `/api/webhooks`
+### Orders `/api/orders`
 
-**POST /api/webhooks/payment** — Receive payment confirmation from gateway
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/orders` | List all orders |
+| `GET` | `/api/orders/:id` | Get order with line items and payments |
+| `POST` | `/api/orders` | Create a new order (Compra) |
+| `PUT` | `/api/orders/:id` | Update order status or seller |
 
-### Enrollment `/api/enrollments`
+---
 
-**GET /api/enrollments** — List all enrollments
-**GET /api/enrollments/:id** — Get enrollment details
+### Payments `/api/payments`
+
+| Method | Path | Protection | Description |
+|--------|------|-----------|-------------|
+| `GET` | `/api/payments` | — | List all payments |
+| `GET` | `/api/payments/:id` | — | Get payment by ID |
+| `POST` | `/api/payments/manual` | Admin | Register a manual payment & trigger enrollment |
+| `PUT` | `/api/payments/manual/:id` | — | Update payment status |
+
+---
+
+### Webhooks `/api/webhooks`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/webhooks/payment` | Receive payment confirmation from online gateway (Culqi) |
+
+The webhook validates the payment signature, registers the `Pago`, marks the `Compra` as `pagado`, and triggers automatic Moodle enrollment.
+
+---
+
+### Enrollments `/api/enrollments`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/enrollments` | List all enrollments |
+| `GET` | `/api/enrollments/:id` | Get enrollment details |
+| `POST` | `/api/enrollments` | Manually generate an enrollment |
+| `PUT` | `/api/enrollments/:id` | Update enrollment status |
+
+---
 
 ### Dashboard `/api/dashboard`
 
-**GET /api/dashboard/payments** — Payment dashboard with recent transactions
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/dashboard/payments` | Payment summary dashboard |
+
+---
 
 ### Reports `/api/reports`
 
-**GET /api/reports/sales** — Sales & enrollment analytics (with filters)
-
-### Development `/api/dev`
-
-**POST /api/dev/simulate-payment** — Simulate payment (dev only)
-**GET /api/dev/emails** — View simulated emails (dev only)
-**DELETE /api/dev/emails** — Clear email store (dev only)
+| Method | Path | Query Params | Description |
+|--------|------|--------------|-------------|
+| `GET` | `/api/reports/sales` | `startDate`, `endDate`, `courseId`, `paymentMethod` | Filtered sales & enrollment report |
 
 ---
 
 ## Business Logic
 
-### The Order-to-Enrollment Workflow
+### Order-to-Enrollment Workflow
 
 ```
 1. CREATE ORDER (Compra)
    Customer selects products → POST /api/orders
-   ├─ Compra state: "pendiente"
+   ├─ Compra.estado_order = "pendiente"
    ├─ Cliente associated
    └─ DetalleCompra items created
 
-2. PAYMENT INITIATED
-   Customer pays via gateway → POST /api/webhooks/payment
-   OR admin registers → POST /api/payments/manual
-   ├─ Pago created with method & amount
-   └─ Pago state: "confirmado" | "rechazado" | "pendiente"
+2. PAYMENT
+   Online gateway  → POST /api/webhooks/payment
+   OR admin manual → POST /api/payments/manual
+   ├─ Pago record created (method, amount, transaction code)
+   └─ Pago.estado = "confirmado" | "rechazado" | "pendiente"
 
-3. PAYMENT CONFIRMATION (if "confirmado")
-   ├─ Compra state → "pagado"
-   ├─ Email: Payment confirmation sent
-   └─ Auto-Enrollment Triggered!
+3. PAYMENT CONFIRMED
+   ├─ Compra.estado_order → "pagado"
+   ├─ Email: payment confirmation sent to customer
+   └─ Auto-enrollment triggered
 
 4. AUTO-ENROLLMENT
-   System enrolls customer in purchased courses:
-   ├─ For each DetalleCompra → Producto → Edicion → Curso:
-   │  ├─ Create Matricula record
-   │  ├─ Simulate Moodle enrollment
-   │  └─ Send enrollment success email
-   ├─ Matricula state: "activo"
-   └─ Customer ready to access course in Moodle
+   For each DetalleCompra → Producto → Edicion:
+   ├─ Matricula record created (estado = "activo")
+   ├─ Moodle API: enroll student in moodle_course_id
+   └─ Email: enrollment confirmation sent to customer
 
 5. COMPLETION
-   ├─ Enroll confirms in Moodle dashboard
-   └─ Course content accessible
+   └─ Student can access course in Moodle
 ```
 
 ### Payment Methods
 
-The system supports five payment methods:
-
 | Method | Use Case |
 |--------|----------|
-| **online** | Credit/debit card, online gateways |
-| **transferencia** | Bank transfer |
-| **efectivo** | Cash, in-person |
-| **pos** | Point-of-sale, card reader |
-| **yape** | Peruvian mobile payment app |
+| `online` | Credit/debit card, online gateway (Culqi) |
+| `transferencia` | Bank transfer |
+| `efectivo` | Cash, in-person |
+| `pos` | Point-of-sale terminal |
+| `yape` | Peruvian mobile payment app |
+
+### Moodle Integration
+
+The `moodle.service.ts` and `moodle.helper.ts` handle all Moodle REST API calls:
+
+- **Create user** — Creates a Moodle account using the student's name, DNI, and email
+- **Enroll in course** — Enrolls the student in the edition's `moodle_course_id`
+- **Send credentials** — Emails the student their initial Moodle password
+
+Moodle calls are made to `MOODLE_URL` using the `MOODLE_TOKEN` API token.
 
 ---
 
@@ -559,52 +603,53 @@ The system supports five payment methods:
 
 ### Complete Purchase & Enrollment Flow
 
-**Step 1: Create Customer**
+**1. Create Customer**
 ```bash
-POST /api/customers
-{
-  "nombre": "Pedro",
-  "apellido_paterno": "Morales",
-  "apellido_materno": "Ruiz",
-  "email": "pedro@example.com",
-  "telefono": "912345678",
-  "dni": "12345678"
-}
+curl -X POST http://localhost:5000/api/customers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Pedro",
+    "apellido_paterno": "Morales",
+    "apellido_materno": "Ruiz",
+    "email": "pedro@example.com",
+    "telefono": "912345678",
+    "dni": "12345678"
+  }'
 ```
 
-**Step 2: Get Products**
+**2. Browse Products**
 ```bash
-GET /api/products
+curl http://localhost:5000/api/products
 ```
 
-**Step 3: Create Order**
+**3. Create Order**
 ```bash
-POST /api/orders
-{
-  "cliente_id": "cust-uuid",
-  "detalles": [
-    {
-      "producto_id": "prod-uuid",
-      "costo_unitario": 299.99
-    }
-  ]
-}
+curl -X POST http://localhost:5000/api/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cliente_id": "<customer-uuid>",
+    "detalles": [
+      { "producto_id": "<product-uuid>", "costo_unitario": 299.99 }
+    ]
+  }'
 ```
 
-**Step 4: Process Payment**
+**4. Register Manual Payment (Admin)**
 ```bash
-POST /api/webhooks/payment
-{
-  "orderId": "order-uuid",
-  "amount": 299.99,
-  "status": "confirmado",
-  "transactionCode": "TXNCODE-001"
-}
+curl -X POST http://localhost:5000/api/payments/manual \
+  -H "Content-Type: application/json" \
+  -H "x-admin-secret: your_admin_secret" \
+  -d '{
+    "orden_id": "<order-uuid>",
+    "cantidad": 299.99,
+    "metodo_pago": "transferencia",
+    "codigo_transaccion": "TXN-2026-001"
+  }'
 ```
 
-**Step 5: Verify Enrollment**
+**5. Verify Enrollment**
 ```bash
-GET /api/enrollments
+curl http://localhost:5000/api/enrollments
 ```
 
 ---
@@ -613,23 +658,33 @@ GET /api/enrollments
 
 ### Prisma Studio
 ```bash
-npx prisma studio
+bunx prisma studio
 ```
-Opens `http://localhost:5555` for visual data exploration.
+Opens visual database browser at `http://localhost:5555`.
 
 ### Prisma Migrations
 ```bash
-npx prisma migrate dev --name your_migration_name
-npx prisma migrate status
-npx prisma migrate reset
+# Create and apply a new migration
+bunx prisma migrate dev --name <migration_name>
+
+# Check migration status
+bunx prisma migrate status
+
+# Reset the database (drops all data)
+bun run reset-db
 ```
 
 ### Database Seeding
 ```bash
-npx prisma db seed
+bun run seeding
 ```
 
-### Build & Run
+### Linting
+```bash
+npx eslint src/
+```
+
+### Build
 ```bash
 npm run build
 node dist/index.js
@@ -639,29 +694,30 @@ node dist/index.js
 
 ## Error Handling
 
-### Standard Error Responses
+All controllers return standard HTTP status codes with a JSON error body `{ "error": "message" }`:
 
-| Status | Message |
-|--------|---------|
-| **400** | Bad Request — Invalid input |
-| **401** | Unauthorized — Invalid webhook signature |
-| **403** | Forbidden — Admin access required |
-| **404** | Not Found — Resource does not exist |
-| **500** | Internal Server Error |
+| Status | Description |
+|--------|-------------|
+| `400` | Bad Request — Missing or invalid input |
+| `401` | Unauthorized — Invalid webhook signature |
+| `403` | Forbidden — Admin access required |
+| `404` | Not Found — Resource does not exist |
+| `409` | Conflict — Duplicate transaction or existing enrollment |
+| `500` | Internal Server Error |
 
 ---
 
 ## Deployment
 
-### Production Environment Setup
+### Production Environment Variables
 
 ```dotenv
-DATABASE_USER=prod_user
-DATABASE_PASSWORD=<strong-password>
-MOODLE_TOKEN=<real-token>
+DATABASE_URL=mysql://prod_user:<strong-password>@db-host:3306/bfedu_db
+MOODLE_TOKEN=<real-moodle-token>
 SMTP_HOST=smtp.sendgrid.net
 ADMIN_SECRET=<very-long-random-string>
 JWT_SECRET=<random-secret>
+PAYMENT_WEBHOOK_SECRET=<random-secret>
 ```
 
 ### Build & Run
@@ -676,49 +732,35 @@ node dist/index.js
 ```dockerfile
 FROM node:20-alpine
 WORKDIR /app
-COPY package.json .
+COPY package.json bun.lock ./
 RUN npm install
 COPY . .
 RUN npm run build
-EXPOSE 3000
+EXPOSE 5000
 CMD ["node", "dist/index.js"]
 ```
 
 ```bash
 docker build -t moodle-enrollment-backend .
-docker run -p 3000:3000 --env-file .env.local moodle-enrollment-backend
+docker run -p 5000:5000 --env-file .env moodle-enrollment-backend
 ```
 
 ---
 
-## Contributing
+## Resources
 
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Make changes and test locally
-3. Commit: `git commit -m "Add feature description"`
-4. Push and create a pull request
-
-### Code Style
-
-- Use TypeScript for all code
-- Run ESLint: `npx eslint src/`
-- Follow naming conventions: camelCase for variables, PascalCase for types
-
----
-
-## Support & Documentation
-
-- **Prisma Docs:** https://www.prisma.io/docs/
-- **Express Docs:** https://expressjs.com/
-- **Moodle API:** https://docs.moodle.org/dev/Web_service_API_functions
+- [Prisma Docs](https://www.prisma.io/docs/)
+- [Express.js Docs](https://expressjs.com/)
+- [Moodle Web Service API](https://docs.moodle.org/dev/Web_service_API_functions)
+- [Culqi (Payment Gateway)](https://docs.culqi.com/)
 
 ---
 
 ## License
 
-MIT License — See LICENSE file for details.
+MIT License — See `LICENSE` file for details.
 
 ---
 
-**Last Updated:** March 3, 2026
-**Version:** 1.0.0
+**Last Updated:** March 6, 2026  
+**Version:** 1.1.0
