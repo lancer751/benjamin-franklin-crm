@@ -7,11 +7,10 @@
     "moduleDetection": "force",
     "allowJs": false,
 
-    // Node.js ESM module resolution
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "noEmit": true,
+    "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./",
 
