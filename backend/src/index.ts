@@ -1,4 +1,5 @@
 import express from "express";
+import { prisma } from "./config/connection";
 import dotevn from "dotenv";
 import cors from "cors";
 import nodemailer from "nodemailer";
@@ -17,6 +18,7 @@ import reportRoutes from "./routes/report.route";
 
 dotevn.config();
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 // middleware
 app.use(express.json());
@@ -49,4 +51,14 @@ export const emailTransporter = nodemailer.createTransport({
   tls: { rejectUnauthorized: false }
 });
 
-export default app
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+  prisma
+    .$connect()
+    .then(() => {
+      console.log("Connected to the database");
+    })
+    .catch((error) => {
+      console.error("Error connecting to the database:", error);
+    });
+});
