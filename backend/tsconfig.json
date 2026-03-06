@@ -10,7 +10,8 @@
     // Node.js ESM module resolution
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "noEmit": false,
+    "esModuleInterop": true,
+    "noEmit": true,
     "outDir": "./dist",
     "rootDir": "./",
 

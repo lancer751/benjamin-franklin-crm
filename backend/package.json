@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx --watch ./src/index.ts",
-    "build": "tsc --outDir dist",
+    "build": "bun build src/index.ts --outdir ./dist --target nodet node",
     "seeding": "bunx prisma db seed",
     "reset-db": "bunx prisma migrate reset"
   },
