@@ -4,10 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "tsx --watch ./src/index.ts",
-    "bundle": "bun run ./src/build.ts",
+    "start": "bun run ./src/index.ts",
+    "dev": "bun run --hot --env-file=.env src/index.ts",
     "seeding": "bunx prisma db seed",
-    "reset-db": "bunx prisma migrate reset"
+    "reset-db": "bunx prisma migrate reset",
+    "show-envs": "bun --print process.env"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -26,16 +27,15 @@
     "@faker-js/faker": "^10.3.0",
     "@prisma/adapter-mariadb": "^7.4.0",
     "@prisma/client": "^7.4.2",
-    "@types/express": "^5.0.6",
     "@types/node": "^25.2.3",
     "axios": "^1.13.5",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1",
+    "hono": "^4.12.5",
     "nodemailer": "^8.0.1",
     "prisma": "^7.4.2",
-    "qs": "^6.15.0",
-    "tsx": "^4.21.0"
+    "zod": "^4.3.6",
+    "@hono/zod-validator": "^0.7.6"
   }
 }

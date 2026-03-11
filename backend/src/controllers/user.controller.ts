@@ -1,58 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma } from "../config/connection";
 
-export async function getAllUsers(req: Request, res: Response) {
-  try {
-    const users = await prisma.usuario.findMany({
-      select: {
-        id: true,
-        apellido_materno: true,
-        apellido_paterno: true,
-        nombre: true,
-        email: true,
-        telefono: true,
-        role: true,
-      },
-    });
-    return res.status(200).json(users);
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    return res.status(500).json({ error: "Failed to fetch users" });
-  }
-}
-
-export async function getUserById(req: Request, res: Response) {
-  const userId = req.params.id;
-
-  if (!userId || typeof userId !== "string") {
-    return res.status(400).json({ error: "Invalid user ID" });
-  }
-
-  try {
-    const user = await prisma.usuario.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        apellido_materno: true,
-        apellido_paterno: true,
-        nombre: true,
-        email: true,
-        telefono: true,
-        role: {
-          select: { nombre: true },
-        },
-      },
-    });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    return res.json(user);
-  } catch (error) {
-    console.error(`Error fetching user with id ${userId}:`, error);
-    return res.status(500).json({ error: "Failed to fetch user" });
-  }
-}
-
 export async function createUser(req: Request, res: Response) {
   const {
     apellido_materno,
