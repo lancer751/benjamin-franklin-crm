@@ -1,11 +1,11 @@
 {
   "name": "backend",
-  "module": "index.ts",
+  "main": "index.ts",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "tsx --watch ./src/index.ts",
-    "build": "tsc --outDir dist",
+    "bundle": "bun run ./src/build.ts",
     "seeding": "bunx prisma db seed",
     "reset-db": "bunx prisma migrate reset"
   },

@@ -1,193 +1,137 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
+import { dashboardApi } from "@/api/dashboard";
+import type { DashboardPayment } from "@/types/dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BookOpen, ClipboardList, TrendingUp } from "lucide-react";
-import { mockStudents, mockEnrollments, mockCourses } from "@/lib/mock-data";
+import { Badge } from "@/components/ui/badge";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { CreditCard, CheckCircle, Clock, DollarSign } from "lucide-react";
 
-const CHART_COLORS = [
-  "hsl(199, 89%, 38%)",
-  "hsl(162, 63%, 41%)",
-  "hsl(38, 92%, 50%)",
-  "hsl(0, 72%, 51%)",
-  "hsl(270, 60%, 55%)",
-  "hsl(199, 89%, 58%)",
-];
+const statusColor: Record<string, string> = {
+  confirmado: "bg-success text-success-foreground",
+  pendiente: "bg-warning text-warning-foreground",
+  rechazado: "bg-destructive text-destructive-foreground",
+  reembolsado: "bg-muted text-muted-foreground",
+};
 
-const DashboardPage = () => {
-  const totalStudents = mockStudents.length;
-  const totalCourses = mockCourses.length;
-  const totalEnrollments = mockEnrollments.length;
-  const avgStudentsPerCourse = totalCourses > 0 ? (totalEnrollments / totalCourses).toFixed(1) : "0";
+export default function DashboardPage() {
+  const [payments, setPayments] = useState<DashboardPayment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const barData = useMemo(() => {
-    return mockCourses.map((course) => {
-      const count = mockEnrollments.filter((e) => e.courseId === course.id).length;
-      return { name: course.name.length > 20 ? course.name.slice(0, 18) + "…" : course.name, estudiantes: count, fullName: course.name };
-    });
+  useEffect(() => {
+    dashboardApi
+      .getPayments()
+      .then((res) => setPayments(res.payments))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const pieData = useMemo(() => {
-    return mockCourses.map((course) => {
-      const count = mockEnrollments.filter((e) => e.courseId === course.id).length;
-      return { name: course.name.length > 18 ? course.name.slice(0, 16) + "…" : course.name, value: count };
-    });
-  }, []);
-
-  const statusData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    mockEnrollments.forEach((e) => { counts[e.status] = (counts[e.status] || 0) + 1; });
-    const labels: Record<string, string> = {
-      ENROLLED: "Matriculado",
-      WAITING_LIST: "En espera",
-      PENDING: "Pendiente",
-      APPROVED: "Aprobado",
-      REJECTED: "Rechazado",
-    };
-    return Object.entries(counts).map(([status, value]) => ({
-      name: labels[status] ?? status,
-      value,
-    }));
-  }, []);
-
-  const kpis = [
-    { label: "Total Estudiantes", value: totalStudents, icon: Users, color: "bg-primary/10 text-primary" },
-    { label: "Total Cursos", value: totalCourses, icon: BookOpen, color: "bg-success/10 text-success" },
-    { label: "Total Matrículas", value: totalEnrollments, icon: ClipboardList, color: "bg-warning/10 text-warning" },
-    { label: "Promedio/Curso", value: avgStudentsPerCourse, icon: TrendingUp, color: "bg-accent/10 text-accent" },
-  ];
+  const confirmed = payments.filter((p) => p.estado === "confirmado");
+  const pending = payments.filter((p) => p.estado === "pendiente");
+  const totalAmount = confirmed.reduce((s, p) => s + p.cantidad, 0);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="mt-1 text-muted-foreground">Resumen general del sistema de matrículas.</p>
-      </div>
+      <h1 className="font-display text-2xl font-bold text-foreground">Dashboard</h1>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <Card key={kpi.label}>
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${kpi.color}`}>
-                <kpi.icon className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{kpi.value}</p>
-                <p className="text-sm text-muted-foreground">{kpi.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Bar Chart */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="font-display text-lg">Estudiantes por Curso</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Pagos</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 90%)" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 11, fill: "hsl(215, 15%, 50%)" }}
-                    angle={-35}
-                    textAnchor="end"
-                    interval={0}
-                  />
-                  <YAxis tick={{ fontSize: 12, fill: "hsl(215, 15%, 50%)" }} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(0, 0%, 100%)",
-                      border: "1px solid hsl(214, 20%, 90%)",
-                      borderRadius: "0.5rem",
-                      fontSize: "13px",
-                    }}
-                  />
-                  <Bar dataKey="estudiantes" fill="hsl(199, 89%, 38%)" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <div className="text-2xl font-bold">{payments.length}</div>
           </CardContent>
         </Card>
-
-        {/* Pie Chart - Enrollment Distribution */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="font-display text-lg">Distribución por Curso</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Confirmados</CardTitle>
+            <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    innerRadius={50}
-                    paddingAngle={3}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    labelLine={{ stroke: "hsl(215, 15%, 50%)" }}
-                  >
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="text-2xl font-bold">{confirmed.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pendientes</CardTitle>
+            <Clock className="h-4 w-4 text-warning" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pending.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ingresos Confirmados</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              S/ {totalAmount.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Status Distribution */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="font-display text-lg">Distribución por Estado de Matrícula</CardTitle>
+        <CardHeader>
+          <CardTitle className="text-lg">Pagos Recientes</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={statusData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 90%)" />
-                <XAxis type="number" tick={{ fontSize: 12, fill: "hsl(215, 15%, 50%)" }} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "hsl(215, 15%, 50%)" }} width={75} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(0, 0%, 100%)",
-                    border: "1px solid hsl(214, 20%, 90%)",
-                    borderRadius: "0.5rem",
-                    fontSize: "13px",
-                  }}
-                />
-                <Bar dataKey="value" fill="hsl(162, 63%, 41%)" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {loading ? (
+            <p className="text-muted-foreground text-sm py-4">Cargando…</p>
+          ) : payments.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-4">No hay pagos registrados.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Curso(s)</TableHead>
+                    <TableHead>Método</TableHead>
+                    <TableHead>Monto</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Fecha</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.slice(0, 20).map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">
+                        {p.cliente.nombre} {p.cliente.apellido_paterno}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {p.cursos.map((c) => c.nombre).join(", ") || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="capitalize">{p.metodoPago}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        S/ {p.cantidad.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={statusColor[p.estado] || ""}>{p.estado}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {p.fechaPago ? new Date(p.fechaPago).toLocaleDateString("es-PE") : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
-};
-
-export default DashboardPage;
+}

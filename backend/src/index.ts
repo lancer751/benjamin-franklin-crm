@@ -1,5 +1,4 @@
 import express from "express";
-import { prisma } from "./config/connection";
 import dotevn from "dotenv";
 import cors from "cors";
 import nodemailer from "nodemailer";
@@ -15,11 +14,12 @@ import productRoutes from "./routes/product.route";
 import paymentRoutes from "./routes/payment.route";
 import dashboardRoutes from "./routes/dashboard.route";
 import reportRoutes from "./routes/report.route";
+import { prismaDBConnection } from "./config/connection";
+import path from "node:path";
 
 dotevn.config();
 const app = express();
-const PORT = process.env.PORT || 3000;
-
+const PORT = process.env.PORT || 8000
 // middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -48,17 +48,15 @@ export const emailTransporter = nodemailer.createTransport({
     user: process.env.SMTP_USER || "ntgxltiwmeozkzp5@ethereal.email",
     pass: process.env.SMTP_PASS || "ayd5NtbEM1gBn3D78p",
   },
-  tls: { rejectUnauthorized: false }
+  tls: { rejectUnauthorized: false },
 });
 
+prismaDBConnection();
+
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  prisma
-    .$connect()
-    .then(() => {
-      console.log("Connected to the database");
-    })
-    .catch((error) => {
-      console.error("Error connecting to the database:", error);
-    });
+  console.log(`Server running at http://localhost:${PORT}`);
 });
+export default app;
