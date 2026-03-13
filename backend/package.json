@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "tsx --watch ./src/index.ts",
-    "bundle": "bun run ./src/build.ts",
+    "dev": "bun run --env-file=.env --hot ./src/index.ts",
+    "build": "cd frontend && bun install",
     "seeding": "bunx prisma db seed",
     "reset-db": "bunx prisma migrate reset"
   },
