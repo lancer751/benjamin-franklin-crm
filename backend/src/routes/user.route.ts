@@ -1,29 +1,35 @@
 import { Hono } from "hono";
 import prisma from "../lib/prisma";
 import z from "zod";
+import { zValidator } from "@hono/zod-validator";
 
-// router.get("/", getAllUsers)
-// router.get("/:id", getUserById)
 // router.post("/", createUser)
 // router.put("/:id", updateUser)
 
 // export default router;
 const userSchema = z.object({
-    id: z.uuid(),      
+  id: z.uuid(),
   nombre: z.string().max(50),
   apellido_paterno: z.string().max(20),
-  apellido_materno: z.string().max(20),
+  apellido_materno: z.string().max(20).optional(),
   email: z.email(),
-  telefono: z.number().sta
-  role_id          
-  is_active       
-  password         
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  telefono: z
+    .string()
+    .length(9)
+    .regex(/^9\d{8}$/, "Invalid Peruvian phone number")
+    .optional(),
+  role_id: z.uuid(),
+  is_active: z.boolean(),
+  password: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
-const createUserSchema = z.object({});
+const createUserSchema = userSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
 export const userRoutes = new Hono()
   .get("/", async (c) => {
@@ -89,8 +95,33 @@ export const userRoutes = new Hono()
       received: id,
     });
   })
-  .post("/", async (c) => {
-    return c.json({});
+  .post("/", zValidator("json", createUserSchema), async (c) => {
+    const data = await c.req.valid("json");
+
+    const user = createUserSchema.parse(data);
+
+    try {
+      const newUser = await prisma.usuario.create({
+        data: user,
+        select: {
+          id: true,
+          apellido_materno: true,
+          apellido_paterno: true,
+          nombre: true,
+          email: true,
+          telefono: true,
+          role: {
+            select: { nombre: true },
+          },
+        },
+      });
+      c.status(201);
+      return c.json(newUser);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      c.status(500);
+      return c.json({ error: "Failed to create user" });
+    }
   })
   .put(
     "/:id{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}}",
