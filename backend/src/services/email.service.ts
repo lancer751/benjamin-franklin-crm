@@ -1,5 +1,5 @@
 import type { Decimal } from "@prisma/client/runtime/client";
-import { emailTransporter } from "..";
+import { emailTransporter } from "@lib/nodemailer";
 import nodemailer from "nodemailer";
 
 export async function sendEmail(to: string, subject: string, body: string) {

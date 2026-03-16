@@ -3,13 +3,13 @@
 // idempotency (duplicate transaction code check), and Compra status update.
 
 import type { Decimal } from "@prisma/client/runtime/client";
-import { prisma } from "../config/connection";
 import {
   sendPaymentConfirmedEmail,
   sendPaymentRejectedEmail,
   sendManualPaymentRegisteredEmail,
 } from "./email.service";
 import type { Pago } from "../../generated/prisma/client";
+import prisma from "../lib/prisma";
 
 export type PaymentMethod =
   | "efectivo"
@@ -69,7 +69,7 @@ export async function processPayment(
     return { success: false, error: `Compra ${compraId} not found` };
   }
 
-  if(insertedAmount < compra.costo_total || insertedAmount > compra.costo_total) {
+  if (insertedAmount < compra.costo_total || insertedAmount > compra.costo_total) {
     return { success: false, error: "Amount is not equal to the total cost of the order" };
   }
 

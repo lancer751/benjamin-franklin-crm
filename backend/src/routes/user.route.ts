@@ -1,12 +1,8 @@
 import { Hono } from "hono";
 import prisma from "../lib/prisma";
-import z from "zod";
+import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
-// router.post("/", createUser)
-// router.put("/:id", updateUser)
-
-// export default router;
 const userSchema = z.object({
   id: z.uuid(),
   nombre: z.string().max(50),

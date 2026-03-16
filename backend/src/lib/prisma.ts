@@ -1,8 +1,5 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../../generated/prisma/client";
-import dotevn from "dotenv";
-
-dotevn.config();
 
 export const MOODLE_URL =
   process.env.MOODLE_URL ||
@@ -26,14 +23,5 @@ export const adapter = new PrismaMariaDb({
 });
 
 const prisma = new PrismaClient({ adapter });
-
-prisma
-  .$connect()
-  .then(() => {
-    console.log("Connected to the database");
-  })
-  .catch((error) => {
-    console.error("Error connecting to the database:", error);
-  });
 
 export default prisma;
