@@ -1,3 +1,4 @@
+import prisma from "@lib/prisma";
 import {
   Prisma,
   CompraEstado,
@@ -5,7 +6,6 @@ import {
   MetodoPago,
   MatriculaEstado,
 } from "../generated/prisma/client";
-import { prisma } from "../src/config/connection";
 import { faker } from "@faker-js/faker";
 
 function generateOrderNumber() {

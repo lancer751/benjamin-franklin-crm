@@ -2,8 +2,8 @@
 // Handles creating Matricula records, preventing duplicates, and orchestrating
 // Moodle simulation + email notifications.
 
-import { prisma } from "../config/connection";
-import { sendEnrollmentSuccessEmail } from "./email.service";
+import prisma from "@lib/prisma";
+import { sendEnrollmentSuccessEmail } from "@services/email.service";
 
 export interface EnrollResult {
   success: boolean;
@@ -42,7 +42,7 @@ export async function enrollClientInCourse(
         where: { id: edicion_id },
         select: {
           curso: {
-            select: { nombre: true}
+            select: { nombre: true }
           }
         }
       }),

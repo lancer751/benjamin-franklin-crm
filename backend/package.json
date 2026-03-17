@@ -4,10 +4,22 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --env-file=.env --hot ./src/index.ts",
-    "build": "cd frontend && bun install",
-    "seeding": "bunx prisma db seed",
-    "reset-db": "bunx prisma migrate reset"
+    "start": "bun run ./src/index.ts",
+    "dev": "bun run --hot --env-file=.env src/index.ts",
+    "migrate": "bunx prisma migrate dev --name init",
+    "reset-db": "bunx prisma migrate reset",
+    "show-envs": "bun --print process.env",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "detect-cycles": "madge src --circular",
+    "prisma:generate": "bunx prisma generate",
+    "prisma:push": "bunx prisma db push",
+    "prisma:migrate": "bunx prisma migrate dev --name init",
+    "prisma:deploy": "bunx prisma migrate deploy",
+    "prisma:seed": "bunx prisma db seed",
+    "prisma:studio": "bunx prisma studio",
+    "db:reset": "bunx prisma migrate reset",
+    "db:setup": "bunx prisma generate && prisma db push && prisma db seed"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -15,8 +27,12 @@
     "@types/bun": "latest",
     "@types/cors": "^2.8.19",
     "@types/nodemailer": "^7.0.10",
+    "@typescript-eslint/parser": "^8.57.1",
     "eslint": "^10.0.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
     "globals": "^17.3.0",
+    "madge": "^8.0.0",
     "typescript-eslint": "^8.55.0"
   },
   "peerDependencies": {
@@ -24,18 +40,18 @@
   },
   "dependencies": {
     "@faker-js/faker": "^10.3.0",
+    "@hono/zod-validator": "^0.7.6",
     "@prisma/adapter-mariadb": "^7.4.0",
     "@prisma/client": "^7.4.2",
-    "@types/express": "^5.0.6",
     "@types/node": "^25.2.3",
     "axios": "^1.13.5",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1",
+    "hono": "^4.12.5",
     "nodemailer": "^8.0.1",
     "prisma": "^7.4.2",
-    "qs": "^6.15.0",
-    "tsx": "^4.21.0"
+    "vercel": "^50.32.5",
+    "zod": "^4.3.6"
   }
 }

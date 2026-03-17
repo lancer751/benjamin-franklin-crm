@@ -1,9 +1,41 @@
 import js from "@eslint/js";
 import globals from "globals";
-import tseslint from "typescript-eslint";
+import { configs, plugin } from "typescript-eslint";
 import { defineConfig } from "eslint/config";
+import importPlugin from "eslint-plugin-import";
 
 export default defineConfig([
-  { files: ["**/*.{js,mjs,cjs,ts,mts,cts}"], plugins: { js }, extends: ["js/recommended"], languageOptions: { globals: globals.node } },
-  tseslint.configs.recommended, 
+  js.configs.recommended,
+  importPlugin.flatConfigs.recommended,
+  ...configs.recommended,
+  {
+    files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
+    plugins: { "@typescript-eslint": plugin },
+    languageOptions: { globals: globals.node },
+    rules: {
+      "no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_"
+        }
+      ],
+      "import/no-cycle": ["error", { maxDepth: 2 }]
+    }
+  },
+  {
+    extends: [importPlugin.flatConfigs.recommended, importPlugin.flatConfigs.typescript],
+  },
+  {
+    settings: {
+      'import/resolver': {
+        typescript: {
+          alwaysTryTypes: true,
+          bun: true,
+          project: 'tsconfig.json',
+        }
+      }
+    },
+  },
 ]);

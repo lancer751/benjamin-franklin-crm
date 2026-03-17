@@ -1,13 +1,13 @@
 // Simulated Moodle integration service.
 // No real Moodle API calls are made; all responses are simulated.
 
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError, isAxiosError } from "axios";
 import type { MoodleUser, NewStudent } from "../types/user";
-import { MOODLE_TOKEN, MOODLE_URL } from "../config/connection";
 import type {
   EnrolledStudentsPerCourse,
   MoodleErrorResponse,
 } from "../types/moodle";
+import { MOODLE_TOKEN, MOODLE_URL } from "../lib/prisma";
 
 export interface MoodleEnrollResult {
   success: boolean;
@@ -23,8 +23,8 @@ type EnrollmentData = {
 
 type EnrollmentResult =
   | {
-      success: true;
-    }
+    success: true;
+  }
   | { success: false; error: string };
 
 export async function simulateMoodleEnrollment(
@@ -45,9 +45,9 @@ export async function simulateMoodleEnrollment(
 
 type CreateStudentResult =
   | {
-      success: true;
-      data: Pick<MoodleUser, "id" | "username">;
-    }
+    success: true;
+    data: Pick<MoodleUser, "id" | "username">;
+  }
   | { success: false; error: string; data?: MoodleUser };
 
 export async function getModdleStudentById(
@@ -78,7 +78,7 @@ export async function getModdleStudentById(
     console.error("error on getMoodleStudentByEmail", error);
 
     // Axios error handling
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       const axiosError = error as AxiosError<MoodleErrorResponse>;
 
       if (axiosError.response?.data?.message) {
@@ -155,7 +155,7 @@ export async function createNewModdleStudent(
     console.error("Error in createNewStudentModle", error);
 
     // Axios error handling
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       const axiosError = error as AxiosError<MoodleErrorResponse>;
 
       if (axiosError.response?.data?.message) {
@@ -197,8 +197,8 @@ export async function enrolledStudentInMoodleCourse(
       },
       timeout: 30_000,
     });
-    
-    
+
+
     //here logic to manage error
 
 
@@ -251,7 +251,7 @@ export async function enrollStudentsInMoodle(
     console.error("Error in enrollStudentsInMoodle service", error);
 
     // Axios error handling
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       const axiosError = error as AxiosError<MoodleErrorResponse>;
 
       if (axiosError.response?.data?.message) {
