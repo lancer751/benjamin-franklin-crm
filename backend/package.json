@@ -6,12 +6,20 @@
   "scripts": {
     "start": "bun run ./src/index.ts",
     "dev": "bun run --hot --env-file=.env src/index.ts",
-    "seeding": "bunx prisma db seed",
+    "migrate": "bunx prisma migrate dev --name init",
     "reset-db": "bunx prisma migrate reset",
     "show-envs": "bun --print process.env",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "detect-cycles": "madge src --circular"
+    "detect-cycles": "madge src --circular",
+    "prisma:generate": "bunx prisma generate",
+    "prisma:push": "bunx prisma db push",
+    "prisma:migrate": "bunx prisma migrate dev --name init",
+    "prisma:deploy": "bunx prisma migrate deploy",
+    "prisma:seed": "bunx prisma db seed",
+    "prisma:studio": "bunx prisma studio",
+    "db:reset": "bunx prisma migrate reset",
+    "db:setup": "bunx prisma generate && prisma db push && prisma db seed"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
