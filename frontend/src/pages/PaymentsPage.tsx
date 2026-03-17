@@ -64,8 +64,27 @@ export default function PaymentsPage() {
       toast.success("Pago registrado");
       setDialogOpen(false);
       refetch();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Error al registrar pago");
+    } catch (err: unknown) {
+      let message = "Error al registrar pago";
+
+      if (err instanceof Error) {
+        message = err.message;
+      }
+
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err
+      ) {
+        const maybeAxiosError = err as {
+          response?: { data?: { error?: string } };
+        };
+
+        message =
+          maybeAxiosError.response?.data?.error ?? message;
+      }
+
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -159,6 +178,7 @@ export default function PaymentsPage() {
               <Label>Método de Pago</Label>
               <Select
                 value={form.method}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onValueChange={(v) => setForm({ ...form, method: v as any })}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -173,6 +193,7 @@ export default function PaymentsPage() {
               <Label>Estado</Label>
               <Select
                 value={form.paymentStatus}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onValueChange={(v) => setForm({ ...form, paymentStatus: v as any })}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>

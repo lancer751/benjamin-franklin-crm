@@ -42,13 +42,32 @@ export default function ReportsPage() {
     }
     setLoading(true);
     try {
-      const params: any = { startDate, endDate };
+      const params: { startDate: string; endDate: string; courseId?: string; paymentMethod?: string } = { startDate, endDate };
       if (courseId) params.courseId = courseId;
       if (paymentMethod) params.paymentMethod = paymentMethod;
       const data = await reportsApi.getSales(params);
       setReport(data);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Error al generar reporte");
+    } catch (err: unknown) {
+      let message = "Error al generar reporte";
+
+      if (err instanceof Error) {
+        message = err.message;
+      }
+
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err
+      ) {
+        const maybeAxiosError = err as {
+          response?: { data?: { error?: string } };
+        };
+
+        message =
+          maybeAxiosError.response?.data?.error ?? message;
+      }
+
+      toast.error(message);
     } finally {
       setLoading(false);
     }

@@ -1,22 +1,50 @@
 import { useState, useEffect, useCallback } from "react";
 
-export function useFetch<T>(fetchFn: () => Promise<T>, deps: unknown[] = []) {
+export function useFetch<T>(
+  fetchFn: () => Promise<T>,
+  deps: unknown[] = []
+) {
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // 👈 start false
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    fetchFn()
-      .then(setData)
-      .catch((err) => setError(err?.response?.data?.error || err.message || "Error"))
-      .finally(() => setLoading(false));
-  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+  const execute = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await fetchFn();
+      setData(res);
+      return res;
+    } catch (err: unknown) {
+      let message = "Error";
+
+      if (err instanceof Error) {
+        message = err.message;
+      } else if (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err
+      ) {
+        const maybeAxiosError = err as {
+          response?: { data?: { error?: string } };
+        };
+
+        message =
+          maybeAxiosError.response?.data?.error ?? message;
+      }
+
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchFn]);
 
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    execute();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
 
-  return { data, loading, error, refetch };
+  return { data, loading, error, refetch: execute };
 }

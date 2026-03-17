@@ -52,10 +52,30 @@ export default function CoursesPage() {
         await coursesApi.create(form);
         toast.success("Curso creado");
       }
+
       setDialogOpen(false);
       refetch();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Error al guardar");
+    } catch (err: unknown) {
+      let message = "Error al guardar";
+
+      if (err instanceof Error) {
+        message = err.message;
+      }
+
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err
+      ) {
+        const maybeAxiosError = err as {
+          response?: { data?: { error?: string } };
+        };
+
+        message =
+          maybeAxiosError.response?.data?.error ?? message;
+      }
+
+      toast.error(message);
     } finally {
       setSaving(false);
     }

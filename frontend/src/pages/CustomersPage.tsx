@@ -2,7 +2,7 @@ import { useState } from "react";
 import { customersApi } from "@/api/customers";
 import { useFetch } from "@/hooks/useFetch";
 import type { Customer, CustomerFormData } from "@/types/customer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,8 +73,27 @@ export default function CustomersPage() {
       }
       setDialogOpen(false);
       refetch();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Error al guardar");
+    } catch (err: unknown) {
+      let message = "Error al guardar";
+
+      if (err instanceof Error) {
+        message = err.message;
+      }
+
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err
+      ) {
+        const maybeAxiosError = err as {
+          response?: { data?: { error?: string } };
+        };
+
+        message =
+          maybeAxiosError.response?.data?.error ?? message;
+      }
+
+      toast.error(message);
     } finally {
       setSaving(false);
     }

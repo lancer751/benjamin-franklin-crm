@@ -10,10 +10,14 @@ import { paymentRoutes } from '@routes/payment.route'
 import { productRoutes } from '@routes/product.route'
 import { reportRoutes } from '@routes/report.route'
 import { webhookRoutes } from '@routes/webhook.route'
+import { cors } from 'hono/cors'
 
 const app = new Hono()
 
 app.use("*", logger())
+app.use("*", cors({
+  origin: "*",
+}))
 
 const _apiRoutes = app
   .basePath("/api")

@@ -80,8 +80,27 @@ export default function OrdersPage() {
       setClienteId("");
       setSelectedProducts([]);
       refetch();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Error al crear orden");
+    } catch (err: unknown) {
+      let message = "Error al crear orden";
+
+      if (err instanceof Error) {
+        message = err.message;
+      }
+
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err
+      ) {
+        const maybeAxiosError = err as {
+          response?: { data?: { error?: string } };
+        };
+
+        message =
+          maybeAxiosError.response?.data?.error ?? message;
+      }
+
+      toast.error(message);
     } finally {
       setSaving(false);
     }
