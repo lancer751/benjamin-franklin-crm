@@ -4,9 +4,7 @@
 
 import type { Decimal } from "@prisma/client/runtime/client";
 import {
-  sendPaymentConfirmedEmail,
   sendPaymentRejectedEmail,
-  sendManualPaymentRegisteredEmail,
 } from "./email.service";
 import type { Pago } from "../../generated/prisma/client";
 import prisma from "../lib/prisma";
@@ -43,8 +41,8 @@ export function validateWebhookSignature(
   _payload: unknown,
   _signature: string,
 ): boolean {
-  console.log(_payload)
-  console.log(_signature)
+  console.log(_payload);
+  console.log(_signature);
   // In production: compare HMAC-SHA256 of payload with secret key.
   // For MVP: always return true (simulated).
   return true;
@@ -56,8 +54,14 @@ export function validateWebhookSignature(
 export async function processPayment(
   options: ProcessPaymentOptions,
 ): Promise<ProcessPaymentResult> {
-  const { compraId, insertedAmount, method, paymentStatus, transactionCode, isManual } =
-    options;
+  const {
+    compraId,
+    insertedAmount,
+    method,
+    paymentStatus,
+    transactionCode,
+    isManual,
+  } = options;
 
   // 1. Validate the order exists
   const compra = await prisma.compra.findUnique({
@@ -69,8 +73,14 @@ export async function processPayment(
     return { success: false, error: `Compra ${compraId} not found` };
   }
 
-  if (insertedAmount < compra.costo_total || insertedAmount > compra.costo_total) {
-    return { success: false, error: "Amount is not equal to the total cost of the order" };
+  if (
+    insertedAmount < compra.costo_total ||
+    insertedAmount > compra.costo_total
+  ) {
+    return {
+      success: false,
+      error: "Amount is not equal to the total cost of the order",
+    };
   }
 
   // 4. Create Pago + update Compra in a transaction
@@ -99,24 +109,25 @@ export async function processPayment(
   const clientName = `${compra.cliente.nombre} ${compra.cliente.apellido_paterno}`;
   const clientEmail = compra.cliente.email;
 
-  // 5. Post-payment actions
-  if (paymentStatus === "confirmado") {
-    // Send payment confirmed email
-    await sendPaymentConfirmedEmail(
-      clientEmail,
-      clientName,
-      insertedAmount,
-      transactionCode ?? pago.id,
-    );
+  // // 5. Post-payment actions
+  // if (paymentStatus === "confirmado") {
+  //   // Send payment confirmed email
+  //   await sendPaymentConfirmedEmail(
+  //     clientEmail,
+  //     clientName,
+  //     insertedAmount,
+  //     transactionCode ?? pago.id,
+  //   );
 
-    if (isManual) {
-      await sendManualPaymentRegisteredEmail(clientEmail, clientName, insertedAmount, method);
-    }
-  }
-
-  if (paymentStatus === "rechazado") {
-    await sendPaymentRejectedEmail(clientEmail, clientName, insertedAmount);
-  }
+  //   if (isManual) {
+  //     await sendManualPaymentRegisteredEmail(
+  //       clientEmail,
+  //       clientName,
+  //       insertedAmount,
+  //       method,
+  //     );
+  //   }
+  // }
 
   return { success: true, paymentData: pago };
 }

@@ -1,9 +1,6 @@
 import { Hono } from "hono";
 import prisma from "@lib/prisma";
-import {
-  processPayment,
-  type PaymentMethod,
-} from "@services/payment.service";
+import { processPayment, type PaymentMethod } from "@services/payment.service";
 import { Decimal } from "@prisma/client/runtime/client";
 
 export const paymentRoutes = new Hono()
@@ -19,7 +16,6 @@ export const paymentRoutes = new Hono()
   .post("/manual", async (c) => {
     try {
       const { order_id, amount, method, paymentStatus } = await c.req.json();
-
       if (!order_id || !amount || !method || !paymentStatus) {
         return c.json(
           { error: "order_id, amount, method, and status are required" },
@@ -31,7 +27,6 @@ export const paymentRoutes = new Hono()
         return c.json({ error: "Amount must be a number" }, 400);
       }
 
-      console.log(amount, typeof amount);
       const allowedMethods: PaymentMethod[] = [
         "efectivo",
         "transferencia",
