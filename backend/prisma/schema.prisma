@@ -3,6 +3,10 @@ generator client {
   output   = "../generated/prisma"
 }
 
+generator zod {
+  provider = "prisma-zod-generator"
+}
+
 datasource db {
   provider = "mysql"
 }
@@ -69,7 +73,15 @@ enum CampaingPlatform {
   FACEBOOK
   INSTAGRAM
   TIKTOK
-  TELEGRAM
+  WEBSITE
+}
+
+enum LeadOriginSource {
+  FACEBOOK
+  INSTAGRAM
+  TIKTOK
+  WHATSAPP
+  WEBSITE
 }
 
 enum LeadStatus {
@@ -106,14 +118,15 @@ model Role {
 
 model SellerProfile {
   id           String  @id @default(uuid()) @db.Char(36)
-  user_id      String @unique
-  sales_target Int
-  sales_closed Int?
+  user_id      String  @unique
+  sales_target Int @default(0)
+  sales_closed Int? @default(0)
   max_discount Decimal
 
-  user   User    @relation(fields: [user_id], references: [id])
-  leads  Lead[]
-  orders Order[] @relation("SELLER_ORDERS")
+  user              User                @relation(fields: [user_id], references: [id])
+  leads             Lead[]
+  orders            Order[]             @relation("SELLER_ORDERS")
+  lead_interactions Lead_Interactions[]
 }
 
 model MarketingProfile {
@@ -124,20 +137,20 @@ model MarketingProfile {
 }
 
 model User {
-  id              String           @id @default(uuid()) @db.Char(36)
-  first_name      String
-  middle_name     String
-  last_name       String
-  email           String           @unique
-  cellphone       String           @db.Char(9)
-  role_id         String
-  is_active       Boolean          @default(true)
-  password        String
-  created_at      DateTime         @default(now())
-  updated_at      DateTime         @updatedAt
-  role            Role             @relation(fields: [role_id], references: [id])
-  marketing MarketingProfile?
-  seller SellerProfile?
+  id          String            @id @default(uuid()) @db.Char(36)
+  first_name  String
+  middle_name String
+  last_name   String
+  email       String            @unique
+  cellphone   String            @db.Char(9)
+  role_id     String
+  is_active   Boolean           @default(true)
+  password    String
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+  role        Role              @relation(fields: [role_id], references: [id])
+  marketing   MarketingProfile?
+  seller      SellerProfile?
 }
 
 enum PhoneType {
@@ -166,32 +179,50 @@ model Lead {
   email              String     @unique
   secondary_email    String?
   dni                String?    @unique @db.Char(8)
+  score Int @default(2)
   moodle_user_id     Int?       @unique
-  assigned_seller_id String?
+  campaign_id        String?
+  assigned_to String?
+  source LeadOriginSource
   lead_status        LeadStatus @default(NEW)
   created_at         DateTime   @default(now())
   updated_at         DateTime   @updatedAt
 
   //relations
-  seller SellerProfile? @relation(fields: [assigned_seller_id], references: [id])
-  phones LeadPhone[]
-  orders Order[]
+  seller            SellerProfile?      @relation(fields: [assigned_to], references: [id])
+  phones            LeadPhone[]
+  orders            Order[]
   lead_interactions Lead_Interactions[]
+  campaing          Campaing?           @relation(fields: [campaign_id], references: [id])
 
   //indexes
-  @@index([assigned_seller_id])
+  @@index([assigned_to])
   @@index([lead_status])
 }
 
-model Lead_Interactions {
-  id String @id @default(uuid()) @db.Char(36)
-  lead_id String
+enum InteractionType {
+  website_form
+  sell
+  whatsapp
+  email
+  meeting
+  call
+}
 
-  lead  Lead @relation(fields: [lead_id], references: [id])
+model Lead_Interactions {
+  id            String @id @default(uuid()) @db.Char(36)
+  lead_id       String
+  notes         String
+  created_by    String
+
+  lead   Lead          @relation(fields: [lead_id], references: [id])
+  seller SellerProfile @relation(fields: [created_by], references: [id])
 }
 
 model Tasks {
   id String @id @default(uuid()) @db.Char(36)
+  title String
+  content String @db.MediumText()
 }
 
 model Course {
@@ -217,6 +248,7 @@ model Campaing {
 
   is_organic Boolean
   edicion    Edition[]
+  leads      Lead[]
 }
 
 model Modality {
@@ -256,7 +288,7 @@ model Product {
   category            String
   edition_id          String
   price               Decimal     @db.Decimal(10, 2)
-  discount_price      Decimal?     @db.Decimal(10, 2)
+  discount_price      Decimal?    @db.Decimal(10, 2)
   discount_expires_at DateTime?
   sales_status        SalesStatus @default(DRAFT)
   created_at          DateTime    @default(now())
@@ -272,7 +304,7 @@ model Order {
   generated_by String?
   sub_total    Decimal     @db.Decimal(10, 2)
   total_amount Decimal     @db.Decimal(10, 2)
-  discount     Decimal  @db.Decimal(10, 2)   @default(0)
+  discount     Decimal     @default(0) @db.Decimal(10, 2)
   order_status OrderStatus @default(PENDING)
   order_code   String      @unique @db.Char(7)
 

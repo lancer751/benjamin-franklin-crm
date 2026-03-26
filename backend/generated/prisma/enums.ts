@@ -95,10 +95,21 @@ export const CampaingPlatform = {
   FACEBOOK: 'FACEBOOK',
   INSTAGRAM: 'INSTAGRAM',
   TIKTOK: 'TIKTOK',
-  TELEGRAM: 'TELEGRAM'
+  WEBSITE: 'WEBSITE'
 } as const
 
 export type CampaingPlatform = (typeof CampaingPlatform)[keyof typeof CampaingPlatform]
+
+
+export const LeadOriginSource = {
+  FACEBOOK: 'FACEBOOK',
+  INSTAGRAM: 'INSTAGRAM',
+  TIKTOK: 'TIKTOK',
+  WHATSAPP: 'WHATSAPP',
+  WEBSITE: 'WEBSITE'
+} as const
+
+export type LeadOriginSource = (typeof LeadOriginSource)[keyof typeof LeadOriginSource]
 
 
 export const LeadStatus = {
@@ -135,3 +146,15 @@ export const PhoneType = {
 } as const
 
 export type PhoneType = (typeof PhoneType)[keyof typeof PhoneType]
+
+
+export const InteractionType = {
+  website_form: 'website_form',
+  sell: 'sell',
+  whatsapp: 'whatsapp',
+  email: 'email',
+  meeting: 'meeting',
+  call: 'call'
+} as const
+
+export type InteractionType = (typeof InteractionType)[keyof typeof InteractionType]

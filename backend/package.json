@@ -51,6 +51,7 @@
     "hono": "^4.12.5",
     "nodemailer": "^8.0.1",
     "prisma": "^7.4.2",
+    "prisma-zod-generator": "^2.1.4",
     "vercel": "^50.32.5",
     "zod": "^4.3.6"
   }

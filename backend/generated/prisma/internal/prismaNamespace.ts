@@ -1584,8 +1584,11 @@ export const LeadScalarFieldEnum = {
   email: 'email',
   secondary_email: 'secondary_email',
   dni: 'dni',
+  score: 'score',
   moodle_user_id: 'moodle_user_id',
-  assigned_seller_id: 'assigned_seller_id',
+  campaign_id: 'campaign_id',
+  assigned_to: 'assigned_to',
+  source: 'source',
   lead_status: 'lead_status',
   created_at: 'created_at',
   updated_at: 'updated_at'
@@ -1596,14 +1599,18 @@ export type LeadScalarFieldEnum = (typeof LeadScalarFieldEnum)[keyof typeof Lead
 
 export const Lead_InteractionsScalarFieldEnum = {
   id: 'id',
-  lead_id: 'lead_id'
+  lead_id: 'lead_id',
+  notes: 'notes',
+  created_by: 'created_by'
 } as const
 
 export type Lead_InteractionsScalarFieldEnum = (typeof Lead_InteractionsScalarFieldEnum)[keyof typeof Lead_InteractionsScalarFieldEnum]
 
 
 export const TasksScalarFieldEnum = {
-  id: 'id'
+  id: 'id',
+  title: 'title',
+  content: 'content'
 } as const
 
 export type TasksScalarFieldEnum = (typeof TasksScalarFieldEnum)[keyof typeof TasksScalarFieldEnum]
@@ -1800,7 +1807,8 @@ export const LeadOrderByRelevanceFieldEnum = {
   email: 'email',
   secondary_email: 'secondary_email',
   dni: 'dni',
-  assigned_seller_id: 'assigned_seller_id'
+  campaign_id: 'campaign_id',
+  assigned_to: 'assigned_to'
 } as const
 
 export type LeadOrderByRelevanceFieldEnum = (typeof LeadOrderByRelevanceFieldEnum)[keyof typeof LeadOrderByRelevanceFieldEnum]
@@ -1808,14 +1816,18 @@ export type LeadOrderByRelevanceFieldEnum = (typeof LeadOrderByRelevanceFieldEnu
 
 export const Lead_InteractionsOrderByRelevanceFieldEnum = {
   id: 'id',
-  lead_id: 'lead_id'
+  lead_id: 'lead_id',
+  notes: 'notes',
+  created_by: 'created_by'
 } as const
 
 export type Lead_InteractionsOrderByRelevanceFieldEnum = (typeof Lead_InteractionsOrderByRelevanceFieldEnum)[keyof typeof Lead_InteractionsOrderByRelevanceFieldEnum]
 
 
 export const TasksOrderByRelevanceFieldEnum = {
-  id: 'id'
+  id: 'id',
+  title: 'title',
+  content: 'content'
 } as const
 
 export type TasksOrderByRelevanceFieldEnum = (typeof TasksOrderByRelevanceFieldEnum)[keyof typeof TasksOrderByRelevanceFieldEnum]
@@ -1962,6 +1974,13 @@ export type EnumPhoneTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$Prisma
  * Reference to a field of type 'Gender'
  */
 export type EnumGenderFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Gender'>
+    
+
+
+/**
+ * Reference to a field of type 'LeadOriginSource'
+ */
+export type EnumLeadOriginSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LeadOriginSource'>
     
 
 
