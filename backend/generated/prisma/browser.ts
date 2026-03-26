@@ -23,52 +23,77 @@ export * from './enums.ts';
  */
 export type Role = Prisma.RoleModel
 /**
- * Model Usuario
+ * Model SellerProfile
  * 
  */
-export type Usuario = Prisma.UsuarioModel
+export type SellerProfile = Prisma.SellerProfileModel
 /**
- * Model Cliente
+ * Model MarketingProfile
  * 
  */
-export type Cliente = Prisma.ClienteModel
+export type MarketingProfile = Prisma.MarketingProfileModel
 /**
- * Model Curso
+ * Model User
  * 
  */
-export type Curso = Prisma.CursoModel
+export type User = Prisma.UserModel
 /**
- * Model Modalidad
+ * Model LeadPhone
  * 
  */
-export type Modalidad = Prisma.ModalidadModel
+export type LeadPhone = Prisma.LeadPhoneModel
 /**
- * Model Edicion
+ * Model Lead
  * 
  */
-export type Edicion = Prisma.EdicionModel
+export type Lead = Prisma.LeadModel
 /**
- * Model Producto
+ * Model Lead_Interactions
  * 
  */
-export type Producto = Prisma.ProductoModel
+export type Lead_Interactions = Prisma.Lead_InteractionsModel
 /**
- * Model Compra
+ * Model Tasks
  * 
  */
-export type Compra = Prisma.CompraModel
+export type Tasks = Prisma.TasksModel
 /**
- * Model DetalleCompra
+ * Model Course
  * 
  */
-export type DetalleCompra = Prisma.DetalleCompraModel
+export type Course = Prisma.CourseModel
 /**
- * Model Pago
+ * Model Campaing
  * 
  */
-export type Pago = Prisma.PagoModel
+export type Campaing = Prisma.CampaingModel
 /**
- * Model Matricula
+ * Model Modality
  * 
  */
-export type Matricula = Prisma.MatriculaModel
+export type Modality = Prisma.ModalityModel
+/**
+ * Model Edition
+ * 
+ */
+export type Edition = Prisma.EditionModel
+/**
+ * Model Product
+ * 
+ */
+export type Product = Prisma.ProductModel
+/**
+ * Model Order
+ * 
+ */
+export type Order = Prisma.OrderModel
+/**
+ * Model OrderDetail
+ * 
+ */
+export type OrderDetail = Prisma.OrderDetailModel
+/**
+ * Model Payment
+ * 
+ */
+export type Payment = Prisma.PaymentModel

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -18,185 +12,312 @@ enum CursoStatus {
   inactivo
 }
 
-enum MetodoPago {
-  efectivo
-  transferencia
-  pos
-  online
-  yape
+enum OrderStatus {
+  PENDING
+  CANCELLED
+  COMPLETED
+  REFUNDED
 }
 
-enum CompraEstado {
-  pendiente
-  pagado
-  cancelado
-  reembolsado
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  POS
+  ONLINE
+  YAPE
 }
 
-enum PagoEstado {
-  pendiente
-  confirmado
-  rechazado
-  reembolsado
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REFUNDED
 }
 
-enum MatriculaEstado {
-  activo
-  retirado
-  completado
+enum RoleAccess {
+  SALES_REP
+  MARKETING
+  SALES_SUPERVISOR
+  ADMIN
+  COLLECTIONS
 }
 
-// db models
+enum CampaingStatus {
+  ACTIVE
+  INACTIVE
+  PAUSED
+}
+
+enum EditionStatus {
+  IN_PROGRESS
+  COMPLETED
+  OPEN
+  SCHEDULED
+  DRAFT
+  CANCELLED
+}
+
+enum SalesStatus {
+  DRAFT
+  PUBLISHED
+  ON_SALE
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaingPlatform {
+  FACEBOOK
+  INSTAGRAM
+  TIKTOK
+  TELEGRAM
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ATTEMPTED_CONTACT
+  QUALIFIED
+  UNQUALIFIED
+  IN_PROGRESS
+  NEGOTIATION
+  PROPOSAL_SENT
+  WON
+  LOST
+  REJECTED
+  FOLLOW_UP
+  ON_HOLD
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NOT_SPECIFIED
+}
+
 model Role {
-  id          String    @id @default(uuid()) @db.Char(36)
-  nombre      String    @unique
-  descripcion String?
-  is_active   Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  usuarios    Usuario[]
+  id          String     @id @default(uuid()) @db.Char(36)
+  name        RoleAccess
+  description String?
+  is_active   Boolean    @default(true)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  users       User[]
 }
 
-model Usuario {
-  id               String  @id @default(uuid()) @db.Char(36)
-  nombre           String
-  apellido_paterno String
-  apellido_materno String?
-  email            String  @unique
-  telefono         String?
-  role_id          String
-  is_active        Boolean @default(true)
-  password         String
+model SellerProfile {
+  id           String  @id @default(uuid()) @db.Char(36)
+  user_id      String @unique
+  sales_target Int
+  sales_closed Int?
+  max_discount Decimal
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  role    Role     @relation(fields: [role_id], references: [id])
-  compras Compra[] @relation("VendedorCompras")
+  user   User    @relation(fields: [user_id], references: [id])
+  leads  Lead[]
+  orders Order[] @relation("SELLER_ORDERS")
 }
 
-model Cliente {
-  id               String  @id @default(uuid()) @db.Char(36)
-  nombre           String
-  apellido_paterno String
-  apellido_materno String
-  telefono         String? @db.Char(9)
-  email            String  @unique
-  dni              String  @unique @db.Char(8)
-  moodle_user_id   Int?    @unique
-  credentials_sent Boolean @default(false)
+model MarketingProfile {
+  id      String @id @default(uuid()) @db.Char(36)
+  user_id String @unique
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  compras    Compra[]
-  matriculas Matricula[]
+  user User @relation(fields: [user_id], references: [id])
 }
 
-model Curso {
-  id               String      @id @default(uuid()) @db.Char(36)
-  nombre           String
-  descripcion      String?
-  status           CursoStatus @default(activo)
-  duracion_semanas Int
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  ediciones Edicion[]
+model User {
+  id              String           @id @default(uuid()) @db.Char(36)
+  first_name      String
+  middle_name     String
+  last_name       String
+  email           String           @unique
+  cellphone       String           @db.Char(9)
+  role_id         String
+  is_active       Boolean          @default(true)
+  password        String
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+  role            Role             @relation(fields: [role_id], references: [id])
+  marketing MarketingProfile?
+  seller SellerProfile?
 }
 
-model Modalidad {
-  id     String @id @default(uuid()) @db.Char(36)
-  nombre String @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  ediciones Edicion[]
+enum PhoneType {
+  WHATSAPP
+  TELEPHONE
 }
 
-model Edicion {
-  id                 String    @id @default(uuid()) @db.Char(36)
-  curso_id           String
-  fecha_inicio       DateTime? @db.Date
-  fecha_finalizacion DateTime? @db.Date
-  modalidad_id       String
-  moodle_course_id   Int?   @unique
+model LeadPhone {
+  id      String    @id @default(uuid()) @db.Char(36)
+  number  String
+  type    PhoneType
+  lead_id String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  curso      Curso       @relation(fields: [curso_id], references: [id])
-  modalidad  Modalidad   @relation(fields: [modalidad_id], references: [id])
-  productos  Producto[]
-  matriculas Matricula[]
+  lead Lead @relation(fields: [lead_id], references: [id])
 }
 
-model Producto {
-  id         String  @id @default(uuid()) @db.Char(36)
-  edicion_id String
-  precio     Decimal @db.Decimal(10, 2)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  edicion       Edicion         @relation(fields: [edicion_id], references: [id])
-  detalleCompra DetalleCompra[]
-}
-
-model Compra {
-  id           String       @id @default(uuid()) @db.Char(36)
-  cliente_id   String
-  vendedor_id  String?
-  costo_total  Decimal      @db.Decimal(10, 2)
-  estado_order CompraEstado
-  numero_order String       @unique @db.Char(10)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  cliente  Cliente  @relation(fields: [cliente_id], references: [id])
-  vendedor Usuario? @relation("VendedorCompras", fields: [vendedor_id], references: [id])
-
-  detalles DetalleCompra[]
-  pagos    Pago[]
-}
-
-model DetalleCompra {
-  id             String   @id @default(uuid()) @db.Char(36)
-  producto_id    String
-  costo_unitario Decimal  @db.Decimal(10, 2)
-  compra_id      String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  producto Producto @relation(fields: [producto_id], references: [id])
-  compra   Compra   @relation(fields: [compra_id], references: [id])
-}
-
-model Pago {
+model Lead {
   id                 String     @id @default(uuid()) @db.Char(36)
-  orden_id           String
-  cantidad           Decimal    @db.Decimal(10, 2)
-  estado             PagoEstado
-  codigo_transaccion String?     @unique
-  fecha_pago         DateTime?
-  metodo_pago        MetodoPago
+  first_name         String
+  middle_name        String
+  last_name          String
+  profession         String?
+  gender             Gender?
+  address            String?
+  second_address     String?
+  email              String     @unique
+  secondary_email    String?
+  dni                String?    @unique @db.Char(8)
+  moodle_user_id     Int?       @unique
+  assigned_seller_id String?
+  lead_status        LeadStatus @default(NEW)
+  created_at         DateTime   @default(now())
+  updated_at         DateTime   @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  //relations
+  seller SellerProfile? @relation(fields: [assigned_seller_id], references: [id])
+  phones LeadPhone[]
+  orders Order[]
+  lead_interactions Lead_Interactions[]
 
-  compra Compra @relation(fields: [orden_id], references: [id])
+  //indexes
+  @@index([assigned_seller_id])
+  @@index([lead_status])
 }
 
-model Matricula {
-  id         String          @id @default(uuid()) @db.Char(36)
-  cliente_id String
-  edicion_id String
-  estado     MatriculaEstado
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  cliente    Cliente         @relation(fields: [cliente_id], references: [id])
-  edicion    Edicion         @relation(fields: [edicion_id], references: [id])
+model Lead_Interactions {
+  id String @id @default(uuid()) @db.Char(36)
+  lead_id String
+
+  lead  Lead @relation(fields: [lead_id], references: [id])
+}
+
+model Tasks {
+  id String @id @default(uuid()) @db.Char(36)
+}
+
+model Course {
+  id          String    @id @default(uuid()) @db.Char(36)
+  name        String
+  description String?
+  image_url   String?
+  code        String    @db.Char(7)
+  editions    Edition[]
+}
+
+model Campaing {
+  id             String   @id @default(uuid()) @db.Char(36)
+  campaing_name  String
+  initial_budget Decimal  @db.Decimal(10, 2)
+  total_spent    Decimal? @db.Decimal(10, 2)
+
+  status     CampaingStatus
+  start_date DateTime       @default(now())
+  end_date   DateTime?
+
+  platform CampaingPlatform
+
+  is_organic Boolean
+  edicion    Edition[]
+}
+
+model Modality {
+  id       String    @id @default(uuid()) @db.Char(36)
+  nombre   String    @unique
+  editions Edition[]
+}
+
+model Edition {
+  id               String        @id @default(uuid()) @db.Char(36)
+  course_id        String
+  edition_number   Int
+  start_date       DateTime      @db.Date
+  end_date         DateTime      @db.Date
+  modality_id      String
+  moodle_course_id Int?          @unique
+  teacher_fullname String
+  meet_link        String
+  edition_status   EditionStatus @default(DRAFT)
+  edition_code     String        @db.Char(7) //generated based on the course-code + year + ednumber
+  campaign_id      String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  course     Course   @relation(fields: [course_id], references: [id])
+  modality   Modality @relation(fields: [modality_id], references: [id])
+  campaing   Campaing @relation(fields: [campaign_id], references: [id])
+
+  products Product[]
+}
+
+model Product {
+  id                  String      @id @default(uuid()) @db.Char(36)
+  slug                String?
+  description         String?
+  short_description   String?
+  category            String
+  edition_id          String
+  price               Decimal     @db.Decimal(10, 2)
+  discount_price      Decimal?     @db.Decimal(10, 2)
+  discount_expires_at DateTime?
+  sales_status        SalesStatus @default(DRAFT)
+  created_at          DateTime    @default(now())
+  updated_at          DateTime    @updatedAt
+
+  edition        Edition       @relation(fields: [edition_id], references: [id])
+  orders_details OrderDetail[]
+}
+
+model Order {
+  id           String      @id @default(uuid()) @db.Char(36)
+  lead_id      String
+  generated_by String?
+  sub_total    Decimal     @db.Decimal(10, 2)
+  total_amount Decimal     @db.Decimal(10, 2)
+  discount     Decimal  @db.Decimal(10, 2)   @default(0)
+  order_status OrderStatus @default(PENDING)
+  order_code   String      @unique @db.Char(7)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // relations
+  lead   Lead           @relation(fields: [lead_id], references: [id])
+  seller SellerProfile? @relation("SELLER_ORDERS", fields: [generated_by], references: [id])
+
+  orderDetails OrderDetail[]
+  payments     Payment[]
+
+  // indexes
+  @@index([lead_id])
+  @@index([order_status])
+}
+
+model OrderDetail {
+  id            String  @id @default(uuid()) @db.Char(36)
+  product_id    String
+  price         Decimal @db.Decimal(10, 2)
+  order_id      String
+  discount_code String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  product    Product  @relation(fields: [product_id], references: [id])
+  order      Order    @relation(fields: [order_id], references: [id])
+}
+
+model Payment {
+  id             String        @id @default(uuid()) @db.Char(36)
+  order_id       String
+  payment_date   DateTime
+  amount         Decimal       @db.Decimal(10, 2)
+  payment_method PaymentMethod
+  payment_status PaymentStatus
+  currency       String?       @db.Char(3)
+  transaccion_id String? // from payment gateway
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+
+  order Order @relation(fields: [order_id], references: [id])
+
+  @@index([order_id])
+  @@index([payment_status])
 }

@@ -17,41 +17,121 @@ export const CursoStatus = {
 export type CursoStatus = (typeof CursoStatus)[keyof typeof CursoStatus]
 
 
-export const MetodoPago = {
-  efectivo: 'efectivo',
-  transferencia: 'transferencia',
-  pos: 'pos',
-  online: 'online',
-  yape: 'yape'
+export const OrderStatus = {
+  PENDING: 'PENDING',
+  CANCELLED: 'CANCELLED',
+  COMPLETED: 'COMPLETED',
+  REFUNDED: 'REFUNDED'
 } as const
 
-export type MetodoPago = (typeof MetodoPago)[keyof typeof MetodoPago]
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus]
 
 
-export const CompraEstado = {
-  pendiente: 'pendiente',
-  pagado: 'pagado',
-  cancelado: 'cancelado',
-  reembolsado: 'reembolsado'
+export const PaymentMethod = {
+  CASH: 'CASH',
+  BANK_TRANSFER: 'BANK_TRANSFER',
+  POS: 'POS',
+  ONLINE: 'ONLINE',
+  YAPE: 'YAPE'
 } as const
 
-export type CompraEstado = (typeof CompraEstado)[keyof typeof CompraEstado]
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod]
 
 
-export const PagoEstado = {
-  pendiente: 'pendiente',
-  confirmado: 'confirmado',
-  rechazado: 'rechazado',
-  reembolsado: 'reembolsado'
+export const PaymentStatus = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  FAILED: 'FAILED',
+  REFUNDED: 'REFUNDED'
 } as const
 
-export type PagoEstado = (typeof PagoEstado)[keyof typeof PagoEstado]
+export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus]
 
 
-export const MatriculaEstado = {
-  activo: 'activo',
-  retirado: 'retirado',
-  completado: 'completado'
+export const RoleAccess = {
+  SALES_REP: 'SALES_REP',
+  MARKETING: 'MARKETING',
+  SALES_SUPERVISOR: 'SALES_SUPERVISOR',
+  ADMIN: 'ADMIN',
+  COLLECTIONS: 'COLLECTIONS'
 } as const
 
-export type MatriculaEstado = (typeof MatriculaEstado)[keyof typeof MatriculaEstado]
+export type RoleAccess = (typeof RoleAccess)[keyof typeof RoleAccess]
+
+
+export const CampaingStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  PAUSED: 'PAUSED'
+} as const
+
+export type CampaingStatus = (typeof CampaingStatus)[keyof typeof CampaingStatus]
+
+
+export const EditionStatus = {
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  OPEN: 'OPEN',
+  SCHEDULED: 'SCHEDULED',
+  DRAFT: 'DRAFT',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type EditionStatus = (typeof EditionStatus)[keyof typeof EditionStatus]
+
+
+export const SalesStatus = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  ON_SALE: 'ON_SALE',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type SalesStatus = (typeof SalesStatus)[keyof typeof SalesStatus]
+
+
+export const CampaingPlatform = {
+  FACEBOOK: 'FACEBOOK',
+  INSTAGRAM: 'INSTAGRAM',
+  TIKTOK: 'TIKTOK',
+  TELEGRAM: 'TELEGRAM'
+} as const
+
+export type CampaingPlatform = (typeof CampaingPlatform)[keyof typeof CampaingPlatform]
+
+
+export const LeadStatus = {
+  NEW: 'NEW',
+  CONTACTED: 'CONTACTED',
+  ATTEMPTED_CONTACT: 'ATTEMPTED_CONTACT',
+  QUALIFIED: 'QUALIFIED',
+  UNQUALIFIED: 'UNQUALIFIED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  NEGOTIATION: 'NEGOTIATION',
+  PROPOSAL_SENT: 'PROPOSAL_SENT',
+  WON: 'WON',
+  LOST: 'LOST',
+  REJECTED: 'REJECTED',
+  FOLLOW_UP: 'FOLLOW_UP',
+  ON_HOLD: 'ON_HOLD'
+} as const
+
+export type LeadStatus = (typeof LeadStatus)[keyof typeof LeadStatus]
+
+
+export const Gender = {
+  MALE: 'MALE',
+  FEMALE: 'FEMALE',
+  NOT_SPECIFIED: 'NOT_SPECIFIED'
+} as const
+
+export type Gender = (typeof Gender)[keyof typeof Gender]
+
+
+export const PhoneType = {
+  WHATSAPP: 'WHATSAPP',
+  TELEPHONE: 'TELEPHONE'
+} as const
+
+export type PhoneType = (typeof PhoneType)[keyof typeof PhoneType]
