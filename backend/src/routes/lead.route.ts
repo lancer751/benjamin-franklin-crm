@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import prisma from "../lib/prisma";
-import z from "zod";
-import { LeadCreateInputObjectSchema } from "../../prisma/generated/schemas";
 import { zValidator } from "@hono/zod-validator";
-
+import { CreateLeadSchema, UpdateLeadSchema } from "@/zod-schemas/lead";
+import { handleError } from "@/helpers/errorHandling";
+import { UUID_ROUTE } from "@/helpers/constants";
 
 export const leadRoutes = new Hono()
   .get("/", async (c) => {
@@ -16,7 +16,7 @@ export const leadRoutes = new Hono()
       return c.json({ error: "Error while getting leads" });
     }
   })
-  .get("/:id{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}}", async (c) => {
+  .get(UUID_ROUTE, async (c) => {
     const id = c.req.param("id");
 
     try {
@@ -33,27 +33,56 @@ export const leadRoutes = new Hono()
       return c.json({ error: "Failed to fetch lead" }, 500);
     }
   })
-  .post("/", zValidator("json", LeadCreateInputObjectSchema) ,async (c) => {
-    const data = await c.req.valid("json")
-    const lead = LeadCreateInputObjectSchema.parse(data)
+  .post("/", zValidator("json", CreateLeadSchema), async (c) => {
+    const lead = await c.req.valid("json");
     try {
       const newLead = await prisma.lead.create({
-        data: lead
+        data: lead,
       });
       return c.json(newLead, 201);
     } catch (error) {
-      console.error("Error in createNewCustomer", error);
-      return c.json({ error: "Failed to create customer" }, 500);
+      return handleError(c, error, "Failed to create Lead");
     }
   })
-  .put("/:id", async (c) => {
+  .put(UUID_ROUTE, zValidator("json", UpdateLeadSchema), async (c) => {
     const id = c.req.param("id");
-    const { nombre, apellido_paterno, apellido_materno, email, telefono, dni } =
-      await c.req.json();
+    const lead = await c.req.valid("json");
 
-    if (!id || typeof id !== "string") {
-      return c.json({ error: "Invalid customer ID" }, 400);
+    try {
+      const existingLead = await prisma.lead.findUnique({
+        where: { id },
+      });
+
+      if (!existingLead) {
+        return c.json({ error: "Lead not found" }, 400);
+      }
+
+      const updatedLead = await prisma.lead.update({
+        data: lead,
+        where: {
+          id,
+        },
+      });
+
+      return c.json(updatedLead, 200);
+    } catch (error) {
+      console.error(error);
+      return handleError(c, error, "Failed to update Lead");
     }
+  })
+  .delete(UUID_ROUTE, async (c) => {
+    const id = c.req.param("id");
+    try {
+      const existingLead = await prisma.lead.findUnique({ where: { id } });
+      if (!existingLead) {
+        return c.json({ error: "Lead not found" }, 400);
+      }
+      await prisma.lead.delete({
+        where: { id },
+      });
 
-   
+      return c.json({ message: "Lead deleted successfully" }, 200);
+    } catch (error) {
+      handleError(c, error, "Error while deleting the lead");
+    }
   });
