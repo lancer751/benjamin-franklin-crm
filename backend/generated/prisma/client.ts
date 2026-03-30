@@ -67,6 +67,11 @@ export type User = Prisma.UserModel
  */
 export type LeadPhone = Prisma.LeadPhoneModel
 /**
+ * Model LeadCampaing
+ * 
+ */
+export type LeadCampaing = Prisma.LeadCampaingModel
+/**
  * Model Lead
  * 
  */

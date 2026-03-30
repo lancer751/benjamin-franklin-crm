@@ -1,4 +1,4 @@
-import {z} from "zod";
+import { z } from "zod";
 
 const GenderSchema = z.enum(["MALE", "FEMALE", "NOT_SPECIFIED"]);
 
@@ -37,7 +37,18 @@ export const LeadSchema = z.object({
   second_address: z.string().min(10).optional().nullable(),
   email: z.email(),
   secondary_email: z.email().optional().nullable(),
-  dni: z.string().min(8).optional().nullable(),
+  dni: z
+    .string()
+    .length(8)
+    .optional()
+    .nullable()
+    .refine(
+      (dni) => {
+        if (!dni) return null;
+        return /^\d+$/.test(dni);
+      },
+      { message: "DNI must contain only numbers" },
+    ),
   score: z.number().int().optional(),
   moodle_user_id: z.number().int().optional().nullable(),
   source: LeadOriginSourceSchema,
@@ -46,6 +57,8 @@ export const LeadSchema = z.object({
 
 export const createLeadSchema = LeadSchema.omit({
   id: true,
+}).extend({
+  campaing_id: z.uuid().length(36).optional(),
 });
 
 export const updateLeadSchema = createLeadSchema
@@ -65,7 +78,7 @@ const interactionTypeSchema = z.enum([
   "EMAIL",
   "MEETING",
   "CALL",
-  "CRONO"
+  "CRONO",
 ]);
 
 export const LeadInteractionSchema = z.object({

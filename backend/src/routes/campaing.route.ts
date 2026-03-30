@@ -1,0 +1,82 @@
+import type { SuccessResponse } from "@/app";
+import { UUID_ROUTE } from "@/helpers/constants";
+import prisma from "@/lib/prisma";
+import {
+  createCampaingSchema,
+  updateCampaingSchema,
+} from "@/zod-schemas/campaing.schema";
+import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+
+export const campaingRoutes = new Hono()
+  .get("/", async (c) => {
+    const campaings = await prisma.campaing.findMany({});
+    return c.json(campaings, 200);
+  })
+  .get(UUID_ROUTE, async (c) => {
+    const { id } = c.req.param();
+    const campaing = await prisma.campaing.findUnique({
+      where: { id },
+    });
+
+    if (!campaing) {
+      throw new HTTPException(404, { message: "Campaing not found" });
+    }
+    return c.json<SuccessResponse<typeof campaing>>({
+      success: true,
+      data: campaing,
+      message: "Campaing found successfully",
+    });
+  })
+  .post("/", zValidator("json", createCampaingSchema), async (c) => {
+    const campaingData = c.req.valid("json");
+
+    const newCampaing = await prisma.campaing.create({
+      data: campaingData,
+    });
+
+    return c.json<SuccessResponse<typeof newCampaing>>(
+      {
+        success: true,
+        data: newCampaing,
+        message: "Campaing created successfully",
+      },
+      201,
+    );
+  })
+  .put(UUID_ROUTE, zValidator("json", updateCampaingSchema), async (c) => {
+    const { id } = c.req.param();
+    const campaingData = c.req.valid("json");
+
+    const existingCampaing = await prisma.campaing.findUnique({
+      where: { id },
+    });
+
+    if (!existingCampaing) {
+      throw new HTTPException(404, { message: "Campaing not found" });
+    }
+
+    const updatedCampaing = await prisma.campaing.update({
+      where: { id },
+      data: campaingData,
+    });
+
+    return c.json<SuccessResponse<typeof updatedCampaing>>({
+      success: true,
+      data: updatedCampaing,
+      message: "Campaing updated successfully",
+    });
+  })
+  .delete(UUID_ROUTE, async (c) => {
+    const { id } = c.req.param();
+    const deletedCampaing = await prisma.campaing.delete({
+      where: { id },
+    });
+
+    return c.json<SuccessResponse<typeof deletedCampaing>>({
+      success: true,
+      data: deletedCampaing,
+      message: "Campaing deleted successfully",
+    });
+  });

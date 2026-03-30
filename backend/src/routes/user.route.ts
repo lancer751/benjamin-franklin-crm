@@ -12,6 +12,7 @@ import {
 import type { SuccessResponse } from "@/app";
 
 export const userRoutes = new Hono()
+  // get all users
   .get("/", async (c) => {
     const users = await prisma.user.findMany({
       omit: {
@@ -20,6 +21,7 @@ export const userRoutes = new Hono()
     });
     return c.json(users, 200);
   })
+  //get user details by id
   .get(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
@@ -62,6 +64,7 @@ export const userRoutes = new Hono()
       200,
     );
   })
+  // get seller profile by user id
   .get(
     "/sellers/:user_id",
     zValidator("param", z.object({ user_id: z.uuid().min(36).max(36) })),
@@ -84,6 +87,8 @@ export const userRoutes = new Hono()
       );
     },
   )
+  // create new user with role-based profile creation
+  // from here we create the user and the profile based on the role selected
   .post("/", zValidator("json", createUserSchema), async (c) => {
     const userData = c.req.valid("json");
 
@@ -121,6 +126,7 @@ export const userRoutes = new Hono()
       201,
     );
   })
+  // update user details
   .put(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
@@ -143,6 +149,7 @@ export const userRoutes = new Hono()
       );
     },
   )
+  // update seller profile
   .put(
     "/sellers/:user_id",
     zValidator("param", z.object({ user_id: z.uuid().min(36).max(36) })),
@@ -165,6 +172,7 @@ export const userRoutes = new Hono()
       );
     },
   )
+  // delete user by id
   .delete(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
@@ -182,4 +190,9 @@ export const userRoutes = new Hono()
         200,
       );
     },
-  );
+  )
+  // for now we just return the roles, but in the future we can add more details to the roles like permissions and access levels
+  .get("/roles", async (c) => {
+    const roles = await prisma.role.findMany({});
+    return c.json(roles, 200);
+  });

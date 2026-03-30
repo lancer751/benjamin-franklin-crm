@@ -5,6 +5,9 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { userRoutes } from "./routes/user.route";
 import { courseRoutes } from "./routes/course.route";
+import { campaingRoutes } from "./routes/campaing.route";
+import { productRoutes } from "./routes/product.route";
+import { orderRoutes } from "./routes/order.route";
 
 const app = new Hono();
 
@@ -27,12 +30,17 @@ export type SuccessResponse<T = void> = {
   message: string;
 } & (T extends void ? unknown : { data: T });
 
+// payment routes is missing
 const _apiRoutes = app
   .basePath("/api")
   .route("/leads", leadRoutes)
   .route("/users", userRoutes)
   .route("/courses", courseRoutes)
+  .route("/campaings", campaingRoutes)
+  .route("/products", productRoutes)
+  .route("/orders", orderRoutes)
 
+  // error handling for http errors
 app.onError((err, c) => {
   if (err instanceof HTTPException) {
     console.log("Error caause:", err.cause);

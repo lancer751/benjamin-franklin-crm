@@ -29,23 +29,27 @@ export const createUserSchema = userSchema.omit({
 export const updateUserSchema = createUserSchema.partial();
 
 // seller profiles schema
-export const sellerProfileSchema = userSchema.extend({
-  user_id: z.uuid().min(36).max(36),
-  sales_target: z
-    .number()
-    .positive("Sales target must be a positive number")
-    .default(0)
-    .optional(),
-  sales_closed: z
-    .number()
-    .positive("Sales closed must be a positive number")
-    .default(0)
-    .optional(),
-  max_discount: z
-    .number()
-    .min(0, "Max discount must be at least 0")
-    .max(100, "Max discount cannot exceed 100")
-    .default(0),
-}).omit({id: true});
+export const sellerProfileSchema = userSchema
+  .extend({
+    user_id: z.uuid().min(36).max(36),
+    sales_target: z
+      .number()
+      .positive("Sales target must be a positive number")
+      .default(0)
+      .optional(),
+    sales_closed: z
+      .number()
+      .positive("Sales closed must be a positive number")
+      .default(0)
+      .optional(),
+    max_discount: z
+      .number()
+      .min(0, "Max discount must be at least 0")
+      .max(100, "Max discount cannot exceed 100")
+      .default(0),
+  })
+  .omit({ id: true });
 
-export const updateSellerProfileSchema = sellerProfileSchema.omit({user_id: true}).partial();
+export const updateSellerProfileSchema = sellerProfileSchema
+  .omit({ user_id: true })
+  .partial();

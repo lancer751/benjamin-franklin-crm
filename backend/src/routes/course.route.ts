@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import {
   createCourseEditionSchema,
   createCourseSchema,
+  createModalitySchema,
   updateCourseEditionSchema,
   updateCourseSchema,
 } from "@/zod-schemas/course.schema";
@@ -13,10 +14,13 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 export const courseRoutes = new Hono()
+  // getting all courses
+  // TODO: add pagination for filtering and sorting courses data
   .get("/", async (c) => {
     const courses = await prisma.course.findMany({});
     return c.json(courses, 200);
   })
+  // getting course details
   .get(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
@@ -41,10 +45,13 @@ export const courseRoutes = new Hono()
       );
     },
   )
+  // getting  course editions
+  // TODO: add pagination for filtering and sorting course editions data
   .get("/editions", async (c) => {
     const courseEditions = await prisma.edition.findMany({});
     return c.json(courseEditions, 200);
   })
+  // getting course edition details
   .get(
     "/editions/:editionId",
     zValidator("param", z.object({ editionId: z.uuid().length(36) })),
@@ -68,6 +75,7 @@ export const courseRoutes = new Hono()
       );
     },
   )
+  // creating a new course
   .post("/", zValidator("json", createCourseSchema), async (c) => {
     const courseData = c.req.valid("json");
     const course = await prisma.course.create({ data: courseData });
@@ -80,6 +88,7 @@ export const courseRoutes = new Hono()
       201,
     );
   })
+  // creating a new course edition
   .post(
     "/editions",
     zValidator("json", createCourseEditionSchema),
@@ -99,6 +108,7 @@ export const courseRoutes = new Hono()
       );
     },
   )
+  // updating course details
   .put(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().length(36) })),
@@ -129,6 +139,7 @@ export const courseRoutes = new Hono()
       );
     },
   )
+  // updating course edition details
   .put(
     "/editions/:editionId",
     zValidator("param", z.object({ editionId: z.uuid().length(36) })),
@@ -159,6 +170,7 @@ export const courseRoutes = new Hono()
       );
     },
   )
+  // deleting a course
   .delete(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().length(36) })),
@@ -174,16 +186,16 @@ export const courseRoutes = new Hono()
       }
 
       await prisma.course.delete({ where: { id } });
-      return c.json<SuccessResponse<null>>(
+      return c.json<SuccessResponse>(
         {
           success: true,
           message: "Course deleted successfully",
-          data: null,
         },
         200,
       );
     },
   )
+  // deleting a course edition
   .delete(
     "/editions/:editionId",
     zValidator("param", z.object({ editionId: z.uuid().length(36) })),
@@ -198,11 +210,57 @@ export const courseRoutes = new Hono()
       }
 
       await prisma.edition.delete({ where: { id: editionId } });
-      return c.json<SuccessResponse<null>>(
+      return c.json<SuccessResponse>(
         {
           success: true,
           message: "Course edition deleted successfully",
-          data: null,
+        },
+        200,
+      );
+    },
+  )
+  .get("/modalities", async (c) => {
+    const modalities = await prisma.modality.findMany({});
+    return c.json(modalities, 200);
+  })
+  .post("/modalities", zValidator("json", createModalitySchema), async (c) => {
+    const modalityData = c.req.valid("json");
+    const modality = await prisma.modality.create({ data: modalityData });
+    return c.json<SuccessResponse<typeof modality>>(
+      {
+        success: true,
+        message: "Modality created successfully",
+        data: modality,
+      },
+      201,
+    );
+  })
+  .put(
+    "/modalities/:modalityId",
+    zValidator("param", z.object({ modalityId: z.uuid().length(36) })),
+    // Create a separate scheme for modality creation and update if needed, for now we are using the same scheme for both operations, because modality only has one field
+    zValidator("json", createModalitySchema),
+    async (c) => {
+      const modalityId = c.req.param("modalityId");
+      const modalityData = c.req.valid("json");
+
+      const existingModality = await prisma.modality.findUnique({
+        where: { id: modalityId },
+      });
+
+      if (!existingModality) {
+        throw new HTTPException(404, { message: "Modality not found" });
+      }
+
+      const modality = await prisma.modality.update({
+        where: { id: modalityId },
+        data: modalityData,
+      });
+      return c.json<SuccessResponse<typeof modality>>(
+        {
+          success: true,
+          message: "Modality updated successfully",
+          data: modality,
         },
         200,
       );

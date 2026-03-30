@@ -17,7 +17,7 @@ export const courseSchema = z.object({
 export const createCourseSchema = courseSchema.omit({ id: true });
 export const updateCourseSchema = createCourseSchema.partial();
 
-// course edition schema
+// course edition schemas
 const editionStatusEnum = z.enum([
   "IN_PROGRESS",
   "COMPLETED",
@@ -55,3 +55,11 @@ export const courseEditionSchema = z.object({
 
 export const createCourseEditionSchema = courseEditionSchema.omit({ id: true });
 export const updateCourseEditionSchema = createCourseEditionSchema.partial();
+
+// modality schema
+export const modalitySchema = z.object({
+  id: z.uuid().length(36),
+  name: z.string().nonempty("Modality name cannot be empty")
+})
+
+export const createModalitySchema = modalitySchema.omit({id: true})

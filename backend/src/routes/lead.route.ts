@@ -17,6 +17,7 @@ export const leadRoutes = new Hono()
     return c.json(leads, 200);
   })
   // lead details
+  // TODO: we should also return the campaings that the lead is associated with, and the interactions that the lead has had
   .get(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
@@ -88,30 +89,44 @@ export const leadRoutes = new Hono()
       201,
     );
   })
-  // create a lead from external source
+  // create a lead and its interactions from external source
   .post("/external", zValidator("json", createLeadSchema), async (c) => {
     const lead = c.req.valid("json");
 
     // creating the lead and the lead interaction at the same time, since we know that if the lead is being created from an external source, it means that there was an interaction with the lead, and we want to keep track of that interaction in our system
     const newLead = await prisma.$transaction(async (tx) => {
-      const createdLead = await tx.lead.create({
-        data: lead,
+      // if the lead already exists, we only create the interaction, otherwise we create the lead and the interaction
+      const existingLead = await tx.lead.findUnique({
+        where: { email: lead.email },
       });
 
-      if (!createdLead) {
-        throw new HTTPException(500, {
-          message: "Failed to create lead from external source",
+      const newLead =
+        existingLead ??
+        (await tx.lead.create({
+          data: lead,
+        }));
+
+      // assuring to track
+      if (lead.campaing_id) {
+        await tx.leadCampaing.create({
+          data: {
+            lead_id: newLead.id,
+            campaing_id: lead.campaing_id,
+            is_primary: existingLead ? false : true,
+          },
         });
       }
 
       await tx.leadInteraction.create({
         data: {
-          lead_id: createdLead.id,
-          notes: `Lead created from: ${lead.source}`,
-          created_by: newLead.assigned_to
+          lead_id: newLead.id,
+          notes: existingLead
+            ? `New interaction from: ${lead.source}`
+            : `Lead tracked from: ${lead.source}`,
+          created_by: newLead.assigned_to,
         },
       });
-      return createdLead;
+      return newLead;
     });
     return c.json<SuccessResponse<typeof newLead>>(
       {
