@@ -3,6 +3,8 @@ import { logger } from "hono/logger";
 import { leadRoutes } from "@/routes/lead.route";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
+import { userRoutes } from "./routes/user.route";
+import { courseRoutes } from "./routes/course.route";
 
 const app = new Hono();
 
@@ -20,10 +22,20 @@ export type ErrorResponse = {
   isFormError?: boolean;
 };
 
-const _apiRoutes = app.basePath("/api").route("/leads", leadRoutes);
+export type SuccessResponse<T = void> = {
+  success: true;
+  message: string;
+} & (T extends void ? unknown : { data: T });
+
+const _apiRoutes = app
+  .basePath("/api")
+  .route("/leads", leadRoutes)
+  .route("/users", userRoutes)
+  .route("/courses", courseRoutes)
 
 app.onError((err, c) => {
   if (err instanceof HTTPException) {
+    console.log("Error caause:", err.cause);
     const errorResponse =
       err.res ??
       c.json<ErrorResponse>(
@@ -42,6 +54,7 @@ app.onError((err, c) => {
     return errorResponse;
   }
 
+  // For other types of errors, return a generic error response
   return c.json<ErrorResponse>(
     {
       success: false,

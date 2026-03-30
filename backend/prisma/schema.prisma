@@ -115,15 +115,15 @@ model SellerProfile {
   id           String  @id @default(uuid()) @db.Char(36)
   user_id      String  @unique
   sales_target Int @default(0)
-  sales_closed Int? @default(0)
-  max_discount Decimal
+  max_discount Decimal? @default(0)
 
   user              User                @relation(fields: [user_id], references: [id])
   leads             Lead[]
   orders            Order[]             @relation("SELLER_ORDERS")
-  lead_interactions Lead_Interactions[]
+  LeadInteraction LeadInteraction[]
 }
 
+// add more fields for this role
 model MarketingProfile {
   id      String @id @default(uuid()) @db.Char(36)
   user_id String @unique
@@ -136,8 +136,8 @@ model User {
   first_name  String
   middle_name String
   last_name   String
-  email       String            @unique
-  cellphone   String            @db.Char(9)
+  email       String?            @unique
+  cellphone   String?            @db.Char(9)
   role_id     String
   is_active   Boolean           @default(true)
   password    String
@@ -187,7 +187,7 @@ model Lead {
   seller            SellerProfile?      @relation(fields: [assigned_to], references: [id])
   phones            LeadPhone[]
   orders            Order[]
-  lead_interactions Lead_Interactions[]
+  LeadInteraction LeadInteraction[]
   campaing          Campaing?           @relation(fields: [campaign_id], references: [id])
 
   //indexes
@@ -196,22 +196,23 @@ model Lead {
 }
 
 enum InteractionType {
-  website_form
-  sell
-  whatsapp
-  email
-  meeting
-  call
+  WEBSITE_FORM
+  SELL
+  WHATSAPP
+  EMAIL
+  MEETING
+  CALL
+  CRONO
 }
 
-model Lead_Interactions {
+model LeadInteraction {
   id            String @id @default(uuid()) @db.Char(36)
   lead_id       String
   notes         String
-  created_by    String
-
+  created_by    String?
+  type InteractionType @default(CRONO)
   lead   Lead          @relation(fields: [lead_id], references: [id])
-  seller SellerProfile @relation(fields: [created_by], references: [id])
+  seller SellerProfile? @relation(fields: [created_by], references: [id])
 }
 
 model Tasks {
@@ -263,7 +264,7 @@ model Edition {
   teacher_fullname String
   meet_link        String
   edition_status   EditionStatus @default(DRAFT)
-  edition_code     String        @db.Char(7) //generated based on the course-code + year + ednumber
+  edition_code     String        @db.Char(12) //generated based on the course-code + year + ednumber
   campaign_id      String
 
   created_at DateTime @default(now())

@@ -48,10 +48,10 @@ export type LeadPhone = Prisma.LeadPhoneModel
  */
 export type Lead = Prisma.LeadModel
 /**
- * Model Lead_Interactions
+ * Model LeadInteraction
  * 
  */
-export type Lead_Interactions = Prisma.Lead_InteractionsModel
+export type LeadInteraction = Prisma.LeadInteractionModel
 /**
  * Model Tasks
  * 

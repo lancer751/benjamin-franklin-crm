@@ -1,4 +1,4 @@
-import z from "zod";
+import {z} from "zod";
 
 const GenderSchema = z.enum(["MALE", "FEMALE", "NOT_SPECIFIED"]);
 
@@ -44,13 +44,47 @@ export const LeadSchema = z.object({
   lead_status: LeadStatusSchema.optional(),
 });
 
-export const CreateLeadSchema = LeadSchema.omit({
+export const createLeadSchema = LeadSchema.omit({
   id: true,
 });
 
-export const UpdateLeadSchema = CreateLeadSchema.partial().refine(
-  (data) => (
-    Object.keys(data).length > 0,
-    { message: "At least one field must be provided" }
-  ),
-);
+export const updateLeadSchema = createLeadSchema
+  .partial()
+  .refine(
+    (data) => (
+      Object.keys(data).length > 0,
+      { message: "At least one field must be provided" }
+    ),
+  );
+
+// lead interaction schema
+const interactionTypeSchema = z.enum([
+  "WEBSITE_FORM",
+  "SELL",
+  "WHATSAPP",
+  "EMAIL",
+  "MEETING",
+  "CALL",
+  "CRONO"
+]);
+
+export const LeadInteractionSchema = z.object({
+  id: z.uuid().length(36),
+  lead_id: z.uuid(),
+  notes: z.string().max(255),
+  created_by: z.uuid().optional().nullable(),
+  type: interactionTypeSchema,
+});
+
+export const createLeadInteractionSchema = LeadInteractionSchema.omit({
+  id: true,
+});
+
+export const updateLeadInteractionSchema = createLeadInteractionSchema
+  .partial()
+  .refine(
+    (data) => (
+      Object.keys(data).length > 0,
+      { message: "At least one field must be provided" }
+    ),
+  );

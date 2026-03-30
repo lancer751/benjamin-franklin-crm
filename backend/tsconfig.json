@@ -50,6 +50,9 @@
       ],
       "@middleware/*": [
         "./src/middleware/*"
+      ],
+      "@shared/*": [
+        "../shared/*"
       ]
     }
   },

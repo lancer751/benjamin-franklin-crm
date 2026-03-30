@@ -57,7 +57,7 @@ export const ModelName = {
   User: 'User',
   LeadPhone: 'LeadPhone',
   Lead: 'Lead',
-  Lead_Interactions: 'Lead_Interactions',
+  LeadInteraction: 'LeadInteraction',
   Tasks: 'Tasks',
   Course: 'Course',
   Campaing: 'Campaing',
@@ -101,7 +101,6 @@ export const SellerProfileScalarFieldEnum = {
   id: 'id',
   user_id: 'user_id',
   sales_target: 'sales_target',
-  sales_closed: 'sales_closed',
   max_discount: 'max_discount'
 } as const
 
@@ -168,14 +167,15 @@ export const LeadScalarFieldEnum = {
 export type LeadScalarFieldEnum = (typeof LeadScalarFieldEnum)[keyof typeof LeadScalarFieldEnum]
 
 
-export const Lead_InteractionsScalarFieldEnum = {
+export const LeadInteractionScalarFieldEnum = {
   id: 'id',
   lead_id: 'lead_id',
   notes: 'notes',
-  created_by: 'created_by'
+  created_by: 'created_by',
+  type: 'type'
 } as const
 
-export type Lead_InteractionsScalarFieldEnum = (typeof Lead_InteractionsScalarFieldEnum)[keyof typeof Lead_InteractionsScalarFieldEnum]
+export type LeadInteractionScalarFieldEnum = (typeof LeadInteractionScalarFieldEnum)[keyof typeof LeadInteractionScalarFieldEnum]
 
 
 export const TasksScalarFieldEnum = {
@@ -385,14 +385,14 @@ export const LeadOrderByRelevanceFieldEnum = {
 export type LeadOrderByRelevanceFieldEnum = (typeof LeadOrderByRelevanceFieldEnum)[keyof typeof LeadOrderByRelevanceFieldEnum]
 
 
-export const Lead_InteractionsOrderByRelevanceFieldEnum = {
+export const LeadInteractionOrderByRelevanceFieldEnum = {
   id: 'id',
   lead_id: 'lead_id',
   notes: 'notes',
   created_by: 'created_by'
 } as const
 
-export type Lead_InteractionsOrderByRelevanceFieldEnum = (typeof Lead_InteractionsOrderByRelevanceFieldEnum)[keyof typeof Lead_InteractionsOrderByRelevanceFieldEnum]
+export type LeadInteractionOrderByRelevanceFieldEnum = (typeof LeadInteractionOrderByRelevanceFieldEnum)[keyof typeof LeadInteractionOrderByRelevanceFieldEnum]
 
 
 export const TasksOrderByRelevanceFieldEnum = {

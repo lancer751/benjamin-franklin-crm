@@ -5,3 +5,4 @@ bun.lockb
 .vscode/
 .idea/
 .DS_Store
+dist/

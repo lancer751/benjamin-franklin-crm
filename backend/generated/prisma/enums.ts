@@ -149,12 +149,13 @@ export type PhoneType = (typeof PhoneType)[keyof typeof PhoneType]
 
 
 export const InteractionType = {
-  website_form: 'website_form',
-  sell: 'sell',
-  whatsapp: 'whatsapp',
-  email: 'email',
-  meeting: 'meeting',
-  call: 'call'
+  WEBSITE_FORM: 'WEBSITE_FORM',
+  SELL: 'SELL',
+  WHATSAPP: 'WHATSAPP',
+  EMAIL: 'EMAIL',
+  MEETING: 'MEETING',
+  CALL: 'CALL',
+  CRONO: 'CRONO'
 } as const
 
 export type InteractionType = (typeof InteractionType)[keyof typeof InteractionType]

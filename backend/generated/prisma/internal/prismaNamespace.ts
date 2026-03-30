@@ -80,12 +80,12 @@ export type PrismaVersion = {
 }
 
 /**
- * Prisma Client JS version: 7.4.2
- * Query Engine version: 94a226be1cf2967af2541cca5529f0f7ba866919
+ * Prisma Client JS version: 7.6.0
+ * Query Engine version: 75cbdc1eb7150937890ad5465d861175c6624711
  */
 export const prismaVersion: PrismaVersion = {
-  client: "7.4.2",
-  engine: "94a226be1cf2967af2541cca5529f0f7ba866919"
+  client: "7.6.0",
+  engine: "75cbdc1eb7150937890ad5465d861175c6624711"
 }
 
 /**
@@ -390,7 +390,7 @@ export const ModelName = {
   User: 'User',
   LeadPhone: 'LeadPhone',
   Lead: 'Lead',
-  Lead_Interactions: 'Lead_Interactions',
+  LeadInteraction: 'LeadInteraction',
   Tasks: 'Tasks',
   Course: 'Course',
   Campaing: 'Campaing',
@@ -415,7 +415,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "role" | "sellerProfile" | "marketingProfile" | "user" | "leadPhone" | "lead" | "lead_Interactions" | "tasks" | "course" | "campaing" | "modality" | "edition" | "product" | "order" | "orderDetail" | "payment"
+    modelProps: "role" | "sellerProfile" | "marketingProfile" | "user" | "leadPhone" | "lead" | "leadInteraction" | "tasks" | "course" | "campaing" | "modality" | "edition" | "product" | "order" | "orderDetail" | "payment"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -815,69 +815,69 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    Lead_Interactions: {
-      payload: Prisma.$Lead_InteractionsPayload<ExtArgs>
-      fields: Prisma.Lead_InteractionsFieldRefs
+    LeadInteraction: {
+      payload: Prisma.$LeadInteractionPayload<ExtArgs>
+      fields: Prisma.LeadInteractionFieldRefs
       operations: {
         findUnique: {
-          args: Prisma.Lead_InteractionsFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$Lead_InteractionsPayload> | null
+          args: Prisma.LeadInteractionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadInteractionPayload> | null
         }
         findUniqueOrThrow: {
-          args: Prisma.Lead_InteractionsFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$Lead_InteractionsPayload>
+          args: Prisma.LeadInteractionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadInteractionPayload>
         }
         findFirst: {
-          args: Prisma.Lead_InteractionsFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$Lead_InteractionsPayload> | null
+          args: Prisma.LeadInteractionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadInteractionPayload> | null
         }
         findFirstOrThrow: {
-          args: Prisma.Lead_InteractionsFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$Lead_InteractionsPayload>
+          args: Prisma.LeadInteractionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadInteractionPayload>
         }
         findMany: {
-          args: Prisma.Lead_InteractionsFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$Lead_InteractionsPayload>[]
+          args: Prisma.LeadInteractionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadInteractionPayload>[]
         }
         create: {
-          args: Prisma.Lead_InteractionsCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$Lead_InteractionsPayload>
+          args: Prisma.LeadInteractionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadInteractionPayload>
         }
         createMany: {
-          args: Prisma.Lead_InteractionsCreateManyArgs<ExtArgs>
+          args: Prisma.LeadInteractionCreateManyArgs<ExtArgs>
           result: BatchPayload
         }
         delete: {
-          args: Prisma.Lead_InteractionsDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$Lead_InteractionsPayload>
+          args: Prisma.LeadInteractionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadInteractionPayload>
         }
         update: {
-          args: Prisma.Lead_InteractionsUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$Lead_InteractionsPayload>
+          args: Prisma.LeadInteractionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadInteractionPayload>
         }
         deleteMany: {
-          args: Prisma.Lead_InteractionsDeleteManyArgs<ExtArgs>
+          args: Prisma.LeadInteractionDeleteManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateMany: {
-          args: Prisma.Lead_InteractionsUpdateManyArgs<ExtArgs>
+          args: Prisma.LeadInteractionUpdateManyArgs<ExtArgs>
           result: BatchPayload
         }
         upsert: {
-          args: Prisma.Lead_InteractionsUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$Lead_InteractionsPayload>
+          args: Prisma.LeadInteractionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadInteractionPayload>
         }
         aggregate: {
-          args: Prisma.Lead_InteractionsAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateLead_Interactions>
+          args: Prisma.LeadInteractionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLeadInteraction>
         }
         groupBy: {
-          args: Prisma.Lead_InteractionsGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.Lead_InteractionsGroupByOutputType>[]
+          args: Prisma.LeadInteractionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeadInteractionGroupByOutputType>[]
         }
         count: {
-          args: Prisma.Lead_InteractionsCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.Lead_InteractionsCountAggregateOutputType> | number
+          args: Prisma.LeadInteractionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeadInteractionCountAggregateOutputType> | number
         }
       }
     }
@@ -1530,7 +1530,6 @@ export const SellerProfileScalarFieldEnum = {
   id: 'id',
   user_id: 'user_id',
   sales_target: 'sales_target',
-  sales_closed: 'sales_closed',
   max_discount: 'max_discount'
 } as const
 
@@ -1597,14 +1596,15 @@ export const LeadScalarFieldEnum = {
 export type LeadScalarFieldEnum = (typeof LeadScalarFieldEnum)[keyof typeof LeadScalarFieldEnum]
 
 
-export const Lead_InteractionsScalarFieldEnum = {
+export const LeadInteractionScalarFieldEnum = {
   id: 'id',
   lead_id: 'lead_id',
   notes: 'notes',
-  created_by: 'created_by'
+  created_by: 'created_by',
+  type: 'type'
 } as const
 
-export type Lead_InteractionsScalarFieldEnum = (typeof Lead_InteractionsScalarFieldEnum)[keyof typeof Lead_InteractionsScalarFieldEnum]
+export type LeadInteractionScalarFieldEnum = (typeof LeadInteractionScalarFieldEnum)[keyof typeof LeadInteractionScalarFieldEnum]
 
 
 export const TasksScalarFieldEnum = {
@@ -1814,14 +1814,14 @@ export const LeadOrderByRelevanceFieldEnum = {
 export type LeadOrderByRelevanceFieldEnum = (typeof LeadOrderByRelevanceFieldEnum)[keyof typeof LeadOrderByRelevanceFieldEnum]
 
 
-export const Lead_InteractionsOrderByRelevanceFieldEnum = {
+export const LeadInteractionOrderByRelevanceFieldEnum = {
   id: 'id',
   lead_id: 'lead_id',
   notes: 'notes',
   created_by: 'created_by'
 } as const
 
-export type Lead_InteractionsOrderByRelevanceFieldEnum = (typeof Lead_InteractionsOrderByRelevanceFieldEnum)[keyof typeof Lead_InteractionsOrderByRelevanceFieldEnum]
+export type LeadInteractionOrderByRelevanceFieldEnum = (typeof LeadInteractionOrderByRelevanceFieldEnum)[keyof typeof LeadInteractionOrderByRelevanceFieldEnum]
 
 
 export const TasksOrderByRelevanceFieldEnum = {
@@ -1992,6 +1992,13 @@ export type EnumLeadStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$Prism
 
 
 /**
+ * Reference to a field of type 'InteractionType'
+ */
+export type EnumInteractionTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'InteractionType'>
+    
+
+
+/**
  * Reference to a field of type 'CampaingStatus'
  */
 export type EnumCampaingStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CampaingStatus'>
@@ -2147,7 +2154,7 @@ export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   leadPhone?: Prisma.LeadPhoneOmit
   lead?: Prisma.LeadOmit
-  lead_Interactions?: Prisma.Lead_InteractionsOmit
+  leadInteraction?: Prisma.LeadInteractionOmit
   tasks?: Prisma.TasksOmit
   course?: Prisma.CourseOmit
   campaing?: Prisma.CampaingOmit
