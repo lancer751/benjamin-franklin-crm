@@ -211,6 +211,40 @@ export type EnumPhoneTypeWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumPhoneTypeFilter<$PrismaModel>
 }
 
+export type EnumCampaignMemberStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.CampaignMemberStatus | Prisma.EnumCampaignMemberStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.CampaignMemberStatus[]
+  notIn?: $Enums.CampaignMemberStatus[]
+  not?: Prisma.NestedEnumCampaignMemberStatusFilter<$PrismaModel> | $Enums.CampaignMemberStatus
+}
+
+export type EnumLeadOriginSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadOriginSource | Prisma.EnumLeadOriginSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadOriginSource[]
+  notIn?: $Enums.LeadOriginSource[]
+  not?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel> | $Enums.LeadOriginSource
+}
+
+export type EnumCampaignMemberStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.CampaignMemberStatus | Prisma.EnumCampaignMemberStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.CampaignMemberStatus[]
+  notIn?: $Enums.CampaignMemberStatus[]
+  not?: Prisma.NestedEnumCampaignMemberStatusWithAggregatesFilter<$PrismaModel> | $Enums.CampaignMemberStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumCampaignMemberStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumCampaignMemberStatusFilter<$PrismaModel>
+}
+
+export type EnumLeadOriginSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadOriginSource | Prisma.EnumLeadOriginSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadOriginSource[]
+  notIn?: $Enums.LeadOriginSource[]
+  not?: Prisma.NestedEnumLeadOriginSourceWithAggregatesFilter<$PrismaModel> | $Enums.LeadOriginSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel>
+}
+
 export type EnumGenderNullableFilter<$PrismaModel = never> = {
   equals?: $Enums.Gender | Prisma.EnumGenderFieldRefInput<$PrismaModel> | null
   in?: $Enums.Gender[] | null
@@ -227,13 +261,6 @@ export type IntNullableFilter<$PrismaModel = never> = {
   gt?: number | Prisma.IntFieldRefInput<$PrismaModel>
   gte?: number | Prisma.IntFieldRefInput<$PrismaModel>
   not?: Prisma.NestedIntNullableFilter<$PrismaModel> | number | null
-}
-
-export type EnumLeadOriginSourceFilter<$PrismaModel = never> = {
-  equals?: $Enums.LeadOriginSource | Prisma.EnumLeadOriginSourceFieldRefInput<$PrismaModel>
-  in?: $Enums.LeadOriginSource[]
-  notIn?: $Enums.LeadOriginSource[]
-  not?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel> | $Enums.LeadOriginSource
 }
 
 export type EnumLeadStatusFilter<$PrismaModel = never> = {
@@ -267,16 +294,6 @@ export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
   _sum?: Prisma.NestedIntNullableFilter<$PrismaModel>
   _min?: Prisma.NestedIntNullableFilter<$PrismaModel>
   _max?: Prisma.NestedIntNullableFilter<$PrismaModel>
-}
-
-export type EnumLeadOriginSourceWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.LeadOriginSource | Prisma.EnumLeadOriginSourceFieldRefInput<$PrismaModel>
-  in?: $Enums.LeadOriginSource[]
-  notIn?: $Enums.LeadOriginSource[]
-  not?: Prisma.NestedEnumLeadOriginSourceWithAggregatesFilter<$PrismaModel> | $Enums.LeadOriginSource
-  _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel>
 }
 
 export type EnumLeadStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -691,11 +708,11 @@ export type NestedEnumPhoneTypeWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumPhoneTypeFilter<$PrismaModel>
 }
 
-export type NestedEnumGenderNullableFilter<$PrismaModel = never> = {
-  equals?: $Enums.Gender | Prisma.EnumGenderFieldRefInput<$PrismaModel> | null
-  in?: $Enums.Gender[] | null
-  notIn?: $Enums.Gender[] | null
-  not?: Prisma.NestedEnumGenderNullableFilter<$PrismaModel> | $Enums.Gender | null
+export type NestedEnumCampaignMemberStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.CampaignMemberStatus | Prisma.EnumCampaignMemberStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.CampaignMemberStatus[]
+  notIn?: $Enums.CampaignMemberStatus[]
+  not?: Prisma.NestedEnumCampaignMemberStatusFilter<$PrismaModel> | $Enums.CampaignMemberStatus
 }
 
 export type NestedEnumLeadOriginSourceFilter<$PrismaModel = never> = {
@@ -703,6 +720,33 @@ export type NestedEnumLeadOriginSourceFilter<$PrismaModel = never> = {
   in?: $Enums.LeadOriginSource[]
   notIn?: $Enums.LeadOriginSource[]
   not?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel> | $Enums.LeadOriginSource
+}
+
+export type NestedEnumCampaignMemberStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.CampaignMemberStatus | Prisma.EnumCampaignMemberStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.CampaignMemberStatus[]
+  notIn?: $Enums.CampaignMemberStatus[]
+  not?: Prisma.NestedEnumCampaignMemberStatusWithAggregatesFilter<$PrismaModel> | $Enums.CampaignMemberStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumCampaignMemberStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumCampaignMemberStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumLeadOriginSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.LeadOriginSource | Prisma.EnumLeadOriginSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.LeadOriginSource[]
+  notIn?: $Enums.LeadOriginSource[]
+  not?: Prisma.NestedEnumLeadOriginSourceWithAggregatesFilter<$PrismaModel> | $Enums.LeadOriginSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel>
+}
+
+export type NestedEnumGenderNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.Gender | Prisma.EnumGenderFieldRefInput<$PrismaModel> | null
+  in?: $Enums.Gender[] | null
+  notIn?: $Enums.Gender[] | null
+  not?: Prisma.NestedEnumGenderNullableFilter<$PrismaModel> | $Enums.Gender | null
 }
 
 export type NestedEnumLeadStatusFilter<$PrismaModel = never> = {
@@ -747,16 +791,6 @@ export type NestedFloatNullableFilter<$PrismaModel = never> = {
   gt?: number | Prisma.FloatFieldRefInput<$PrismaModel>
   gte?: number | Prisma.FloatFieldRefInput<$PrismaModel>
   not?: Prisma.NestedFloatNullableFilter<$PrismaModel> | number | null
-}
-
-export type NestedEnumLeadOriginSourceWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.LeadOriginSource | Prisma.EnumLeadOriginSourceFieldRefInput<$PrismaModel>
-  in?: $Enums.LeadOriginSource[]
-  notIn?: $Enums.LeadOriginSource[]
-  not?: Prisma.NestedEnumLeadOriginSourceWithAggregatesFilter<$PrismaModel> | $Enums.LeadOriginSource
-  _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumLeadOriginSourceFilter<$PrismaModel>
 }
 
 export type NestedEnumLeadStatusWithAggregatesFilter<$PrismaModel = never> = {

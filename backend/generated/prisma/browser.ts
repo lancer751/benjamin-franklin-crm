@@ -43,10 +43,10 @@ export type User = Prisma.UserModel
  */
 export type LeadPhone = Prisma.LeadPhoneModel
 /**
- * Model LeadCampaing
+ * Model CampaingMember
  * 
  */
-export type LeadCampaing = Prisma.LeadCampaingModel
+export type CampaingMember = Prisma.CampaingMemberModel
 /**
  * Model Lead
  * 

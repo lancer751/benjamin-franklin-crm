@@ -42,39 +42,38 @@ async function main() {
     }),
   ]);
 
-  const users = await Promise.all([
-    Array.from({
-      length: 20
-    }).map(() => {
-      prisma.user.create({
+  const admins = await Promise.all(
+    Array.from({ length: 10 }).map(() => {
+      return prisma.user.create({
         data: {
           first_name: fakerES.person.firstName(),
           middle_name: fakerES.person.middleName(),
           last_name: fakerES.person.lastName(),
           password: "password123",
           email: fakerES.internet.email(),
-          role_id: roles[Math.floor((Math.random() * roles.length))]!.id
-        }
-      })
-    })
-  ])
-
-  const sellerUser = await prisma.user.create({
-    data: {
-      first_name: "Juan",
-      middle_name: "",
-      last_name: "Perez",
-      email: "seller@test.com",
-      password: "hashed_password",
-      role_id: salesRole!.id,
-      seller: {
-        create: {
-          sales_target: 10000,
-          max_discount: 20,
+          role_id: roles[0].id,
         },
-      },
-    },
-  });
+      });
+    }),
+  );
+
+  const sellers = await Promise.all(
+    Array.from({ length: 10 }).map(() => {
+      return prisma.user.create({
+        data: {
+          first_name: fakerES.person.firstName(),
+          middle_name: fakerES.person.middleName(),
+          last_name: fakerES.person.lastName(),
+          password: "password123",
+          email: fakerES.internet.email(),
+          role_id: roles[1].id,
+        },
+      });
+    }),
+  );
+
+  // TODO: create fake data for the other entities
+  
 }
 
 main()

@@ -112,7 +112,7 @@ export const LeadOriginSource = {
 export type LeadOriginSource = (typeof LeadOriginSource)[keyof typeof LeadOriginSource]
 
 
-export const LeadStatus = {
+export const CampaignMemberStatus = {
   NEW: 'NEW',
   CONTACTED: 'CONTACTED',
   ATTEMPTED_CONTACT: 'ATTEMPTED_CONTACT',
@@ -128,7 +128,7 @@ export const LeadStatus = {
   ON_HOLD: 'ON_HOLD'
 } as const
 
-export type LeadStatus = (typeof LeadStatus)[keyof typeof LeadStatus]
+export type CampaignMemberStatus = (typeof CampaignMemberStatus)[keyof typeof CampaignMemberStatus]
 
 
 export const Gender = {
@@ -148,14 +148,28 @@ export const PhoneType = {
 export type PhoneType = (typeof PhoneType)[keyof typeof PhoneType]
 
 
+export const LeadStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE'
+} as const
+
+export type LeadStatus = (typeof LeadStatus)[keyof typeof LeadStatus]
+
+
+export const LeadStage = {
+  PROSPECT: 'PROSPECT'
+} as const
+
+export type LeadStage = (typeof LeadStage)[keyof typeof LeadStage]
+
+
 export const InteractionType = {
   WEBSITE_FORM: 'WEBSITE_FORM',
   SELL: 'SELL',
   WHATSAPP: 'WHATSAPP',
   EMAIL: 'EMAIL',
   MEETING: 'MEETING',
-  CALL: 'CALL',
-  CRONO: 'CRONO'
+  CALL: 'CALL'
 } as const
 
 export type InteractionType = (typeof InteractionType)[keyof typeof InteractionType]

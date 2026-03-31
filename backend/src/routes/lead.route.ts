@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import prisma from "../lib/prisma";
 import { zValidator } from "@hono/zod-validator";
 import {
+  createLeadFromExternalSchema,
   createLeadInteractionSchema,
   createLeadSchema,
   updateLeadSchema,
@@ -90,53 +91,66 @@ export const leadRoutes = new Hono()
     );
   })
   // create a lead and its interactions from external source
-  .post("/external", zValidator("json", createLeadSchema), async (c) => {
-    const lead = c.req.valid("json");
-
-    // creating the lead and the lead interaction at the same time, since we know that if the lead is being created from an external source, it means that there was an interaction with the lead, and we want to keep track of that interaction in our system
-    const newLead = await prisma.$transaction(async (tx) => {
-      // if the lead already exists, we only create the interaction, otherwise we create the lead and the interaction
-      const existingLead = await tx.lead.findUnique({
+  .post(
+    "/external",
+    zValidator("json", createLeadFromExternalSchema),
+    async (c) => {
+      const lead = c.req.valid("json");
+      const { lead_interaction, source, campaing_id, ...formattedLead } =
+        structuredClone(lead);
+      const { notes, type } = lead_interaction;
+      // creating the lead and the lead interaction at the same time, since we know that if the lead is being created from an external source, it means that there was an interaction with the lead, and we want to keep track of that interaction in our system
+      const existingLead = await prisma.lead.findUnique({
         where: { email: lead.email },
       });
 
-      const newLead =
-        existingLead ??
-        (await tx.lead.create({
-          data: lead,
-        }));
+      // if the lead already exists, we only create a new interaction, otherwise we create the lead, a campaingmember and the interaction
 
-      // assuring to track
-      if (lead.campaing_id) {
-        await tx.leadCampaing.create({
-          data: {
-            lead_id: newLead.id,
-            campaing_id: lead.campaing_id,
-            is_primary: existingLead ? false : true,
+      await prisma.$transaction(async (tx) => {
+        const createdLead =
+          existingLead ??
+          (await tx.lead.create({
+            data: { ...formattedLead, primary_campaign_id: campaing_id },
+          }));
+
+        // creating a new campaign member if the lead doesn't exist
+        const existingCampaingMember = await tx.campaingMember.findFirst({
+          where: {
+            campaing_id,
+            lead_id: createdLead.id,
           },
         });
-      }
 
-      await tx.leadInteraction.create({
-        data: {
-          lead_id: newLead.id,
-          notes: existingLead
-            ? `New interaction from: ${lead.source}`
-            : `Lead tracked from: ${lead.source}`,
-          created_by: newLead.assigned_to,
-        },
+        if (!existingCampaingMember) {
+          await tx.campaingMember.create({
+            data: {
+              source: source,
+              campaing_id: campaing_id,
+              lead_id: createdLead.id,
+              is_primary: existingLead ? true : false,
+            },
+          });
+        }
+
+        // creating a new interaction
+        await tx.leadInteraction.create({
+          data: {
+            campaing_id: campaing_id,
+            notes,
+            lead_id: createdLead.id,
+            type,
+          },
+        });
       });
-      return newLead;
-    });
-    return c.json<SuccessResponse<typeof newLead>>(
-      {
-        success: true,
-        message: "Lead created successfully from external source",
-        data: newLead,
-      },
-      201,
-    );
-  })
+      return c.json<SuccessResponse>(
+        {
+          success: true,
+          message: "Lead created successfully from external source",
+        },
+        201,
+      );
+    },
+  )
   // register lead interaction manually from the CRM
   .post(
     "/interactions",

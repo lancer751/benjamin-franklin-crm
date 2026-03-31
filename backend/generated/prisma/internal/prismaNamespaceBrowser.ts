@@ -56,7 +56,7 @@ export const ModelName = {
   MarketingProfile: 'MarketingProfile',
   User: 'User',
   LeadPhone: 'LeadPhone',
-  LeadCampaing: 'LeadCampaing',
+  CampaingMember: 'CampaingMember',
   Lead: 'Lead',
   LeadInteraction: 'LeadInteraction',
   Tasks: 'Tasks',
@@ -141,16 +141,19 @@ export const LeadPhoneScalarFieldEnum = {
 export type LeadPhoneScalarFieldEnum = (typeof LeadPhoneScalarFieldEnum)[keyof typeof LeadPhoneScalarFieldEnum]
 
 
-export const LeadCampaingScalarFieldEnum = {
+export const CampaingMemberScalarFieldEnum = {
   id: 'id',
   lead_id: 'lead_id',
   campaing_id: 'campaing_id',
+  status: 'status',
+  assigned_to: 'assigned_to',
+  source: 'source',
   created_at: 'created_at',
   updated_at: 'updated_at',
   is_primary: 'is_primary'
 } as const
 
-export type LeadCampaingScalarFieldEnum = (typeof LeadCampaingScalarFieldEnum)[keyof typeof LeadCampaingScalarFieldEnum]
+export type CampaingMemberScalarFieldEnum = (typeof CampaingMemberScalarFieldEnum)[keyof typeof CampaingMemberScalarFieldEnum]
 
 
 export const LeadScalarFieldEnum = {
@@ -165,10 +168,7 @@ export const LeadScalarFieldEnum = {
   email: 'email',
   secondary_email: 'secondary_email',
   dni: 'dni',
-  score: 'score',
   moodle_user_id: 'moodle_user_id',
-  assigned_to: 'assigned_to',
-  source: 'source',
   lead_status: 'lead_status',
   primary_campaign_id: 'primary_campaign_id',
   created_at: 'created_at',
@@ -183,6 +183,7 @@ export const LeadInteractionScalarFieldEnum = {
   lead_id: 'lead_id',
   notes: 'notes',
   created_by: 'created_by',
+  campaing_id: 'campaing_id',
   type: 'type'
 } as const
 
@@ -380,13 +381,14 @@ export const LeadPhoneOrderByRelevanceFieldEnum = {
 export type LeadPhoneOrderByRelevanceFieldEnum = (typeof LeadPhoneOrderByRelevanceFieldEnum)[keyof typeof LeadPhoneOrderByRelevanceFieldEnum]
 
 
-export const LeadCampaingOrderByRelevanceFieldEnum = {
+export const CampaingMemberOrderByRelevanceFieldEnum = {
   id: 'id',
   lead_id: 'lead_id',
-  campaing_id: 'campaing_id'
+  campaing_id: 'campaing_id',
+  assigned_to: 'assigned_to'
 } as const
 
-export type LeadCampaingOrderByRelevanceFieldEnum = (typeof LeadCampaingOrderByRelevanceFieldEnum)[keyof typeof LeadCampaingOrderByRelevanceFieldEnum]
+export type CampaingMemberOrderByRelevanceFieldEnum = (typeof CampaingMemberOrderByRelevanceFieldEnum)[keyof typeof CampaingMemberOrderByRelevanceFieldEnum]
 
 
 export const LeadOrderByRelevanceFieldEnum = {
@@ -400,7 +402,6 @@ export const LeadOrderByRelevanceFieldEnum = {
   email: 'email',
   secondary_email: 'secondary_email',
   dni: 'dni',
-  assigned_to: 'assigned_to',
   primary_campaign_id: 'primary_campaign_id'
 } as const
 
@@ -411,7 +412,8 @@ export const LeadInteractionOrderByRelevanceFieldEnum = {
   id: 'id',
   lead_id: 'lead_id',
   notes: 'notes',
-  created_by: 'created_by'
+  created_by: 'created_by',
+  campaing_id: 'campaing_id'
 } as const
 
 export type LeadInteractionOrderByRelevanceFieldEnum = (typeof LeadInteractionOrderByRelevanceFieldEnum)[keyof typeof LeadInteractionOrderByRelevanceFieldEnum]

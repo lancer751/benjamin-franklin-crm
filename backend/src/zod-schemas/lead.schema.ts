@@ -10,7 +10,7 @@ export const LeadOriginSourceSchema = z.enum([
   "WEBSITE",
 ]);
 
-export const LeadStatusSchema = z.enum([
+export const LeadStageSchema = z.enum([
   "NEW",
   "CONTACTED",
   "ATTEMPTED_CONTACT",
@@ -25,6 +25,8 @@ export const LeadStatusSchema = z.enum([
   "FOLLOW_UP",
   "ON_HOLD",
 ]);
+
+export const LeadStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 
 export const LeadSchema = z.object({
   id: z.uuid().max(36),
@@ -49,26 +51,18 @@ export const LeadSchema = z.object({
       },
       { message: "DNI must contain only numbers" },
     ),
-  score: z.number().int().optional(),
   moodle_user_id: z.number().int().optional().nullable(),
-  source: LeadOriginSourceSchema,
-  lead_status: LeadStatusSchema.optional(),
+  lead_status: LeadStatusSchema,
+  primary_campaign_id: z.uuid().max(36),
+  created_at: z.date(),
+  updated_at: z.date(),
 });
 
 export const createLeadSchema = LeadSchema.omit({
   id: true,
-}).extend({
-  campaing_id: z.uuid().length(36).optional(),
+  created_at: true,
+  updated_at: true,
 });
-
-export const updateLeadSchema = createLeadSchema
-  .partial()
-  .refine(
-    (data) => (
-      Object.keys(data).length > 0,
-      { message: "At least one field must be provided" }
-    ),
-  );
 
 // lead interaction schema
 const interactionTypeSchema = z.enum([
@@ -78,16 +72,38 @@ const interactionTypeSchema = z.enum([
   "EMAIL",
   "MEETING",
   "CALL",
-  "CRONO",
 ]);
 
 export const LeadInteractionSchema = z.object({
   id: z.uuid().length(36),
   lead_id: z.uuid(),
   notes: z.string().max(255),
-  created_by: z.uuid().optional().nullable(),
+  created_by: z.uuid().length(36).optional().nullable(),
+  campaing_id: z.uuid().length(36),
   type: interactionTypeSchema,
 });
+
+export const createLeadFromExternalSchema = createLeadSchema
+  .omit({ primary_campaign_id: true })
+  .extend({
+    lead_interaction: LeadInteractionSchema.omit({
+      id: true,
+      created_by: true,
+      lead_id: true,
+      campaing_id: true,
+    }),
+    source: LeadOriginSourceSchema,
+    campaing_id: z.uuid().length(36),
+  });
+
+export const updateLeadSchema = createLeadSchema
+  .partial()
+  .refine(
+    (data) => (
+      Object.keys(data).length > 0,
+      { message: "At least one field must be provided" }
+    ),
+  );
 
 export const createLeadInteractionSchema = LeadInteractionSchema.omit({
   id: true,

@@ -389,7 +389,7 @@ export const ModelName = {
   MarketingProfile: 'MarketingProfile',
   User: 'User',
   LeadPhone: 'LeadPhone',
-  LeadCampaing: 'LeadCampaing',
+  CampaingMember: 'CampaingMember',
   Lead: 'Lead',
   LeadInteraction: 'LeadInteraction',
   Tasks: 'Tasks',
@@ -416,7 +416,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "role" | "sellerProfile" | "marketingProfile" | "user" | "leadPhone" | "leadCampaing" | "lead" | "leadInteraction" | "tasks" | "course" | "campaing" | "modality" | "edition" | "product" | "order" | "orderDetail" | "payment"
+    modelProps: "role" | "sellerProfile" | "marketingProfile" | "user" | "leadPhone" | "campaingMember" | "lead" | "leadInteraction" | "tasks" | "course" | "campaing" | "modality" | "edition" | "product" | "order" | "orderDetail" | "payment"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -750,69 +750,69 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    LeadCampaing: {
-      payload: Prisma.$LeadCampaingPayload<ExtArgs>
-      fields: Prisma.LeadCampaingFieldRefs
+    CampaingMember: {
+      payload: Prisma.$CampaingMemberPayload<ExtArgs>
+      fields: Prisma.CampaingMemberFieldRefs
       operations: {
         findUnique: {
-          args: Prisma.LeadCampaingFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCampaingPayload> | null
+          args: Prisma.CampaingMemberFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CampaingMemberPayload> | null
         }
         findUniqueOrThrow: {
-          args: Prisma.LeadCampaingFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCampaingPayload>
+          args: Prisma.CampaingMemberFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CampaingMemberPayload>
         }
         findFirst: {
-          args: Prisma.LeadCampaingFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCampaingPayload> | null
+          args: Prisma.CampaingMemberFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CampaingMemberPayload> | null
         }
         findFirstOrThrow: {
-          args: Prisma.LeadCampaingFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCampaingPayload>
+          args: Prisma.CampaingMemberFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CampaingMemberPayload>
         }
         findMany: {
-          args: Prisma.LeadCampaingFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCampaingPayload>[]
+          args: Prisma.CampaingMemberFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CampaingMemberPayload>[]
         }
         create: {
-          args: Prisma.LeadCampaingCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCampaingPayload>
+          args: Prisma.CampaingMemberCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CampaingMemberPayload>
         }
         createMany: {
-          args: Prisma.LeadCampaingCreateManyArgs<ExtArgs>
+          args: Prisma.CampaingMemberCreateManyArgs<ExtArgs>
           result: BatchPayload
         }
         delete: {
-          args: Prisma.LeadCampaingDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCampaingPayload>
+          args: Prisma.CampaingMemberDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CampaingMemberPayload>
         }
         update: {
-          args: Prisma.LeadCampaingUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCampaingPayload>
+          args: Prisma.CampaingMemberUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CampaingMemberPayload>
         }
         deleteMany: {
-          args: Prisma.LeadCampaingDeleteManyArgs<ExtArgs>
+          args: Prisma.CampaingMemberDeleteManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateMany: {
-          args: Prisma.LeadCampaingUpdateManyArgs<ExtArgs>
+          args: Prisma.CampaingMemberUpdateManyArgs<ExtArgs>
           result: BatchPayload
         }
         upsert: {
-          args: Prisma.LeadCampaingUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeadCampaingPayload>
+          args: Prisma.CampaingMemberUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CampaingMemberPayload>
         }
         aggregate: {
-          args: Prisma.LeadCampaingAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateLeadCampaing>
+          args: Prisma.CampaingMemberAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCampaingMember>
         }
         groupBy: {
-          args: Prisma.LeadCampaingGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.LeadCampaingGroupByOutputType>[]
+          args: Prisma.CampaingMemberGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CampaingMemberGroupByOutputType>[]
         }
         count: {
-          args: Prisma.LeadCampaingCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.LeadCampaingCountAggregateOutputType> | number
+          args: Prisma.CampaingMemberCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CampaingMemberCountAggregateOutputType> | number
         }
       }
     }
@@ -1636,16 +1636,19 @@ export const LeadPhoneScalarFieldEnum = {
 export type LeadPhoneScalarFieldEnum = (typeof LeadPhoneScalarFieldEnum)[keyof typeof LeadPhoneScalarFieldEnum]
 
 
-export const LeadCampaingScalarFieldEnum = {
+export const CampaingMemberScalarFieldEnum = {
   id: 'id',
   lead_id: 'lead_id',
   campaing_id: 'campaing_id',
+  status: 'status',
+  assigned_to: 'assigned_to',
+  source: 'source',
   created_at: 'created_at',
   updated_at: 'updated_at',
   is_primary: 'is_primary'
 } as const
 
-export type LeadCampaingScalarFieldEnum = (typeof LeadCampaingScalarFieldEnum)[keyof typeof LeadCampaingScalarFieldEnum]
+export type CampaingMemberScalarFieldEnum = (typeof CampaingMemberScalarFieldEnum)[keyof typeof CampaingMemberScalarFieldEnum]
 
 
 export const LeadScalarFieldEnum = {
@@ -1660,10 +1663,7 @@ export const LeadScalarFieldEnum = {
   email: 'email',
   secondary_email: 'secondary_email',
   dni: 'dni',
-  score: 'score',
   moodle_user_id: 'moodle_user_id',
-  assigned_to: 'assigned_to',
-  source: 'source',
   lead_status: 'lead_status',
   primary_campaign_id: 'primary_campaign_id',
   created_at: 'created_at',
@@ -1678,6 +1678,7 @@ export const LeadInteractionScalarFieldEnum = {
   lead_id: 'lead_id',
   notes: 'notes',
   created_by: 'created_by',
+  campaing_id: 'campaing_id',
   type: 'type'
 } as const
 
@@ -1875,13 +1876,14 @@ export const LeadPhoneOrderByRelevanceFieldEnum = {
 export type LeadPhoneOrderByRelevanceFieldEnum = (typeof LeadPhoneOrderByRelevanceFieldEnum)[keyof typeof LeadPhoneOrderByRelevanceFieldEnum]
 
 
-export const LeadCampaingOrderByRelevanceFieldEnum = {
+export const CampaingMemberOrderByRelevanceFieldEnum = {
   id: 'id',
   lead_id: 'lead_id',
-  campaing_id: 'campaing_id'
+  campaing_id: 'campaing_id',
+  assigned_to: 'assigned_to'
 } as const
 
-export type LeadCampaingOrderByRelevanceFieldEnum = (typeof LeadCampaingOrderByRelevanceFieldEnum)[keyof typeof LeadCampaingOrderByRelevanceFieldEnum]
+export type CampaingMemberOrderByRelevanceFieldEnum = (typeof CampaingMemberOrderByRelevanceFieldEnum)[keyof typeof CampaingMemberOrderByRelevanceFieldEnum]
 
 
 export const LeadOrderByRelevanceFieldEnum = {
@@ -1895,7 +1897,6 @@ export const LeadOrderByRelevanceFieldEnum = {
   email: 'email',
   secondary_email: 'secondary_email',
   dni: 'dni',
-  assigned_to: 'assigned_to',
   primary_campaign_id: 'primary_campaign_id'
 } as const
 
@@ -1906,7 +1907,8 @@ export const LeadInteractionOrderByRelevanceFieldEnum = {
   id: 'id',
   lead_id: 'lead_id',
   notes: 'notes',
-  created_by: 'created_by'
+  created_by: 'created_by',
+  campaing_id: 'campaing_id'
 } as const
 
 export type LeadInteractionOrderByRelevanceFieldEnum = (typeof LeadInteractionOrderByRelevanceFieldEnum)[keyof typeof LeadInteractionOrderByRelevanceFieldEnum]
@@ -2059,9 +2061,9 @@ export type EnumPhoneTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$Prisma
 
 
 /**
- * Reference to a field of type 'Gender'
+ * Reference to a field of type 'CampaignMemberStatus'
  */
-export type EnumGenderFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Gender'>
+export type EnumCampaignMemberStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CampaignMemberStatus'>
     
 
 
@@ -2069,6 +2071,13 @@ export type EnumGenderFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaMod
  * Reference to a field of type 'LeadOriginSource'
  */
 export type EnumLeadOriginSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'LeadOriginSource'>
+    
+
+
+/**
+ * Reference to a field of type 'Gender'
+ */
+export type EnumGenderFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Gender'>
     
 
 
@@ -2241,7 +2250,7 @@ export type GlobalOmitConfig = {
   marketingProfile?: Prisma.MarketingProfileOmit
   user?: Prisma.UserOmit
   leadPhone?: Prisma.LeadPhoneOmit
-  leadCampaing?: Prisma.LeadCampaingOmit
+  campaingMember?: Prisma.CampaingMemberOmit
   lead?: Prisma.LeadOmit
   leadInteraction?: Prisma.LeadInteractionOmit
   tasks?: Prisma.TasksOmit
