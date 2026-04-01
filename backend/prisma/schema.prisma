@@ -117,7 +117,7 @@ model SellerProfile {
   max_discount Decimal? @default(0)
 
   user            User              @relation(fields: [user_id], references: [id])
-  campaingMembers           CampaingMember[]
+  campaingMembers CampaingMember[]
   orders          Order[]           @relation("SELLER_ORDERS")
   LeadInteraction LeadInteraction[]
 }
@@ -162,21 +162,22 @@ model LeadPhone {
 }
 
 model CampaingMember {
-  id          String           @id @default(uuid()) @db.Char(36)
+  id          String               @id @default(uuid()) @db.Char(36)
   lead_id     String
   campaing_id String
-  status CampaignMemberStatus       @default(NEW)
+  status      CampaignMemberStatus @default(NEW)
   assigned_to String?
   source      LeadOriginSource
-  created_at  DateTime         @default(now())
-  updated_at  DateTime         @updatedAt
-  is_primary  Boolean          @default(false)
+  created_at  DateTime             @default(now())
+  updated_at  DateTime             @updatedAt
+  is_primary  Boolean              @default(false)
 
-  lead     Lead      @relation(fields: [lead_id], references: [id])
-  campaing Campaing @relation(fields: [campaing_id], references: [id])
-  seller              SellerProfile?    @relation(fields: [assigned_to], references: [id])
+  lead             Lead              @relation(fields: [lead_id], references: [id])
+  campaing         Campaing          @relation(fields: [campaing_id], references: [id])
+  seller           SellerProfile?    @relation(fields: [assigned_to], references: [id])
   leadInteractions LeadInteraction[]
 
+  @@unique([lead_id, campaing_id])
   @@index([status])
   @@index([assigned_to])
 }
@@ -188,33 +189,32 @@ enum LeadStatus {
 
 enum LeadStage {
   PROSPECT
-
 }
 
 model Lead {
-  id              String  @id @default(uuid()) @db.Char(36)
-  first_name      String
-  middle_name     String
-  last_name       String
-  profession      String?
-  gender          Gender?
-  address         String?
-  second_address  String?
-  email           String  @unique
-  secondary_email String?
-  dni             String? @unique @db.Char(8)
-  moodle_user_id  Int?    @unique
-  lead_status LeadStatus
-  primary_campaign_id String
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
+  id                  String     @id @default(uuid()) @db.Char(36)
+  first_name          String
+  middle_name         String
+  last_name           String
+  profession          String?
+  gender              Gender?
+  address             String?
+  second_address      String?
+  email               String     @unique
+  secondary_email     String?
+  dni                 String?    @unique @db.Char(8)
+  moodle_user_id      Int?       @unique
+  lead_status         LeadStatus @default(ACTIVE)
+  primary_campaign_id String?
+  created_at          DateTime   @default(now())
+  updated_at          DateTime   @updatedAt
 
   //relations
   phones              LeadPhone[]
   orders              Order[]
   leadInteraction     LeadInteraction[]
   campaingMember      CampaingMember[]
-  leadPrimaryCampaing Campaing         @relation("PrimaryCampaign", fields: [primary_campaign_id], references: [id])
+  leadPrimaryCampaing Campaing?         @relation("PrimaryCampaign", fields: [primary_campaign_id], references: [id])
 }
 
 enum InteractionType {
@@ -234,9 +234,9 @@ model LeadInteraction {
   campaing_id String
   type        InteractionType
 
-  lead   Lead           @relation(fields: [lead_id], references: [id])
-  campaingMember   CampaingMember           @relation(fields: [campaing_id], references: [id])
-  seller SellerProfile? @relation(fields: [created_by], references: [id])
+  lead           Lead           @relation(fields: [lead_id], references: [id])
+  campaingMember CampaingMember @relation(fields: [campaing_id], references: [id])
+  seller         SellerProfile? @relation(fields: [created_by], references: [id])
 }
 
 model Tasks {
@@ -266,10 +266,11 @@ model Campaing {
   is_organic     Boolean
   created_at     DateTime         @default(now())
   updated_at     DateTime         @updatedAt
+  edition_id     String           @unique
 
-  edition        Edition[]
   CampaingMember CampaingMember[]
   leads          Lead[]           @relation("PrimaryCampaign")
+  edition        Edition          @relation(fields: [edition_id], references: [id])
 }
 
 model Modality {
@@ -290,15 +291,14 @@ model Edition {
   meet_link        String
   edition_status   EditionStatus @default(DRAFT)
   edition_code     String        @unique @db.Char(12) //generated based on the course-code + year + ednumber
-  campaign_id      String
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   course     Course   @relation(fields: [course_id], references: [id])
   modality   Modality @relation(fields: [modality_id], references: [id])
-  campaing   Campaing @relation(fields: [campaign_id], references: [id])
 
   products Product[]
+  campaing Campaing?
 }
 
 model Product {
@@ -349,7 +349,7 @@ model OrderDetail {
   product_id    String
   price         Decimal @db.Decimal(10, 2)
   order_id      String
-  discount_code String?
+  discount_code String? @db.Char(7)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -357,6 +357,7 @@ model OrderDetail {
   order      Order    @relation(fields: [order_id], references: [id])
 }
 
+// TODO add fields and a model to manage cuotas and cash payments
 model Payment {
   id             String        @id @default(uuid()) @db.Char(36)
   order_id       String

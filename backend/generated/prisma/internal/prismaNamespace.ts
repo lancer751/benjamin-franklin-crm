@@ -1716,7 +1716,8 @@ export const CampaingScalarFieldEnum = {
   platform: 'platform',
   is_organic: 'is_organic',
   created_at: 'created_at',
-  updated_at: 'updated_at'
+  updated_at: 'updated_at',
+  edition_id: 'edition_id'
 } as const
 
 export type CampaingScalarFieldEnum = (typeof CampaingScalarFieldEnum)[keyof typeof CampaingScalarFieldEnum]
@@ -1742,7 +1743,6 @@ export const EditionScalarFieldEnum = {
   meet_link: 'meet_link',
   edition_status: 'edition_status',
   edition_code: 'edition_code',
-  campaign_id: 'campaign_id',
   created_at: 'created_at',
   updated_at: 'updated_at'
 } as const
@@ -1936,7 +1936,8 @@ export type CourseOrderByRelevanceFieldEnum = (typeof CourseOrderByRelevanceFiel
 
 export const CampaingOrderByRelevanceFieldEnum = {
   id: 'id',
-  campaing_name: 'campaing_name'
+  campaing_name: 'campaing_name',
+  edition_id: 'edition_id'
 } as const
 
 export type CampaingOrderByRelevanceFieldEnum = (typeof CampaingOrderByRelevanceFieldEnum)[keyof typeof CampaingOrderByRelevanceFieldEnum]
@@ -1956,8 +1957,7 @@ export const EditionOrderByRelevanceFieldEnum = {
   modality_id: 'modality_id',
   teacher_fullname: 'teacher_fullname',
   meet_link: 'meet_link',
-  edition_code: 'edition_code',
-  campaign_id: 'campaign_id'
+  edition_code: 'edition_code'
 } as const
 
 export type EditionOrderByRelevanceFieldEnum = (typeof EditionOrderByRelevanceFieldEnum)[keyof typeof EditionOrderByRelevanceFieldEnum]

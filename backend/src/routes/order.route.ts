@@ -5,6 +5,7 @@ import {
   createOrderSchema,
   updateOrderSchema,
 } from "@/zod-schemas/order.schema";
+import { faker } from "@faker-js/faker";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -20,7 +21,10 @@ export const orderRoutes = new Hono()
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
-      const order = await prisma.order.findUnique({ where: { id } });
+      const order = await prisma.order.findUnique({ where: { id }, include: {
+        orderDetails: true
+      }});
+
       if (!order) {
         throw new HTTPException(404, { message: "Order not found" });
       }
@@ -29,12 +33,29 @@ export const orderRoutes = new Hono()
   )
   .post("/", zValidator("json", createOrderSchema), async (c) => {
     const orderData = c.req.valid("json");
-    const newOrder = await prisma.order.create({ data: orderData });
-    return c.json<SuccessResponse<typeof newOrder>>({
-      success: true,
-      message: "Order created successfully",
-      data: newOrder,
-    }, 201);
+    const { order_items, ...newOrderData } = structuredClone(orderData);
+
+    const generatedOrder = await prisma.order.create({
+      data: {
+        ...newOrderData,
+        order_code: faker.string.alpha({ length: 7 }),
+        orderDetails: {
+          createMany: { data: order_items },
+        },
+      },
+      include: {
+        orderDetails: true,
+      },
+    });
+
+    return c.json<SuccessResponse<typeof generatedOrder>>(
+      {
+        success: true,
+        message: "Order created successfully",
+        data: generatedOrder,
+      },
+      201,
+    );
   })
   .put(
     UUID_ROUTE,
@@ -43,13 +64,24 @@ export const orderRoutes = new Hono()
     async (c) => {
       const { id } = c.req.valid("param");
       const orderData = c.req.valid("json");
+      const { order_items, ...orderToUpdate } = structuredClone(orderData);
       const existingOrder = await prisma.order.findUnique({ where: { id } });
       if (!existingOrder) {
         throw new HTTPException(404, { message: "Order not found" });
       }
       const updatedOrder = await prisma.order.update({
         where: { id },
-        data: orderData,
+        data: {
+          ...orderToUpdate,
+          orderDetails: order_items
+            ? {
+                updateMany: order_items.map((item) => ({
+                  where: { product_id: item.product_id },
+                  data: item,
+                })),
+              }
+            : undefined,
+        },
       });
       return c.json<SuccessResponse<typeof updatedOrder>>({
         success: true,
@@ -67,10 +99,22 @@ export const orderRoutes = new Hono()
       if (!existingOrder) {
         throw new HTTPException(404, { message: "Order not found" });
       }
-      await prisma.order.delete({ where: { id } });
-      return c.json<SuccessResponse>({
-        success: true,
-        message: "Order deleted successfully",
-      }, 200);
+      await prisma.order.delete({
+        where: {
+          id,
+          orderDetails: {
+            every: {
+              order_id: id,
+            },
+          },
+        },
+      });
+      return c.json<SuccessResponse>(
+        {
+          success: true,
+          message: "Order deleted successfully",
+        },
+        200,
+      );
     },
   );

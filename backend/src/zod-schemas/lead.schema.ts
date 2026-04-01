@@ -52,8 +52,8 @@ export const LeadSchema = z.object({
       { message: "DNI must contain only numbers" },
     ),
   moodle_user_id: z.number().int().optional().nullable(),
-  lead_status: LeadStatusSchema,
-  primary_campaign_id: z.uuid().max(36),
+  lead_status: LeadStatusSchema.default("ACTIVE"),
+  primary_campaign_id: z.uuid().max(36).optional(),
   created_at: z.date(),
   updated_at: z.date(),
 });

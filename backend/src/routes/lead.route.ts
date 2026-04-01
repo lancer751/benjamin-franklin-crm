@@ -171,6 +171,7 @@ export const leadRoutes = new Hono()
       );
     },
   )
+  // TODO: when updating the primary_id_campaign from lead, the field is_primary from campaingmember must be updated
   .put(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
