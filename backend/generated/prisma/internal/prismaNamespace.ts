@@ -400,7 +400,9 @@ export const ModelName = {
   Product: 'Product',
   Order: 'Order',
   OrderDetail: 'OrderDetail',
-  Payment: 'Payment'
+  Payment: 'Payment',
+  PaymentPlan: 'PaymentPlan',
+  ScheduledPayment: 'ScheduledPayment'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -416,7 +418,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "role" | "sellerProfile" | "marketingProfile" | "user" | "leadPhone" | "campaingMember" | "lead" | "leadInteraction" | "tasks" | "course" | "campaing" | "modality" | "edition" | "product" | "order" | "orderDetail" | "payment"
+    modelProps: "role" | "sellerProfile" | "marketingProfile" | "user" | "leadPhone" | "campaingMember" | "lead" | "leadInteraction" | "tasks" | "course" | "campaing" | "modality" | "edition" | "product" | "order" | "orderDetail" | "payment" | "paymentPlan" | "scheduledPayment"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1542,6 +1544,138 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PaymentPlan: {
+      payload: Prisma.$PaymentPlanPayload<ExtArgs>
+      fields: Prisma.PaymentPlanFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PaymentPlanFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaymentPlanPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PaymentPlanFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaymentPlanPayload>
+        }
+        findFirst: {
+          args: Prisma.PaymentPlanFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaymentPlanPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PaymentPlanFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaymentPlanPayload>
+        }
+        findMany: {
+          args: Prisma.PaymentPlanFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaymentPlanPayload>[]
+        }
+        create: {
+          args: Prisma.PaymentPlanCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaymentPlanPayload>
+        }
+        createMany: {
+          args: Prisma.PaymentPlanCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.PaymentPlanDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaymentPlanPayload>
+        }
+        update: {
+          args: Prisma.PaymentPlanUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaymentPlanPayload>
+        }
+        deleteMany: {
+          args: Prisma.PaymentPlanDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PaymentPlanUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.PaymentPlanUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaymentPlanPayload>
+        }
+        aggregate: {
+          args: Prisma.PaymentPlanAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePaymentPlan>
+        }
+        groupBy: {
+          args: Prisma.PaymentPlanGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PaymentPlanGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PaymentPlanCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PaymentPlanCountAggregateOutputType> | number
+        }
+      }
+    }
+    ScheduledPayment: {
+      payload: Prisma.$ScheduledPaymentPayload<ExtArgs>
+      fields: Prisma.ScheduledPaymentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ScheduledPaymentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledPaymentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ScheduledPaymentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledPaymentPayload>
+        }
+        findFirst: {
+          args: Prisma.ScheduledPaymentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledPaymentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ScheduledPaymentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledPaymentPayload>
+        }
+        findMany: {
+          args: Prisma.ScheduledPaymentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledPaymentPayload>[]
+        }
+        create: {
+          args: Prisma.ScheduledPaymentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledPaymentPayload>
+        }
+        createMany: {
+          args: Prisma.ScheduledPaymentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.ScheduledPaymentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledPaymentPayload>
+        }
+        update: {
+          args: Prisma.ScheduledPaymentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledPaymentPayload>
+        }
+        deleteMany: {
+          args: Prisma.ScheduledPaymentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ScheduledPaymentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.ScheduledPaymentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ScheduledPaymentPayload>
+        }
+        aggregate: {
+          args: Prisma.ScheduledPaymentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateScheduledPayment>
+        }
+        groupBy: {
+          args: Prisma.ScheduledPaymentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ScheduledPaymentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ScheduledPaymentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ScheduledPaymentCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1757,7 +1891,8 @@ export const ProductScalarFieldEnum = {
   short_description: 'short_description',
   category: 'category',
   edition_id: 'edition_id',
-  price: 'price',
+  cash_price: 'cash_price',
+  installment_price: 'installment_price',
   discount_price: 'discount_price',
   discount_expires_at: 'discount_expires_at',
   sales_status: 'sales_status',
@@ -1799,11 +1934,12 @@ export type OrderDetailScalarFieldEnum = (typeof OrderDetailScalarFieldEnum)[key
 
 export const PaymentScalarFieldEnum = {
   id: 'id',
-  order_id: 'order_id',
+  scheduled_payment_id: 'scheduled_payment_id',
   payment_date: 'payment_date',
   amount: 'amount',
   payment_method: 'payment_method',
   payment_status: 'payment_status',
+  type: 'type',
   currency: 'currency',
   transaccion_id: 'transaccion_id',
   created_at: 'created_at',
@@ -1811,6 +1947,32 @@ export const PaymentScalarFieldEnum = {
 } as const
 
 export type PaymentScalarFieldEnum = (typeof PaymentScalarFieldEnum)[keyof typeof PaymentScalarFieldEnum]
+
+
+export const PaymentPlanScalarFieldEnum = {
+  id: 'id',
+  total_installments: 'total_installments',
+  order_id: 'order_id',
+  total_amount: 'total_amount',
+  start_date: 'start_date',
+  status: 'status'
+} as const
+
+export type PaymentPlanScalarFieldEnum = (typeof PaymentPlanScalarFieldEnum)[keyof typeof PaymentPlanScalarFieldEnum]
+
+
+export const ScheduledPaymentScalarFieldEnum = {
+  id: 'id',
+  due_date: 'due_date',
+  due_amount: 'due_amount',
+  payment_plan_id: 'payment_plan_id',
+  number: 'number',
+  status: 'status',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type ScheduledPaymentScalarFieldEnum = (typeof ScheduledPaymentScalarFieldEnum)[keyof typeof ScheduledPaymentScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1997,12 +2159,28 @@ export type OrderDetailOrderByRelevanceFieldEnum = (typeof OrderDetailOrderByRel
 
 export const PaymentOrderByRelevanceFieldEnum = {
   id: 'id',
-  order_id: 'order_id',
+  scheduled_payment_id: 'scheduled_payment_id',
   currency: 'currency',
   transaccion_id: 'transaccion_id'
 } as const
 
 export type PaymentOrderByRelevanceFieldEnum = (typeof PaymentOrderByRelevanceFieldEnum)[keyof typeof PaymentOrderByRelevanceFieldEnum]
+
+
+export const PaymentPlanOrderByRelevanceFieldEnum = {
+  id: 'id',
+  order_id: 'order_id'
+} as const
+
+export type PaymentPlanOrderByRelevanceFieldEnum = (typeof PaymentPlanOrderByRelevanceFieldEnum)[keyof typeof PaymentPlanOrderByRelevanceFieldEnum]
+
+
+export const ScheduledPaymentOrderByRelevanceFieldEnum = {
+  id: 'id',
+  payment_plan_id: 'payment_plan_id'
+} as const
+
+export type ScheduledPaymentOrderByRelevanceFieldEnum = (typeof ScheduledPaymentOrderByRelevanceFieldEnum)[keyof typeof ScheduledPaymentOrderByRelevanceFieldEnum]
 
 
 
@@ -2145,6 +2323,27 @@ export type EnumPaymentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$Pr
 
 
 /**
+ * Reference to a field of type 'PaymentType'
+ */
+export type EnumPaymentTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentType'>
+    
+
+
+/**
+ * Reference to a field of type 'PaymentPlanStatus'
+ */
+export type EnumPaymentPlanStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentPlanStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'InstallmentStatus'
+ */
+export type EnumInstallmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'InstallmentStatus'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -2262,6 +2461,8 @@ export type GlobalOmitConfig = {
   order?: Prisma.OrderOmit
   orderDetail?: Prisma.OrderDetailOmit
   payment?: Prisma.PaymentOmit
+  paymentPlan?: Prisma.PaymentPlanOmit
+  scheduledPayment?: Prisma.ScheduledPaymentOmit
 }
 
 /* Types for Logging */

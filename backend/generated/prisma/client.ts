@@ -126,3 +126,13 @@ export type OrderDetail = Prisma.OrderDetailModel
  * 
  */
 export type Payment = Prisma.PaymentModel
+/**
+ * Model PaymentPlan
+ * 
+ */
+export type PaymentPlan = Prisma.PaymentPlanModel
+/**
+ * Model ScheduledPayment
+ * 
+ */
+export type ScheduledPayment = Prisma.ScheduledPaymentModel

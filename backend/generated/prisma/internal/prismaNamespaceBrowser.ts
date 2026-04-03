@@ -67,7 +67,9 @@ export const ModelName = {
   Product: 'Product',
   Order: 'Order',
   OrderDetail: 'OrderDetail',
-  Payment: 'Payment'
+  Payment: 'Payment',
+  PaymentPlan: 'PaymentPlan',
+  ScheduledPayment: 'ScheduledPayment'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -262,7 +264,8 @@ export const ProductScalarFieldEnum = {
   short_description: 'short_description',
   category: 'category',
   edition_id: 'edition_id',
-  price: 'price',
+  cash_price: 'cash_price',
+  installment_price: 'installment_price',
   discount_price: 'discount_price',
   discount_expires_at: 'discount_expires_at',
   sales_status: 'sales_status',
@@ -304,11 +307,12 @@ export type OrderDetailScalarFieldEnum = (typeof OrderDetailScalarFieldEnum)[key
 
 export const PaymentScalarFieldEnum = {
   id: 'id',
-  order_id: 'order_id',
+  scheduled_payment_id: 'scheduled_payment_id',
   payment_date: 'payment_date',
   amount: 'amount',
   payment_method: 'payment_method',
   payment_status: 'payment_status',
+  type: 'type',
   currency: 'currency',
   transaccion_id: 'transaccion_id',
   created_at: 'created_at',
@@ -316,6 +320,32 @@ export const PaymentScalarFieldEnum = {
 } as const
 
 export type PaymentScalarFieldEnum = (typeof PaymentScalarFieldEnum)[keyof typeof PaymentScalarFieldEnum]
+
+
+export const PaymentPlanScalarFieldEnum = {
+  id: 'id',
+  total_installments: 'total_installments',
+  order_id: 'order_id',
+  total_amount: 'total_amount',
+  start_date: 'start_date',
+  status: 'status'
+} as const
+
+export type PaymentPlanScalarFieldEnum = (typeof PaymentPlanScalarFieldEnum)[keyof typeof PaymentPlanScalarFieldEnum]
+
+
+export const ScheduledPaymentScalarFieldEnum = {
+  id: 'id',
+  due_date: 'due_date',
+  due_amount: 'due_amount',
+  payment_plan_id: 'payment_plan_id',
+  number: 'number',
+  status: 'status',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type ScheduledPaymentScalarFieldEnum = (typeof ScheduledPaymentScalarFieldEnum)[keyof typeof ScheduledPaymentScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -502,10 +532,26 @@ export type OrderDetailOrderByRelevanceFieldEnum = (typeof OrderDetailOrderByRel
 
 export const PaymentOrderByRelevanceFieldEnum = {
   id: 'id',
-  order_id: 'order_id',
+  scheduled_payment_id: 'scheduled_payment_id',
   currency: 'currency',
   transaccion_id: 'transaccion_id'
 } as const
 
 export type PaymentOrderByRelevanceFieldEnum = (typeof PaymentOrderByRelevanceFieldEnum)[keyof typeof PaymentOrderByRelevanceFieldEnum]
+
+
+export const PaymentPlanOrderByRelevanceFieldEnum = {
+  id: 'id',
+  order_id: 'order_id'
+} as const
+
+export type PaymentPlanOrderByRelevanceFieldEnum = (typeof PaymentPlanOrderByRelevanceFieldEnum)[keyof typeof PaymentPlanOrderByRelevanceFieldEnum]
+
+
+export const ScheduledPaymentOrderByRelevanceFieldEnum = {
+  id: 'id',
+  payment_plan_id: 'payment_plan_id'
+} as const
+
+export type ScheduledPaymentOrderByRelevanceFieldEnum = (typeof ScheduledPaymentOrderByRelevanceFieldEnum)[keyof typeof ScheduledPaymentOrderByRelevanceFieldEnum]
 

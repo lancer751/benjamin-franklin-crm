@@ -7,7 +7,8 @@ export const productSchema = z.object({
   short_description: z.string().optional(),
   category: z.string(),
   edition_id: z.string(),
-  price: z.number().positive(),
+  cash_price: z.number().positive(),
+  installment_price: z.number().positive(),
   discount_price: z.number().positive().optional().default(0),
   discount_expires_at: z.date().optional(),
   sales_status: z.enum([
@@ -27,6 +28,6 @@ export const createProductSchema = productSchema.omit({
   updated_at: true,
 });
 
-export const updateProductSchema = createProductSchema.partial()
+export const updateProductSchema = createProductSchema.partial();
 
-export type Product = z.infer<typeof productSchema>
+export type Product = z.infer<typeof productSchema>;

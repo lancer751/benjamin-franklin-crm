@@ -173,3 +173,30 @@ export const InteractionType = {
 } as const
 
 export type InteractionType = (typeof InteractionType)[keyof typeof InteractionType]
+
+
+export const PaymentType = {
+  FULL: 'FULL',
+  INSTALLMENTS: 'INSTALLMENTS'
+} as const
+
+export type PaymentType = (typeof PaymentType)[keyof typeof PaymentType]
+
+
+export const PaymentPlanStatus = {
+  COMPLETED: 'COMPLETED',
+  PENDING: 'PENDING',
+  CANCELLED: 'CANCELLED'
+} as const
+
+export type PaymentPlanStatus = (typeof PaymentPlanStatus)[keyof typeof PaymentPlanStatus]
+
+
+export const InstallmentStatus = {
+  PARTIALLY_PAID: 'PARTIALLY_PAID',
+  PAID: 'PAID',
+  OVERDUE: 'OVERDUE',
+  PENDING: 'PENDING'
+} as const
+
+export type InstallmentStatus = (typeof InstallmentStatus)[keyof typeof InstallmentStatus]

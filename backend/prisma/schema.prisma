@@ -308,7 +308,8 @@ model Product {
   short_description   String?
   category            String
   edition_id          String
-  price               Decimal     @db.Decimal(10, 2)
+  cash_price          Decimal     @db.Decimal(10, 2)
+  installment_price   Decimal     @db.Decimal(10, 2)
   discount_price      Decimal?    @default(0) @db.Decimal(10, 2)
   discount_expires_at DateTime?
   sales_status        SalesStatus @default(DRAFT)
@@ -337,7 +338,7 @@ model Order {
   seller SellerProfile? @relation("SELLER_ORDERS", fields: [generated_by], references: [id])
 
   orderDetails OrderDetail[]
-  payments     Payment[]
+  paymentPlans PaymentPlan[]
 
   // indexes
   @@index([lead_id])
@@ -358,20 +359,69 @@ model OrderDetail {
 }
 
 // TODO add fields and a model to manage cuotas and cash payments
-model Payment {
-  id             String        @id @default(uuid()) @db.Char(36)
-  order_id       String
-  payment_date   DateTime
-  amount         Decimal       @db.Decimal(10, 2)
-  payment_method PaymentMethod
-  payment_status PaymentStatus
-  currency       String?       @db.Char(3)
-  transaccion_id String? // from payment gateway
-  created_at     DateTime      @default(now())
-  updated_at     DateTime      @updatedAt
+enum PaymentType {
+  FULL
+  INSTALLMENTS
+}
 
-  order Order @relation(fields: [order_id], references: [id])
+//regiter payment transactions
+model Payment {
+  id                   String        @id @default(uuid()) @db.Char(36)
+  scheduled_payment_id String
+  payment_date         DateTime
+  amount               Decimal       @db.Decimal(10, 2)
+  payment_method       PaymentMethod
+  payment_status       PaymentStatus
+  type                 PaymentType
+  currency             String?       @db.Char(3)
+  transaccion_id       String? // from payment gateway
+  created_at           DateTime      @default(now())
+  updated_at           DateTime      @updatedAt
+
+  schedulePayment ScheduledPayment @relation(fields: [scheduled_payment_id], references: [id])
+
+  @@index([payment_status])
+}
+
+enum PaymentPlanStatus {
+  COMPLETED
+  PENDING
+  CANCELLED
+}
+
+model PaymentPlan {
+  id                 String            @id @default(uuid()) @db.Char(36)
+  total_installments Int
+  order_id           String
+  total_amount       Decimal           @db.Decimal(10, 2)
+  start_date         DateTime
+  status             PaymentPlanStatus @default(PENDING)
+
+  order        Order              @relation(fields: [order_id], references: [id])
+  installments ScheduledPayment[]
 
   @@index([order_id])
-  @@index([payment_status])
+}
+
+enum InstallmentStatus {
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  PENDING
+}
+
+model ScheduledPayment {
+  id              String            @id @default(uuid()) @db.Char(36)
+  due_date        DateTime
+  due_amount      Decimal           @db.Decimal(10, 2)
+  payment_plan_id String
+  number          Int @default(1)
+  status          InstallmentStatus @default(PENDING)
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+
+  payment_plan PaymentPlan @relation(fields: [payment_plan_id], references: [id])
+  payments     Payment[]
+
+  @@unique([payment_plan_id, number])
 }
