@@ -339,6 +339,7 @@ model Order {
 
   orderDetails OrderDetail[]
   paymentPlans PaymentPlan[]
+  payments Payment[]
 
   // indexes
   @@index([lead_id])
@@ -367,7 +368,8 @@ enum PaymentType {
 //regiter payment transactions
 model Payment {
   id                   String        @id @default(uuid()) @db.Char(36)
-  scheduled_payment_id String
+  order_id String
+  scheduled_payment_id String?
   payment_date         DateTime
   amount               Decimal       @db.Decimal(10, 2)
   payment_method       PaymentMethod
@@ -378,7 +380,8 @@ model Payment {
   created_at           DateTime      @default(now())
   updated_at           DateTime      @updatedAt
 
-  schedulePayment ScheduledPayment @relation(fields: [scheduled_payment_id], references: [id])
+  schedulePayment ScheduledPayment? @relation(fields: [scheduled_payment_id], references: [id])
+  order Order @relation(fields: [order_id], references: [id])
 
   @@index([payment_status])
 }

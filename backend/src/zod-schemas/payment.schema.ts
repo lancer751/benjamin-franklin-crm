@@ -1,6 +1,12 @@
 import z from "zod";
 
-const paymentMethod = z.enum(["YAPE", "ONLINE", "POS","CASH", "BANK_TRANSFER"]);
+const paymentMethod = z.enum([
+  "YAPE",
+  "ONLINE",
+  "POS",
+  "CASH",
+  "BANK_TRANSFER",
+]);
 const paymentStatus = z.enum(["CONFIRMED", "REFUNDED", "FAILED"]);
 const paymentType = z.enum(["FULL", "INSTALLMENTS"]);
 const paymentPlanStatus = z.enum(["COMPLETED", "PENDING", "CANCELLED"]);
@@ -13,7 +19,8 @@ const scheduledPaymentStatus = z.enum([
 
 const paymentSchema = z.object({
   id: z.uuid().length(36),
-  scheduled_payment_id: z.uuid().length(36),
+  order_id: z.uuid().length(36),
+  scheduled_payment_id: z.uuid().length(36).optional(),
   payment_date: z.date(),
   amount: z.number().positive(),
   payment_method: paymentMethod,
@@ -50,10 +57,20 @@ export const createPaymentSchema = paymentSchema
     id: true,
     created_at: true,
     updated_at: true,
+    scheduled_payment_id: true
   })
   .extend({
-    payment_plan: paymentPlanSchema.omit({ id: true }),
-    scheduled_payments: z.array(
-      scheduledPayment.omit({ id: true, created_at: true, updated_at: true, payment_plan_id: true}),
-    ),
+    payment_plan: paymentPlanSchema
+      .omit({ id: true })
+      .extend({
+        scheduled_payments: z.array(
+          scheduledPayment.omit({
+            id: true,
+            created_at: true,
+            updated_at: true,
+            payment_plan_id: true,
+          }),
+        ),
+      })
+      .optional(),
   });

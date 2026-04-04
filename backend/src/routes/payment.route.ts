@@ -16,41 +16,52 @@ export const paymentRoutes = new Hono()
   })
   .post("/manual", zValidator("json", createPaymentSchema), async (c) => {
     const paymentData = c.req.valid("json");
-    const { scheduled_payments, payment_plan, ...newPaymentData } =
-      structuredClone(paymentData);
+    const {payment_plan, ...newPaymentData} = structuredClone(paymentData)
+    let scheduledPaymentId: null | string = null
 
-    const paymentPlan = await prisma.paymentPlan.create({
-      data: payment_plan,
-    });
+    if (paymentData.type === "INSTALLMENTS" && payment_plan) {
+      const { scheduled_payments, ...paymentPlanData } =
+        payment_plan;
+      const result = await prisma.$transaction(async (tx) => {
+        const paymentPlan = await tx.paymentPlan.create({
+          data: paymentPlanData,
+        });
 
-    await prisma.scheduledPayment.createMany({
-      data: scheduled_payments.map((payment) => ({
-        ...payment,
-        payment_plan_id: paymentPlan.id,
-        status: paymentData.type === "FULL" ? "PAID" : "PENDING",
-      })),
-    });
+        await tx.scheduledPayment.createMany({
+          data: scheduled_payments.map((sch) => {
+            return {
+              ...sch,
+              payment_plan_id: paymentPlan.id,
+            };
+          }),
+        });
 
-    const firstPayment = await prisma.scheduledPayment.findUnique({
-      where: {
-        payment_plan_id_number: {
-          payment_plan_id: paymentPlan.id,
-          number: 1,
-        },
-      },
-    })
+        const firstScheduledPayment = await tx.scheduledPayment.findUnique({
+          where: {
+            payment_plan_id_number: {
+              number: 1,
+              payment_plan_id: paymentPlan.id,
+            },
+          },
+        });
 
-    if(!firstPayment) {
-        throw new HTTPException(404, {message: "scheduled payment not found"})
+        if(!firstScheduledPayment){
+          throw new HTTPException(404, {message: "First scheduled payment not found"})
+        }
+
+        return firstScheduledPayment;
+      });
+
+      scheduledPaymentId = result.id
     }
 
     const generatedPayment = await prisma.payment.create({
-        data: {...newPaymentData, scheduled_payment_id: firstPayment.id}
+      data: {...newPaymentData, scheduled_payment_id: scheduledPaymentId}
     })
 
     return c.json<SuccessResponse<typeof generatedPayment>>({
-        message: "New payment created successfully",
-        success: true,
-        data: generatedPayment
-    })
+      message: "New payment created successfully",
+      success: true,
+      data: generatedPayment,
+    });
   });

@@ -1,107 +1,20 @@
-/*
-  Warnings:
+-- CreateTable
+CREATE TABLE `Role` (
+    `id` CHAR(36) NOT NULL,
+    `name` ENUM('SALES_REP', 'MARKETING', 'SALES_SUPERVISOR', 'ADMIN', 'COLLECTIONS') NOT NULL,
+    `description` VARCHAR(191) NULL,
+    `is_active` BOOLEAN NOT NULL DEFAULT true,
 
-  - You are about to drop the column `createdAt` on the `role` table. All the data in the column will be lost.
-  - You are about to drop the column `descripcion` on the `role` table. All the data in the column will be lost.
-  - You are about to drop the column `nombre` on the `role` table. All the data in the column will be lost.
-  - You are about to drop the column `updatedAt` on the `role` table. All the data in the column will be lost.
-  - You are about to drop the `cliente` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `compra` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `curso` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `detallecompra` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `edicion` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `matricula` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `modalidad` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `pago` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `producto` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `usuario` table. If the table is not empty, all the data it contains will be lost.
-  - Added the required column `name` to the `Role` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `updated_at` to the `Role` table without a default value. This is not possible if the table is not empty.
-
-*/
--- DropForeignKey
-ALTER TABLE `compra` DROP FOREIGN KEY `Compra_cliente_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `compra` DROP FOREIGN KEY `Compra_vendedor_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `detallecompra` DROP FOREIGN KEY `DetalleCompra_compra_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `detallecompra` DROP FOREIGN KEY `DetalleCompra_producto_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `edicion` DROP FOREIGN KEY `Edicion_curso_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `edicion` DROP FOREIGN KEY `Edicion_modalidad_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `matricula` DROP FOREIGN KEY `Matricula_cliente_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `matricula` DROP FOREIGN KEY `Matricula_edicion_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `pago` DROP FOREIGN KEY `Pago_orden_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `producto` DROP FOREIGN KEY `Producto_edicion_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `usuario` DROP FOREIGN KEY `Usuario_role_id_fkey`;
-
--- DropIndex
-DROP INDEX `Role_nombre_key` ON `role`;
-
--- AlterTable
-ALTER TABLE `role` DROP COLUMN `createdAt`,
-    DROP COLUMN `descripcion`,
-    DROP COLUMN `nombre`,
-    DROP COLUMN `updatedAt`,
-    ADD COLUMN `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    ADD COLUMN `description` VARCHAR(191) NULL,
-    ADD COLUMN `name` ENUM('SALES_REP', 'MARKETING', 'SALES_SUPERVISOR', 'ADMIN', 'COLLECTIONS') NOT NULL,
-    ADD COLUMN `updated_at` DATETIME(3) NOT NULL;
-
--- DropTable
-DROP TABLE `cliente`;
-
--- DropTable
-DROP TABLE `compra`;
-
--- DropTable
-DROP TABLE `curso`;
-
--- DropTable
-DROP TABLE `detallecompra`;
-
--- DropTable
-DROP TABLE `edicion`;
-
--- DropTable
-DROP TABLE `matricula`;
-
--- DropTable
-DROP TABLE `modalidad`;
-
--- DropTable
-DROP TABLE `pago`;
-
--- DropTable
-DROP TABLE `producto`;
-
--- DropTable
-DROP TABLE `usuario`;
+    UNIQUE INDEX `Role_name_key`(`name`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `SellerProfile` (
     `id` CHAR(36) NOT NULL,
     `user_id` VARCHAR(191) NOT NULL,
-    `sales_target` INTEGER NOT NULL,
-    `sales_closed` INTEGER NULL,
-    `max_discount` DECIMAL(65, 30) NOT NULL,
+    `sales_target` INTEGER NOT NULL DEFAULT 0,
+    `max_discount` DECIMAL(65, 30) NULL DEFAULT 0,
 
     UNIQUE INDEX `SellerProfile_user_id_key`(`user_id`),
     PRIMARY KEY (`id`)
@@ -122,8 +35,8 @@ CREATE TABLE `User` (
     `first_name` VARCHAR(191) NOT NULL,
     `middle_name` VARCHAR(191) NOT NULL,
     `last_name` VARCHAR(191) NOT NULL,
-    `email` VARCHAR(191) NOT NULL,
-    `cellphone` CHAR(9) NOT NULL,
+    `email` VARCHAR(191) NULL,
+    `cellphone` CHAR(9) NULL,
     `role_id` VARCHAR(191) NOT NULL,
     `is_active` BOOLEAN NOT NULL DEFAULT true,
     `password` VARCHAR(191) NOT NULL,
@@ -145,6 +58,24 @@ CREATE TABLE `LeadPhone` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `CampaingMember` (
+    `id` CHAR(36) NOT NULL,
+    `lead_id` VARCHAR(191) NOT NULL,
+    `campaing_id` VARCHAR(191) NOT NULL,
+    `status` ENUM('NEW', 'CONTACTED', 'ATTEMPTED_CONTACT', 'QUALIFIED', 'UNQUALIFIED', 'IN_PROGRESS', 'NEGOTIATION', 'PROPOSAL_SENT', 'WON', 'LOST', 'REJECTED', 'FOLLOW_UP', 'ON_HOLD') NOT NULL DEFAULT 'NEW',
+    `assigned_to` VARCHAR(191) NULL,
+    `source` ENUM('FACEBOOK', 'INSTAGRAM', 'TIKTOK', 'WHATSAPP', 'WEBSITE') NOT NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL,
+    `is_primary` BOOLEAN NOT NULL DEFAULT false,
+
+    INDEX `CampaingMember_status_idx`(`status`),
+    INDEX `CampaingMember_assigned_to_idx`(`assigned_to`),
+    UNIQUE INDEX `CampaingMember_lead_id_campaing_id_key`(`lead_id`, `campaing_id`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `Lead` (
     `id` CHAR(36) NOT NULL,
     `first_name` VARCHAR(191) NOT NULL,
@@ -158,23 +89,25 @@ CREATE TABLE `Lead` (
     `secondary_email` VARCHAR(191) NULL,
     `dni` CHAR(8) NULL,
     `moodle_user_id` INTEGER NULL,
-    `assigned_seller_id` VARCHAR(191) NULL,
-    `lead_status` ENUM('NEW', 'CONTACTED', 'ATTEMPTED_CONTACT', 'QUALIFIED', 'UNQUALIFIED', 'IN_PROGRESS', 'NEGOTIATION', 'PROPOSAL_SENT', 'WON', 'LOST', 'REJECTED', 'FOLLOW_UP', 'ON_HOLD') NOT NULL DEFAULT 'NEW',
+    `lead_status` ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE',
+    `primary_campaign_id` VARCHAR(191) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `Lead_email_key`(`email`),
     UNIQUE INDEX `Lead_dni_key`(`dni`),
     UNIQUE INDEX `Lead_moodle_user_id_key`(`moodle_user_id`),
-    INDEX `Lead_assigned_seller_id_idx`(`assigned_seller_id`),
-    INDEX `Lead_lead_status_idx`(`lead_status`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Lead_Interactions` (
+CREATE TABLE `LeadInteraction` (
     `id` CHAR(36) NOT NULL,
     `lead_id` VARCHAR(191) NOT NULL,
+    `notes` VARCHAR(191) NOT NULL,
+    `created_by` VARCHAR(191) NULL,
+    `campaing_id` VARCHAR(191) NOT NULL,
+    `type` ENUM('WEBSITE_FORM', 'SELL', 'WHATSAPP', 'EMAIL', 'MEETING', 'CALL') NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -182,6 +115,8 @@ CREATE TABLE `Lead_Interactions` (
 -- CreateTable
 CREATE TABLE `Tasks` (
     `id` CHAR(36) NOT NULL,
+    `title` VARCHAR(191) NOT NULL,
+    `content` MEDIUMTEXT NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -204,20 +139,24 @@ CREATE TABLE `Campaing` (
     `initial_budget` DECIMAL(10, 2) NOT NULL,
     `total_spent` DECIMAL(10, 2) NULL,
     `status` ENUM('ACTIVE', 'INACTIVE', 'PAUSED') NOT NULL,
-    `start_date` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `start_date` DATETIME(3) NOT NULL,
     `end_date` DATETIME(3) NULL,
-    `platform` ENUM('FACEBOOK', 'INSTAGRAM', 'TIKTOK', 'TELEGRAM') NOT NULL,
+    `platform` ENUM('FACEBOOK', 'INSTAGRAM', 'TIKTOK', 'WEBSITE') NOT NULL,
     `is_organic` BOOLEAN NOT NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL,
+    `edition_id` VARCHAR(191) NOT NULL,
 
+    UNIQUE INDEX `Campaing_edition_id_key`(`edition_id`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Modality` (
     `id` CHAR(36) NOT NULL,
-    `nombre` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
 
-    UNIQUE INDEX `Modality_nombre_key`(`nombre`),
+    UNIQUE INDEX `Modality_name_key`(`name`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -233,12 +172,12 @@ CREATE TABLE `Edition` (
     `teacher_fullname` VARCHAR(191) NOT NULL,
     `meet_link` VARCHAR(191) NOT NULL,
     `edition_status` ENUM('IN_PROGRESS', 'COMPLETED', 'OPEN', 'SCHEDULED', 'DRAFT', 'CANCELLED') NOT NULL DEFAULT 'DRAFT',
-    `edition_code` CHAR(7) NOT NULL,
-    `campaign_id` VARCHAR(191) NOT NULL,
+    `edition_code` CHAR(12) NOT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `Edition_moodle_course_id_key`(`moodle_course_id`),
+    UNIQUE INDEX `Edition_edition_code_key`(`edition_code`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -250,8 +189,9 @@ CREATE TABLE `Product` (
     `short_description` VARCHAR(191) NULL,
     `category` VARCHAR(191) NOT NULL,
     `edition_id` VARCHAR(191) NOT NULL,
-    `price` DECIMAL(10, 2) NOT NULL,
-    `discount_price` DECIMAL(10, 2) NULL,
+    `cash_price` DECIMAL(10, 2) NOT NULL,
+    `installment_price` DECIMAL(10, 2) NOT NULL,
+    `discount_price` DECIMAL(10, 2) NULL DEFAULT 0,
     `discount_expires_at` DATETIME(3) NULL,
     `sales_status` ENUM('DRAFT', 'PUBLISHED', 'ON_SALE', 'COMPLETED', 'CANCELLED') NOT NULL DEFAULT 'DRAFT',
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -285,7 +225,7 @@ CREATE TABLE `OrderDetail` (
     `product_id` VARCHAR(191) NOT NULL,
     `price` DECIMAL(10, 2) NOT NULL,
     `order_id` VARCHAR(191) NOT NULL,
-    `discount_code` VARCHAR(191) NULL,
+    `discount_code` CHAR(7) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL,
 
@@ -296,17 +236,46 @@ CREATE TABLE `OrderDetail` (
 CREATE TABLE `Payment` (
     `id` CHAR(36) NOT NULL,
     `order_id` VARCHAR(191) NOT NULL,
+    `scheduled_payment_id` VARCHAR(191) NULL,
     `payment_date` DATETIME(3) NOT NULL,
     `amount` DECIMAL(10, 2) NOT NULL,
     `payment_method` ENUM('CASH', 'BANK_TRANSFER', 'POS', 'ONLINE', 'YAPE') NOT NULL,
     `payment_status` ENUM('PENDING', 'CONFIRMED', 'FAILED', 'REFUNDED') NOT NULL,
+    `type` ENUM('FULL', 'INSTALLMENTS') NOT NULL,
     `currency` CHAR(3) NULL,
     `transaccion_id` VARCHAR(191) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL,
 
-    INDEX `Payment_order_id_idx`(`order_id`),
     INDEX `Payment_payment_status_idx`(`payment_status`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `PaymentPlan` (
+    `id` CHAR(36) NOT NULL,
+    `total_installments` INTEGER NOT NULL,
+    `order_id` VARCHAR(191) NOT NULL,
+    `total_amount` DECIMAL(10, 2) NOT NULL,
+    `start_date` DATETIME(3) NOT NULL,
+    `status` ENUM('COMPLETED', 'PENDING', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
+
+    INDEX `PaymentPlan_order_id_idx`(`order_id`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `ScheduledPayment` (
+    `id` CHAR(36) NOT NULL,
+    `due_date` DATETIME(3) NOT NULL,
+    `due_amount` DECIMAL(10, 2) NOT NULL,
+    `payment_plan_id` VARCHAR(191) NOT NULL,
+    `number` INTEGER NOT NULL DEFAULT 1,
+    `status` ENUM('PARTIALLY_PAID', 'PAID', 'OVERDUE', 'PENDING') NOT NULL DEFAULT 'PENDING',
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `ScheduledPayment_payment_plan_id_number_key`(`payment_plan_id`, `number`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -323,19 +292,34 @@ ALTER TABLE `User` ADD CONSTRAINT `User_role_id_fkey` FOREIGN KEY (`role_id`) RE
 ALTER TABLE `LeadPhone` ADD CONSTRAINT `LeadPhone_lead_id_fkey` FOREIGN KEY (`lead_id`) REFERENCES `Lead`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Lead` ADD CONSTRAINT `Lead_assigned_seller_id_fkey` FOREIGN KEY (`assigned_seller_id`) REFERENCES `SellerProfile`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `CampaingMember` ADD CONSTRAINT `CampaingMember_lead_id_fkey` FOREIGN KEY (`lead_id`) REFERENCES `Lead`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Lead_Interactions` ADD CONSTRAINT `Lead_Interactions_lead_id_fkey` FOREIGN KEY (`lead_id`) REFERENCES `Lead`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `CampaingMember` ADD CONSTRAINT `CampaingMember_campaing_id_fkey` FOREIGN KEY (`campaing_id`) REFERENCES `Campaing`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CampaingMember` ADD CONSTRAINT `CampaingMember_assigned_to_fkey` FOREIGN KEY (`assigned_to`) REFERENCES `SellerProfile`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Lead` ADD CONSTRAINT `Lead_primary_campaign_id_fkey` FOREIGN KEY (`primary_campaign_id`) REFERENCES `Campaing`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `LeadInteraction` ADD CONSTRAINT `LeadInteraction_lead_id_fkey` FOREIGN KEY (`lead_id`) REFERENCES `Lead`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `LeadInteraction` ADD CONSTRAINT `LeadInteraction_campaing_id_fkey` FOREIGN KEY (`campaing_id`) REFERENCES `CampaingMember`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `LeadInteraction` ADD CONSTRAINT `LeadInteraction_created_by_fkey` FOREIGN KEY (`created_by`) REFERENCES `SellerProfile`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Campaing` ADD CONSTRAINT `Campaing_edition_id_fkey` FOREIGN KEY (`edition_id`) REFERENCES `Edition`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Edition` ADD CONSTRAINT `Edition_course_id_fkey` FOREIGN KEY (`course_id`) REFERENCES `Course`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Edition` ADD CONSTRAINT `Edition_modality_id_fkey` FOREIGN KEY (`modality_id`) REFERENCES `Modality`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `Edition` ADD CONSTRAINT `Edition_campaign_id_fkey` FOREIGN KEY (`campaign_id`) REFERENCES `Campaing`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Product` ADD CONSTRAINT `Product_edition_id_fkey` FOREIGN KEY (`edition_id`) REFERENCES `Edition`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -353,4 +337,13 @@ ALTER TABLE `OrderDetail` ADD CONSTRAINT `OrderDetail_product_id_fkey` FOREIGN K
 ALTER TABLE `OrderDetail` ADD CONSTRAINT `OrderDetail_order_id_fkey` FOREIGN KEY (`order_id`) REFERENCES `Order`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `Payment` ADD CONSTRAINT `Payment_scheduled_payment_id_fkey` FOREIGN KEY (`scheduled_payment_id`) REFERENCES `ScheduledPayment`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `Payment` ADD CONSTRAINT `Payment_order_id_fkey` FOREIGN KEY (`order_id`) REFERENCES `Order`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `PaymentPlan` ADD CONSTRAINT `PaymentPlan_order_id_fkey` FOREIGN KEY (`order_id`) REFERENCES `Order`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `ScheduledPayment` ADD CONSTRAINT `ScheduledPayment_payment_plan_id_fkey` FOREIGN KEY (`payment_plan_id`) REFERENCES `PaymentPlan`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
