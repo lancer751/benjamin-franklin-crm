@@ -38,7 +38,7 @@ export const orderRoutes = new Hono()
     const generatedOrder = await prisma.order.create({
       data: {
         ...newOrderData,
-        order_code: faker.string.alpha({ length: 7 }),
+        order_code: faker.string.alpha({ length: 7, casing: "upper" }),
         orderDetails: {
           createMany: { data: order_items },
         },

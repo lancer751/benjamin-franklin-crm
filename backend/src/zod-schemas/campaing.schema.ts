@@ -9,10 +9,10 @@ export const campaingSchema = z.object({
     .max(99999999.99)
     .refine((val) => Number.isInteger(val * 100), {
       message: "Must have at most 2 decimal places",
-    }),
+    }).nonnegative(),
   total_spent: z
     .number()
-    .positive()
+    .nonnegative()
     .max(99999999.99)
     .optional()
     .refine(
@@ -25,8 +25,8 @@ export const campaingSchema = z.object({
     ),
   status: z.enum(["ACTIVE", "INACTIVE", "PAUSED"]),
   edition_id: z.uuid().length(36),
-  start_date: z.date(),
-  end_date: z.date().optional(),
+  start_date: z.coerce.date(),
+  end_date: z.coerce.date().optional(),
   platform: z.enum(["FACEBOOK", "INSTAGRAM", "TIKTOK", "WEBSITE"]),
   is_organic: z.boolean(),
   created_at: z.date(),

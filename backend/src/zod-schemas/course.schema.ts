@@ -31,14 +31,14 @@ export const courseEditionSchema = z.object({
   id: z.uuid().length(36),
   course_id: z.uuid().length(36),
   edition_number: z.number().int().positive(),
-  start_date: z.date(),
-  end_date: z.date(),
+  start_date: z.coerce.date(),
+  end_date: z.coerce.date(),
   modality_id: z.uuid().length(36),
   moodle_course_id: z.number().int().positive().optional(),
   teacher_fullname: z
     .string()
     .regex(
-      /^[a-zA-Z\s]+$/,
+      /^[\p{L}\s]+$/u,
       "Teacher fullname must contain only letters and spaces",
     )
     .refine(
@@ -50,16 +50,20 @@ export const courseEditionSchema = z.object({
   edition_code: z
     .string()
     .length(12, "Edition code must be exactly 12 characters long"),
-  campaign_id: z.uuid().length(36),
 });
 
 export const createCourseEditionSchema = courseEditionSchema.omit({ id: true });
-export const updateCourseEditionSchema = createCourseEditionSchema.partial();
+export const updateCourseEditionSchema = createCourseEditionSchema
+  .partial()
+  .refine(
+    (obj) => Object.keys(obj).length > 0,
+    "At least one field must be provided",
+  );
 
 // modality schema
 export const modalitySchema = z.object({
   id: z.uuid().length(36),
-  name: z.string().nonempty("Modality name cannot be empty")
-})
+  name: z.string().nonempty("Modality name cannot be empty"),
+});
 
-export const createModalitySchema = modalitySchema.omit({id: true})
+export const createModalitySchema = modalitySchema.omit({ id: true });

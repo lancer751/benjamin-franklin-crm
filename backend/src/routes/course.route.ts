@@ -29,17 +29,36 @@ export const courseRoutes = new Hono()
 
       const course = await prisma.course.findUnique({
         where: { id },
+        include: {
+          editions: {
+            omit: {
+              course_id: true,
+              modality_id: true,
+            },
+            include: {
+              modality: {
+                select: { name: true },
+              },
+            },
+          },
+        },
       });
 
       if (!course) {
         throw new HTTPException(404, { message: "Course not found" });
       }
 
-      return c.json<SuccessResponse<typeof course>>(
+      const formattedEditions = course.editions.map((edt) => ({
+        ...edt,
+        modality: edt.modality.name,
+      }));
+      const formattedCourse = { ...course, editions: formattedEditions };
+
+      return c.json<SuccessResponse<typeof formattedCourse>>(
         {
           success: true,
           message: "Course retrieved successfully",
-          data: course,
+          data: formattedCourse,
         },
         201,
       );
@@ -48,30 +67,69 @@ export const courseRoutes = new Hono()
   // getting  course editions
   // TODO: add pagination for filtering and sorting course editions data
   .get("/editions", async (c) => {
-    const courseEditions = await prisma.edition.findMany({});
-    return c.json(courseEditions, 200);
+    const courseEditions = await prisma.edition.findMany({
+      omit: { course_id: true, modality_id: true },
+      include: {
+        course: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        modality: {
+          select: { name: true },
+        },
+        campaing: {
+          omit: {edition_id: true}
+        }
+      },
+      orderBy: {
+        created_at: "desc"
+      }
+    });
+
+    const formattedCourseEditions = courseEditions.map((ced) => ({
+      ...ced,
+      modality: ced.modality.name,
+      campaing: ced.campaing
+    }));
+    return c.json(formattedCourseEditions, 200);
   })
   // getting course edition details
   .get(
-    "/editions/:editionId",
-    zValidator("param", z.object({ editionId: z.uuid().length(36) })),
+    `/editions${UUID_ROUTE}`,
+    zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
-      const editionId = c.req.param("editionId");
+      const editionId = c.req.param("id");
+      console.log(editionId)
       const courseEdition = await prisma.edition.findUnique({
         where: { id: editionId },
+        omit: { modality_id: true, course_id: true },
+        include: {
+          modality: {
+            select: { name: true },
+          },
+          course: true,
+        },
       });
 
       if (!courseEdition) {
         throw new HTTPException(404, { message: "Course Edition not found" });
       }
 
-      return c.json<SuccessResponse<typeof courseEdition>>(
+      const clonedEdition = structuredClone(courseEdition);
+      const formattedEdition = {
+        ...clonedEdition,
+        modality: clonedEdition.modality.name,
+      };
+
+      return c.json<SuccessResponse<typeof formattedEdition>>(
         {
           success: true,
           message: "Course edition retrieved successfully",
-          data: courseEdition,
+          data: formattedEdition,
         },
-        201,
+        200,
       );
     },
   )
@@ -141,11 +199,11 @@ export const courseRoutes = new Hono()
   )
   // updating course edition details
   .put(
-    "/editions/:editionId",
-    zValidator("param", z.object({ editionId: z.uuid().length(36) })),
+    `editions${UUID_ROUTE}`,
+    zValidator("param", z.object({ id: z.uuid().length(36) })),
     zValidator("json", updateCourseEditionSchema),
     async (c) => {
-      const editionId = c.req.param("editionId");
+      const editionId = c.req.param("id");
       const courseEditionData = c.req.valid("json");
 
       const existingCourseEdition = await prisma.edition.findUnique({
@@ -197,10 +255,10 @@ export const courseRoutes = new Hono()
   )
   // deleting a course edition
   .delete(
-    "/editions/:editionId",
-    zValidator("param", z.object({ editionId: z.uuid().length(36) })),
+    `/editions${UUID_ROUTE}`,
+    zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
-      const editionId = c.req.param("editionId");
+      const editionId = c.req.param("id");
       const courseEdition = await prisma.edition.findUnique({
         where: { id: editionId },
       });

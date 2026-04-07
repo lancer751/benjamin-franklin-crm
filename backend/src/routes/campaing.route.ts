@@ -18,6 +18,21 @@ export const campaingRoutes = new Hono()
     const { id } = c.req.param();
     const campaing = await prisma.campaing.findUnique({
       where: { id },
+      omit: { edition_id: true },
+      include: {
+        edition: {
+          select: {
+            id: true,
+            edition_code: true,
+            edition_status: true,
+            modality: {select: {name: true}},
+            course: {
+              select: { id: true, name: true },
+            },
+            edition_number: true
+          },
+        },
+      },
     });
 
     if (!campaing) {

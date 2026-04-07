@@ -211,6 +211,8 @@ export const leadRoutes = new Hono()
     if (!existingLead) {
       throw new HTTPException(404, { message: "Lead not found" });
     }
+
+    //TODO: config error cascade deletion when a lead is related to another table.
     await prisma.lead.delete({
       where: { id },
     });

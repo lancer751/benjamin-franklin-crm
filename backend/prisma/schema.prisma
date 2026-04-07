@@ -335,7 +335,7 @@ model Order {
 
   // relations
   lead   Lead           @relation(fields: [lead_id], references: [id])
-  seller SellerProfile? @relation("SELLER_ORDERS", fields: [generated_by], references: [id])
+  seller SellerProfile? @relation("SELLER_ORDERS", fields: [generated_by], references: [user_id])
 
   orderDetails OrderDetail[]
   paymentPlans PaymentPlan[]
