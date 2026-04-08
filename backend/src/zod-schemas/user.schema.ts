@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const userSchema = z.object({
   id: z.uuid().min(36).max(36),
-  name: z.string().min(1, "Name is required"),
   first_name: z
     .string()
     .min(2, "First name must be at least 2 characters long"),
@@ -29,17 +28,12 @@ export const createUserSchema = userSchema.omit({
 export const updateUserSchema = createUserSchema.partial();
 
 // seller profiles schema
-export const sellerProfileSchema = userSchema
-  .extend({
+export const sellerProfileSchema = z.object({
+    id: z.uuid().min(36).max(36),
     user_id: z.uuid().min(36).max(36),
     sales_target: z
       .number()
       .positive("Sales target must be a positive number")
-      .default(0)
-      .optional(),
-    sales_closed: z
-      .number()
-      .positive("Sales closed must be a positive number")
       .default(0)
       .optional(),
     max_discount: z
@@ -48,8 +42,9 @@ export const sellerProfileSchema = userSchema
       .max(100, "Max discount cannot exceed 100")
       .default(0),
   })
-  .omit({ id: true });
 
-export const updateSellerProfileSchema = sellerProfileSchema
-  .omit({ user_id: true })
+export const createSellerProfileSchema = sellerProfileSchema
+  .omit({ id: true })
+
+export const updateSellerProfileSchema = createSellerProfileSchema
   .partial();

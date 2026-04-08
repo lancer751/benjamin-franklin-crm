@@ -157,6 +157,20 @@ export const leadRoutes = new Hono()
     zValidator("json", createLeadInteractionSchema),
     async (c) => {
       const interactionData = c.req.valid("json");
+
+      const existingCampaingMember = await prisma.campaingMember.findUnique({
+        where: {
+          lead_id_campaing_id:{
+            campaing_id: interactionData.campaing_id,
+            lead_id: interactionData.lead_id
+          }
+        }
+      })
+
+      if(!existingCampaingMember) {
+        throw new HTTPException(500, {message: "You can't add an interaction if the user hasn't been added to a Campaing"})
+      }
+
       const newInteraction = await prisma.leadInteraction.create({
         data: interactionData,
       });

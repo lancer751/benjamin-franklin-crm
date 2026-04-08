@@ -5,6 +5,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { HTTPException } from "hono/http-exception";
 import {
+  createSellerProfileSchema,
   createUserSchema,
   updateSellerProfileSchema,
   updateUserSchema,
@@ -17,6 +18,11 @@ export const userRoutes = new Hono()
     const users = await prisma.user.findMany({
       omit: {
         password: true,
+        role_id: true,
+      },
+      include: { role: { select: { name: true } } },
+      orderBy: {
+        created_at: "desc",
       },
     });
     return c.json(users, 200);
@@ -28,7 +34,12 @@ export const userRoutes = new Hono()
     async (c) => {
       const id = c.req.param("id");
 
-      const user = await prisma.user.findUniqueOrThrow({ where: { id } });
+      const user = await prisma.user.findUniqueOrThrow({
+        where: { id },
+        omit: { role_id: true },
+        include: { role: { select: { name: true } } },
+      });
+
       if (!user) {
         throw new HTTPException(404, { message: "User don't found" });
       }
@@ -42,17 +53,60 @@ export const userRoutes = new Hono()
       );
     },
   )
+  // TODO: create a single endpoint to deliver users job details based on the role
   .get("/sellers", async (c) => {
-    const sellers = await prisma.sellerProfile.findMany({});
-    return c.json<SuccessResponse<typeof sellers>>(
-      {
-        success: true,
-        message: "Sellers found successfully",
-        data: sellers,
+    const sellers = await prisma.sellerProfile.findMany({
+      include: {
+        user: {
+          select: {
+            first_name: true,
+            last_name: true,
+            middle_name: true,
+            is_active: true,
+          },
+        },
       },
-      200,
-    );
+    });
+
+    const formattedSeller = sellers.map((seller) => {
+      const { user, ...sellerDetails } = seller;
+
+      return {
+        ...sellerDetails,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        middle_name: user.middle_name,
+      };
+    });
+
+    return c.json(formattedSeller, 200);
   })
+  // show seller details like sales_target and max_discount
+  .get(
+    `/sellers/:id`,
+    zValidator("param", z.object({ id: z.uuid().length(36) })),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const sellerDetails = await prisma.sellerProfile.findUnique({
+        where: { id },
+      });
+
+      if (!sellerDetails) {
+        throw new HTTPException(404, {
+          message: "Seller not found. There's no seller profile with this id",
+        });
+      }
+
+      return c.json<SuccessResponse<typeof sellerDetails>>(
+        {
+          success: true,
+          message: "Seller Profile found successfully",
+          data: sellerDetails,
+        },
+        200,
+      );
+    },
+  )
   .get("/marketers", async (c) => {
     const marketers = await prisma.marketingProfile.findMany({});
     return c.json<SuccessResponse<typeof marketers>>(
@@ -103,17 +157,6 @@ export const userRoutes = new Hono()
         throw new HTTPException(400, { message: "Invalid role ID" });
       }
 
-      switch (selectedRole.name) {
-        case "SALES_REP": {
-          await tx.sellerProfile.create({ data: { user_id: user.id } });
-          break;
-        }
-        case "MARKETING": {
-          await tx.marketingProfile.create({ data: { user_id: user.id } });
-          break;
-        }
-      }
-
       return user;
     });
 
@@ -126,6 +169,26 @@ export const userRoutes = new Hono()
       201,
     );
   })
+  .post(
+    "sellers/",
+    zValidator("json", createSellerProfileSchema),
+    async (c) => {
+      const sellerProfileData = c.req.valid("json");
+
+      const createdSellerProfile = await prisma.sellerProfile.create({
+        data: sellerProfileData,
+      });
+
+      return c.json<SuccessResponse<typeof createdSellerProfile>>(
+        {
+          success: true,
+          message: "seller profile created successfully",
+          data: createdSellerProfile,
+        },
+        201,
+      );
+    },
+  )
   // update user details
   .put(
     UUID_ROUTE,
@@ -151,15 +214,21 @@ export const userRoutes = new Hono()
   )
   // update seller profile
   .put(
-    "/sellers/:user_id",
-    zValidator("param", z.object({ user_id: z.uuid().min(36).max(36) })),
+    "/sellers/:id",
+    zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
     zValidator("json", updateSellerProfileSchema),
     async (c) => {
-      const user_id = c.req.param("user_id");
+      const id = c.req.param("id");
       const sellerData = c.req.valid("json");
 
+      const existingSellerProfile = await prisma.sellerProfile.findUnique({
+        where: { id },
+      });
+      if (!existingSellerProfile) {
+        throw new HTTPException(404, { message: "Seller profile not found" });
+      }
       const updatedSellerProfile = await prisma.sellerProfile.update({
-        where: { user_id },
+        where: { id },
         data: sellerData,
       });
       return c.json<SuccessResponse<typeof updatedSellerProfile>>(
