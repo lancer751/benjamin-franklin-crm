@@ -79,5 +79,23 @@ app.get("/", (c) => {
   return c.json({ status: "ok" });
 });
 
+import net from "net";
+
+const socket = new net.Socket();
+
+socket.setTimeout(5000);
+
+socket.connect(30000, "interchange.proxy.rlwy.net", () => {
+  console.log("TCP connection OK");
+  socket.destroy();
+});
+
+socket.on("error", (err) => {
+  console.error("TCP ERROR:", err);
+});
+
+socket.on("timeout", () => {
+  console.error("TCP TIMEOUT");
+});
 export default app;
 export type ApiRoutes = typeof _apiRoutes;

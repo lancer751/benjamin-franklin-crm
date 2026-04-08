@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
 
 enum CursoStatus {
@@ -242,7 +242,7 @@ model LeadInteraction {
 model Tasks {
   id      String @id @default(uuid()) @db.Char(36)
   title   String
-  content String @db.MediumText()
+  content String @db.Text()
 }
 
 model Course {

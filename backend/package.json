@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run ./src/index.ts",
+    "start": "bun run ./src/index.ts && bun run prisma:generate",
     "dev": "bun run --hot --env-file=.env src/index.ts",
     "migrate": "bunx prisma migrate dev --name init",
     "reset-db": "bunx prisma migrate reset",
@@ -41,7 +41,7 @@
   "dependencies": {
     "@faker-js/faker": "^10.3.0",
     "@hono/zod-validator": "^0.7.6",
-    "@prisma/adapter-mariadb": "^7.4.0",
+    "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.6.0",
     "@types/node": "^25.2.3",
     "axios": "^1.13.5",
@@ -50,6 +50,7 @@
     "dotenv": "^17.3.1",
     "hono": "^4.12.5",
     "nodemailer": "^8.0.1",
+    "pg": "^8.20.0",
     "prisma": "^7.6.0",
     "prisma-zod-generator": "^2.1.4",
     "vercel": "^50.32.5",
