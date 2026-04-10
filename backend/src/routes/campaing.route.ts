@@ -2,18 +2,21 @@ import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
 import prisma from "@/lib/prisma";
 import {
+  createCampaignMemberSchema,
   createCampaingSchema,
   updateCampaingSchema,
 } from "@/zod-schemas/campaing.schema";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { success } from "zod";
 
 export const campaingRoutes = new Hono()
   .get("/", async (c) => {
     const campaings = await prisma.campaing.findMany({});
     return c.json(campaings, 200);
   })
+  // campaign details
   .get(UUID_ROUTE, async (c) => {
     const { id } = c.req.param();
     const campaing = await prisma.campaing.findUnique({
@@ -25,13 +28,14 @@ export const campaingRoutes = new Hono()
             id: true,
             edition_code: true,
             edition_status: true,
-            modality: {select: {name: true}},
+            modality: { select: { name: true } },
             course: {
               select: { id: true, name: true },
             },
-            edition_number: true
+            edition_number: true,
           },
         },
+        members: true,
       },
     });
 
@@ -60,6 +64,22 @@ export const campaingRoutes = new Hono()
       201,
     );
   })
+  // add a lead or customer (campaign member) to the campaing
+  .post(
+    "/campaignsellers",
+    zValidator("json", createCampaignMemberSchema),
+    async (c) => {
+      const campaignMemberData = c.req.valid("json")
+
+      const campaignMember = await prisma.campaignMember.create({data: campaignMemberData})
+
+      return c.json<SuccessResponse<typeof campaignMember>>({
+        success: true,
+        message: "lead/customer added to the campaign successfully",
+        data: campaignMember
+      });
+    },
+  )
   .put(UUID_ROUTE, zValidator("json", updateCampaingSchema), async (c) => {
     const { id } = c.req.param();
     const campaingData = c.req.valid("json");

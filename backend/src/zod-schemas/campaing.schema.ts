@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LeadOriginSourceSchema } from "./lead.schema";
 
 export const campaingSchema = z.object({
   id: z.uuid().length(36),
@@ -9,7 +10,8 @@ export const campaingSchema = z.object({
     .max(99999999.99)
     .refine((val) => Number.isInteger(val * 100), {
       message: "Must have at most 2 decimal places",
-    }).nonnegative(),
+    })
+    .nonnegative(),
   total_spent: z
     .number()
     .nonnegative()
@@ -44,3 +46,45 @@ export const updateCampaingSchema = createCampaingSchema
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
   });
+
+// campaing member schemas
+const campaignMemberStatus = z.enum([
+  "NEW",
+  "CONTACTED",
+  "QUALIFIED",
+  "ATTEMPTED_CONTACT",
+]);
+
+export const campaignMemberSchema = z.object({
+  id: z.uuid().length(36),
+  lead_id: z.string(),
+  campaing_id: z.string(),
+  status: campaignMemberStatus.default("NEW"),
+  assigned_to: z.uuid().length(36),
+  source: LeadOriginSourceSchema,
+  created_at: z.date().default(() => new Date()),
+  updated_at: z.date(),
+  is_primary: z.boolean().default(false),
+});
+
+export const createCampaignMemberSchema = campaignMemberSchema.omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const updateCampaignMemberSchema = createCampaignMemberSchema.partial();
+
+export const campaignSellerSchema = z.object({
+  id: z.uuid().length(36),
+  campaign_id: z.uuid().length(36),
+  seller_id: z.uuid().length(36),
+  assigned_at: z.date().default(() => new Date()),
+});
+
+export const createCampaignSellerSchema = campaignSellerSchema.omit({
+  id: true,
+  assigned_at: true,
+});
+
+export type CampaignSeller = z.infer<typeof campaignSellerSchema>;

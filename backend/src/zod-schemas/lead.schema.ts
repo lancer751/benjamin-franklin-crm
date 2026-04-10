@@ -10,21 +10,6 @@ export const LeadOriginSourceSchema = z.enum([
   "WEBSITE",
 ]);
 
-export const LeadStageSchema = z.enum([
-  "NEW",
-  "CONTACTED",
-  "ATTEMPTED_CONTACT",
-  "QUALIFIED",
-  "UNQUALIFIED",
-  "IN_PROGRESS",
-  "NEGOTIATION",
-  "PROPOSAL_SENT",
-  "WON",
-  "LOST",
-  "REJECTED",
-  "FOLLOW_UP",
-  "ON_HOLD",
-]);
 
 export const LeadStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 

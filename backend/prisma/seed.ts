@@ -101,8 +101,7 @@ async function main() {
       return prisma.course.create({
         data: {
           name: fakerES.commerce.productName(),
-          description: fakerES.commerce.productDescription(),
-          code: fakerES.string.alpha(10).toUpperCase(),
+          code: fakerES.string.alpha(7).toUpperCase(),
           image_url: fakerES.image.url(),
         },
       });

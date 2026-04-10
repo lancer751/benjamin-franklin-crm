@@ -83,17 +83,13 @@ enum LeadOriginSource {
 enum CampaignMemberStatus {
   NEW
   CONTACTED
-  ATTEMPTED_CONTACT
   QUALIFIED
   UNQUALIFIED
-  IN_PROGRESS
-  NEGOTIATION
-  PROPOSAL_SENT
-  WON
-  LOST
-  REJECTED
+  ATTEMPTED_CONTACT
   FOLLOW_UP
   ON_HOLD
+  WON
+  LOST
 }
 
 enum Gender {
@@ -115,11 +111,26 @@ model SellerProfile {
   user_id      String   @unique
   sales_target Int      @default(0)
   max_discount Decimal? @default(0)
+  assigned_campaing String
 
   user            User              @relation(fields: [user_id], references: [id])
-  campaingMembers CampaingMember[]
+  campaignMembers CampaignMember[]
   orders          Order[]           @relation("SELLER_ORDERS")
   LeadInteraction LeadInteraction[]
+  campaigns       CampaignSeller[]
+}
+
+model CampaignSeller {
+  id          String @id @default(uuid()) @db.Char(36)
+  campaign_id String
+  seller_id   String
+
+  campaign Campaing      @relation(fields: [campaign_id], references: [id])
+  seller   SellerProfile @relation(fields: [seller_id], references: [id])
+
+  assigned_at DateTime @default(now())
+
+  @@unique([campaign_id, seller_id])
 }
 
 // add more fields for this role
@@ -161,12 +172,12 @@ model LeadPhone {
   lead Lead @relation(fields: [lead_id], references: [id])
 }
 
-model CampaingMember {
+model CampaignMember {
   id          String               @id @default(uuid()) @db.Char(36)
   lead_id     String
   campaing_id String
   status      CampaignMemberStatus @default(NEW)
-  assigned_to String?
+  assigned_to String
   source      LeadOriginSource
   created_at  DateTime             @default(now())
   updated_at  DateTime             @updatedAt
@@ -187,8 +198,19 @@ enum LeadStatus {
   INACTIVE
 }
 
-enum LeadStage {
-  PROSPECT
+enum MoodleStudentStatus {
+  ACTIVE
+  SUSPENDED
+}
+model CustomerProfile {
+  id                  String     @id @default(uuid()) @db.Char(36)
+  lead_id String @unique
+  moodle_user_name String
+  moodle_user_id      Int?       @unique
+  moodle_user_status MoodleStudentStatus @default(ACTIVE)
+  password String
+
+  lead Lead @relation(fields: [lead_id], references: [id])
 }
 
 model Lead {
@@ -203,7 +225,6 @@ model Lead {
   email               String     @unique
   secondary_email     String?
   dni                 String?    @unique @db.Char(8)
-  moodle_user_id      Int?       @unique
   lead_status         LeadStatus @default(ACTIVE)
   primary_campaign_id String?
   created_at          DateTime   @default(now())
@@ -212,8 +233,9 @@ model Lead {
   //relations
   phones              LeadPhone[]
   orders              Order[]
-  leadInteraction     LeadInteraction[]
-  campaingMember      CampaingMember[]
+  interactions     LeadInteraction[]
+  campaignsEngaging      CampaignMember[]
+  customerProfile CustomerProfile?
   leadPrimaryCampaing Campaing?         @relation("PrimaryCampaign", fields: [primary_campaign_id], references: [id])
 }
 
@@ -235,7 +257,7 @@ model LeadInteraction {
   type        InteractionType
 
   lead           Lead           @relation(fields: [lead_id], references: [id])
-  campaingMember CampaingMember @relation(fields: [campaing_id], references: [id])
+  campaignMember CampaignMember @relation(fields: [campaing_id], references: [id])
   seller         SellerProfile? @relation(fields: [created_by], references: [id])
 }
 
@@ -268,9 +290,10 @@ model Campaing {
   updated_at     DateTime         @updatedAt
   edition_id     String           @unique
 
-  CampaingMember CampaingMember[]
+  members CampaignMember[]
   leads          Lead[]           @relation("PrimaryCampaign")
   edition        Edition          @relation(fields: [edition_id], references: [id])
+  sellers         CampaignSeller[]
 }
 
 model Modality {
@@ -375,6 +398,7 @@ model Payment {
   payment_method       PaymentMethod
   payment_status       PaymentStatus
   type                 PaymentType
+  payment_receipt String?
   currency             String?       @db.Char(3)
   transaccion_id       String? // from payment gateway
   created_at           DateTime      @default(now())

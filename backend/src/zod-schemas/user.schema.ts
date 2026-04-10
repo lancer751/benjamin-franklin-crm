@@ -41,6 +41,7 @@ export const sellerProfileSchema = z.object({
       .min(0, "Max discount must be at least 0")
       .max(100, "Max discount cannot exceed 100")
       .default(0),
+    assigned_campaing: z.uuid().length(36)
   })
 
 export const createSellerProfileSchema = sellerProfileSchema

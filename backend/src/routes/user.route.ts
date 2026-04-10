@@ -176,7 +176,7 @@ export const userRoutes = new Hono()
       const sellerProfileData = c.req.valid("json");
 
       const createdSellerProfile = await prisma.sellerProfile.create({
-        data: sellerProfileData,
+       data: sellerProfileData,
       });
 
       return c.json<SuccessResponse<typeof createdSellerProfile>>(

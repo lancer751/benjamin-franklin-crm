@@ -14,18 +14,26 @@ import type { SuccessResponse } from "@/app";
 
 export const leadRoutes = new Hono()
   .get("/", async (c) => {
-    const leads = await prisma.lead.findMany();
+    const leads = await prisma.lead.findMany({
+      include: {
+        leadPrimaryCampaing: true
+      }
+    });
     return c.json(leads, 200);
   })
   // lead details
-  // TODO: we should also return the campaings that the lead is associated with, and the interactions that the lead has had
   .get(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
     async (c) => {
       const id = c.req.param("id");
+      // return the campaings that the lead is associated with, and the interactions that the lead has had
       const lead = await prisma.lead.findUnique({
         where: { id },
+        include: {
+          interactions: true,
+          campaignsEngaging: { include: { campaing: true } },
+        },
       });
 
       if (!lead) {
@@ -42,7 +50,8 @@ export const leadRoutes = new Hono()
       );
     },
   )
-  // get lead interactions
+  // get lead interactions without specifying a campaing
+  // TODO: add filtering and sortering and pagination
   .get(
     `/${UUID_ROUTE}/interactions`,
     zValidator("param", z.object({ id: z.uuid().length(36) })),
@@ -104,8 +113,17 @@ export const leadRoutes = new Hono()
         where: { email: lead.email },
       });
 
-      // if the lead already exists, we only create a new interaction, otherwise we create the lead, a campaingmember and the interaction
+      const existingCampaignSeller = await prisma.campaignSeller.findFirst({
+        where: { campaign_id: campaing_id },
+      });
 
+      if (!existingCampaignSeller) {
+        throw new HTTPException(404, {
+          message: `Campaign with id ${campaing_id} doesn't exist`,
+        });
+      }
+
+      // if the lead already exists, we only create a new interaction, otherwise we create the lead, a campaingmember and the interaction
       await prisma.$transaction(async (tx) => {
         const createdLead =
           existingLead ??
@@ -114,7 +132,7 @@ export const leadRoutes = new Hono()
           }));
 
         // creating a new campaign member if the lead doesn't exist
-        const existingCampaingMember = await tx.campaingMember.findFirst({
+        const existingCampaingMember = await tx.campaignMember.findFirst({
           where: {
             campaing_id,
             lead_id: createdLead.id,
@@ -122,12 +140,13 @@ export const leadRoutes = new Hono()
         });
 
         if (!existingCampaingMember) {
-          await tx.campaingMember.create({
+          await tx.campaignMember.create({
             data: {
               source: source,
               campaing_id: campaing_id,
               lead_id: createdLead.id,
               is_primary: existingLead ? true : false,
+              assigned_to: existingCampaignSeller.seller_id,
             },
           });
         }
@@ -158,17 +177,20 @@ export const leadRoutes = new Hono()
     async (c) => {
       const interactionData = c.req.valid("json");
 
-      const existingCampaingMember = await prisma.campaingMember.findUnique({
+      const existingCampaingMember = await prisma.campaignMember.findUnique({
         where: {
-          lead_id_campaing_id:{
+          lead_id_campaing_id: {
             campaing_id: interactionData.campaing_id,
-            lead_id: interactionData.lead_id
-          }
-        }
-      })
+            lead_id: interactionData.lead_id,
+          },
+        },
+      });
 
-      if(!existingCampaingMember) {
-        throw new HTTPException(500, {message: "You can't add an interaction if the user hasn't been added to a Campaing"})
+      if (!existingCampaingMember) {
+        throw new HTTPException(500, {
+          message:
+            "You can't add an interaction if the user hasn't been added to a Campaing",
+        });
       }
 
       const newInteraction = await prisma.leadInteraction.create({
