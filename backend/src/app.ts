@@ -8,8 +8,9 @@ import { courseRoutes } from "./routes/course.route";
 import { campaingRoutes } from "./routes/campaing.route";
 import { productRoutes } from "./routes/product.route";
 import { orderRoutes } from "./routes/order.route";
+import type {ErrorResponse} from "shared"
 
-const app = new Hono();
+export const app = new Hono();
 
 app.use("*", logger());
 app.use(
@@ -19,19 +20,13 @@ app.use(
   }),
 );
 
-export type ErrorResponse = {
-  success: false;
-  error: string;
-  isFormError?: boolean;
-};
-
 export type SuccessResponse<T = void> = {
   success: true;
   message: string;
 } & (T extends void ? unknown : { data: T });
 
-// payment routes is missing
-const _apiRoutes = app
+// TODO: refactor this routing
+export const apiRoutes = app
   .basePath("/api")
   .route("/leads", leadRoutes)
   .route("/users", userRoutes)
@@ -79,23 +74,8 @@ app.get("/", (c) => {
   return c.json({ status: "ok" });
 });
 
-import net from "net";
-
-const socket = new net.Socket();
-
-socket.setTimeout(5000);
-
-socket.connect(30000, "interchange.proxy.rlwy.net", () => {
-  console.log("TCP connection OK");
-  socket.destroy();
-});
-
-socket.on("error", (err) => {
-  console.error("TCP ERROR:", err);
-});
-
-socket.on("timeout", () => {
-  console.error("TCP TIMEOUT");
-});
-export default app;
-export type ApiRoutes = typeof _apiRoutes;
+export default {
+  port: Number(process.env.PORT) || 3000, 
+  hostname: '0.0.0.0', 
+  fetch: app.fetch, 
+}

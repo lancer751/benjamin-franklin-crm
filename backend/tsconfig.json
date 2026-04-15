@@ -1,28 +1,24 @@
 {
+  "extends": "../tsconfig.json",
   "compilerOptions": {
     // Environment setup & latest features
     "lib": [
       "ESNext"
     ],
     "target": "ESNext",
-    "module": "Preserve",
-    "moduleDetection": "force",
-    "allowJs": true,
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
     // Bundler mode
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "noEmit": true,
+     "allowImportingTsExtensions": false,
     // Best practices
     "strict": true,
-    "skipLibCheck": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
+    "esModuleInterop": true,
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false,
     "types": [
       "bun-types"
     ],
@@ -54,6 +50,13 @@
       "@shared/*": [
         "../shared/*"
       ]
-    }
+    },
+    // Output settings
+    "declaration": true,
+    "outDir": "dist",
+    "noEmit": false,
+    "emitDecoratorMetadata": true,
   },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
 }

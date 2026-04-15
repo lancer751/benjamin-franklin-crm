@@ -11,11 +11,13 @@ import {
   updateUserSchema,
 } from "@/zod-schemas/user.schema";
 import type { SuccessResponse } from "@/app";
+import withPrisma from "@/lib/prisma";
+import type { ContextWithPrisma } from "@/lib/contextVariables";
 
-export const userRoutes = new Hono()
+export const userRoutes = new Hono<ContextWithPrisma>()
   // get all users
-  .get("/", async (c) => {
-    const users = await prisma.user.findMany({
+  .get("/", withPrisma, async (c) => {
+    const users = await c.get("prisma").user.findMany({
       omit: {
         password: true,
         role_id: true,
@@ -34,7 +36,7 @@ export const userRoutes = new Hono()
     async (c) => {
       const id = c.req.param("id");
 
-      const user = await prisma.user.findUniqueOrThrow({
+      const user = await c.get("prisma").user.findUniqueOrThrow({
         where: { id },
         omit: { role_id: true },
         include: { role: { select: { name: true } } },
@@ -55,7 +57,7 @@ export const userRoutes = new Hono()
   )
   // TODO: create a single endpoint to deliver users job details based on the role
   .get("/sellers", async (c) => {
-    const sellers = await prisma.sellerProfile.findMany({
+    const sellers = await c.get("prisma").sellerProfile.findMany({
       include: {
         user: {
           select: {
@@ -87,7 +89,7 @@ export const userRoutes = new Hono()
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
-      const sellerDetails = await prisma.sellerProfile.findUnique({
+      const sellerDetails = await c.get("prisma").sellerProfile.findUnique({
         where: { id },
       });
 
@@ -108,7 +110,7 @@ export const userRoutes = new Hono()
     },
   )
   .get("/marketers", async (c) => {
-    const marketers = await prisma.marketingProfile.findMany({});
+    const marketers = await c.get("prisma").marketingProfile.findMany({});
     return c.json<SuccessResponse<typeof marketers>>(
       {
         success: true,
@@ -125,7 +127,7 @@ export const userRoutes = new Hono()
     async (c) => {
       const user_id = c.req.param("user_id");
 
-      const seller = await prisma.sellerProfile.findUnique({
+      const seller = await c.get("prisma").sellerProfile.findUnique({
         where: { user_id },
       });
       if (!seller) {
@@ -146,7 +148,7 @@ export const userRoutes = new Hono()
   .post("/", zValidator("json", createUserSchema), async (c) => {
     const userData = c.req.valid("json");
 
-    const newUser = await prisma.$transaction(async (tx) => {
+    const newUser = await c.get("prisma").$transaction(async (tx) => {
       const user = await tx.user.create({ data: userData });
       const selectedRole = await tx.role.findUnique({
         where: { id: user.role_id },
@@ -175,7 +177,7 @@ export const userRoutes = new Hono()
     async (c) => {
       const sellerProfileData = c.req.valid("json");
 
-      const createdSellerProfile = await prisma.sellerProfile.create({
+      const createdSellerProfile = await c.get("prisma").sellerProfile.create({
        data: sellerProfileData,
       });
 
@@ -198,7 +200,7 @@ export const userRoutes = new Hono()
       const id = c.req.param("id");
       const userData = c.req.valid("json");
 
-      const updatedUser = await prisma.user.update({
+      const updatedUser = await c.get("prisma").user.update({
         where: { id },
         data: userData,
       });
@@ -221,13 +223,13 @@ export const userRoutes = new Hono()
       const id = c.req.param("id");
       const sellerData = c.req.valid("json");
 
-      const existingSellerProfile = await prisma.sellerProfile.findUnique({
+      const existingSellerProfile = await c.get("prisma").sellerProfile.findUnique({
         where: { id },
       });
       if (!existingSellerProfile) {
         throw new HTTPException(404, { message: "Seller profile not found" });
       }
-      const updatedSellerProfile = await prisma.sellerProfile.update({
+      const updatedSellerProfile = await c.get("prisma").sellerProfile.update({
         where: { id },
         data: sellerData,
       });
@@ -248,7 +250,7 @@ export const userRoutes = new Hono()
     async (c) => {
       const id = c.req.param("id");
 
-      await prisma.user.delete({
+      await c.get("prisma").user.delete({
         where: { id },
       });
       return c.json<SuccessResponse>(
@@ -262,6 +264,6 @@ export const userRoutes = new Hono()
   )
   // for now we just return the roles, but in the future we can add more details to the roles like permissions and access levels
   .get("/roles", async (c) => {
-    const roles = await prisma.role.findMany({});
+    const roles = await c.get("prisma").role.findMany({});
     return c.json(roles, 200);
   });

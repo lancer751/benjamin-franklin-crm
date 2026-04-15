@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import prisma from "../lib/prisma";
 import { zValidator } from "@hono/zod-validator";
 import {
   createLeadFromExternalSchema,
@@ -11,10 +10,11 @@ import { UUID_ROUTE } from "@/helpers/constants";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import type { SuccessResponse } from "@/app";
+import type { ContextWithPrisma } from "@/lib/contextVariables";
 
-export const leadRoutes = new Hono()
+export const leadRoutes = new Hono<ContextWithPrisma>()
   .get("/", async (c) => {
-    const leads = await prisma.lead.findMany({
+    const leads = await c.get("prisma").lead.findMany({
       include: {
         leadPrimaryCampaing: true
       }
@@ -28,7 +28,7 @@ export const leadRoutes = new Hono()
     async (c) => {
       const id = c.req.param("id");
       // return the campaings that the lead is associated with, and the interactions that the lead has had
-      const lead = await prisma.lead.findUnique({
+      const lead = await c.get("prisma").lead.findUnique({
         where: { id },
         include: {
           interactions: true,
@@ -57,7 +57,7 @@ export const leadRoutes = new Hono()
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const id = c.req.param("id");
-      const interactions = await prisma.leadInteraction.findMany({
+      const interactions = await c.get("prisma").leadInteraction.findMany({
         where: { lead_id: id },
         include: {
           seller: {
@@ -87,7 +87,7 @@ export const leadRoutes = new Hono()
   .post("/", zValidator("json", createLeadSchema), async (c) => {
     const lead = c.req.valid("json");
     // lead phone is missing, adjust the schema to handle it
-    const newLead = await prisma.lead.create({
+    const newLead = await c.get("prisma").lead.create({
       data: lead,
     });
     return c.json<SuccessResponse<typeof newLead>>(
@@ -109,11 +109,11 @@ export const leadRoutes = new Hono()
         structuredClone(lead);
       const { notes, type } = lead_interaction;
       // creating the lead and the lead interaction at the same time, since we know that if the lead is being created from an external source, it means that there was an interaction with the lead, and we want to keep track of that interaction in our system
-      const existingLead = await prisma.lead.findUnique({
+      const existingLead = await c.get("prisma").lead.findUnique({
         where: { email: lead.email },
       });
 
-      const existingCampaignSeller = await prisma.campaignSeller.findFirst({
+      const existingCampaignSeller = await c.get("prisma").campaignSeller.findFirst({
         where: { campaign_id: campaing_id },
       });
 
@@ -124,7 +124,7 @@ export const leadRoutes = new Hono()
       }
 
       // if the lead already exists, we only create a new interaction, otherwise we create the lead, a campaingmember and the interaction
-      await prisma.$transaction(async (tx) => {
+      await c.get("prisma").$transaction(async (tx) => {
         const createdLead =
           existingLead ??
           (await tx.lead.create({
@@ -177,7 +177,7 @@ export const leadRoutes = new Hono()
     async (c) => {
       const interactionData = c.req.valid("json");
 
-      const existingCampaingMember = await prisma.campaignMember.findUnique({
+      const existingCampaingMember = await c.get("prisma").campaignMember.findUnique({
         where: {
           lead_id_campaing_id: {
             campaing_id: interactionData.campaing_id,
@@ -193,7 +193,7 @@ export const leadRoutes = new Hono()
         });
       }
 
-      const newInteraction = await prisma.leadInteraction.create({
+      const newInteraction = await c.get("prisma").leadInteraction.create({
         data: interactionData,
       });
 
@@ -216,7 +216,7 @@ export const leadRoutes = new Hono()
       const id = c.req.param("id");
       const lead = c.req.valid("json");
 
-      const existingLead = await prisma.lead.findUnique({
+      const existingLead = await c.get("prisma").lead.findUnique({
         where: { id },
       });
 
@@ -224,7 +224,7 @@ export const leadRoutes = new Hono()
         throw new HTTPException(404, { message: "Lead not found" });
       }
 
-      const updatedLead = await prisma.lead.update({
+      const updatedLead = await c.get("prisma").lead.update({
         data: lead,
         where: {
           id,
@@ -243,13 +243,13 @@ export const leadRoutes = new Hono()
   )
   .delete(UUID_ROUTE, async (c) => {
     const id = c.req.param("id");
-    const existingLead = await prisma.lead.findUnique({ where: { id } });
+    const existingLead = await c.get("prisma").lead.findUnique({ where: { id } });
     if (!existingLead) {
       throw new HTTPException(404, { message: "Lead not found" });
     }
 
     //TODO: config error cascade deletion when a lead is related to another table.
-    await prisma.lead.delete({
+    await c.get("prisma").lead.delete({
       where: { id },
     });
 

@@ -2,6 +2,7 @@
   "name": "moodle-enroll-manager",
   "version": "0.0.1",
   "description": "",
+  "packageManager": "bun@1.2.4",
   "workspaces": [
     "./backend",
     "./management-dashboard",
@@ -9,42 +10,23 @@
   ],
    "scripts": {
     "dev": "turbo dev",
-    "dev:client": "turbo dev --filter=client",
-    "dev:server": "turbo dev --filter=server",
+    "dev:client": "turbo dev --filter=management-dashboard",
+    "dev:server": "turbo dev --filter=backend",
     "build": "turbo build",
-    "build:client": "turbo build --filter=client",
-    "build:server": "turbo build --filter=server",
+    "build:client": "turbo build --filter=management-dashboard",
+    "build:server": "turbo build --filter=backend",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "test": "turbo test",
-    "postinstall": "turbo build --filter=shared --filter=server"
+    "postinstall": "turbo build --filter=shared --filter=backend"
   },
-  "keywords": [
-    "bun",
-    "hono",
-    "react",
-    "vite",
-    "monorepo"
-  ],
-  "author": "",
+  "author": "lauwc",
   "license": "ISC",
   "type": "commonjs",
-  "dependencies": {
-    "@vitejs/plugin-react-swc": "^4.2.3",
-    "autoprefixer": "^10.4.24",
-    "axios": "^1.13.6",
-    "lovable-tagger": "^1.1.13",
-    "postcss": "^8.5.6",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tailwindcss": "^3.4.19",
-    "tailwindcss-animate": "^1.0.7",
-    "vite": "^5.4.19"
-  },
   "private": true,
   "devDependencies": {
     "bun-types": "latest",
-    "turbo": "^2.5.5"
+    "turbo": "^2.6.3"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

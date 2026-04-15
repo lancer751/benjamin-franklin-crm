@@ -1,6 +1,6 @@
 import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
-import prisma from "@/lib/prisma";
+import type { ContextWithPrisma } from "@/lib/contextVariables";
 import {
   createCampaignMemberSchema,
   createCampaingSchema,
@@ -9,17 +9,16 @@ import {
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { success } from "zod";
 
-export const campaingRoutes = new Hono()
+export const campaingRoutes = new Hono<ContextWithPrisma>()
   .get("/", async (c) => {
-    const campaings = await prisma.campaing.findMany({});
+    const campaings = await c.get("prisma").campaing.findMany({});
     return c.json(campaings, 200);
   })
   // campaign details
   .get(UUID_ROUTE, async (c) => {
     const { id } = c.req.param();
-    const campaing = await prisma.campaing.findUnique({
+    const campaing = await c.get("prisma").campaing.findUnique({
       where: { id },
       omit: { edition_id: true },
       include: {
@@ -51,7 +50,7 @@ export const campaingRoutes = new Hono()
   .post("/", zValidator("json", createCampaingSchema), async (c) => {
     const campaingData = c.req.valid("json");
 
-    const newCampaing = await prisma.campaing.create({
+    const newCampaing = await c.get("prisma").campaing.create({
       data: campaingData,
     });
 
@@ -71,7 +70,7 @@ export const campaingRoutes = new Hono()
     async (c) => {
       const campaignMemberData = c.req.valid("json")
 
-      const campaignMember = await prisma.campaignMember.create({data: campaignMemberData})
+      const campaignMember = await c.get("prisma").campaignMember.create({data: campaignMemberData})
 
       return c.json<SuccessResponse<typeof campaignMember>>({
         success: true,
@@ -84,7 +83,7 @@ export const campaingRoutes = new Hono()
     const { id } = c.req.param();
     const campaingData = c.req.valid("json");
 
-    const existingCampaing = await prisma.campaing.findUnique({
+    const existingCampaing = await c.get("prisma").campaing.findUnique({
       where: { id },
     });
 
@@ -92,7 +91,7 @@ export const campaingRoutes = new Hono()
       throw new HTTPException(404, { message: "Campaing not found" });
     }
 
-    const updatedCampaing = await prisma.campaing.update({
+    const updatedCampaing = await c.get("prisma").campaing.update({
       where: { id },
       data: campaingData,
     });
@@ -105,7 +104,7 @@ export const campaingRoutes = new Hono()
   })
   .delete(UUID_ROUTE, async (c) => {
     const { id } = c.req.param();
-    const deletedCampaing = await prisma.campaing.delete({
+    const deletedCampaing = await c.get("prisma").campaing.delete({
       where: { id },
     });
 

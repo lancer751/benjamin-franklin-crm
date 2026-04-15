@@ -1,13 +1,13 @@
 import type { SuccessResponse } from "@/app";
-import prisma from "@/lib/prisma";
+import type { ContextWithPrisma } from "@/lib/contextVariables";
 import { createPaymentSchema } from "@/zod-schemas/payment.schema";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 
-export const paymentRoutes = new Hono()
+export const paymentRoutes = new Hono<ContextWithPrisma>()
   .get("/", async (c) => {
-    const payments = await prisma.payment.findMany({
+    const payments = await c.get("prisma").payment.findMany({
       orderBy: {
         created_at: "desc",
       },
@@ -22,7 +22,7 @@ export const paymentRoutes = new Hono()
     if (paymentData.type === "INSTALLMENTS" && payment_plan) {
       const { scheduled_payments, ...paymentPlanData } =
         payment_plan;
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await c.get("prisma").$transaction(async (tx) => {
         const paymentPlan = await tx.paymentPlan.create({
           data: paymentPlanData,
         });
@@ -55,7 +55,7 @@ export const paymentRoutes = new Hono()
       scheduledPaymentId = result.id
     }
 
-    const generatedPayment = await prisma.payment.create({
+    const generatedPayment = await c.get("prisma").payment.create({
       data: {...newPaymentData, scheduled_payment_id: scheduledPaymentId}
     })
 

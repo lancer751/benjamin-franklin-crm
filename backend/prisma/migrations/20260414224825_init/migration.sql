@@ -29,7 +29,7 @@ CREATE TYPE "CampaingPlatform" AS ENUM ('FACEBOOK', 'INSTAGRAM', 'TIKTOK', 'WEBS
 CREATE TYPE "LeadOriginSource" AS ENUM ('FACEBOOK', 'INSTAGRAM', 'TIKTOK', 'WHATSAPP', 'WEBSITE');
 
 -- CreateEnum
-CREATE TYPE "CampaignMemberStatus" AS ENUM ('NEW', 'CONTACTED', 'ATTEMPTED_CONTACT', 'QUALIFIED', 'UNQUALIFIED', 'IN_PROGRESS', 'NEGOTIATION', 'PROPOSAL_SENT', 'WON', 'LOST', 'REJECTED', 'FOLLOW_UP', 'ON_HOLD');
+CREATE TYPE "CampaignMemberStatus" AS ENUM ('NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'ATTEMPTED_CONTACT', 'FOLLOW_UP', 'ON_HOLD', 'WON', 'LOST');
 
 -- CreateEnum
 CREATE TYPE "Gender" AS ENUM ('MALE', 'FEMALE', 'NOT_SPECIFIED');
@@ -41,7 +41,7 @@ CREATE TYPE "PhoneType" AS ENUM ('WHATSAPP', 'TELEPHONE');
 CREATE TYPE "LeadStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 
 -- CreateEnum
-CREATE TYPE "LeadStage" AS ENUM ('PROSPECT');
+CREATE TYPE "MoodleStudentStatus" AS ENUM ('ACTIVE', 'SUSPENDED');
 
 -- CreateEnum
 CREATE TYPE "InteractionType" AS ENUM ('WEBSITE_FORM', 'SELL', 'WHATSAPP', 'EMAIL', 'MEETING', 'CALL');
@@ -71,8 +71,19 @@ CREATE TABLE "SellerProfile" (
     "user_id" TEXT NOT NULL,
     "sales_target" INTEGER NOT NULL DEFAULT 0,
     "max_discount" DECIMAL(65,30) DEFAULT 0,
+    "assigned_campaing" TEXT NOT NULL,
 
     CONSTRAINT "SellerProfile_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CampaignSeller" (
+    "id" CHAR(36) NOT NULL,
+    "campaign_id" TEXT NOT NULL,
+    "seller_id" TEXT NOT NULL,
+    "assigned_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "CampaignSeller_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -111,18 +122,30 @@ CREATE TABLE "LeadPhone" (
 );
 
 -- CreateTable
-CREATE TABLE "CampaingMember" (
+CREATE TABLE "CampaignMember" (
     "id" CHAR(36) NOT NULL,
     "lead_id" TEXT NOT NULL,
     "campaing_id" TEXT NOT NULL,
     "status" "CampaignMemberStatus" NOT NULL DEFAULT 'NEW',
-    "assigned_to" TEXT,
+    "assigned_to" TEXT NOT NULL,
     "source" "LeadOriginSource" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "is_primary" BOOLEAN NOT NULL DEFAULT false,
 
-    CONSTRAINT "CampaingMember_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "CampaignMember_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CustomerProfile" (
+    "id" CHAR(36) NOT NULL,
+    "lead_id" TEXT NOT NULL,
+    "moodle_user_name" TEXT NOT NULL,
+    "moodle_user_id" INTEGER,
+    "moodle_user_status" "MoodleStudentStatus" NOT NULL DEFAULT 'ACTIVE',
+    "password" TEXT NOT NULL,
+
+    CONSTRAINT "CustomerProfile_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -138,7 +161,6 @@ CREATE TABLE "Lead" (
     "email" TEXT NOT NULL,
     "secondary_email" TEXT,
     "dni" CHAR(8),
-    "moodle_user_id" INTEGER,
     "lead_status" "LeadStatus" NOT NULL DEFAULT 'ACTIVE',
     "primary_campaign_id" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -282,6 +304,7 @@ CREATE TABLE "Payment" (
     "payment_method" "PaymentMethod" NOT NULL,
     "payment_status" "PaymentStatus" NOT NULL,
     "type" "PaymentType" NOT NULL,
+    "payment_receipt" TEXT,
     "currency" CHAR(3),
     "transaccion_id" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -323,28 +346,34 @@ CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 CREATE UNIQUE INDEX "SellerProfile_user_id_key" ON "SellerProfile"("user_id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "CampaignSeller_campaign_id_seller_id_key" ON "CampaignSeller"("campaign_id", "seller_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "MarketingProfile_user_id_key" ON "MarketingProfile"("user_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE INDEX "CampaingMember_status_idx" ON "CampaingMember"("status");
+CREATE INDEX "CampaignMember_status_idx" ON "CampaignMember"("status");
 
 -- CreateIndex
-CREATE INDEX "CampaingMember_assigned_to_idx" ON "CampaingMember"("assigned_to");
+CREATE INDEX "CampaignMember_assigned_to_idx" ON "CampaignMember"("assigned_to");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CampaingMember_lead_id_campaing_id_key" ON "CampaingMember"("lead_id", "campaing_id");
+CREATE UNIQUE INDEX "CampaignMember_lead_id_campaing_id_key" ON "CampaignMember"("lead_id", "campaing_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CustomerProfile_lead_id_key" ON "CustomerProfile"("lead_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CustomerProfile_moodle_user_id_key" ON "CustomerProfile"("moodle_user_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Lead_email_key" ON "Lead"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Lead_dni_key" ON "Lead"("dni");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Lead_moodle_user_id_key" ON "Lead"("moodle_user_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Campaing_edition_id_key" ON "Campaing"("edition_id");
@@ -380,6 +409,12 @@ CREATE UNIQUE INDEX "ScheduledPayment_payment_plan_id_number_key" ON "ScheduledP
 ALTER TABLE "SellerProfile" ADD CONSTRAINT "SellerProfile_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "CampaignSeller" ADD CONSTRAINT "CampaignSeller_campaign_id_fkey" FOREIGN KEY ("campaign_id") REFERENCES "Campaing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CampaignSeller" ADD CONSTRAINT "CampaignSeller_seller_id_fkey" FOREIGN KEY ("seller_id") REFERENCES "SellerProfile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "MarketingProfile" ADD CONSTRAINT "MarketingProfile_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -389,13 +424,16 @@ ALTER TABLE "User" ADD CONSTRAINT "User_role_id_fkey" FOREIGN KEY ("role_id") RE
 ALTER TABLE "LeadPhone" ADD CONSTRAINT "LeadPhone_lead_id_fkey" FOREIGN KEY ("lead_id") REFERENCES "Lead"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CampaingMember" ADD CONSTRAINT "CampaingMember_lead_id_fkey" FOREIGN KEY ("lead_id") REFERENCES "Lead"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "CampaignMember" ADD CONSTRAINT "CampaignMember_lead_id_fkey" FOREIGN KEY ("lead_id") REFERENCES "Lead"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CampaingMember" ADD CONSTRAINT "CampaingMember_campaing_id_fkey" FOREIGN KEY ("campaing_id") REFERENCES "Campaing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "CampaignMember" ADD CONSTRAINT "CampaignMember_campaing_id_fkey" FOREIGN KEY ("campaing_id") REFERENCES "Campaing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CampaingMember" ADD CONSTRAINT "CampaingMember_assigned_to_fkey" FOREIGN KEY ("assigned_to") REFERENCES "SellerProfile"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "CampaignMember" ADD CONSTRAINT "CampaignMember_assigned_to_fkey" FOREIGN KEY ("assigned_to") REFERENCES "SellerProfile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CustomerProfile" ADD CONSTRAINT "CustomerProfile_lead_id_fkey" FOREIGN KEY ("lead_id") REFERENCES "Lead"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Lead" ADD CONSTRAINT "Lead_primary_campaign_id_fkey" FOREIGN KEY ("primary_campaign_id") REFERENCES "Campaing"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -404,7 +442,7 @@ ALTER TABLE "Lead" ADD CONSTRAINT "Lead_primary_campaign_id_fkey" FOREIGN KEY ("
 ALTER TABLE "LeadInteraction" ADD CONSTRAINT "LeadInteraction_lead_id_fkey" FOREIGN KEY ("lead_id") REFERENCES "Lead"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "LeadInteraction" ADD CONSTRAINT "LeadInteraction_campaing_id_fkey" FOREIGN KEY ("campaing_id") REFERENCES "CampaingMember"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "LeadInteraction" ADD CONSTRAINT "LeadInteraction_campaing_id_fkey" FOREIGN KEY ("campaing_id") REFERENCES "CampaignMember"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "LeadInteraction" ADD CONSTRAINT "LeadInteraction_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "SellerProfile"("id") ON DELETE SET NULL ON UPDATE CASCADE;

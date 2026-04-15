@@ -1,6 +1,6 @@
 import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
-import prisma from "@/lib/prisma";
+import type { ContextWithPrisma } from "@/lib/contextVariables";
 import {
   createOrderSchema,
   updateOrderSchema,
@@ -11,9 +11,9 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import {z} from "zod";
 
-export const orderRoutes = new Hono()
+export const orderRoutes = new Hono<ContextWithPrisma>()
   .get("/", async (c) => {
-    const orders = await prisma.order.findMany({});
+    const orders = await c.get("prisma").order.findMany({});
     return c.json(orders, 200);
   })
   .get(
@@ -21,7 +21,7 @@ export const orderRoutes = new Hono()
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
-      const order = await prisma.order.findUnique({ where: { id }, include: {
+      const order = await c.get("prisma").order.findUnique({ where: { id }, include: {
         orderDetails: true
       }});
 
@@ -35,7 +35,7 @@ export const orderRoutes = new Hono()
     const orderData = c.req.valid("json");
     const { order_items, ...newOrderData } = structuredClone(orderData);
 
-    const generatedOrder = await prisma.order.create({
+    const generatedOrder = await c.get("prisma").order.create({
       data: {
         ...newOrderData,
         order_code: faker.string.alpha({ length: 7, casing: "upper" }),
@@ -65,11 +65,11 @@ export const orderRoutes = new Hono()
       const { id } = c.req.valid("param");
       const orderData = c.req.valid("json");
       const { order_items, ...orderToUpdate } = structuredClone(orderData);
-      const existingOrder = await prisma.order.findUnique({ where: { id } });
+      const existingOrder = await c.get("prisma").order.findUnique({ where: { id } });
       if (!existingOrder) {
         throw new HTTPException(404, { message: "Order not found" });
       }
-      const updatedOrder = await prisma.order.update({
+      const updatedOrder = await c.get("prisma").order.update({
         where: { id },
         data: {
           ...orderToUpdate,
@@ -95,11 +95,11 @@ export const orderRoutes = new Hono()
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
-      const existingOrder = await prisma.order.findUnique({ where: { id } });
+      const existingOrder = await c.get("prisma").order.findUnique({ where: { id } });
       if (!existingOrder) {
         throw new HTTPException(404, { message: "Order not found" });
       }
-      await prisma.order.delete({
+      await c.get("prisma").order.delete({
         where: {
           id,
           orderDetails: {

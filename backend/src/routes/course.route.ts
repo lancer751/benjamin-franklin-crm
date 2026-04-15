@@ -1,6 +1,6 @@
 import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
-import prisma from "@/lib/prisma";
+import type { ContextWithPrisma } from "@/lib/contextVariables";
 import {
   createCourseEditionSchema,
   createCourseSchema,
@@ -13,11 +13,11 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
-export const courseRoutes = new Hono()
+export const courseRoutes = new Hono<ContextWithPrisma>()
   // getting all courses
   // TODO: add pagination for filtering and sorting courses data
   .get("/", async (c) => {
-    const courses = await prisma.course.findMany({});
+    const courses = await c.get("prisma").course.findMany({});
     return c.json(courses, 200);
   })
   // getting course details
@@ -27,7 +27,7 @@ export const courseRoutes = new Hono()
     async (c) => {
       const id = c.req.param("id");
 
-      const course = await prisma.course.findUnique({
+      const course = await c.get("prisma").course.findUnique({
         where: { id },
         include: {
           editions: {
@@ -67,7 +67,7 @@ export const courseRoutes = new Hono()
   // getting  course editions
   // TODO: add pagination for filtering and sorting course editions data
   .get("/editions", async (c) => {
-    const courseEditions = await prisma.edition.findMany({
+    const courseEditions = await c.get("prisma").edition.findMany({
       omit: { course_id: true, modality_id: true },
       include: {
         course: {
@@ -102,7 +102,7 @@ export const courseRoutes = new Hono()
     async (c) => {
       const editionId = c.req.param("id");
       console.log(editionId)
-      const courseEdition = await prisma.edition.findUnique({
+      const courseEdition = await c.get("prisma").edition.findUnique({
         where: { id: editionId },
         omit: { modality_id: true, course_id: true },
         include: {
@@ -136,7 +136,7 @@ export const courseRoutes = new Hono()
   // creating a new course
   .post("/", zValidator("json", createCourseSchema), async (c) => {
     const courseData = c.req.valid("json");
-    const course = await prisma.course.create({ data: courseData });
+    const course = await c.get("prisma").course.create({ data: courseData });
     return c.json<SuccessResponse<typeof course>>(
       {
         success: true,
@@ -152,7 +152,7 @@ export const courseRoutes = new Hono()
     zValidator("json", createCourseEditionSchema),
     async (c) => {
       const courseEditionData = c.req.valid("json");
-      const courseEdition = await prisma.edition.create({
+      const courseEdition =  await c.get("prisma").edition.create({
         data: courseEditionData,
       });
 
@@ -175,7 +175,7 @@ export const courseRoutes = new Hono()
       const id = c.req.param("id");
       const courseData = c.req.valid("json");
 
-      const existingCourse = await prisma.course.findUnique({
+      const existingCourse =  await c.get("prisma").course.findUnique({
         where: { id },
       });
 
@@ -183,7 +183,7 @@ export const courseRoutes = new Hono()
         throw new HTTPException(404, { message: "Course not found" });
       }
 
-      const course = await prisma.course.update({
+      const course = await c.get("prisma").course.update({
         where: { id },
         data: courseData,
       });
@@ -206,7 +206,7 @@ export const courseRoutes = new Hono()
       const editionId = c.req.param("id");
       const courseEditionData = c.req.valid("json");
 
-      const existingCourseEdition = await prisma.edition.findUnique({
+      const existingCourseEdition = await c.get("prisma").edition.findUnique({
         where: { id: editionId },
       });
 
@@ -214,7 +214,7 @@ export const courseRoutes = new Hono()
         throw new HTTPException(404, { message: "Course Edition not found" });
       }
 
-      const courseEdition = await prisma.edition.update({
+      const courseEdition = await c.get("prisma").edition.update({
         where: { id: editionId },
         data: courseEditionData,
       });
@@ -235,7 +235,7 @@ export const courseRoutes = new Hono()
     async (c) => {
       const id = c.req.param("id");
 
-      const existingCourse = await prisma.course.findUnique({
+      const existingCourse =  await c.get("prisma").course.findUnique({
         where: { id },
       });
 
@@ -243,7 +243,7 @@ export const courseRoutes = new Hono()
         throw new HTTPException(404, { message: "Course not found" });
       }
 
-      await prisma.course.delete({ where: { id } });
+      await c.get("prisma").course.delete({ where: { id } });
       return c.json<SuccessResponse>(
         {
           success: true,
@@ -259,7 +259,7 @@ export const courseRoutes = new Hono()
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const editionId = c.req.param("id");
-      const courseEdition = await prisma.edition.findUnique({
+      const courseEdition = await c.get("prisma").edition.findUnique({
         where: { id: editionId },
       });
 
@@ -267,7 +267,7 @@ export const courseRoutes = new Hono()
         throw new HTTPException(404, { message: "Course Edition not found" });
       }
 
-      await prisma.edition.delete({ where: { id: editionId } });
+      await c.get("prisma").edition.delete({ where: { id: editionId } });
       return c.json<SuccessResponse>(
         {
           success: true,
@@ -278,12 +278,12 @@ export const courseRoutes = new Hono()
     },
   )
   .get("/modalities", async (c) => {
-    const modalities = await prisma.modality.findMany({});
+    const modalities = await c.get("prisma").modality.findMany({});
     return c.json(modalities, 200);
   })
   .post("/modalities", zValidator("json", createModalitySchema), async (c) => {
     const modalityData = c.req.valid("json");
-    const modality = await prisma.modality.create({ data: modalityData });
+    const modality = await c.get("prisma").modality.create({ data: modalityData });
     return c.json<SuccessResponse<typeof modality>>(
       {
         success: true,
@@ -302,7 +302,7 @@ export const courseRoutes = new Hono()
       const modalityId = c.req.param("modalityId");
       const modalityData = c.req.valid("json");
 
-      const existingModality = await prisma.modality.findUnique({
+      const existingModality = await c.get("prisma").modality.findUnique({
         where: { id: modalityId },
       });
 
@@ -310,7 +310,7 @@ export const courseRoutes = new Hono()
         throw new HTTPException(404, { message: "Modality not found" });
       }
 
-      const modality = await prisma.modality.update({
+      const modality =await c.get("prisma").modality.update({
         where: { id: modalityId },
         data: modalityData,
       });

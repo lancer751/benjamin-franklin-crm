@@ -1,11 +1,16 @@
-import prisma from "@/lib/prisma";
 import { fakerES } from "@faker-js/faker";
 import type {
-  CampaingPlatform,
   EditionStatus,
-  LeadOriginSource,
 } from "../generated/prisma/enums";
-import { length } from "zod";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../generated/prisma/client";
+
+const databaseUrl = `${process.env.DATABASE_URL}`;
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is not set");
+}
+const adapter = new PrismaPg({ connectionString: databaseUrl });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("🌱 Seeding...");
@@ -168,74 +173,6 @@ async function main() {
       });
     }),
   );
-
-  // Campaings, leads and campaing members
-  const platforms = ["FACEBOOK", "WEBSITE", "TIKTOK", "INSTAGRAM"];
-  const campaings = await Promise.all(
-    editions.map((edition) => {
-      return prisma.campaing.create({
-        data: {
-          campaing_name: `${fakerES.commerce.productAdjective()} ${fakerES.commerce.product()} Lanzamiento`,
-          initial_budget: fakerES.number.float({
-            min: 1000,
-            max: 50000,
-          }),
-          status: "ACTIVE",
-          start_date: fakerES.date.between({
-            from: "2020-01-01T00:00:00.000Z",
-            to: new Date(),
-          }),
-          platform: fakerES.helpers.arrayElement(platforms) as CampaingPlatform,
-          is_organic: fakerES.datatype.boolean(),
-          edition_id: edition.id,
-        },
-      });
-    }),
-  );
-
-  const leads = await Promise.all(
-    Array.from({
-      length: 100,
-    }).map(() => {
-      return prisma.lead.create({
-        data: {
-          first_name: fakerES.person.firstName(),
-          middle_name: fakerES.person.middleName(),
-          last_name: fakerES.person.lastName(),
-          email: fakerES.internet.email(),
-          address: fakerES.location.streetAddress(),
-          second_address: fakerES.location.streetAddress(),
-          dni: fakerES.string.numeric({ length: 8 }),
-        },
-      });
-    }),
-  );
-
-  const leadsId = leads.map((lead) => lead.id);
-  const campaingsId = campaings.map((camp) => camp.id);
-  const leadOriginSource = [
-    "FACEBOOK",
-    "INSTAGRAM",
-    "TIKTOK",
-    "WHATSAPP",
-    "WEBSITE",
-  ];
-
-  const campaingMembersData = campaingsId.flatMap((id) => {
-    const shuffledLeads = fakerES.helpers.shuffle(leadsId);
-
-    return shuffledLeads.slice(0, 30).map((leadId) => ({
-      lead_id: leadId,
-      campaing_id: id,
-      source: fakerES.helpers.arrayElement(
-        leadOriginSource,
-      ) as LeadOriginSource,
-    }));
-  });
-
-  await prisma.campaingMember.createMany({
-    data: campaingMembersData,
-  });
 }
 
 main()

@@ -1,10 +1,17 @@
 {
   "name": "backend",
-  "main": "index.ts",
-  "type": "module",
+  "main": "dist/src/app.js",
+  "types": "dist/src/app.d.ts",
   "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/src/client.d.ts",
+      "default": "./dist/src/client.js"
+    }
+  },
   "scripts": {
-    "start": "bun run ./src/index.ts && bun run prisma:generate",
+    "build": "tsc && tsc-alias",
+    "start": "bun run prisma:generate && bun run --env-file=.env ./dist/src/app.js",
     "dev": "bun run --hot --env-file=.env src/index.ts",
     "migrate": "bunx prisma migrate dev --name init",
     "reset-db": "bunx prisma migrate reset",
@@ -25,7 +32,6 @@
     "@eslint/js": "^10.0.1",
     "@types/bcrypt": "^6.0.0",
     "@types/bun": "latest",
-    "@types/cors": "^2.8.19",
     "@types/nodemailer": "^7.0.10",
     "@typescript-eslint/parser": "^8.57.1",
     "eslint": "^10.0.0",
@@ -33,6 +39,7 @@
     "eslint-plugin-import": "^2.32.0",
     "globals": "^17.3.0",
     "madge": "^8.0.0",
+    "tsc-alias": "^1.8.16",
     "typescript-eslint": "^8.55.0"
   },
   "peerDependencies": {
@@ -44,16 +51,16 @@
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.6.0",
     "@types/node": "^25.2.3",
-    "axios": "^1.13.5",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "hono": "^4.12.5",
     "nodemailer": "^8.0.1",
     "pg": "^8.20.0",
-    "prisma": "^7.6.0",
+    "prisma": "^7.7.0",
     "prisma-zod-generator": "^2.1.4",
     "vercel": "^50.32.5",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "shared": "workspace:*"
   }
 }
