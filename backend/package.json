@@ -10,7 +10,7 @@
     }
   },
   "scripts": {
-    "build": "bun run prisma:generate && tsc && tsc-alias",
+    "build": "tsc && tsc-alias",
     "start": "bun run --env-file=.env ./dist/src/app.js",
     "dev": "bun run --hot --env-file=.env src/index.ts",
     "migrate": "bunx prisma migrate dev --name init",
