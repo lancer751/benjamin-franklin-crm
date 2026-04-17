@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import prisma from "../lib/prisma";
 import { UUID_ROUTE } from "@/helpers/constants";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";

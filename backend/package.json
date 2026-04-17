@@ -10,8 +10,8 @@
     }
   },
   "scripts": {
-    "build": "tsc && tsc-alias",
-    "start": "bun run prisma:generate && bun run --env-file=.env ./dist/src/app.js",
+    "build": "bun run prisma:generate && tsc && tsc-alias",
+    "start": "bun run --env-file=.env ./dist/src/app.js",
     "dev": "bun run --hot --env-file=.env src/index.ts",
     "migrate": "bunx prisma migrate dev --name init",
     "reset-db": "bunx prisma migrate reset",
@@ -38,6 +38,7 @@
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
     "globals": "^17.3.0",
+    "jiti": "^2.6.1",
     "madge": "^8.0.0",
     "tsc-alias": "^1.8.16",
     "typescript-eslint": "^8.55.0"

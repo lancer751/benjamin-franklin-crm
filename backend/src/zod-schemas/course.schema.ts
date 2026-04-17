@@ -10,6 +10,7 @@ export const courseSchema = z.object({
     .string()
     .max(200, "Course description must be at most 200 characters long")
     .optional(),
+  classes_number: z.int().positive(),
   image_url: z.url("Invalid image URL").optional(),
   code: z.string().length(7, "Course code must be exactly 7 characters long"),
 });
@@ -17,8 +18,8 @@ export const courseSchema = z.object({
 export const createCourseSchema = courseSchema.omit({ id: true });
 export const updateCourseSchema = createCourseSchema.partial();
 
-// course edition schemas
-const editionStatusEnum = z.enum([
+// ---- Enums ----
+export const EditionStatusSchema = z.enum([
   "IN_PROGRESS",
   "COMPLETED",
   "OPEN",
@@ -27,14 +28,22 @@ const editionStatusEnum = z.enum([
   "CANCELLED",
 ]);
 
-export const courseEditionSchema = z.object({
+export const DurationUnitSchema = z.enum(["WEEKS", "MONTHS"]);
+
+// ---- Base: mirrors the DB model 1:1 ----
+
+export const EditionSchema = z.object({
   id: z.uuid().length(36),
   course_id: z.uuid().length(36),
   edition_number: z.number().int().positive(),
   start_date: z.coerce.date(),
   end_date: z.coerce.date(),
+  hours_amount: z.number().int().positive(),
+  classes_number: z.number().int().positive(),
+  duration_value: z.number().int().positive(),
+  duration_unit: DurationUnitSchema,
   modality_id: z.uuid().length(36),
-  moodle_course_id: z.number().int().positive().optional(),
+  moodle_course_id: z.number().int().positive().nullable(),
   teacher_fullname: z
     .string()
     .regex(
@@ -45,14 +54,16 @@ export const courseEditionSchema = z.object({
       (name) => name.trim().length > 0,
       "Teacher fullname cannot be empty",
     ),
-  meet_link: z.url("Invalid meet link URL"),
-  edition_status: editionStatusEnum.optional(),
+  meet_link: z.string().url("Invalid meet link URL").nullable(), // nullable: PACKED has none
+  edition_status: EditionStatusSchema,
   edition_code: z
     .string()
-    .length(12, "Edition code must be exactly 12 characters long"),
+    .length(12, "Edition code must be exactly 12 characters"),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
 });
 
-export const createCourseEditionSchema = courseEditionSchema.omit({ id: true });
+export const createCourseEditionSchema = EditionSchema.omit({ id: true });
 export const updateCourseEditionSchema = createCourseEditionSchema
   .partial()
   .refine(

@@ -12,7 +12,7 @@
     "dev": "turbo dev",
     "dev:client": "turbo dev --filter=management-dashboard",
     "dev:server": "turbo dev --filter=backend",
-    "build": "turbo build",
+    "build": "bun install && turbo build",
     "build:client": "turbo build --filter=management-dashboard",
     "build:server": "turbo build --filter=backend",
     "lint": "turbo lint",

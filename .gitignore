@@ -6,5 +6,4 @@ bun.lockb
 .idea/
 .DS_Store
 dist/
-.turbo/cache
-.turbo/preferences
+.turbo

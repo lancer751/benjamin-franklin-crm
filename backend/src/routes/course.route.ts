@@ -74,6 +74,7 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
           select: {
             id: true,
             name: true,
+            image_url: true
           },
         },
         modality: {

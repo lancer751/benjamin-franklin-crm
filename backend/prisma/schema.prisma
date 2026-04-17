@@ -107,10 +107,10 @@ model Role {
 }
 
 model SellerProfile {
-  id           String   @id @default(uuid()) @db.Char(36)
-  user_id      String   @unique
-  sales_target Int      @default(0)
-  max_discount Decimal? @default(0)
+  id                String   @id @default(uuid()) @db.Char(36)
+  user_id           String   @unique
+  sales_target      Int      @default(0)
+  max_discount      Decimal? @default(0)
   assigned_campaing String
 
   user            User              @relation(fields: [user_id], references: [id])
@@ -202,13 +202,14 @@ enum MoodleStudentStatus {
   ACTIVE
   SUSPENDED
 }
+
 model CustomerProfile {
-  id                  String     @id @default(uuid()) @db.Char(36)
-  lead_id String @unique
-  moodle_user_name String
-  moodle_user_id      Int?       @unique
+  id                 String              @id @default(uuid()) @db.Char(36)
+  lead_id            String              @unique
+  moodle_user_name   String
+  moodle_user_id     Int?                @unique
   moodle_user_status MoodleStudentStatus @default(ACTIVE)
-  password String
+  password           String
 
   lead Lead @relation(fields: [lead_id], references: [id])
 }
@@ -233,9 +234,9 @@ model Lead {
   //relations
   phones              LeadPhone[]
   orders              Order[]
-  interactions     LeadInteraction[]
-  campaignsEngaging      CampaignMember[]
-  customerProfile CustomerProfile?
+  interactions        LeadInteraction[]
+  campaignsEngaging   CampaignMember[]
+  customerProfile     CustomerProfile?
   leadPrimaryCampaing Campaing?         @relation("PrimaryCampaign", fields: [primary_campaign_id], references: [id])
 }
 
@@ -271,6 +272,7 @@ model Course {
   id          String    @id @default(uuid()) @db.Char(36)
   name        String
   description String?
+  classes_number Int
   image_url   String?
   code        String    @db.Char(7)
   editions    Edition[]
@@ -291,9 +293,9 @@ model Campaing {
   edition_id     String           @unique
 
   members CampaignMember[]
-  leads          Lead[]           @relation("PrimaryCampaign")
-  edition        Edition          @relation(fields: [edition_id], references: [id])
-  sellers         CampaignSeller[]
+  leads   Lead[]           @relation("PrimaryCampaign")
+  edition Edition          @relation(fields: [edition_id], references: [id])
+  sellers CampaignSeller[]
 }
 
 model Modality {
@@ -302,35 +304,97 @@ model Modality {
   editions Edition[]
 }
 
+enum WeekDays {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum ScheduleType {
+  REGULAR // the default recurring schedule
+  OVERRIDE // a temporary schedule for a specific period
+}
+
+model EditionSchedule {
+  id          String                @id @default(uuid()) @db.Char(36)
+  edition_id  String
+  day_of_week WeekDays
+  type        ScheduleType          @default(REGULAR) // REGULAR applies for the full duration of the edition
+  // fields just for OVERRIDE blocks
+  valid_from  DateTime?             @db.Date
+  valid_until DateTime?             @db.Date
+  slots       EditionScheduleSlot[]
+  created_at  DateTime              @default(now())
+  updated_at  DateTime              @updatedAt
+
+  edition Edition @relation(fields: [edition_id], references: [id])
+
+  @@index([edition_id])
+}
+
+model EditionScheduleSlot {
+  id          String @id @default(uuid()) @db.Char(36)
+  schedule_id String
+  start_time  String // "HH:MM" in 24h — avoids timezone drift on TIME columns
+  end_time    String // "HH:MM" in 24h
+
+  schedule EditionSchedule @relation(fields: [schedule_id], references: [id], onDelete: Cascade)
+
+  @@index([schedule_id])
+}
+
+enum DurationUnit {
+  WEEKS
+  MONTHS
+}
+
 model Edition {
-  id               String        @id @default(uuid()) @db.Char(36)
-  course_id        String
-  edition_number   Int
-  start_date       DateTime      @db.Date
+  id             String   @id @default(uuid()) @db.Char(36)
+  course_id      String
+  edition_number Int
+  start_date     DateTime @db.Date
+  hours_amount Int
+  classes_number Int // you cand define them or take them from the course table
+  duration_value          Int 
+  duration_unit DurationUnit
   end_date         DateTime      @db.Date
   modality_id      String
   moodle_course_id Int?          @unique
   teacher_fullname String
-  meet_link        String
+  meet_link        String?  // optional: PACKED modalities do not have one
   edition_status   EditionStatus @default(DRAFT)
   edition_code     String        @unique @db.Char(12) //generated based on the course-code + year + ednumber
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
   course     Course   @relation(fields: [course_id], references: [id])
   modality   Modality @relation(fields: [modality_id], references: [id])
+  productItems     ProductItem[]
+  campaing         Campaing?
+  schedules EditionSchedule[]
+}
 
-  products Product[]
-  campaing Campaing?
+model ProductItem {
+  id         String @id @default(uuid()) @db.Char(36)
+  edition_id String
+  product_id String
+
+  edition Edition @relation(fields: [edition_id], references: [id])
+  product Product @relation(fields: [product_id], references: [id])
 }
 
 model Product {
   id                  String      @id @default(uuid()) @db.Char(36)
+  name                String // you can write a new name or define it from the course and edition.
   slug                String?
   description         String?
   short_description   String?
   category            String
-  edition_id          String
   cash_price          Decimal     @db.Decimal(10, 2)
   installment_price   Decimal     @db.Decimal(10, 2)
   discount_price      Decimal?    @default(0) @db.Decimal(10, 2)
@@ -339,7 +403,7 @@ model Product {
   created_at          DateTime    @default(now())
   updated_at          DateTime    @updatedAt
 
-  edition        Edition       @relation(fields: [edition_id], references: [id])
+  productItems   ProductItem[]
   orders_details OrderDetail[]
 }
 
@@ -362,7 +426,7 @@ model Order {
 
   orderDetails OrderDetail[]
   paymentPlans PaymentPlan[]
-  payments Payment[]
+  payments     Payment[]
 
   // indexes
   @@index([lead_id])
@@ -391,21 +455,21 @@ enum PaymentType {
 //regiter payment transactions
 model Payment {
   id                   String        @id @default(uuid()) @db.Char(36)
-  order_id String
+  order_id             String
   scheduled_payment_id String?
   payment_date         DateTime
   amount               Decimal       @db.Decimal(10, 2)
   payment_method       PaymentMethod
   payment_status       PaymentStatus
   type                 PaymentType
-  payment_receipt String?
+  payment_receipt      String?
   currency             String?       @db.Char(3)
   transaccion_id       String? // from payment gateway
   created_at           DateTime      @default(now())
   updated_at           DateTime      @updatedAt
 
   schedulePayment ScheduledPayment? @relation(fields: [scheduled_payment_id], references: [id])
-  order Order @relation(fields: [order_id], references: [id])
+  order           Order             @relation(fields: [order_id], references: [id])
 
   @@index([payment_status])
 }
@@ -442,7 +506,7 @@ model ScheduledPayment {
   due_date        DateTime
   due_amount      Decimal           @db.Decimal(10, 2)
   payment_plan_id String
-  number          Int @default(1)
+  number          Int               @default(1)
   status          InstallmentStatus @default(PENDING)
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt
