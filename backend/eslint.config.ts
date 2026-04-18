@@ -1,6 +1,6 @@
 import js from "@eslint/js";
 import globals from "globals";
-import { configs, plugin } from "typescript-eslint";
+import {configs, plugin } from 'typescript-eslint'
 import { defineConfig } from "eslint/config";
 import importPlugin from "eslint-plugin-import";
 
@@ -11,31 +11,41 @@ export default defineConfig([
   {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
     plugins: { "@typescript-eslint": plugin },
-    languageOptions: { globals: globals.node },
+    languageOptions: {
+      globals: globals.node,
+      parserOptions: {
+        projectService: {
+          allowDefaultProject: ["./eslint.config.ts"],
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
       "no-unused-vars": "warn",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         {
           varsIgnorePattern: "^_",
-          argsIgnorePattern: "^_"
-        }
+          argsIgnorePattern: "^_",
+        },
       ],
-      "import/no-cycle": ["error", { maxDepth: 2 }]
-    }
+      "import/no-cycle": ["error", { maxDepth: 2 }],
+    },
   },
   {
-    extends: [importPlugin.flatConfigs.recommended, importPlugin.flatConfigs.typescript],
+    extends: [
+      importPlugin.flatConfigs.recommended,
+      importPlugin.flatConfigs.typescript,
+    ],
   },
   {
     settings: {
-      'import/resolver': {
+      "import/resolver": {
         typescript: {
           alwaysTryTypes: true,
           bun: true,
-          project: 'tsconfig.json',
-        }
-      }
+        },
+      },
     },
   },
 ]);
