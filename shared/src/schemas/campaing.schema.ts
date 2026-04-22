@@ -47,7 +47,11 @@ export const updateCampaingSchema = createCampaingSchema
     message: "At least one field must be provided for update",
   });
 
-// campaing member schemas
+export type CampaignDTO = z.infer<typeof campaingSchema>;
+export type CreateCampaignDTO = z.infer<typeof createCampaingSchema>;
+export type UpdateCampaignDTO = z.infer<typeof updateCampaingSchema>;
+
+// campaign member schemas
 const campaignMemberStatus = z.enum([
   "NEW",
   "CONTACTED",
@@ -75,6 +79,14 @@ export const createCampaignMemberSchema = campaignMemberSchema.omit({
 
 export const updateCampaignMemberSchema = createCampaignMemberSchema.partial();
 
+export type CampaignMemberDTO = z.infer<typeof campaignMemberSchema>;
+export type CreateCampaignMemberDTO = z.infer<
+  typeof createCampaignMemberSchema
+>;
+export type UpdateCampaignMemberDTO = z.infer<
+  typeof updateCampaignMemberSchema
+>;
+
 export const campaignSellerSchema = z.object({
   id: z.uuid().length(36),
   campaign_id: z.uuid().length(36),
@@ -87,4 +99,7 @@ export const createCampaignSellerSchema = campaignSellerSchema.omit({
   assigned_at: true,
 });
 
-export type CampaignSeller = z.infer<typeof campaignSellerSchema>;
+export type CampaignSellerDTO = z.infer<typeof campaignSellerSchema>;
+export type CreateCampaignSellerDTO = z.infer<
+  typeof createCampaignSellerSchema
+>;

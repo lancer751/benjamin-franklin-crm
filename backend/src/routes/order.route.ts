@@ -4,7 +4,7 @@ import type { ContextWithPrisma } from "@/lib/contextVariables";
 import {
   createOrderSchema,
   updateOrderSchema,
-} from "@/zod-schemas/order.schema";
+} from "@shared/dist";
 import { faker } from "@faker-js/faker";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";

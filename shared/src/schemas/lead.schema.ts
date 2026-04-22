@@ -10,7 +10,6 @@ export const LeadOriginSourceSchema = z.enum([
   "WEBSITE",
 ]);
 
-
 export const LeadStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 
 export const LeadSchema = z.object({
@@ -49,7 +48,6 @@ export const createLeadSchema = LeadSchema.omit({
   updated_at: true,
 });
 
-// lead interaction schema
 const interactionTypeSchema = z.enum([
   "WEBSITE_FORM",
   "SELL",
@@ -102,3 +100,25 @@ export const updateLeadInteractionSchema = createLeadInteractionSchema
       { message: "At least one field must be provided" }
     ),
   );
+
+// ---- Enum types ----
+export type Gender = z.infer<typeof GenderSchema>;
+export type LeadOriginSource = z.infer<typeof LeadOriginSourceSchema>;
+export type LeadStatus = z.infer<typeof LeadStatusSchema>;
+export type InteractionType = z.infer<typeof interactionTypeSchema>;
+
+// ---- DTO types ----
+export type LeadDTO = z.infer<typeof LeadSchema>;
+export type CreateLeadDTO = z.infer<typeof createLeadSchema>;
+export type UpdateLeadDTO = z.infer<typeof updateLeadSchema>;
+export type CreateLeadFromExternalDTO = z.infer<
+  typeof createLeadFromExternalSchema
+>;
+
+export type LeadInteractionDTO = z.infer<typeof LeadInteractionSchema>;
+export type CreateLeadInteractionDTO = z.infer<
+  typeof createLeadInteractionSchema
+>;
+export type UpdateLeadInteractionDTO = z.infer<
+  typeof updateLeadInteractionSchema
+>;

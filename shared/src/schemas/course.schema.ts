@@ -18,6 +18,10 @@ export const courseSchema = z.object({
 export const createCourseSchema = courseSchema.omit({ id: true });
 export const updateCourseSchema = createCourseSchema.partial();
 
+export type CourseDTO = z.infer<typeof courseSchema>;
+export type CreateCourseDTO = z.infer<typeof createCourseSchema>;
+export type UpdateCourseDTO = z.infer<typeof updateCourseSchema>;
+
 // ---- Enums ----
 export const EditionStatusSchema = z.enum([
   "IN_PROGRESS",
@@ -29,6 +33,9 @@ export const EditionStatusSchema = z.enum([
 ]);
 
 export const DurationUnitSchema = z.enum(["WEEKS", "MONTHS"]);
+
+export type EditionStatus = z.infer<typeof EditionStatusSchema>;
+export type DurationUnit = z.infer<typeof DurationUnitSchema>;
 
 // ---- Base: mirrors the DB model 1:1 ----
 
@@ -54,7 +61,7 @@ export const EditionSchema = z.object({
       (name) => name.trim().length > 0,
       "Teacher fullname cannot be empty",
     ),
-  meet_link: z.string().url("Invalid meet link URL").nullable(), // nullable: PACKED has none
+  meet_link: z.string().url("Invalid meet link URL").nullable(),
   edition_status: EditionStatusSchema,
   edition_code: z
     .string()
@@ -71,10 +78,17 @@ export const updateCourseEditionSchema = createCourseEditionSchema
     "At least one field must be provided",
   );
 
-// modality schema
+export type EditionDTO = z.infer<typeof EditionSchema>;
+export type CreateCourseEditionDTO = z.infer<typeof createCourseEditionSchema>;
+export type UpdateCourseEditionDTO = z.infer<typeof updateCourseEditionSchema>;
+
+// ---- Modality ----
 export const modalitySchema = z.object({
   id: z.uuid().length(36),
   name: z.string().nonempty("Modality name cannot be empty"),
 });
 
 export const createModalitySchema = modalitySchema.omit({ id: true });
+
+export type ModalityDTO = z.infer<typeof modalitySchema>;
+export type CreateModalityDTO = z.infer<typeof createModalitySchema>;

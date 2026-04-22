@@ -1,13 +1,10 @@
-import { PrismaClient } from "../../generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
 import type { Context, Next } from "hono";
+import { prisma } from "@repo/database";
 
 const databaseUrl = `${process.env.DATABASE_URL}`;
 if (!databaseUrl) {
   throw new Error("DATABASE_URL is not set");
 }
-const adapter = new PrismaPg({ connectionString: databaseUrl });
-const prisma = new PrismaClient({ adapter });
 
 function withPrisma(c: Context, next: Next) {
   if (!c.get("prisma")) {

@@ -1,0 +1,45 @@
+{
+  "name": "@repo/database",
+  "version": "1.0.0",
+  "main": "dist/client.js",
+  "types": "dist/client.d.ts",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/client.d.js",
+      "default": "./dist/client.js"
+    }
+  },
+  "scripts": {
+    "prisma:generate": "bunx prisma generate",
+    "prisma:push": "bunx prisma db push",
+    "prisma:migrate": "bunx prisma migrate dev --name init",
+    "prisma:deploy": "bunx prisma migrate deploy",
+    "prisma:seed": "bunx prisma db seed",
+    "prisma:studio": "bunx prisma studio",
+    "db:reset": "bunx prisma migrate reset",
+    "db:setup": "bunx prisma generate && prisma db push && prisma db seed",
+    "db:push": "bunx prisma db push",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "format": "bunx prisma format",
+    "generate": "bunx prisma generate",
+    "lint": "eslint . --max-warnings 0",
+    "studio": "bunx prisma studio"
+    
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.6.0",
+    "dotenv": "^17.2.3",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@eslint/js": "^10.0.1",
+    "prisma": "^7.7.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

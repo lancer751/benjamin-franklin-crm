@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../generated/prisma/client"
+import type { PrismaClient } from "@repo/database"
 
 export type ContextWithPrisma = {
   Variables: {

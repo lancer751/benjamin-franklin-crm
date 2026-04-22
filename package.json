@@ -6,19 +6,20 @@
   "workspaces": [
     "./backend",
     "./management-dashboard",
-    "./shared"
+    "./shared",
+    "./packages/**"
   ],
    "scripts": {
     "dev": "turbo dev",
     "dev:client": "turbo dev --filter=management-dashboard",
     "dev:server": "turbo dev --filter=backend",
-    "build": "bun install && turbo build",
+    "build": "turbo build",
     "build:client": "turbo build --filter=management-dashboard",
     "build:server": "turbo build --filter=backend",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "test": "turbo test",
-    "postinstall": "turbo build --filter=shared --filter=backend"
+    "postinstall": "turbo build --filter=shared --filter=@repo/database --filter=backend"
   },
   "author": "lauwc",
   "license": "ISC",
@@ -32,6 +33,6 @@
     "typescript": "^5.0.0"
   },
   "engines": {
-    "node": "22.12.0"
+    "node": ">=22.12.0"
   }
 }

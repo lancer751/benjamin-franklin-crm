@@ -8,7 +8,7 @@ import {
   createUserSchema,
   updateSellerProfileSchema,
   updateUserSchema,
-} from "@/zod-schemas/user.schema";
+} from "@shared/dist";
 import type { SuccessResponse } from "@/app";
 import withPrisma from "@/lib/prisma";
 import type { ContextWithPrisma } from "@/lib/contextVariables";

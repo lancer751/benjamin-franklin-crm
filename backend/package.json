@@ -13,20 +13,10 @@
     "build": "tsc && tsc-alias",
     "start": "bun run --env-file=.env ./dist/src/app.js",
     "dev": "bun run --hot --env-file=.env src/index.ts",
-    "migrate": "bunx prisma migrate dev --name init",
-    "reset-db": "bunx prisma migrate reset",
     "show-envs": "bun --print process.env",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "detect-cycles": "madge src --circular",
-    "prisma:generate": "bunx prisma generate",
-    "prisma:push": "bunx prisma db push",
-    "prisma:migrate": "bunx prisma migrate dev --name init",
-    "prisma:deploy": "bunx prisma migrate deploy",
-    "prisma:seed": "bunx prisma db seed",
-    "prisma:studio": "bunx prisma studio",
-    "db:reset": "bunx prisma migrate reset",
-    "db:setup": "bunx prisma generate && prisma db push && prisma db seed"
+    "detect-cycles": "madge src --circular"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -62,6 +52,7 @@
     "prisma-zod-generator": "^2.1.4",
     "vercel": "^50.32.5",
     "zod": "^4.3.6",
-    "shared": "workspace:*"
+    "shared": "workspace:*",
+    "@repo/database": "workspace:*"
   }
 }

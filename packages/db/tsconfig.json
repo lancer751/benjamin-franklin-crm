@@ -1,0 +1,36 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // Environment setup
+    "lib": ["ESNext"],
+    "target": "ESNext",
+    "module": "ESNext",
+
+    // Output configuration
+    "declaration": true,
+    "outDir": "./dist",
+    "noEmit": false,
+    "rootDir": "./",
+
+    // Type checking
+    "strict": true,
+    "skipLibCheck": true,
+
+    // Additional checks
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "composite": false,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": false,
+    "isolatedModules": true,
+    "moduleResolution": "Bundler",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "preserveWatchOutput": true,
+    "strictNullChecks": true
+  },
+  "exclude": ["node_modules", "generated",  "**/*.test.ts", "dist"],
+  "include": ["src/**/*", "prisma"]
+}

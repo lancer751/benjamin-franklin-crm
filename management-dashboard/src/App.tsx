@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { benjaminCrmApi } from "./lib/apiConnection";
+import { createUserSchema, type CreateUserDTO } from "shared";
 
-type ResponseType = Awaited<ReturnType<typeof benjaminCrmApi.users.$get>>;
+type UsersResponse = Awaited<ReturnType<typeof benjaminCrmApi.users.$get>>;
+type PublicUser = Awaited<ReturnType<UsersResponse["json"]>>[number]
 
 function App() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<PublicUser[]>([]);
   console.log(users)
   useEffect(() => {
     async function getUsers() {
-      const res: ResponseType= await benjaminCrmApi.users.$get();
+      const res: UsersResponse= await benjaminCrmApi.users.$get();
       const data = await res.json();
       setUsers(data);
     }

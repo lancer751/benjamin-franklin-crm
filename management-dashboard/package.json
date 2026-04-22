@@ -10,10 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@repo/database": "workspace:*",
+    "@tailwindcss/vite": "^4.2.4",
+    "@tanstack/react-form": "^1.29.1",
+    "backend": "workspace:*",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "shared": "workspace:*",
-    "backend": "workspace:*"
+    "tailwindcss": "^4.2.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

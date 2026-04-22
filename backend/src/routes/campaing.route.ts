@@ -1,12 +1,12 @@
 import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
+import { zValidator } from "@hono/zod-validator";
 import {
   createCampaignMemberSchema,
   createCampaingSchema,
   updateCampaingSchema,
-} from "@/zod-schemas/campaing.schema";
-import { zValidator } from "@hono/zod-validator";
+} from "@shared/dist";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 
@@ -68,14 +68,16 @@ export const campaingRoutes = new Hono<ContextWithPrisma>()
     "/campaignsellers",
     zValidator("json", createCampaignMemberSchema),
     async (c) => {
-      const campaignMemberData = c.req.valid("json")
+      const campaignMemberData = c.req.valid("json");
 
-      const campaignMember = await c.get("prisma").campaignMember.create({data: campaignMemberData})
+      const campaignMember = await c
+        .get("prisma")
+        .campaignMember.create({ data: campaignMemberData });
 
       return c.json<SuccessResponse<typeof campaignMember>>({
         success: true,
         message: "lead/customer added to the campaign successfully",
-        data: campaignMember
+        data: campaignMember,
       });
     },
   )

@@ -108,6 +108,7 @@ async function main() {
           name: fakerES.commerce.productName(),
           code: fakerES.string.alpha(7).toUpperCase(),
           image_url: fakerES.image.url(),
+          classes_number: fakerES.number.int({max: 10})
         },
       });
     }),
@@ -169,6 +170,10 @@ async function main() {
           ) as EditionStatus,
           edition_code: `${c.code.concat(fakerES.string.alpha({length: 5, casing: "upper"}))}`,
           meet_link: fakerES.image.url(),
+          classes_number: fakerES.number.int({max: 10}),
+          duration_unit: "WEEKS",
+          duration_value: 4,
+          hours_amount: 32
         },
       });
     }),
