@@ -4,7 +4,8 @@
   "tasks": {
     "prisma:generate": {
       "inputs": ["prisma/schema.prisma", "prisma.config.ts"],
-      "outputs": ["generated/**", "node_modules/.prisma/**"]
+      "outputs": ["generated/**", "node_modules/.prisma/**"],
+      "env": ["DATABASE_URL"]
     },
     "build": {
       "dependsOn": ["^build", "prisma:generate"],

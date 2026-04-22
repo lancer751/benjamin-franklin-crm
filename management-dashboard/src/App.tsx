@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import "./App.css";
 import { benjaminCrmApi } from "./lib/apiConnection";
 import { createUserSchema, type CreateUserDTO } from "shared";
 
