@@ -7,11 +7,9 @@
     ],
     "target": "ESNext",
     "module": "ESNext",
-    "composite": true,
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     // Bundler mode
-    "moduleResolution": "bundler",
     "allowImportingTsExtensions": false,
     // Best practices
     "strict": true,
@@ -20,15 +18,9 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "types": [
-      "bun-types"
-    ],
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@repo/database": [
-        "../packages/db/dist/client.d.ts"
       ],
       "@lib/*": [
         "./src/lib/*"
@@ -50,9 +42,6 @@
       ],
       "@middleware/*": [
         "./src/middleware/*"
-      ],
-      "@shared/*": [
-        "../shared/*"
       ]
     },
     // Output settings

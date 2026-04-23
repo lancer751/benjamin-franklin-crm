@@ -1,13 +1,13 @@
 {
   "name": "@repo/database",
   "version": "1.0.0",
-  "main": "dist/client.js",
-  "types": "dist/client.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "private": true,
   "exports": {
     ".": {
-      "types": "./dist/client.d.ts",
-      "default": "./dist/client.js"
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
     }
   },
   "scripts": {
@@ -26,7 +26,6 @@
     "generate": "bunx prisma generate",
     "lint": "eslint . --max-warnings 0",
     "studio": "bunx prisma studio"
-    
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
