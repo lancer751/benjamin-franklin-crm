@@ -19,7 +19,7 @@
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "test": "turbo test",
-    "postinstall": "turbo build --filter=@repo/database --filter=shared && turbo build --filter=backend"
+    "postinstall": "turbo build --filter=@repo/database --filter=shared --filter=backend"
   },
   "author": "lauwc",
   "license": "ISC",
