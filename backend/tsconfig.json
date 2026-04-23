@@ -7,11 +7,12 @@
     ],
     "target": "ESNext",
     "module": "ESNext",
+    "composite": true,
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     // Bundler mode
     "moduleResolution": "bundler",
-     "allowImportingTsExtensions": false,
+    "allowImportingTsExtensions": false,
     // Best practices
     "strict": true,
     "noImplicitOverride": true,
@@ -25,6 +26,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@repo/database": [
+        "../packages/db/dist/client.d.ts"
       ],
       "@lib/*": [
         "./src/lib/*"
@@ -58,6 +62,12 @@
     "rootDir": "./",
     "emitDecoratorMetadata": true,
   },
-    "include": ["src/**/*", "eslint.config.ts"],
-    "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*",
+    "eslint.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

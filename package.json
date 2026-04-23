@@ -9,7 +9,7 @@
     "./shared",
     "./packages/**"
   ],
-   "scripts": {
+  "scripts": {
     "dev": "turbo dev",
     "dev:client": "turbo dev --filter=management-dashboard",
     "dev:server": "turbo dev --filter=backend",
@@ -19,7 +19,7 @@
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "test": "turbo test",
-    "postinstall": "turbo build --filter=shared --filter=@repo/database --filter=backend"
+    "postinstall": "turbo build --filter=@repo/database --filter=shared && turbo build --filter=backend"
   },
   "author": "lauwc",
   "license": "ISC",
