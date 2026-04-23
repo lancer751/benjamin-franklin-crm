@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 224 76% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 220 14% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 14% 96%;
+    --input-border: 220 13% 87%;
+    --ring: 224 76% 48%;
+
+    --radius: 0.5rem;
+
+    --sidebar-bg: 222 47% 11%;
+    --sidebar-fg: 220 14% 75%;
+    --sidebar-active: 224 76% 48%;
+    --sidebar-active-fg: 0 0% 100%;
+    --sidebar-hover: 222 40% 16%;
+
+    --label: 222 47% 11%;
+
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 220 14% 75%;
+    --sidebar-primary: 224 76% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 40% 16%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 222 40% 18%;
+    --sidebar-ring: 224 76% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+}
+
+@layer components {
+  .form-label {
+    @apply text-xs font-semibold tracking-wider uppercase text-foreground mb-1.5 block;
+  }
+
+  .form-input {
+    @apply w-full rounded-lg border border-input-border bg-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors;
+  }
+
+  .form-select {
+    @apply w-full rounded-lg border border-input-border bg-input px-4 py-3 text-sm text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-medium text-foreground hover:bg-muted transition-colors;
+  }
+
+  .btn-destructive {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-destructive px-6 py-3 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors;
+  }
+
+  .section-title {
+    @apply flex items-center gap-2.5 text-base font-bold text-foreground;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm;
+  }
+
+  .modal-container {
+    @apply bg-card rounded-xl shadow-2xl w-full max-h-[90vh] overflow-y-auto;
+  }
+}
