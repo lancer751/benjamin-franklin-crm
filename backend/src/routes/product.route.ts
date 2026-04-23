@@ -4,7 +4,7 @@ import type { ContextWithPrisma } from "@/lib/contextVariables";
 import {
   CreateProductSchema,
   UpdateProductSchema,
-} from "@shared/dist";
+} from "shared";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";

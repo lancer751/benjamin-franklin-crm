@@ -8,7 +8,7 @@ import {
   createUserSchema,
   updateSellerProfileSchema,
   updateUserSchema,
-} from "@shared/dist";
+} from "shared";
 import type { SuccessResponse } from "@/app";
 import withPrisma from "@/lib/prisma";
 import type { ContextWithPrisma } from "@/lib/contextVariables";

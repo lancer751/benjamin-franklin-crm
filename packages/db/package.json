@@ -6,7 +6,7 @@
   "private": true,
   "exports": {
     ".": {
-      "types": "./dist/client.d.js",
+      "types": "./dist/client.d.ts",
       "default": "./dist/client.js"
     }
   },

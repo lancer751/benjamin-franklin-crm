@@ -3,6 +3,7 @@ import globals from "globals";
 import {configs, plugin } from 'typescript-eslint'
 import { defineConfig } from "eslint/config";
 import importPlugin from "eslint-plugin-import";
+import path from "node:path";
 
 export default defineConfig([
   js.configs.recommended,
@@ -11,13 +12,12 @@ export default defineConfig([
   {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
     plugins: { "@typescript-eslint": plugin },
+    ignores: ["dist/**", "node_modules/**", "generated/**"],
     languageOptions: {
       globals: globals.node,
       parserOptions: {
-        projectService: {
-          allowDefaultProject: ["./eslint.config.ts"],
-        },
-        tsconfigRootDir: import.meta.dirname,
+        project: ['./tsconfig.json'],
+        tsconfigRootDir:  path.resolve(__dirname),
       },
     },
     rules: {

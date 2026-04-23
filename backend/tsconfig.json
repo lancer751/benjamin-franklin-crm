@@ -55,8 +55,9 @@
     "declaration": true,
     "outDir": "dist",
     "noEmit": false,
+    "rootDir": "./",
     "emitDecoratorMetadata": true,
   },
     "include": ["src/**/*", "eslint.config.ts"],
-    "exclude": ["node_modules", "dist", "prisma.config.ts", "prisma/**/*"]
+    "exclude": ["node_modules", "dist"]
 }

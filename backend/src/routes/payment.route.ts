@@ -1,6 +1,6 @@
 import type { SuccessResponse } from "@/app";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
-import { createPaymentSchema } from "@shared/dist";
+import { createPaymentSchema } from "shared";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";

@@ -20,10 +20,9 @@ app.use(
   }),
 );
 
-export type SuccessResponse<T = void> = {
-  success: true;
-  message: string;
-} & (T extends void ? unknown : { data: T });
+export type SuccessResponse<T = undefined> = T extends undefined
+  ? { success: true; message: string }
+  : { success: true; message: string; data: T };
 
 // TODO: refactor this routing
 export const apiRoutes = app

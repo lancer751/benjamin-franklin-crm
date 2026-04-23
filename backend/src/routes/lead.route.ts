@@ -5,7 +5,7 @@ import {
   createLeadInteractionSchema,
   createLeadSchema,
   updateLeadSchema,
-} from "@shared/dist";
+} from "shared";
 import { UUID_ROUTE } from "@/helpers/constants";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
