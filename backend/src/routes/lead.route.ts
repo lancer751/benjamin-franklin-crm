@@ -11,19 +11,21 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import type { SuccessResponse } from "@/app";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
+import withPrisma from "@/lib/prisma";
 
 export const leadRoutes = new Hono<ContextWithPrisma>()
-  .get("/", async (c) => {
+  .get("/", withPrisma, async (c) => {
     const leads = await c.get("prisma").lead.findMany({
       include: {
-        leadPrimaryCampaing: true
-      }
+        leadPrimaryCampaing: true,
+      },
     });
     return c.json(leads, 200);
   })
   // lead details
   .get(
     UUID_ROUTE,
+    withPrisma,
     zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
     async (c) => {
       const id = c.req.param("id");
@@ -54,6 +56,7 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
   // TODO: add filtering and sortering and pagination
   .get(
     `/${UUID_ROUTE}/interactions`,
+    withPrisma,
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const id = c.req.param("id");
@@ -84,7 +87,7 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       return c.json(formattedInteractions, 200);
     },
   )
-  .post("/", zValidator("json", createLeadSchema), async (c) => {
+  .post("/", withPrisma, zValidator("json", createLeadSchema), async (c) => {
     const lead = c.req.valid("json");
     // lead phone is missing, adjust the schema to handle it
     const newLead = await c.get("prisma").lead.create({
@@ -102,6 +105,7 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
   // create a lead and its interactions from external source
   .post(
     "/external",
+    withPrisma,
     zValidator("json", createLeadFromExternalSchema),
     async (c) => {
       const lead = c.req.valid("json");
@@ -113,9 +117,11 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
         where: { email: lead.email },
       });
 
-      const existingCampaignSeller = await c.get("prisma").campaignSeller.findFirst({
-        where: { campaign_id: campaing_id },
-      });
+      const existingCampaignSeller = await c
+        .get("prisma")
+        .campaignSeller.findFirst({
+          where: { campaign_id: campaing_id },
+        });
 
       if (!existingCampaignSeller) {
         throw new HTTPException(404, {
@@ -173,18 +179,21 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
   // register lead interaction manually from the CRM
   .post(
     "/interactions",
+    withPrisma,
     zValidator("json", createLeadInteractionSchema),
     async (c) => {
       const interactionData = c.req.valid("json");
 
-      const existingCampaingMember = await c.get("prisma").campaignMember.findUnique({
-        where: {
-          lead_id_campaing_id: {
-            campaing_id: interactionData.campaing_id,
-            lead_id: interactionData.lead_id,
+      const existingCampaingMember = await c
+        .get("prisma")
+        .campaignMember.findUnique({
+          where: {
+            lead_id_campaing_id: {
+              campaing_id: interactionData.campaing_id,
+              lead_id: interactionData.lead_id,
+            },
           },
-        },
-      });
+        });
 
       if (!existingCampaingMember) {
         throw new HTTPException(500, {
@@ -210,6 +219,7 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
   // TODO: when updating the primary_id_campaign from lead, the field is_primary from campaingmember must be updated
   .put(
     UUID_ROUTE,
+    withPrisma,
     zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
     zValidator("json", updateLeadSchema),
     async (c) => {
@@ -241,9 +251,11 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       );
     },
   )
-  .delete(UUID_ROUTE, async (c) => {
+  .delete(UUID_ROUTE, withPrisma, async (c) => {
     const id = c.req.param("id");
-    const existingLead = await c.get("prisma").lead.findUnique({ where: { id } });
+    const existingLead = await c
+      .get("prisma")
+      .lead.findUnique({ where: { id } });
     if (!existingLead) {
       throw new HTTPException(404, { message: "Lead not found" });
     }

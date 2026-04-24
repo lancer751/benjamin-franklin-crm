@@ -9,14 +9,15 @@ import {
 } from "shared";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import withPrisma from "@/lib/prisma";
 
 export const campaingRoutes = new Hono<ContextWithPrisma>()
-  .get("/", async (c) => {
+  .get("/",  withPrisma,async (c) => {
     const campaings = await c.get("prisma").campaing.findMany({});
     return c.json(campaings, 200);
   })
   // campaign details
-  .get(UUID_ROUTE, async (c) => {
+  .get(UUID_ROUTE,  withPrisma,async (c) => {
     const { id } = c.req.param();
     const campaing = await c.get("prisma").campaing.findUnique({
       where: { id },
@@ -27,7 +28,7 @@ export const campaingRoutes = new Hono<ContextWithPrisma>()
             id: true,
             edition_code: true,
             edition_status: true,
-            modality: { select: { name: true } },
+            modality: true,
             course: {
               select: { id: true, name: true },
             },
@@ -47,7 +48,7 @@ export const campaingRoutes = new Hono<ContextWithPrisma>()
       message: "Campaing found successfully",
     });
   })
-  .post("/", zValidator("json", createCampaingSchema), async (c) => {
+  .post("/",  withPrisma,zValidator("json", createCampaingSchema), async (c) => {
     const campaingData = c.req.valid("json");
 
     const newCampaing = await c.get("prisma").campaing.create({
@@ -65,7 +66,7 @@ export const campaingRoutes = new Hono<ContextWithPrisma>()
   })
   // add a lead or customer (campaign member) to the campaing
   .post(
-    "/campaignsellers",
+    "/campaignsellers", withPrisma,
     zValidator("json", createCampaignMemberSchema),
     async (c) => {
       const campaignMemberData = c.req.valid("json");
@@ -81,7 +82,7 @@ export const campaingRoutes = new Hono<ContextWithPrisma>()
       });
     },
   )
-  .put(UUID_ROUTE, zValidator("json", updateCampaingSchema), async (c) => {
+  .put(UUID_ROUTE, withPrisma, zValidator("json", updateCampaingSchema), async (c) => {
     const { id } = c.req.param();
     const campaingData = c.req.valid("json");
 
@@ -104,7 +105,7 @@ export const campaingRoutes = new Hono<ContextWithPrisma>()
       message: "Campaing updated successfully",
     });
   })
-  .delete(UUID_ROUTE, async (c) => {
+  .delete(UUID_ROUTE, withPrisma, async (c) => {
     const { id } = c.req.param();
     const deletedCampaing = await c.get("prisma").campaing.delete({
       where: { id },

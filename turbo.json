@@ -41,7 +41,7 @@
         "vite.config.ts",
         "package.json"
       ],
-      "env": ["NODE_ENV", "PORT", "VITE_*"]
+      "env": ["NODE_ENV", "PORT", "VITE_*", "DATABASE_URL"]
     },
     "lint": {
       "dependsOn": ["^build"],

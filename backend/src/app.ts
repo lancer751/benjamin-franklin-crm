@@ -8,6 +8,7 @@ import { courseRoutes } from "./routes/course.route";
 import { campaingRoutes } from "./routes/campaing.route";
 import { productRoutes } from "./routes/product.route";
 import { orderRoutes } from "./routes/order.route";
+import { paymentRoutes } from "./routes/payment.route";
 import type {ErrorResponse} from "shared"
 
 export const app = new Hono();
@@ -33,6 +34,7 @@ export const apiRoutes = app
   .route("/campaings", campaingRoutes)
   .route("/products", productRoutes)
   .route("/orders", orderRoutes)
+  .route("/payments", paymentRoutes)
 
   // error handling for http errors
 app.onError((err, c) => {
