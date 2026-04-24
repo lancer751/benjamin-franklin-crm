@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Wallet,
   Speaker,
+  CalendarDays,
 } from "lucide-react";
 import { useSearchStore } from "@/store/useSearchStore";
 
@@ -35,6 +36,7 @@ const sidebarSections = [
     items: [
       { to: "/admin/usuarios", label: "Usuarios", icon: Users },
       { to: "/admin/cursos", label: "Cursos & Ediciones", icon: GraduationCap },
+      { to: "/admin/calendario", label: "Calendario Académico", icon: CalendarDays },
     ],
   },
   {

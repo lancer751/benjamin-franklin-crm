@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, ShoppingCart, CreditCard, Megaphone, GraduationCap, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, ShoppingCart, CreditCard, Megaphone, GraduationCap, CalendarDays, Settings, LogOut } from "lucide-react";
 
 interface AppSidebarProps {
   active: string;
@@ -12,6 +12,7 @@ const navItems = [
   { id: "pagos", label: "Pagos", icon: CreditCard },
   { id: "campanas", label: "Campañas", icon: Megaphone },
   { id: "cursos", label: "Cursos", icon: GraduationCap },
+  { id: "calendario", label: "Calendario Académico", icon: CalendarDays },
 ];
 
 const AppSidebar = ({ active, onNavigate }: AppSidebarProps) => {

@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/core/components/ui/sonner";
 import { Toaster } from "@/core/components/ui/toaster";
 import { TooltipProvider } from "@/core/components/ui/tooltip";
@@ -14,6 +14,7 @@ import DashboardView from "@/dashboard/views/DashboardView";
 import UsersView from "@/auth/views/UsersView";
 import CoursesAdminView from "@/academic/views/CoursesAdminView";
 import CourseDetailView from "./academic/views/CourseDetailView";
+import AcademicCalendarView from "@/academic/views/AcademicCalendarView";
 
 // Módulo de Leads
 import ProspectsView from "@/leads/views/ProspectsView";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="usuarios/:id" element={<UserDetailView />} />
             <Route path="admin/cursos" element={<CoursesAdminView />} />
             <Route path="admin/cursos/:id" element={<CourseDetailView />} />
+            <Route path="admin/calendario" element={<AcademicCalendarView />} />
             
             {/* Ventas & Prospectos */}
             <Route path="prospectos" element={<ProspectsView />} />

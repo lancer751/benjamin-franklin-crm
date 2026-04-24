@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Search, Bell, HelpCircle, Plus, Trash2, Pencil } from "lucide-react";
 import AppSidebar from "@/core/components/AppSidebar";
 import ProspectForm from "@/leads/components/ProspectForm";
@@ -6,6 +6,7 @@ import CampaignForm from "@/marketing/components/CampaignForm";
 import EditionPricingForm from "@/orders/components/ProductFormModal";
 import PaymentForm from "@/payments/components/PaymentForm";
 import DeleteConfirmModal from "@/core/components/DeleteConfirmModal";
+import AcademicCalendarView from "@/academic/views/AcademicCalendarView";
 
 const Index = () => {
   const [activePage, setActivePage] = useState("prospectos");
@@ -60,32 +61,38 @@ const Index = () => {
 
         {/* Content */}
         <main className="flex-1 p-8">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-foreground">Demo de Modales — CRM</h1>
-            <p className="text-sm text-muted-foreground mt-1">Haz clic en cualquier tarjeta para abrir el formulario correspondiente.</p>
-          </div>
+          {activePage === "calendario" ? (
+            <AcademicCalendarView />
+          ) : (
+            <>
+              <div className="mb-8">
+                <h1 className="text-2xl font-bold text-foreground">Demo de Modales — CRM</h1>
+                <p className="text-sm text-muted-foreground mt-1">Haz clic en cualquier tarjeta para abrir el formulario correspondiente.</p>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cards.map((card) => (
-              <button
-                key={card.id}
-                onClick={card.action}
-                className="group bg-card rounded-xl border border-border p-6 text-left hover:shadow-lg hover:border-primary/30 transition-all"
-              >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${card.destructive ? "bg-destructive/10" : "bg-primary/10"
-                  }`}>
-                  {card.destructive
-                    ? <Trash2 size={18} className="text-destructive" />
-                    : card.id.includes("edit")
-                      ? <Pencil size={18} className="text-primary" />
-                      : <Plus size={18} className="text-primary" />
-                  }
-                </div>
-                <h3 className="font-semibold text-foreground mb-1">{card.label}</h3>
-                <p className="text-sm text-muted-foreground">{card.desc}</p>
-              </button>
-            ))}
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {cards.map((card) => (
+                  <button
+                    key={card.id}
+                    onClick={card.action}
+                    className="group bg-card rounded-xl border border-border p-6 text-left hover:shadow-lg hover:border-primary/30 transition-all"
+                  >
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${card.destructive ? "bg-destructive/10" : "bg-primary/10"
+                      }`}>
+                      {card.destructive
+                        ? <Trash2 size={18} className="text-destructive" />
+                        : card.id.includes("edit")
+                          ? <Pencil size={18} className="text-primary" />
+                          : <Plus size={18} className="text-primary" />
+                      }
+                    </div>
+                    <h3 className="font-semibold text-foreground mb-1">{card.label}</h3>
+                    <p className="text-sm text-muted-foreground">{card.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </main>
       </div>
 
