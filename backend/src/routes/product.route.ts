@@ -1,91 +1,125 @@
 import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
-import {
-  CreateProductSchema,
-  UpdateProductSchema,
-} from "shared";
+import { CreateProductSchema, UpdateProductSchema } from "shared";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import withPrisma from "@/lib/prisma";
 
 export const productRoutes = new Hono<ContextWithPrisma>()
-  // TODO: customize the products response to include pagination, filtering, etc.
-  // morever we can also include the edition details in the response by using prisma's include feature
-  .get("/", async (c) => {
-    const products = await c.get("prisma").product.findMany({
+  // Get all products with filtering and pagination
+  .get("/", withPrisma, async (c) => {
+    const products = c.get("prisma").product.findMany()
+    return c.json(products,200)
+  })
+  // Get product details
+  .get(UUID_ROUTE, withPrisma, async (c) => {
+    const { id } = c.req.param();
+    const product = await c.get("prisma").product.findUnique({
+      where: { id },
       include: {
-        productItems: {
-          include: {
-            edition: { include: { course: { select: { name: true } } } },
-          },
-        },
+        prices: true,
+        edition: true,
+        category: true,
+        orders_details: true,
       },
     });
-    return c.json(products, 200);
-  })
-  // product details
-  // TODO : customize the product details response to include edition details, etc.
-  .get(UUID_ROUTE, async (c) => {
-    const { id } = c.req.param();
-    const product = await c.get("prisma").product.findUnique({ where: { id } });
+
     if (!product) {
       throw new HTTPException(404, { message: "Product not found" });
     }
+
     return c.json<SuccessResponse<typeof product>>(
       {
         success: true,
         data: product,
         message: "Product retrieved successfully",
       },
-      200,
+      200
     );
   })
-  .post("/", zValidator("json", CreateProductSchema), async (c) => {
-    const { items, ...productData } = c.req.valid("json");
+  // Create new product
+  .post("/", withPrisma, zValidator("json", CreateProductSchema), async (c) => {
+    const { prices, ...productData } = c.req.valid("json");
 
-    const newProduct = await c.get("prisma").product.create({
-      data: { ...productData, productItems: { createMany: { data: items } } },
+    const existingEdition = await c.get("prisma").edition.findUnique({
+      where: { id: productData.edition_id },
     });
+
+    if (!existingEdition) {
+      throw new HTTPException(400, { message: "Invalid edition_id" });
+    }
+
+    if(existingEdition.modality !== "HIBRIDO" && prices.every(price => price.attendance_mode !== "HEREDADO")){
+      throw new HTTPException(400, { message: "HEREDADO attendance mode can only be used with VIRTUAL, PRESENCIAL AND ASINCRONO edition modality" });
+    }  
+
+    const newProduct = await c.get("prisma").$transaction(async (tx) => {
+      const product = await tx.product.create({
+        data: {
+          ...productData,
+          prices: {
+            createMany: {data: prices}
+          }
+        },
+        include: {
+          prices: true,
+          edition: true,
+          category: true,
+        },
+      });
+
+      return product;
+    });
+
     return c.json<SuccessResponse<typeof newProduct>>(
       {
         success: true,
         data: newProduct,
         message: "Product created successfully",
       },
-      201,
+      201
     );
   })
-  .put(UUID_ROUTE, zValidator("json", UpdateProductSchema), async (c) => {
+  // Update product
+  .put(UUID_ROUTE, withPrisma, zValidator("json", UpdateProductSchema), async (c) => {
     const { id } = c.req.param();
-    const { items, ...productData } = c.req.valid("json");
+    const { prices, ...productData } = c.req.valid("json");
 
-    const existingProduct = await c
-      .get("prisma")
-      .product.findUnique({ where: { id } });
+    const existingProduct = await c.get("prisma").product.findUnique({
+      where: { id },
+    });
 
     if (!existingProduct) {
       throw new HTTPException(404, { message: "Product not found" });
     }
 
     const updatedProduct = await c.get("prisma").$transaction(async (tx) => {
-      if (items) {
-        await tx.productItem.deleteMany({ where: { product_id: id } });
+      // If prices are provided, delete old ones and create new ones
+      if (prices) {
+        await tx.productPrice.deleteMany({
+          where: { product_id: id },
+        });
       }
 
       return tx.product.update({
         where: { id },
         data: {
           ...productData,
-          ...(items && {
-            productItems: {
-              createMany: {
-                data: items.map((item) => ({ edition_id: item.edition_id })),
-              },
-            },
-          }),
+          prices: prices
+            ? {
+                createMany: {
+                  data: prices,
+                },
+              }
+            : undefined,
         },
-        include: { productItems: true },
+        include: {
+          prices: true,
+          edition: true,
+          category: true,
+        },
       });
     });
 
@@ -95,23 +129,40 @@ export const productRoutes = new Hono<ContextWithPrisma>()
         data: updatedProduct,
         message: "Product updated successfully",
       },
-      200,
+      200
     );
   })
-  .delete(UUID_ROUTE, async (c) => {
+  // Delete product
+  .delete(UUID_ROUTE, withPrisma, async (c) => {
     const { id } = c.req.param();
-    const existingProduct = await c
-      .get("prisma")
-      .product.findUnique({ where: { id } });
+
+    const existingProduct = await c.get("prisma").product.findUnique({
+      where: { id },
+      include: {
+        orders_details: true,
+      },
+    });
+
     if (!existingProduct) {
       throw new HTTPException(404, { message: "Product not found" });
     }
-    await c.get("prisma").product.delete({ where: { id } });
+
+    // Prevent deletion if product is used in orders
+    if (existingProduct.orders_details.length > 0) {
+      throw new HTTPException(400, {
+        message: "Cannot delete product that is used in existing orders",
+      });
+    }
+
+    await c.get("prisma").product.delete({
+      where: { id },
+    });
+
     return c.json<SuccessResponse>(
       {
         success: true,
         message: "Product deleted successfully",
       },
-      200,
+      200
     );
   });

@@ -11,7 +11,6 @@ const paymentStatus = z.enum(["CONFIRMED", "REFUNDED", "FAILED"]);
 const paymentType = z.enum(["FULL", "INSTALLMENTS"]);
 const paymentPlanStatus = z.enum(["COMPLETED", "PENDING", "CANCELLED"]);
 const scheduledPaymentStatus = z.enum([
-  "PARTIALLY_PAID",
   "PAID",
   "OVERDUE",
   "PENDING",
@@ -21,7 +20,7 @@ const paymentSchema = z.object({
   id: z.uuid().length(36),
   order_id: z.uuid().length(36),
   scheduled_payment_id: z.uuid().length(36).optional(),
-  payment_date: z.date(),
+  payment_date: z.coerce.date(),
   amount: z.number().positive(),
   payment_method: paymentMethod,
   payment_status: paymentStatus,
@@ -46,7 +45,7 @@ const scheduledPayment = z.object({
   due_date: z.date(),
   due_amount: z.number().positive(),
   payment_plan_id: z.uuid().length(36),
-  number: z.number().positive().default(1),
+  number: z.number().positive(),
   status: scheduledPaymentStatus,
   created_at: z.date().default(new Date()),
   updated_at: z.date().default(new Date()),
@@ -74,3 +73,8 @@ export const createPaymentSchema = paymentSchema
       })
       .optional(),
   });
+
+export const UpdatePaymentSchema = createPaymentSchema.partial().omit({payment_plan: true}).refine(
+  (data) => Object.keys(data).length > 0,
+  { message: "At least one field must be provided" }
+);
