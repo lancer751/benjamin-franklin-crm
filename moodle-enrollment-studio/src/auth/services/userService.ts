@@ -1,31 +1,32 @@
 import { api } from "@/core/lib/api";
 import { InferRequestType, InferResponseType } from "hono/client";
 
+// Constante para las rutas dinámicas de User (con el regex del backend)
+const UUID_PATH = ":id{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}}" as const;
+
 // ==========================================
-// TIPOS INFERIDOS DESDE EL BACKEND
+// TIPOS INFERIDOS
 // ==========================================
 
-// Tipos Generales de Usuario
+// Usuarios
 type UsersRes = InferResponseType<typeof api.users.$get>;
-type UserByIdRes = InferResponseType<typeof api.users[":id"]["$get"]>;
+type UserByIdRes = InferResponseType<(typeof api.users)[typeof UUID_PATH]["$get"]>;
 type CreateUserReq = InferRequestType<typeof api.users.$post>["json"];
-type UpdateUserReq = InferRequestType<typeof api.users[":id"]["$put"]>["json"];
-type DeleteUserRes = InferResponseType<typeof api.users[":id"]["$delete"]>;
+type UpdateUserReq = InferRequestType<(typeof api.users)[typeof UUID_PATH]["$put"]>["json"];
+type DeleteUserRes = InferResponseType<(typeof api.users)[typeof UUID_PATH]["$delete"]>;
 
-// Tipos de Perfiles Especializados (Sellers y Marketers)
+// Sellers (Vendedores) - Aquí Hono simplificó a ":id" por la anidación
 type SellersRes = InferResponseType<typeof api.users.sellers.$get>;
-type MarketersRes = InferResponseType<typeof api.users.marketers.$get>;
 type SellerProfileByIdRes = InferResponseType<typeof api.users.sellers[":id"]["$get"]>;
-type SellerProfileByUserIdRes = InferResponseType<typeof api.users.sellers[":user_id"]["$get"]>;
 type CreateSellerProfileReq = InferRequestType<typeof api.users.sellers.$post>["json"];
 type UpdateSellerProfileReq = InferRequestType<typeof api.users.sellers[":id"]["$put"]>["json"];
 
-// Tipos de Roles
+// Marketers & Roles
+type MarketersRes = InferResponseType<typeof api.users.marketers.$get>;
 type RolesRes = InferResponseType<typeof api.users.roles.$get>;
 
-
 // ==========================================
-// SERVICIOS: USUARIOS GENERALES
+// SERVICIOS: USUARIOS (Basado en userRoutes)
 // ==========================================
 
 export const getUsers = async (): Promise<UsersRes> => {
@@ -34,7 +35,7 @@ export const getUsers = async (): Promise<UsersRes> => {
 };
 
 export const getUserById = async (id: string): Promise<UserByIdRes> => {
-  const res = await api.users[":id"].$get({ param: { id } });
+  const res = await api.users[UUID_PATH].$get({ param: { id } });
   return await res.json();
 };
 
@@ -44,7 +45,7 @@ export const createUser = async (data: CreateUserReq) => {
 };
 
 export const updateUser = async (id: string, data: UpdateUserReq) => {
-  const res = await api.users[":id"].$put({ 
+  const res = await api.users[UUID_PATH].$put({ 
     param: { id },
     json: data 
   });
@@ -52,13 +53,12 @@ export const updateUser = async (id: string, data: UpdateUserReq) => {
 };
 
 export const deleteUser = async (id: string): Promise<DeleteUserRes> => {
-  const res = await api.users[":id"].$delete({ param: { id } });
+  const res = await api.users[UUID_PATH].$delete({ param: { id } });
   return await res.json();
 };
 
-
 // ==========================================
-// SERVICIOS: PERFILES DE VENDEDORES (SELLERS)
+// SERVICIOS: VENDEDORES (SELLERS)
 // ==========================================
 
 export const getSellers = async (): Promise<SellersRes> => {
@@ -68,11 +68,6 @@ export const getSellers = async (): Promise<SellersRes> => {
 
 export const getSellerProfileById = async (id: string): Promise<SellerProfileByIdRes> => {
   const res = await api.users.sellers[":id"].$get({ param: { id } });
-  return await res.json();
-};
-
-export const getSellerProfileByUserId = async (user_id: string): Promise<SellerProfileByUserIdRes> => {
-  const res = await api.users.sellers[":user_id"].$get({ param: { user_id } });
   return await res.json();
 };
 
@@ -89,20 +84,14 @@ export const updateSellerProfile = async (id: string, data: UpdateSellerProfileR
   return await res.json();
 };
 
-
 // ==========================================
-// SERVICIOS: PERFILES DE MARKETING
+// SERVICIOS: MARKETING Y ROLES
 // ==========================================
 
 export const getMarketers = async (): Promise<MarketersRes> => {
   const res = await api.users.marketers.$get();
   return await res.json();
 };
-
-
-// ==========================================
-// SERVICIOS: ROLES
-// ==========================================
 
 export const getRoles = async (): Promise<RolesRes> => {
   const res = await api.users.roles.$get();

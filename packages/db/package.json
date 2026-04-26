@@ -40,5 +40,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "bun ./src/seed.ts"
   }
 }

@@ -7,7 +7,8 @@
     "./backend",
     "./management-dashboard",
     "./shared",
-    "./packages/**"
+    "./packages/**",
+    "moodle-enrollment-studio"
   ],
   "scripts": {
     "dev": "turbo dev",
@@ -26,6 +27,7 @@
   "type": "commonjs",
   "private": true,
   "devDependencies": {
+    "@types/pg": "^8.20.0",
     "bun-types": "latest",
     "turbo": "^2.6.3"
   },
@@ -34,5 +36,15 @@
   },
   "engines": {
     "node": ">=22.12.0"
+  },
+  "overrides": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3"
+  },
+  "dependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   }
 }

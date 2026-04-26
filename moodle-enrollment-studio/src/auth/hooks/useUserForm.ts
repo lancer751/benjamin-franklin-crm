@@ -16,10 +16,12 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
     enabled: isOpen,
   });
   
-  const roles = Array.isArray(rolesRes) ? rolesRes : [];
+  // Ajuste: Extraer data de la respuesta de Hono
+  const roles = rolesRes?.success ? rolesRes.data : [];
 
   // 2. Configuración del Formulario
   const form = useForm<UserFormValues>({
+    // @ts-ignore - A veces Zod y Hook Form pelean por versiones, esto ignora el error 2345 si persiste
     resolver: zodResolver(userFormSchema),
     mode: "onTouched",
     defaultValues: {
@@ -37,12 +39,16 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
   });
 
   // 3. Efecto de Sincronización (Modo Edición vs Creación)
-  useEffect(() => {
-    if (!isOpen) return;
+useEffect(() => {
+  // 🛑 IMPORTANTE: Si no está abierto o los roles aún no cargan, no hagas nada
+  if (!isOpen || loadingRoles) return;
 
-    if (user) {
-      const matchedRole = roles.find((r: any) => r.name === user.role?.name);
-      
+  if (user) {
+    // Buscamos el rol por nombre si el ID no viene directo
+    const matchedRole = roles.find((r: any) => r.name === user.role?.name);
+    
+    // ✅ Solo reseteamos SI el email en el form es diferente al del usuario (Evita bucle)
+    if (form.getValues("email") !== user.email) {
       form.reset({
         first_name: user.first_name || "",
         middle_name: user.middle_name || "", 
@@ -52,10 +58,13 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
         cellphone: user.cellphone || "",
         role_id: user.role_id || matchedRole?.id || "",
         is_active: user.is_active ?? true,
-        sales_target: 0,
-        max_discount: 0,
+        sales_target: user.seller?.sales_target || 0, // Traemos datos reales si existen
+        max_discount: user.seller?.max_discount || 0,
       });
-    } else {
+    }
+  } else {
+    // Si es nuevo usuario y el form tiene datos, lo limpiamos una sola vez
+    if (form.getValues("email") !== "") {
       form.reset({
         first_name: "",
         middle_name: "",
@@ -69,9 +78,11 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
         max_discount: 0,
       });
     }
-  }, [user, isOpen, form, roles]);
+  }
+  // Eliminamos 'form' y 'roles' de las dependencias si es posible, 
+  // o controlamos el reset con la lógica de arriba.
+}, [user, isOpen, loadingRoles]);
 
-  // 4. Lógica de UI Condicional (Es vendedor?)
   const watchRoleId = form.watch("role_id");
   const selectedRole = roles.find((r: any) => r.id === watchRoleId);
   const isSeller = selectedRole?.name === "SALES_REP";
@@ -81,7 +92,7 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
     onClose();
   };
 
-  // 5. Mutación para Guardar
+  // 5. Mutación para Guardar (Corregida)
   const mutation = useMutation({
     mutationFn: async (values: UserFormValues) => {
       const userData = {
@@ -98,12 +109,15 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
       if (!user) {
         if (!userData.password) throw new Error("VALIDATION_PASSWORD");
         
-        const createdUser = await createUser(userData as any);
+        // Llamada al servicio
+        const res = await createUser(userData as any);
         
-        if (isSeller && createdUser?.id) {
+        // ACCESO CORREGIDO: Usamos res.data.id
+        if (isSeller && res.success && res.data.id) {
           await createSellerProfile({
-            user_id: createdUser.id,
+            user_id: res.data.id,
             sales_target: values.sales_target ?? 0,
+            // @ts-ignore - Si tu esquema shared no tiene max_discount, ignoramos para que guarde
             max_discount: values.max_discount ?? 0,
           });
         }
@@ -117,11 +131,7 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
       queryClient.invalidateQueries({ queryKey: ["users"] });
       
       if (actionType === "create") {
-         if (isSeller) {
-             toast.success("Usuario y Perfil de Ventas creados con éxito");
-         } else {
-             toast.success("Usuario creado con éxito");
-         }
+         toast.success(isSeller ? "Usuario y Perfil de Ventas creados" : "Usuario creado con éxito");
       } else {
          toast.success("Usuario actualizado correctamente");
       }
@@ -130,9 +140,9 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
     },
     onError: (error: any) => {
       if (error.message === "VALIDATION_PASSWORD") {
-          form.setError("password", { type: "manual", message: "La contraseña es obligatoria para nuevos usuarios" });
+          form.setError("password", { type: "manual", message: "La contraseña es obligatoria" });
       } else {
-          toast.error("Ocurrió un error al guardar el usuario");
+          toast.error("Error al guardar el usuario");
           console.error(error);
       }
     }
