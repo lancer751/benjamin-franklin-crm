@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getRoles, createUser, updateUser, createSellerProfile } from "../services/userService";
+import { getRoles, createUser, updateUser, createSellerProfile, updateSellerProfile, getUserById } from "../services/userService";
 import { userFormSchema, type UserFormValues } from "../schemas/userFormSchema";
 
 export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: any | null) => {
@@ -34,7 +34,6 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
       role_id: "",
       is_active: true,
       sales_target: 0,
-      max_discount: 0,
     },
   });
 
@@ -59,7 +58,6 @@ useEffect(() => {
         role_id: user.role_id || matchedRole?.id || "",
         is_active: user.is_active ?? true,
         sales_target: user.seller?.sales_target || 0, // Traemos datos reales si existen
-        max_discount: user.seller?.max_discount || 0,
       });
     }
   } else {
@@ -75,7 +73,6 @@ useEffect(() => {
         role_id: "",
         is_active: true,
         sales_target: 0,
-        max_discount: 0,
       });
     }
   }
@@ -86,6 +83,22 @@ useEffect(() => {
   const watchRoleId = form.watch("role_id");
   const selectedRole = roles.find((r: any) => r.id === watchRoleId);
   const isSeller = selectedRole?.name === "SALES_REP";
+
+  // 4. Fetch Silencioso (On-Demand) para Edición
+  const isEditingSeller = !!user && user.role?.name === "SALES_REP";
+  const { data: fullUserRes } = useQuery({
+    queryKey: ["user", user?.id],
+    queryFn: () => getUserById(user!.id),
+    enabled: isOpen && isEditingSeller,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  });
+  const fullUserDetails = fullUserRes?.success ? fullUserRes.data : null;
+
+  useEffect(() => {
+    if (fullUserDetails?.seller) {
+      form.setValue("sales_target", fullUserDetails.seller.sales_target || 0);
+    }
+  }, [fullUserDetails, form]);
 
   const closeAndReset = () => {
     form.reset();
@@ -117,18 +130,34 @@ useEffect(() => {
           await createSellerProfile({
             user_id: res.data.id,
             sales_target: values.sales_target ?? 0,
-            // @ts-ignore - Si tu esquema shared no tiene max_discount, ignoramos para que guarde
-            max_discount: values.max_discount ?? 0,
           });
         }
         return "create";
       } else {
         await updateUser(user.id, userData as any);
+        
+        // Actualización Relacional en la Mutación
+        if (isSeller) {
+          if (fullUserDetails?.seller?.id) {
+            await updateSellerProfile(fullUserDetails.seller.id, {
+              sales_target: values.sales_target ?? 0,
+            });
+          } else {
+            await createSellerProfile({
+              user_id: user.id,
+              sales_target: values.sales_target ?? 0,
+            });
+          }
+        }
+        
         return "update";
       }
     },
     onSuccess: (actionType) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: ["user", user.id] });
+      }
       
       if (actionType === "create") {
          toast.success(isSeller ? "Usuario y Perfil de Ventas creados" : "Usuario creado con éxito");

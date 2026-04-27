@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, MoreVertical, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Loader2, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import ProspectForm from "@/leads/components/ProspectForm";
+import LeadFormModal from "../components/LeadFormModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllLeads, deleteLead } from "../services/leadService";
 import {
@@ -33,7 +33,7 @@ const stageColors: Record<string, string> = {
 };
 
 const ProspectsView = () => {
-  const [showForm, setShowForm] = useState(false);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [leadToEdit, setLeadToEdit] = useState<any>(null);
   const [leadToDelete, setLeadToDelete] = useState<any>(null);
 
@@ -94,11 +94,11 @@ const ProspectsView = () => {
 
   const handleEdit = (lead: any) => {
     setLeadToEdit(lead);
-    setShowForm(true);
+    setIsLeadModalOpen(true);
   };
 
   const handleCloseForm = () => {
-    setShowForm(false);
+    setIsLeadModalOpen(false);
     setTimeout(() => setLeadToEdit(null), 300);
   };
 
@@ -110,7 +110,7 @@ const ProspectsView = () => {
           <h1 className="text-2xl font-bold text-foreground">Gestión de Prospectos</h1>
           <p className="text-sm text-muted-foreground mt-1">Administra y da seguimiento a los leads de inscripción.</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-primary">
+        <button onClick={() => setIsLeadModalOpen(true)} className="btn-primary">
           <Plus size={18} /> Nuevo Prospecto
         </button>
       </div>
@@ -278,11 +278,10 @@ const ProspectsView = () => {
         )}
       </div>
 
-      <ProspectForm 
-        key={leadToEdit ? leadToEdit.id : 'new-lead'} 
-        open={showForm} 
+      <LeadFormModal 
+        open={isLeadModalOpen} 
         onClose={handleCloseForm} 
-        initialData={leadToEdit} 
+        leadId={leadToEdit?.id || null} 
       />
 
       {/* Diálogo de Confirmación para Eliminar */}

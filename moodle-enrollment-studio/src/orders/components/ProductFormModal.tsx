@@ -2,7 +2,7 @@ import { useState } from "react";
 import { GraduationCap, ChevronDown, DollarSign, Info, Loader2 } from "lucide-react";
 import ModalWrapper from "@/core/components/ModalWrapper";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCourseEditions, getModalities } from "@/academic/services/courseService";
+import { getCourseEditions } from "@/academic/services/courseService";
 // 🧠 Importamos los servicios del producto y notificaciones
 import { createProduct, updateProduct } from "../services/productService";
 import { toast } from "sonner";
@@ -50,14 +50,8 @@ const ProductFormModal = ({ open, onClose, initialData }: ProductFormModalProps)
     enabled: open
   });
 
-  const { data: modalitiesRes } = useQuery({
-    queryKey: ["modalities"],
-    queryFn: getModalities,
-    enabled: open
-  });
-
-  const editions = Array.isArray(editionsRes) ? editionsRes : (editionsRes?.data || []);
-  const modalities = Array.isArray(modalitiesRes) ? modalitiesRes : (modalitiesRes?.data || []);
+  const editions = editionsRes?.success ? editionsRes.data : [];
+  const modalities: any[] = [];
 
   const selectedEdition = editions.find((e: any) => e.id === form.edition_id);
 

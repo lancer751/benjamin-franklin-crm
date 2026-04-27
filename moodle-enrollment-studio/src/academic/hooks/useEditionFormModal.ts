@@ -1,11 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, addMinutes } from "date-fns";
-import { getCourses, getModalities, createCourseEdition, getCourseEditionById, updateCourseEdition } from "../services/courseService";
-import { editionFormSchema, type EditionFormValues } from "../schemas/editionFormSchema";
+import { getCourses, createCourseEdition, getCourseEditionById, updateCourseEdition } from "../services/courseService";
+import { editionFormSchema, type EditionFormValues, defaultEditionFormValues } from "../schemas/editionFormSchema";
+
+const STATIC_MODALITIES = [
+  { id: "PRESENCIAL", name: "Presencial" },
+  { id: "VIRTUAL", name: "Virtual" },
+  { id: "HIBRIDO", name: "Híbrido" },
+  { id: "ASINCRONICO", name: "Asíncrono" }
+];
 
 export const useEditionFormModal = (open: boolean, onClose: () => void, courseId?: string | null, courseCode?: string | null, editionId?: string | null) => {
   const queryClient = useQueryClient();
@@ -18,15 +25,8 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     resolver: zodResolver(editionFormSchema),
     mode: "onTouched",
     defaultValues: {
+      ...defaultEditionFormValues,
       course_id: courseId || "",
-      edition_number: "" as unknown as number,
-      edition_code: "",
-      start_date: undefined,
-      end_date: undefined,
-      modality_id: "",
-      teacher_fullname: "",
-      meet_link: "",
-      edition_status: "SCHEDULED",
     },
   });
 
@@ -47,14 +47,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     enabled: !courseId && mode !== "edit" && open,
   });
 
-  const { data: modalitiesRes, isLoading: isLoadingModalities } = useQuery({
-    queryKey: ["modalities"],
-    queryFn: getModalities,
-    enabled: open, 
-  });
-
-  const courses = Array.isArray(coursesRes) ? coursesRes : (coursesRes?.data || []);
-  const modalities = Array.isArray(modalitiesRes) ? modalitiesRes : (modalitiesRes?.data || []);
+  const courses = useMemo(() => coursesRes?.success ? coursesRes.data : [], [coursesRes]);
 
   // 1. Efecto para Resetear o Llenar Datos Iniciales
   useEffect(() => {
@@ -69,17 +62,21 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
         edition_status: "SCHEDULED",
       });
     } else if (editionRes) {
-      const data = editionRes.data || (editionRes as any);
+      const data = editionRes?.success ? editionRes.data : null;
       if (data) {
         const adjustedStartDate = data.start_date ? adjustDateTz(data.start_date) : undefined;
         const adjustedEndDate = data.end_date ? adjustDateTz(data.end_date) : undefined;
         
-        if (adjustedStartDate) setStartMonth(adjustedStartDate);
-        if (adjustedEndDate) setEndMonth(adjustedEndDate);
+        if (adjustedStartDate) {
+          setStartMonth(prev => prev.getTime() !== adjustedStartDate.getTime() ? adjustedStartDate : prev);
+        }
+        if (adjustedEndDate) {
+          setEndMonth(prev => prev.getTime() !== adjustedEndDate.getTime() ? adjustedEndDate : prev);
+        }
 
         let mappedModalityId = data.modality_id || "";
-        if (typeof data.modality === "string" && modalities.length > 0) {
-          const foundModality = modalities.find((m: any) => m.name.toLowerCase() === data.modality.toLowerCase());
+        if (typeof data.modality === "string" && STATIC_MODALITIES.length > 0) {
+          const foundModality = STATIC_MODALITIES.find((m: any) => m.name.toLowerCase() === data.modality.toLowerCase());
           if (foundModality) mappedModalityId = foundModality.id;
         } else if (data.modality && typeof data.modality === "object") {
           mappedModalityId = data.modality.id || data.modality_id || "";
@@ -95,10 +92,15 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
           teacher_fullname: data.teacher_fullname || "",
           meet_link: data.meet_link || "",
           edition_status: data.edition_status || "SCHEDULED",
+          hours_amount: data.hours_amount || ("" as unknown as number),
+          classes_number: data.classes_number || ("" as unknown as number),
+          duration_value: data.duration_value || ("" as unknown as number),
+          duration_unit: data.duration_unit || "WEEKS",
+          whatsapp_group_link: data.whatsapp_group_link || "",
         });
       }
     }
-  }, [open, editionRes, courseId, mode, form, modalities]);
+  }, [open, editionRes, courseId, mode, form]);
 
   // 🧠 2. AUTO-GENERADOR DE CÓDIGO EN TIEMPO REAL
   const watchCourseId = form.watch("course_id");
@@ -117,7 +119,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
       
       if (selectedCourseCodeStr) {
         let paddedCourse = selectedCourseCodeStr.substring(0, 7).toUpperCase().padEnd(7, 'X');
-        const edStr = String(watchEditionNumber).substring(0, 1);
+        const edStr = String(watchEditionNumber).substring(0, 2).padStart(2, '0');
         const yearStr = (watchStartDate ? watchStartDate.getFullYear() : new Date().getFullYear()).toString();
         
         const generatedCode = `${paddedCourse}${edStr}${yearStr}`;
@@ -144,13 +146,18 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     const payload = {
       course_id: values.course_id,
       edition_code: values.edition_code,
-      modality_id: values.modality_id,
+      modality: values.modality_id,
       edition_number: Number(values.edition_number),
       start_date: values.start_date ? values.start_date.toISOString() : null,
       end_date: values.end_date ? values.end_date.toISOString() : null,
       teacher_fullname: values.teacher_fullname,
       meet_link: values.meet_link?.trim() ? values.meet_link : null, 
-      edition_status: values.edition_status
+      edition_status: values.edition_status,
+      hours_amount: Number(values.hours_amount),
+      classes_number: Number(values.classes_number),
+      duration_value: Number(values.duration_value),
+      duration_unit: values.duration_unit,
+      whatsapp_group_link: values.whatsapp_group_link?.trim() ? values.whatsapp_group_link : null,
     };
 
     const mutationPromise = mode === "create" 
@@ -177,11 +184,10 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     form,
     mode,
     courses,
-    modalities,
+    modalities: STATIC_MODALITIES,
     isLoadingEdition,
     isErrorEdition,
     isLoadingCourses,
-    isLoadingModalities,
     startMonth,
     setStartMonth,
     endMonth,

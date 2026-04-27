@@ -138,104 +138,110 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="code" className="text-sm font-medium">
-              Código del Curso <span className="text-destructive">*</span>
-            </Label>
-            <Input 
-              id="code" 
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Ej: PYTHON" 
-              required 
-              maxLength={7} 
-            />
-            <p className="text-[10px] text-muted-foreground">Máximo 7 caracteres (según backend).</p>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="name" className="text-sm font-medium">
-              Nombre Oficial <span className="text-destructive">*</span>
-            </Label>
-            <Input 
-              id="name" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej: Python para Análisis de Datos" 
-              required 
-            />
-          </div>
-
-          {/* ZONA DE CARGA DE IMAGEN */}
-          <div className="grid gap-2">
-            <Label className="text-sm font-medium">Portada del Curso</Label>
-            {previewUrl ? (
-              <div className="relative w-full h-40 rounded-xl overflow-hidden border border-border shadow-sm group">
-                <img 
-                  src={previewUrl} 
-                  alt="Vista previa de la portada" 
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+        <form onSubmit={handleSubmit} className="flex flex-col max-h-[85vh] overflow-hidden py-4 relative">
+          {/* Cuerpo del Modal (Área de Scroll) */}
+          <div className="flex-1 overflow-y-auto px-1 pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="code" className="text-sm font-medium">
+                  Código del Curso <span className="text-destructive">*</span>
+                </Label>
+                <Input 
+                  id="code" 
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="Ej: PYTHON" 
+                  required 
+                  maxLength={7} 
                 />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 h-8 w-8 z-10 transition-opacity"
-                  onClick={() => {
-                    setPreviewUrl(null);
-                    setImageFile(null);
-                  }}
-                >
-                  <X size={16} />
-                </Button>
+                <p className="text-[10px] text-muted-foreground">Máximo 7 caracteres (según backend).</p>
               </div>
-            ) : (
-              <Label 
-                htmlFor="course-image" 
-                className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-xl bg-muted/40 hover:bg-muted/80 hover:border-primary/50 transition-all cursor-pointer group"
-              >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-muted-foreground group-hover:text-primary transition-colors">
-                  <UploadCloud className="w-10 h-10 mb-3 opacity-50 group-hover:opacity-100 transition-opacity group-hover:-translate-y-1 duration-300" />
-                  <p className="mb-1 text-sm font-medium text-center px-4">
-                    Haz clic o arrastra una{" "}
-                    <span className="font-semibold text-primary">imagen</span> para la portada del curso
-                  </p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-1">PNG, JPG o WEBP (Máx 2MB)</p>
-                </div>
-                <input 
-                  id="course-image" 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleImageChange}
+
+              <div className="grid gap-2">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  Nombre Oficial <span className="text-destructive">*</span>
+                </Label>
+                <Input 
+                  id="name" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ej: Python para Análisis de Datos" 
+                  required 
                 />
-              </Label>
-            )}
+              </div>
+
+              {/* ZONA DE CARGA DE IMAGEN */}
+              <div className="grid gap-2 md:col-span-2">
+                <Label className="text-sm font-medium">Portada del Curso</Label>
+                {previewUrl ? (
+                  <div className="relative w-full h-40 rounded-xl overflow-hidden border border-border shadow-sm group">
+                    <img 
+                      src={previewUrl} 
+                      alt="Vista previa de la portada" 
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8 z-10 transition-opacity"
+                      onClick={() => {
+                        setPreviewUrl(null);
+                        setImageFile(null);
+                      }}
+                    >
+                      <X size={16} />
+                    </Button>
+                  </div>
+                ) : (
+                  <Label 
+                    htmlFor="course-image" 
+                    className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-xl bg-muted/40 hover:bg-muted/80 hover:border-primary/50 transition-all cursor-pointer group"
+                  >
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6 text-muted-foreground group-hover:text-primary transition-colors">
+                      <UploadCloud className="w-10 h-10 mb-3 opacity-50 group-hover:opacity-100 transition-opacity group-hover:-translate-y-1 duration-300" />
+                      <p className="mb-1 text-sm font-medium text-center px-4">
+                        Haz clic o arrastra una{" "}
+                        <span className="font-semibold text-primary">imagen</span> para la portada del curso
+                      </p>
+                      <p className="text-[11px] text-muted-foreground/70 mt-1">PNG, JPG o WEBP (Máx 2MB)</p>
+                    </div>
+                    <input 
+                      id="course-image" 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleImageChange}
+                    />
+                  </Label>
+                )}
+              </div>
+
+              <div className="grid gap-2 md:col-span-2">
+                <Label htmlFor="description" className="text-sm font-medium">
+                  Descripción Corta
+                </Label>
+                <Textarea 
+                  id="description" 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Escribe un breve resumen de lo que trata el curso..." 
+                  rows={3} 
+                  className="resize-none"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="description" className="text-sm font-medium">
-              Descripción Corta
-            </Label>
-            <Textarea 
-              id="description" 
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Escribe un breve resumen de lo que trata el curso..." 
-              rows={3} 
-              className="resize-none"
-            />
-          </div>
-
-          <DialogFooter className="pt-4">
+          {/* Footer Fijo */}
+          <div className="shrink-0 bg-white pt-4 pb-2 border-t mt-2 flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isPending}>
               {isUploading ? "Subiendo imagen..." : isPending ? "Guardando..." : "Guardar Curso"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

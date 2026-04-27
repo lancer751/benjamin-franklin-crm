@@ -1,33 +1,31 @@
 import { api } from "@/core/lib/api";
 import { InferRequestType, InferResponseType } from "hono/client";
 
+// 1. Definimos la constante del path dinámico tal como está en el backend
+const UUID_PATH = ":id{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}}" as const;
+
 // ==========================================
-// TIPOS INFERIDOS DESDE EL BACKEND
+// TIPOS INFERIDOS
 // ==========================================
 
 // --- Cursos ---
-type CoursesRes = InferResponseType<typeof api.courses.$get>;
-type CourseByIdRes = InferResponseType<typeof api.courses[":id"]["$get"]>;
-type CreateCourseReq = InferRequestType<typeof api.courses.$post>["json"];
-type UpdateCourseReq = InferRequestType<typeof api.courses[":id"]["$put"]>["json"];
-type DeleteCourseRes = InferResponseType<typeof api.courses[":id"]["$delete"]>;
+export type CoursesRes = InferResponseType<typeof api.courses.$get>;
+export type CourseByIdRes = InferResponseType<(typeof api.courses)[typeof UUID_PATH]["$get"]>;
+export type CreateCourseReq = InferRequestType<typeof api.courses.$post>["json"];
+export type UpdateCourseReq = InferRequestType<(typeof api.courses)[typeof UUID_PATH]["$put"]>["json"];
+export type DeleteCourseRes = InferResponseType<(typeof api.courses)[typeof UUID_PATH]["$delete"]>;
 
 // --- Ediciones ---
-type EditionsRes = InferResponseType<typeof api.courses.editions.$get>;
-// Nota: Asumiendo que UUID_ROUTE resuelve a "/:id" en el backend
-type EditionByIdRes = InferResponseType<typeof api.courses.editions[":id"]["$get"]>;
-type CreateEditionReq = InferRequestType<typeof api.courses.editions.$post>["json"];
-type UpdateEditionReq = InferRequestType<typeof api.courses.editions[":id"]["$put"]>["json"];
-type DeleteEditionRes = InferResponseType<typeof api.courses.editions[":id"]["$delete"]>;
-
-// --- Modalidades ---
-type ModalitiesRes = InferResponseType<typeof api.courses.modalities.$get>;
-type CreateModalityReq = InferRequestType<typeof api.courses.modalities.$post>["json"];
-type UpdateModalityReq = InferRequestType<typeof api.courses.modalities[":modalityId"]["$put"]>["json"];
-
+export type EditionsRes = InferResponseType<typeof api.courses.editions.$get>;
+// Nota: Para ediciones el backend usa ":id" simple o el UUID_PATH, 
+// ajustamos según lo que devuelva el autocompletado
+export type EditionByIdRes = InferResponseType<(typeof api.courses.editions)[":id"]["$get"]>;
+export type CreateEditionReq = InferRequestType<typeof api.courses.editions.$post>["json"];
+export type UpdateEditionReq = InferRequestType<(typeof api.courses.editions)[":id"]["$put"]>["json"];
+export type DeleteEditionRes = InferResponseType<typeof api.courses.editions[":id"]["$delete"]>;
 
 // ==========================================
-// SERVICIOS: CURSOS MASTER
+// SERVICIOS: CURSOS
 // ==========================================
 
 export const getCourses = async (): Promise<CoursesRes> => {
@@ -36,7 +34,8 @@ export const getCourses = async (): Promise<CoursesRes> => {
 };
 
 export const getCourseById = async (id: string): Promise<CourseByIdRes> => {
-  const res = await api.courses[":id"].$get({ param: { id } });
+  // Accedemos usando la constante para que TypeScript no se queje
+  const res = await (api.courses as any)[UUID_PATH].$get({ param: { id } });
   return await res.json();
 };
 
@@ -46,7 +45,7 @@ export const createCourse = async (data: CreateCourseReq) => {
 };
 
 export const updateCourse = async (id: string, data: UpdateCourseReq) => {
-  const res = await api.courses[":id"].$put({
+  const res = await (api.courses as any)[UUID_PATH].$put({
     param: { id },
     json: data
   });
@@ -54,22 +53,16 @@ export const updateCourse = async (id: string, data: UpdateCourseReq) => {
 };
 
 export const deleteCourse = async (id: string): Promise<DeleteCourseRes> => {
-  const res = await api.courses[":id"].$delete({ param: { id } });
+  const res = await (api.courses as any)[UUID_PATH].$delete({ param: { id } });
   return await res.json();
 };
 
-
 // ==========================================
-// SERVICIOS: EDICIONES DE CURSOS
+// SERVICIOS: EDICIONES
 // ==========================================
 
 export const getCourseEditions = async (): Promise<EditionsRes> => {
   const res = await api.courses.editions.$get();
-  return await res.json();
-};
-
-export const getCourseEditionById = async (id: string): Promise<EditionByIdRes> => {
-  const res = await api.courses.editions[":id"].$get({ param: { id } });
   return await res.json();
 };
 
@@ -78,7 +71,18 @@ export const createCourseEdition = async (data: CreateEditionReq) => {
   return await res.json();
 };
 
+// ==========================================
+// SERVICIOS: EDICIONES (SIN ANY)
+// ==========================================
+
+export const getCourseEditionById = async (id: string): Promise<EditionByIdRes> => {
+  // Ahora TS reconocerá que dentro de editions existe el path dinámico
+  const res = await api.courses.editions[":id"].$get({ param: { id } });
+  return await res.json();
+};
+
 export const updateCourseEdition = async (id: string, data: UpdateEditionReq) => {
+  // Al poner la barra en el backend, esto ya no necesita "as any"
   const res = await api.courses.editions[":id"].$put({
     param: { id },
     json: data
@@ -87,29 +91,8 @@ export const updateCourseEdition = async (id: string, data: UpdateEditionReq) =>
 };
 
 export const deleteCourseEdition = async (id: string): Promise<DeleteEditionRes> => {
-  const res = await api.courses.editions[":id"].$delete({ param: { id } });
-  return await res.json();
-};
-
-
-// ==========================================
-// SERVICIOS: MODALIDADES
-// ==========================================
-
-export const getModalities = async (): Promise<ModalitiesRes> => {
-  const res = await api.courses.modalities.$get();
-  return await res.json();
-};
-
-export const createModality = async (data: CreateModalityReq) => {
-  const res = await api.courses.modalities.$post({ json: data });
-  return await res.json();
-};
-
-export const updateModality = async (modalityId: string, data: UpdateModalityReq) => {
-  const res = await api.courses.modalities[":modalityId"].$put({
-    param: { modalityId },
-    json: data
+  const res = await api.courses.editions[":id"].$delete({ 
+    param: { id } 
   });
   return await res.json();
 };

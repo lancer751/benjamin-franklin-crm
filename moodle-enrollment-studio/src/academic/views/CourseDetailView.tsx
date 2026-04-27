@@ -63,7 +63,7 @@ export default function CourseDetailView() {
     }
   });
 
-  const course = response?.data;
+  const course = response?.success ? response.data : null;
 
   const goBack = () => navigate("/admin/cursos");
 
@@ -223,7 +223,7 @@ export default function CourseDetailView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {course.editions.map((edition: any) => (
+                {course?.editions?.map((edition: any) => (
                   <TableRow key={edition.id} className="group transition-colors hover:bg-muted/30">
                     <TableCell className="font-medium text-foreground pl-6">
                       <span className="bg-muted/50 px-2 py-1 rounded-md border border-border/40 font-mono text-sm">

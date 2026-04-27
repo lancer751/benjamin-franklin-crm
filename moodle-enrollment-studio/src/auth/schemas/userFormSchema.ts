@@ -21,7 +21,6 @@ export const userFormSchema = z.object({
   role_id: z.string().min(1, "Debes seleccionar un rol para este usuario"),
   is_active: z.boolean().default(true),
   sales_target: z.coerce.number().min(0, "La meta no puede ser negativa").optional(),
-  max_discount: z.coerce.number().min(0).max(100, "El descuento máximo es 100%").optional(),
 });
 
 export type UserFormValues = z.infer<typeof userFormSchema>;

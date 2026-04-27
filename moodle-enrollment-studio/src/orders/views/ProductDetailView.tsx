@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getProductById } from "../services/productService";
-import { getCourseEditions, getModalities } from "@/academic/services/courseService";
+import { getCourseEditions } from "@/academic/services/courseService";
 // 🧠 Importaremos el nuevo modal dinámico que creará Antigravity
 import DynamicProductModal from "@/orders/components/DynamicProductModal"; 
 import { ArrowLeft, Edit, Loader2, Tag, BookOpen, DollarSign, Calendar } from "lucide-react";
@@ -30,14 +30,9 @@ const ProductDetailView = () => {
     queryFn: getCourseEditions,
   });
 
-  const { data: modalitiesRes } = useQuery({
-    queryKey: ["modalities"],
-    queryFn: getModalities,
-  });
-
-  const product = productRes?.data || productRes;
-  const editions = Array.isArray(editionsRes) ? editionsRes : (editionsRes?.data || []);
-  const modalities = Array.isArray(modalitiesRes) ? modalitiesRes : (modalitiesRes?.data || []);
+  const product = productRes?.success ? productRes.data : null;
+  const editions = editionsRes?.success ? editionsRes.data : [];
+  const modalities: any[] = [];
   
   const selectedEdition = editions.find((e: any) => e.id === product?.edition_id);
   const selectedModality = modalities.find((m: any) => m.id === selectedEdition?.modality_id);

@@ -40,7 +40,7 @@ export const useCoursesAdminView = () => {
   });
 
   // Procesamiento de Datos
-  const courses = Array.isArray(coursesRes) ? coursesRes : [];
+  const courses = coursesRes?.success && Array.isArray(coursesRes.data) ? coursesRes.data : [];
 
   const filteredCourses = courses.filter((course: any) => {
     const query = (searchQuery || "").toLowerCase();

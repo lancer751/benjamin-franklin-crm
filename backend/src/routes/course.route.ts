@@ -347,7 +347,7 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
   )
   // updating course edition details
   .put(
-    `editions${UUID_ROUTE}`,
+    `editions/${UUID_ROUTE}`,
     withPrisma,
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     zValidator("json", UpdateEditionSchema),
@@ -405,7 +405,7 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
   )
   // deleting a course edition
   .delete(
-    `/editions${UUID_ROUTE}`,
+    `/editions/${UUID_ROUTE}`,
     withPrisma,
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {

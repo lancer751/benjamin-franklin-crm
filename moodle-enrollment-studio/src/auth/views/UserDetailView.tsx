@@ -2,7 +2,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { 
   ArrowLeft, Loader2, User, Phone, Mail, Calendar, 
-  Target, Briefcase, TrendingUp, ShoppingCart, CheckCircle 
+  Target, Briefcase, TrendingUp, ShoppingCart, CheckCircle,
+  XCircle, Percent, Clock
 } from "lucide-react";
 import { getUserById } from "../services/userService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
@@ -117,10 +118,10 @@ export default function UserDetailView() {
           </CardContent>
         </Card>
 
-        {/* DASHBOARD DE VENTAS (Ocupa 2 columnas, solo si es vendedor) */}
-        {isSales && seller && (
+        {/* DASHBOARD DE VENTAS O EMPTY STATE (Ocupa 2 columnas) */}
+        {isSales && seller ? (
           <div className="md:col-span-2 space-y-6">
-            <Card className="shadow-sm border-border/60">
+            <Card className="shadow-sm border-border/60 h-full">
               <CardHeader className="pb-4">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <Briefcase size={16} className="text-amber-600" />
@@ -128,7 +129,7 @@ export default function UserDetailView() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   
                   {/* KPI: Meta de Ventas */}
                   <div className="flex flex-col p-4 rounded-xl border border-border/50 bg-card">
@@ -159,7 +160,7 @@ export default function UserDetailView() {
                       <span className="text-sm font-medium">Órdenes Generadas</span>
                     </div>
                     <span className="text-2xl font-bold text-foreground">
-                      {seller.total_orders || 0}
+                      {seller.total_orders || "0"}
                     </span>
                   </div>
 
@@ -170,12 +171,59 @@ export default function UserDetailView() {
                       <span className="text-sm font-medium">Órdenes Completadas</span>
                     </div>
                     <span className="text-2xl font-bold text-foreground">
-                      {seller.completed_orders || 0}
+                      {seller.completed_orders || "0"}
+                    </span>
+                  </div>
+
+                  {/* KPI: Órdenes Canceladas */}
+                  <div className="flex flex-col p-4 rounded-xl border border-border/50 bg-card">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <XCircle size={16} className="text-red-500" />
+                      <span className="text-sm font-medium">Órdenes Canceladas</span>
+                    </div>
+                    <span className="text-2xl font-bold text-foreground">
+                      {seller.canceled_orders || "0"}
+                    </span>
+                  </div>
+
+                  {/* KPI: Tasa de Devolución */}
+                  <div className="flex flex-col p-4 rounded-xl border border-border/50 bg-card">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <Percent size={16} className="text-orange-500" />
+                      <span className="text-sm font-medium">Tasa de Devolución</span>
+                    </div>
+                    <span className="text-2xl font-bold text-foreground">
+                      {seller.return_rate || "0"}%
+                    </span>
+                  </div>
+
+                  {/* KPI: Tiempo de Respuesta */}
+                  <div className="flex flex-col p-4 rounded-xl border border-border/50 bg-card lg:col-span-3 xl:col-span-1">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <Clock size={16} className="text-blue-500" />
+                      <span className="text-sm font-medium">Tiempo de Respuesta</span>
+                    </div>
+                    <span className="text-2xl font-bold text-foreground">
+                      {seller.response_time_avg || "0"} hrs
                     </span>
                   </div>
 
                 </div>
               </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="md:col-span-2 h-full flex flex-col">
+            <Card className="flex-1 flex flex-col items-center justify-center text-center p-6 border-dashed border-2 border-border/60 bg-muted/20 shadow-none min-h-[350px]">
+              <div className="h-14 w-14 rounded-full bg-background flex items-center justify-center mb-4 shadow-sm border border-border/50">
+                <Target className="h-7 w-7 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Perfil Administrativo/Supervisión
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                El rol actual ({user.role?.name || "SIN ROL"}) tiene acceso a métricas globales desde sus módulos, pero no genera reportes de ventas individuales.
+              </p>
             </Card>
           </div>
         )}
