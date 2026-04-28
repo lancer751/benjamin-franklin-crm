@@ -3,6 +3,23 @@ import { z } from "zod";
 export const SalesStatusSchema = z.enum(["DRAFT", "PUBLISHED", "ON_SALE", "COMPLETED", "CANCELLED"]);
 export const AttendanceModeSchema = z.enum(["VIRTUAL", "PRESENCIAL", "HEREDADO"]);
 
+export const CategorySchema = z.object({
+  id: z.uuid().length(36),
+  name: z.string().min(1, "Category name is required"),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+
+export const CreateCategorySchema = CategorySchema.omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+export const UpdateCategorySchema = CreateCategorySchema.partial().refine(
+  (data) => Object.keys(data).length > 0,
+  { message: "At least one field must be provided" }
+);
+
 const decimalString = z
   .string()
   .regex(/^\d+(\.\d{1,2})?$/, "Must be a valid decimal with up to 2 decimal places");
@@ -93,3 +110,6 @@ export type ProductQuery = z.infer<typeof ProductQuerySchema>;
 export type CreateProductPriceInput = z.infer<typeof CreateProductPriceSchema>;
 export type UpdateProductPriceInput = z.infer<typeof UpdateProductPriceSchema>;
 export type ProductPriceParams = z.infer<typeof ProductPriceParamsSchema>;
+export type Category = z.infer<typeof CategorySchema>;
+export type CreateCategoryInput = z.infer<typeof CreateCategorySchema>;
+export type UpdateCategoryInput = z.infer<typeof UpdateCategorySchema>;

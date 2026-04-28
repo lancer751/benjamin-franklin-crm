@@ -288,7 +288,6 @@ model CourseBenefit {
 
 model Course {
   id          String    @id @default(uuid()) @db.Char(36)
-  category_id String
   type CourseType
   name        String
   description String?
@@ -299,7 +298,6 @@ model Course {
   updated_at  DateTime  @updatedAt
   
   editions    Edition[]
-  category    Category  @relation(fields: [category_id], references: [id])
   benefits    CourseBenefit[]
 }
 
@@ -408,9 +406,9 @@ model Edition {
 model Category {
   id   String @id @default(uuid()) @db.Char(36)
   name String @unique
-
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
   products Product[]
-  courses Course[]
 }
 
 model Product {
