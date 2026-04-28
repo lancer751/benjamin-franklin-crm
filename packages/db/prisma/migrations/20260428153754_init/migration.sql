@@ -47,13 +47,31 @@ CREATE TYPE "MoodleStudentStatus" AS ENUM ('ACTIVE', 'SUSPENDED');
 CREATE TYPE "InteractionType" AS ENUM ('WEBSITE_FORM', 'SELL', 'WHATSAPP', 'EMAIL', 'MEETING', 'CALL');
 
 -- CreateEnum
+CREATE TYPE "CourseType" AS ENUM ('COURSE', 'PROGRAM');
+
+-- CreateEnum
+CREATE TYPE "WeekDays" AS ENUM ('LUES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO');
+
+-- CreateEnum
+CREATE TYPE "ScheduleType" AS ENUM ('REGULAR', 'OVERRIDE');
+
+-- CreateEnum
+CREATE TYPE "DurationUnit" AS ENUM ('WEEKS', 'MONTHS');
+
+-- CreateEnum
+CREATE TYPE "Modality" AS ENUM ('PRESENCIAL', 'VIRTUAL', 'HIBRIDO', 'ASINCRONICO');
+
+-- CreateEnum
+CREATE TYPE "AttendanceMode" AS ENUM ('VIRTUAL', 'PRESENCIAL', 'HEREDADO');
+
+-- CreateEnum
 CREATE TYPE "PaymentType" AS ENUM ('FULL', 'INSTALLMENTS');
 
 -- CreateEnum
 CREATE TYPE "PaymentPlanStatus" AS ENUM ('COMPLETED', 'PENDING', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "InstallmentStatus" AS ENUM ('PARTIALLY_PAID', 'PAID', 'OVERDUE', 'PENDING');
+CREATE TYPE "InstallmentStatus" AS ENUM ('PAID', 'OVERDUE', 'PENDING');
 
 -- CreateTable
 CREATE TABLE "Role" (
@@ -70,8 +88,12 @@ CREATE TABLE "SellerProfile" (
     "id" CHAR(36) NOT NULL,
     "user_id" TEXT NOT NULL,
     "sales_target" INTEGER NOT NULL DEFAULT 0,
-    "max_discount" DECIMAL(65,30) DEFAULT 0,
-    "assigned_campaing" TEXT NOT NULL,
+    "total_sales" INTEGER NOT NULL DEFAULT 0,
+    "total_orders" INTEGER NOT NULL DEFAULT 0,
+    "completed_orders" INTEGER NOT NULL DEFAULT 0,
+    "canceled_orders" INTEGER NOT NULL DEFAULT 0,
+    "return_rate" DECIMAL(5,2) NOT NULL DEFAULT 0,
+    "response_time_avg" DECIMAL(10,2) NOT NULL DEFAULT 0,
 
     CONSTRAINT "SellerProfile_pkey" PRIMARY KEY ("id")
 );
@@ -191,12 +213,27 @@ CREATE TABLE "Tasks" (
 );
 
 -- CreateTable
+CREATE TABLE "CourseBenefit" (
+    "id" CHAR(36) NOT NULL,
+    "course_id" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "image_url" TEXT,
+
+    CONSTRAINT "CourseBenefit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Course" (
     "id" CHAR(36) NOT NULL,
+    "category_id" TEXT NOT NULL,
+    "type" "CourseType" NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
+    "classes_number" INTEGER NOT NULL,
     "image_url" TEXT,
     "code" CHAR(7) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Course_pkey" PRIMARY KEY ("id")
 );
@@ -220,11 +257,27 @@ CREATE TABLE "Campaing" (
 );
 
 -- CreateTable
-CREATE TABLE "Modality" (
+CREATE TABLE "EditionSchedule" (
     "id" CHAR(36) NOT NULL,
-    "name" TEXT NOT NULL,
+    "edition_id" TEXT NOT NULL,
+    "day_of_week" "WeekDays" NOT NULL,
+    "type" "ScheduleType" NOT NULL DEFAULT 'REGULAR',
+    "valid_from" DATE,
+    "valid_until" DATE,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Modality_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "EditionSchedule_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EditionScheduleSlot" (
+    "id" CHAR(36) NOT NULL,
+    "schedule_id" TEXT NOT NULL,
+    "start_time" TEXT NOT NULL,
+    "end_time" TEXT NOT NULL,
+
+    CONSTRAINT "EditionScheduleSlot_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -233,13 +286,18 @@ CREATE TABLE "Edition" (
     "course_id" TEXT NOT NULL,
     "edition_number" INTEGER NOT NULL,
     "start_date" DATE NOT NULL,
+    "hours_amount" INTEGER NOT NULL,
+    "classes_number" INTEGER NOT NULL,
+    "duration_value" INTEGER NOT NULL,
+    "duration_unit" "DurationUnit" NOT NULL,
     "end_date" DATE NOT NULL,
-    "modality_id" TEXT NOT NULL,
+    "modality" "Modality" NOT NULL,
     "moodle_course_id" INTEGER,
     "teacher_fullname" TEXT NOT NULL,
-    "meet_link" TEXT NOT NULL,
+    "meet_link" TEXT,
+    "whatsapp_group_link" TEXT,
     "edition_status" "EditionStatus" NOT NULL DEFAULT 'DRAFT',
-    "edition_code" CHAR(12) NOT NULL,
+    "edition_code" CHAR(13) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -247,15 +305,26 @@ CREATE TABLE "Edition" (
 );
 
 -- CreateTable
+CREATE TABLE "Category" (
+    "id" CHAR(36) NOT NULL,
+    "name" TEXT NOT NULL,
+
+    CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Product" (
     "id" CHAR(36) NOT NULL,
+    "name" TEXT NOT NULL,
     "slug" TEXT,
     "description" TEXT,
+    "image_url" TEXT,
     "short_description" TEXT,
-    "category" TEXT NOT NULL,
+    "presale_price" DECIMAL(10,2),
     "edition_id" TEXT NOT NULL,
-    "cash_price" DECIMAL(10,2) NOT NULL,
-    "installment_price" DECIMAL(10,2) NOT NULL,
+    "category_id" TEXT NOT NULL,
+    "installments_max_number" INTEGER NOT NULL,
+    "installments_min_number" INTEGER NOT NULL,
     "discount_price" DECIMAL(10,2) DEFAULT 0,
     "discount_expires_at" TIMESTAMP(3),
     "sales_status" "SalesStatus" NOT NULL DEFAULT 'DRAFT',
@@ -266,13 +335,25 @@ CREATE TABLE "Product" (
 );
 
 -- CreateTable
+CREATE TABLE "ProductPrice" (
+    "id" CHAR(36) NOT NULL,
+    "product_id" TEXT NOT NULL,
+    "attendance_mode" "AttendanceMode" NOT NULL,
+    "cash_price" DECIMAL(10,2) NOT NULL,
+    "installment_price" DECIMAL(10,2) NOT NULL,
+    "enrollment_fee" DECIMAL(10,2) NOT NULL,
+
+    CONSTRAINT "ProductPrice_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Order" (
     "id" CHAR(36) NOT NULL,
     "lead_id" TEXT NOT NULL,
     "generated_by" TEXT,
     "sub_total" DECIMAL(10,2) NOT NULL,
     "total_amount" DECIMAL(10,2) NOT NULL,
-    "discount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "discount" DECIMAL(10,2) DEFAULT 0,
     "order_status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
     "order_code" CHAR(7) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -331,7 +412,7 @@ CREATE TABLE "ScheduledPayment" (
     "due_date" TIMESTAMP(3) NOT NULL,
     "due_amount" DECIMAL(10,2) NOT NULL,
     "payment_plan_id" TEXT NOT NULL,
-    "number" INTEGER NOT NULL DEFAULT 1,
+    "number" INTEGER NOT NULL,
     "status" "InstallmentStatus" NOT NULL DEFAULT 'PENDING',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -379,13 +460,25 @@ CREATE UNIQUE INDEX "Lead_dni_key" ON "Lead"("dni");
 CREATE UNIQUE INDEX "Campaing_edition_id_key" ON "Campaing"("edition_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Modality_name_key" ON "Modality"("name");
+CREATE INDEX "EditionSchedule_edition_id_idx" ON "EditionSchedule"("edition_id");
+
+-- CreateIndex
+CREATE INDEX "EditionScheduleSlot_schedule_id_idx" ON "EditionScheduleSlot"("schedule_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Edition_moodle_course_id_key" ON "Edition"("moodle_course_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Edition_edition_code_key" ON "Edition"("edition_code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Category_name_key" ON "Category"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Product_edition_id_key" ON "Product"("edition_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProductPrice_product_id_attendance_mode_key" ON "ProductPrice"("product_id", "attendance_mode");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Order_order_code_key" ON "Order"("order_code");
@@ -448,16 +541,31 @@ ALTER TABLE "LeadInteraction" ADD CONSTRAINT "LeadInteraction_campaing_id_fkey" 
 ALTER TABLE "LeadInteraction" ADD CONSTRAINT "LeadInteraction_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "SellerProfile"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "CourseBenefit" ADD CONSTRAINT "CourseBenefit_course_id_fkey" FOREIGN KEY ("course_id") REFERENCES "Course"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Course" ADD CONSTRAINT "Course_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Campaing" ADD CONSTRAINT "Campaing_edition_id_fkey" FOREIGN KEY ("edition_id") REFERENCES "Edition"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EditionSchedule" ADD CONSTRAINT "EditionSchedule_edition_id_fkey" FOREIGN KEY ("edition_id") REFERENCES "Edition"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EditionScheduleSlot" ADD CONSTRAINT "EditionScheduleSlot_schedule_id_fkey" FOREIGN KEY ("schedule_id") REFERENCES "EditionSchedule"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Edition" ADD CONSTRAINT "Edition_course_id_fkey" FOREIGN KEY ("course_id") REFERENCES "Course"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Edition" ADD CONSTRAINT "Edition_modality_id_fkey" FOREIGN KEY ("modality_id") REFERENCES "Modality"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Product" ADD CONSTRAINT "Product_edition_id_fkey" FOREIGN KEY ("edition_id") REFERENCES "Edition"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Product" ADD CONSTRAINT "Product_edition_id_fkey" FOREIGN KEY ("edition_id") REFERENCES "Edition"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Product" ADD CONSTRAINT "Product_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProductPrice" ADD CONSTRAINT "ProductPrice_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Order" ADD CONSTRAINT "Order_lead_id_fkey" FOREIGN KEY ("lead_id") REFERENCES "Lead"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
