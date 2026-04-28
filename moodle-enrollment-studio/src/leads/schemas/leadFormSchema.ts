@@ -16,8 +16,10 @@ export const leadFormSchema = z.object({
   second_address: z.string().min(10, "Debe tener al menos 10 caracteres").optional().or(z.literal("")),
   
   profession: z.string().optional().or(z.literal("")),
-  primary_campaign_id: z.string().uuid("Campaña inválida").optional().or(z.literal("")),
+  primary_campaign_id: z.string().uuid("Campaña inválida").optional().or(z.literal("")).or(z.literal("none")),
   lead_status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+  source: z.string().default("MANUAL"),
+  interaction_notes: z.string().optional(),
 });
 
 export type LeadFormValues = z.infer<typeof leadFormSchema>;
@@ -36,4 +38,6 @@ export const defaultLeadFormValues: Partial<LeadFormValues> = {
   profession: "",
   primary_campaign_id: "",
   lead_status: "ACTIVE",
+  source: "MANUAL",
+  interaction_notes: "",
 };

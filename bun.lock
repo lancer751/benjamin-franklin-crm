@@ -174,7 +174,7 @@
       "name": "@repo/database",
       "version": "1.0.0",
       "dependencies": {
-        "@prisma/adapter-pg": "^7.7.0",
+        "@prisma/adapter-pg": "^7.8.0",
         "@prisma/client": "^7.6.0",
         "dotenv": "^17.2.3",
         "pg": "^8.20.0",
@@ -182,6 +182,7 @@
       "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/bun": "latest",
+        "@types/pg": "^8.20.0",
         "prisma": "^7.7.0",
       },
       "peerDependencies": {

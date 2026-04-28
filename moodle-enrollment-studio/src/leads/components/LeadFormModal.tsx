@@ -15,7 +15,7 @@ interface LeadFormModalProps {
 }
 
 export default function LeadFormModal({ open, onClose, leadId }: LeadFormModalProps) {
-  const { form, mode, isLoadingLead, isErrorLead, isPending, onSubmit } = useLeadFormModal(open, onClose, leadId);
+  const { form, mode, isLoadingLead, isErrorLead, isPending, isLoadingCampaigns, activeCampaigns, onSubmit } = useLeadFormModal(open, onClose, leadId);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -172,18 +172,57 @@ export default function LeadFormModal({ open, onClose, leadId }: LeadFormModalPr
 
                         <FormField control={form.control} name="primary_campaign_id" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Campaña de Origen</FormLabel>
+                            <FormLabel className="flex items-center gap-2">
+                              Campaña de Origen
+                              {isLoadingCampaigns && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+                            </FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || undefined}>
                               <FormControl>
-                                <SelectTrigger><SelectValue placeholder="Selecciona (Pronto)" /></SelectTrigger>
+                                <SelectTrigger disabled={isLoadingCampaigns}>
+                                  <SelectValue placeholder="Selecciona campaña" />
+                                </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="none" disabled>No hay campañas disponibles</SelectItem>
+                                <SelectItem value="none">Sin campaña</SelectItem>
+                                {activeCampaigns.map((c: any) => (
+                                  <SelectItem key={c.id} value={c.id}>{c.campaing_name}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage className="text-red-500" />
                           </FormItem>
                         )}/>
+
+                        <FormField control={form.control} name="source" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Origen del Lead</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger><SelectValue placeholder="Origen" /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="MANUAL">Manual / Presencial</SelectItem>
+                                <SelectItem value="FACEBOOK">Facebook</SelectItem>
+                                <SelectItem value="WHATSAPP">WhatsApp</SelectItem>
+                                <SelectItem value="WEBSITE">Website</SelectItem>
+                                <SelectItem value="INSTAGRAM">Instagram</SelectItem>
+                                <SelectItem value="TIKTOK">TikTok</SelectItem>
+                                <SelectItem value="REFERRAL">Referido</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage className="text-red-500" />
+                          </FormItem>
+                        )}/>
+
+                        {form.watch("source") !== "MANUAL" && (
+                          <FormField control={form.control} name="interaction_notes" render={({ field }) => (
+                            <FormItem className="col-span-1 md:col-span-2 bg-muted/30 p-3 rounded-lg border border-border mt-2">
+                              <FormLabel>Notas del Registro Externo</FormLabel>
+                              <FormControl><Input placeholder="Ej: Lead ingresó pidiendo información del curso..." {...field} /></FormControl>
+                              <FormMessage className="text-red-500" />
+                            </FormItem>
+                          )}/>
+                        )}
 
                         <FormField control={form.control} name="lead_status" render={({ field }) => (
                           <FormItem>
