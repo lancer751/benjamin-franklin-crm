@@ -18,7 +18,6 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
   .get("/", withPrisma, async (c) => {
     const courses = await c.get("prisma").course.findMany({
       include: {
-        category: true,
         benefits: true,
       },
       orderBy: {
@@ -41,7 +40,6 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
     const course = await c.get("prisma").course.findUnique({
       where: { id },
       include: {
-        category: true,
         benefits: true,
         editions: {
           include: {
@@ -71,7 +69,6 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
     const newCourse = await c.get("prisma").course.create({
       data: courseData,
       include: {
-        category: true,
         benefits: true,
       },
     });
@@ -102,7 +99,6 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
       where: { id },
       data: courseData,
       include: {
-        category: true,
         benefits: true,
       },
     });

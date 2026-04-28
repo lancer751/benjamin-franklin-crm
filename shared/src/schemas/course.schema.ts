@@ -31,7 +31,6 @@ export const CourseBenefitSchema = z.object({
 
 export const CourseSchema = z.object({
   id: z.uuid().length(36),
-  category_id: z.uuid().length(36),
   type: CourseTypeSchema,
   name: z
     .string()
@@ -123,7 +122,6 @@ export const UpdateEditionSchema = CreateEditionSchema.partial().refine(
 export const CourseQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
-  category_id: z.string().optional(),
   type: CourseTypeSchema.optional(),
   search: z.string().optional(),
 });
