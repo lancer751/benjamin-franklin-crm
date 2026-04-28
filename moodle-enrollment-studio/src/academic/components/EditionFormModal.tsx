@@ -21,7 +21,7 @@ interface EditionFormModalProps {
 
 export default function EditionFormModal({ open, onClose, courseId, courseCode, editionId }: EditionFormModalProps) {
   const {
-    form, mode, courses, modalities,
+    form, mode, courses,
     isLoadingEdition, isErrorEdition, isLoadingCourses,
     startMonth, setStartMonth, endMonth, setEndMonth,
     isPending, onSubmit
@@ -118,7 +118,7 @@ export default function EditionFormModal({ open, onClose, courseId, courseCode, 
                         )}/>
 
                         {/* Modalidad */}
-                        <FormField control={form.control} name="modality_id" render={({ field }) => (
+                        <FormField control={form.control} name="modality" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Modalidad <span className="text-destructive">*</span></FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
@@ -126,7 +126,10 @@ export default function EditionFormModal({ open, onClose, courseId, courseCode, 
                                 <SelectTrigger><SelectValue placeholder="Elige la modalidad" /></SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {modalities.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                                <SelectItem value="PRESENCIAL">Presencial</SelectItem>
+                                <SelectItem value="VIRTUAL">Virtual</SelectItem>
+                                <SelectItem value="HIBRIDO">Híbrido</SelectItem>
+                                <SelectItem value="ASINCRONICO">Asíncrono</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />

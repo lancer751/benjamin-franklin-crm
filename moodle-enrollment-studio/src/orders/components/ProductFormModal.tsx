@@ -282,10 +282,28 @@ const ProductFormModal = ({ open, onClose, initialData }: ProductFormModalProps)
                 ) : (
                   <div className="space-y-6">
                     {form.prices.map((priceObj, index) => (
-                      <div key={priceObj.attendance_mode} className="p-5 border border-border rounded-lg bg-white shadow-sm">
-                        <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.8)]"></span>
-                          Card de Modalidad: {priceObj.attendance_mode}
+                      <div key={index} className="p-5 border border-border rounded-lg bg-white shadow-sm">
+                        <h4 className="font-semibold text-foreground mb-4 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.8)]"></span>
+                            Modalidad de Precio
+                          </div>
+                          <div className="relative w-48">
+                            <select 
+                              className={`form-select ${errors[`prices.${index}.attendance_mode`] ? 'border-destructive' : ''}`}
+                              value={priceObj.attendance_mode}
+                              onChange={(e) => {
+                                const newPrices = [...form.prices];
+                                newPrices[index] = { ...newPrices[index], attendance_mode: e.target.value as any };
+                                setFieldValue("prices", newPrices);
+                              }}
+                            >
+                              <option value="HEREDADO">Heredado</option>
+                              <option value="PRESENCIAL">Presencial</option>
+                              <option value="VIRTUAL">Virtual</option>
+                            </select>
+                            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                          </div>
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                           <div>

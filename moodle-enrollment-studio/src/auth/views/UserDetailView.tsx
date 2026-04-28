@@ -10,6 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/c
 import { Button } from "@/core/components/ui/button";
 import { Badge } from "@/core/components/ui/badge";
 
+const ROLE_TRANSLATIONS: Record<string, string> = {
+  ADMIN: "Administrador",
+  MARKETING: "Marketing",
+  SALES_SUPERVISOR: "Supervisor de Ventas",
+  SALES_REP: "Asesor de Ventas",
+  COLLECTIONS: "Cobranzas",
+};
+
 export default function UserDetailView() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -66,7 +74,7 @@ export default function UserDetailView() {
                   : "border-gray-200 text-gray-700 bg-gray-50/50"
                 }
               >
-                {user.role?.name || "SIN ROL"}
+                {user.role?.name ? ROLE_TRANSLATIONS[user.role.name] || user.role.name : "Sin Rol"}
               </Badge>
               <Badge
                 variant="secondary"
@@ -222,7 +230,7 @@ export default function UserDetailView() {
                 Perfil Administrativo/Supervisión
               </h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                El rol actual ({user.role?.name || "SIN ROL"}) tiene acceso a métricas globales desde sus módulos, pero no genera reportes de ventas individuales.
+                El rol actual ({user.role?.name ? ROLE_TRANSLATIONS[user.role.name] || user.role.name : "Sin Rol"}) tiene acceso a métricas globales desde sus módulos, pero no genera reportes de ventas individuales.
               </p>
             </Card>
           </div>

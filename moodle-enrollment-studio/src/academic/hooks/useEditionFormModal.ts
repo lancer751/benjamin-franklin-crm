@@ -7,12 +7,6 @@ import { format, addMinutes } from "date-fns";
 import { getCourses, createCourseEdition, getCourseEditionById, updateCourseEdition } from "../services/courseService";
 import { editionFormSchema, type EditionFormValues, defaultEditionFormValues } from "../schemas/editionFormSchema";
 
-const STATIC_MODALITIES = [
-  { id: "PRESENCIAL", name: "Presencial" },
-  { id: "VIRTUAL", name: "Virtual" },
-  { id: "HIBRIDO", name: "Híbrido" },
-  { id: "ASINCRONICO", name: "Asíncrono" }
-];
 
 export const useEditionFormModal = (open: boolean, onClose: () => void, courseId?: string | null, courseCode?: string | null, editionId?: string | null) => {
   const queryClient = useQueryClient();
@@ -74,13 +68,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
           setEndMonth(prev => prev.getTime() !== adjustedEndDate.getTime() ? adjustedEndDate : prev);
         }
 
-        let mappedModalityId = data.modality_id || "";
-        if (typeof data.modality === "string" && STATIC_MODALITIES.length > 0) {
-          const foundModality = STATIC_MODALITIES.find((m: any) => m.name.toLowerCase() === data.modality.toLowerCase());
-          if (foundModality) mappedModalityId = foundModality.id;
-        } else if (data.modality && typeof data.modality === "object") {
-          mappedModalityId = data.modality.id || data.modality_id || "";
-        }
+        let mappedModality = data.modality || "";
 
         form.reset({
           course_id: courseId || data.course?.id || data.course_id || "",
@@ -88,7 +76,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
           edition_code: data.edition_code || "",
           start_date: adjustedStartDate,
           end_date: adjustedEndDate,
-          modality_id: mappedModalityId,
+          modality: mappedModality,
           teacher_fullname: data.teacher_fullname || "",
           meet_link: data.meet_link || "",
           edition_status: data.edition_status || "SCHEDULED",
@@ -146,7 +134,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     const payload = {
       course_id: values.course_id,
       edition_code: values.edition_code,
-      modality: values.modality_id,
+      modality: values.modality,
       edition_number: Number(values.edition_number),
       start_date: values.start_date ? values.start_date.toISOString() : null,
       end_date: values.end_date ? values.end_date.toISOString() : null,
@@ -184,7 +172,6 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     form,
     mode,
     courses,
-    modalities: STATIC_MODALITIES,
     isLoadingEdition,
     isErrorEdition,
     isLoadingCourses,

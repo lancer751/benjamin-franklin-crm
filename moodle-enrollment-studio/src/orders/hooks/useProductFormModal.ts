@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ProductFormValues, productFormSchema } from "../schemas/productFormSchema";
 import { z } from "zod";
 
-const createEmptyPrice = (mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO") => ({
+const createEmptyPrice = (mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO" = "HEREDADO") => ({
   attendance_mode: mode,
   cash_price: "0.00",
   installment_price: "0.00",
@@ -100,19 +100,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     const generatedSlug = generateSlug(generatedName);
 
     // 2. Determine Modality for Prices
-    let newPrices: ProductFormValues["prices"] = [];
-    
-    const modalityName = (selectedEdition.modality?.name || selectedEdition.modality || "").toUpperCase();
-    
-    if (modalityName.includes("HÍBRID") || modalityName.includes("HIBRID")) {
-      newPrices = [createEmptyPrice("VIRTUAL"), createEmptyPrice("PRESENCIAL")];
-    } else if (modalityName.includes("VIRTUAL")) {
-      newPrices = [createEmptyPrice("VIRTUAL")];
-    } else if (modalityName.includes("PRESENCIAL")) {
-      newPrices = [createEmptyPrice("PRESENCIAL")];
-    } else {
-      newPrices = [createEmptyPrice("VIRTUAL")];
-    }
+    let newPrices: ProductFormValues["prices"] = [createEmptyPrice("HEREDADO")];
 
     setForm(prev => ({
       ...prev,

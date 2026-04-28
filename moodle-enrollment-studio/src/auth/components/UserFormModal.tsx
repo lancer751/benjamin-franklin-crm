@@ -24,6 +24,14 @@ import { Input } from "@/core/components/ui/input";
 import { Button } from "@/core/components/ui/button";
 import { Switch } from "@/core/components/ui/switch";
 
+const ROLE_TRANSLATIONS: Record<string, string> = {
+  ADMIN: "Administrador",
+  MARKETING: "Marketing",
+  SALES_SUPERVISOR: "Supervisor de Ventas",
+  SALES_REP: "Asesor de Ventas",
+  COLLECTIONS: "Cobranzas",
+};
+
 // 🧠 Importamos el hook que acabamos de crear
 import { useUserFormModal } from "../hooks/useUserForm";
 
@@ -138,7 +146,7 @@ export function UserFormModal({ isOpen, onClose, user }: UserFormModalProps) {
                         <SelectContent>
                           {roles.map((role: any) => (
                             <SelectItem key={role.id} value={role.id}>
-                              {role.name}
+                              {ROLE_TRANSLATIONS[role.name] || role.name}
                             </SelectItem>
                           ))}
                         </SelectContent>

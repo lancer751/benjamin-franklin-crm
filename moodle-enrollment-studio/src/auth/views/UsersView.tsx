@@ -12,6 +12,14 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { UserFormModal } from "../components/UserFormModal";
 import { useUsersView } from "../hooks/useUsersView";
 
+const ROLE_TRANSLATIONS: Record<string, string> = {
+  ADMIN: "Administrador",
+  MARKETING: "Marketing",
+  SALES_SUPERVISOR: "Supervisor de Ventas",
+  SALES_REP: "Asesor de Ventas",
+  COLLECTIONS: "Cobranzas",
+};
+
 export default function UsersView() {
   const navigate = useNavigate();
   
@@ -66,24 +74,44 @@ export default function UsersView() {
       </div>
 
       {/* Navegación por Tabs y Filtros */}
-      <div className="flex items-center justify-between w-full">
-        <Tabs value={filters.roleFilter} onValueChange={setRoleFilter} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 max-w-md">
-            <TabsTrigger value="ALL">Todos</TabsTrigger>
-            <TabsTrigger value="ADMIN">Administradores</TabsTrigger>
-            <TabsTrigger value="SALES_REP">Ventas</TabsTrigger>
-            <TabsTrigger value="MARKETING">Marketing</TabsTrigger>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full mb-6">
+        <Tabs value={filters.roleFilter} onValueChange={setRoleFilter} className="w-full sm:w-auto">
+          <TabsList className="flex items-center justify-start gap-2 bg-transparent h-auto p-0 overflow-x-auto whitespace-nowrap pb-1 no-scrollbar">
+            <TabsTrigger 
+              value="ALL" 
+              className="px-4 py-2 rounded-full border border-transparent data-[state=active]:border-primary/20 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted transition-all text-muted-foreground font-medium"
+            >
+              Todos
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ADMIN"
+              className="px-4 py-2 rounded-full border border-transparent data-[state=active]:border-primary/20 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted transition-all text-muted-foreground font-medium"
+            >
+              Administradores
+            </TabsTrigger>
+            <TabsTrigger 
+              value="SALES_REP"
+              className="px-4 py-2 rounded-full border border-transparent data-[state=active]:border-primary/20 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted transition-all text-muted-foreground font-medium"
+            >
+              Asesores de Ventas
+            </TabsTrigger>
+            <TabsTrigger 
+              value="MARKETING"
+              className="px-4 py-2 rounded-full border border-transparent data-[state=active]:border-primary/20 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted transition-all text-muted-foreground font-medium"
+            >
+              Marketing
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         
         <Select value={filters.statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px] bg-card border-border/60">
+          <SelectTrigger className="w-full sm:w-[180px] bg-card border-border/60 rounded-full h-10 px-4">
             <SelectValue placeholder="Estado..." />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todos</SelectItem>
-            <SelectItem value="ACTIVE">Activos</SelectItem>
-            <SelectItem value="INACTIVE">Inactivos</SelectItem>
+          <SelectContent className="rounded-xl border-border/60">
+            <SelectItem value="ALL">Todos los estados</SelectItem>
+            <SelectItem value="ACTIVE">Usuarios Activos</SelectItem>
+            <SelectItem value="INACTIVE">Usuarios Inactivos</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -138,7 +166,7 @@ export default function UsersView() {
                             : "border-gray-200 text-gray-700 bg-gray-50/50 hover:bg-gray-50/80"
                         }
                       >
-                        {user.role?.name || "SIN ROL"}
+                        {user.role?.name ? ROLE_TRANSLATIONS[user.role.name] || user.role.name : "Sin Rol"}
                       </Badge>
                     </TableCell>
                     <TableCell>

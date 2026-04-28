@@ -39,14 +39,10 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
 
   // 3. Efecto de Sincronización (Modo Edición vs Creación)
 useEffect(() => {
-  // 🛑 IMPORTANTE: Si no está abierto o los roles aún no cargan, no hagas nada
   if (!isOpen || loadingRoles) return;
 
   if (user) {
-    // Buscamos el rol por nombre si el ID no viene directo
     const matchedRole = roles.find((r: any) => r.name === user.role?.name);
-    
-    // ✅ Solo reseteamos SI el email en el form es diferente al del usuario (Evita bucle)
     if (form.getValues("email") !== user.email) {
       form.reset({
         first_name: user.first_name || "",
@@ -57,11 +53,10 @@ useEffect(() => {
         cellphone: user.cellphone || "",
         role_id: user.role_id || matchedRole?.id || "",
         is_active: user.is_active ?? true,
-        sales_target: user.seller?.sales_target || 0, // Traemos datos reales si existen
+        sales_target: user.seller?.sales_target || 0,
       });
     }
   } else {
-    // Si es nuevo usuario y el form tiene datos, lo limpiamos una sola vez
     if (form.getValues("email") !== "") {
       form.reset({
         first_name: "",
@@ -76,9 +71,7 @@ useEffect(() => {
       });
     }
   }
-  // Eliminamos 'form' y 'roles' de las dependencias si es posible, 
-  // o controlamos el reset con la lógica de arriba.
-}, [user, isOpen, loadingRoles]);
+}, [user, isOpen, loadingRoles, roles, form]);
 
   const watchRoleId = form.watch("role_id");
   const selectedRole = roles.find((r: any) => r.id === watchRoleId);

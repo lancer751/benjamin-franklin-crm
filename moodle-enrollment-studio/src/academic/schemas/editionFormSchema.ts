@@ -9,7 +9,7 @@ export const editionFormSchema = z.object({
   edition_code: z.string().length(13, "El código debe tener exactamente 13 caracteres"),
   start_date: z.date({ required_error: "La fecha de inicio es obligatoria" }),
   end_date: z.date({ required_error: "La fecha de fin es obligatoria" }),
-  modality_id: z.string().min(1, "Debes seleccionar una modalidad"),
+  modality: z.enum(["PRESENCIAL", "VIRTUAL", "HIBRIDO", "ASINCRONICO"], { required_error: "Debes seleccionar una modalidad" }),
   teacher_fullname: z.string()
     .regex(/^[\p{L}\s]+$/u, "Solo debe contener letras y espacios")
     .min(2, "El nombre es obligatorio"),
@@ -42,7 +42,7 @@ export const defaultEditionFormValues: Partial<EditionFormValues> = {
   edition_code: "",
   start_date: undefined,
   end_date: undefined,
-  modality_id: "",
+  modality: undefined,
   teacher_fullname: "",
   meet_link: "",
   edition_status: "SCHEDULED",
