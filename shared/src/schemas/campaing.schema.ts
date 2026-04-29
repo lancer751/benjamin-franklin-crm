@@ -26,7 +26,7 @@ export const campaingSchema = z.object({
       },
     ),
   status: z.enum(["ACTIVE", "INACTIVE", "PAUSED"]),
-  edition_id: z.uuid().length(36),
+  product_id: z.uuid().length(36),
   start_date: z.coerce.date(),
   end_date: z.coerce.date().optional(),
   platform: z.enum(["FACEBOOK", "INSTAGRAM", "TIKTOK", "WEBSITE"]),

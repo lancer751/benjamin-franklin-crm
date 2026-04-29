@@ -20,7 +20,11 @@ export const orderRoutes = new Hono<ContextWithPrisma>()
           },
         },
         lead: true,
-        seller: true,
+        seller: {
+          include: {
+            user: true
+          }
+        },
       },
       orderBy: {
         created_at: "desc",
@@ -48,7 +52,7 @@ export const orderRoutes = new Hono<ContextWithPrisma>()
           },
         },
         lead: true,
-        seller: true,
+        seller: {include: {user: true}},
         paymentPlans: {
           include: {
             installments: true,

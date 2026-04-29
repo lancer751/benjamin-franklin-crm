@@ -62,7 +62,7 @@ export const CreateProductSchema = ProductSchema.omit({
   discount_price: decimalString.optional().nullable(),
   discount_expires_at: z.coerce.date().optional().nullable(),
   prices: z.array(ProductPriceSchema.omit({ id: true, product_id: true })).refine(
-    (prices) => prices.length > 0 && prices.length >= 3,
+    (prices) => prices.length > 0 && prices.length <= 2,
     { message: "You can only provide between 1 and 2 product prices" }
   ),
 });
