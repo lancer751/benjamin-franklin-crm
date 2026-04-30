@@ -43,7 +43,7 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
         benefits: true,
         editions: {
           include: {
-            campaing: true,
+            ownedProduct: true,
           },
         },
       },
@@ -157,7 +157,6 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
             code: true,
           },
         },
-        campaing: true,
         schedules: true,
       },
       orderBy: {
@@ -181,7 +180,6 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
       where: { id },
       include: {
         course: true,
-        campaing: true,
         schedules: {
           include: {
             slots: true,
@@ -211,7 +209,6 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
       data: editionData,
       include: {
         course: true,
-        campaing: true,
       },
     });
 
@@ -242,7 +239,6 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
       data: editionData,
       include: {
         course: true,
-        campaing: true,
       },
     });
 
@@ -262,7 +258,6 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
     const existingEdition = await c.get("prisma").edition.findUnique({
       where: { id },
       include: {
-        campaing: true,
         schedules: true,
       },
     });
@@ -271,12 +266,13 @@ export const courseRoutes = new Hono<ContextWithPrisma>()
       throw new HTTPException(404, { message: "Course edition not found" });
     }
 
+    // this must be in products
     // Prevent deletion if edition has campaign or schedules
-    if (existingEdition.campaing || existingEdition.schedules.length > 0) {
-      throw new HTTPException(400, {
-        message: "Cannot delete edition that has associated campaigns or schedules",
-      });
-    }
+    // if (existingEdition.campaing || existingEdition.schedules.length > 0) {
+    //   throw new HTTPException(400, {
+    //     message: "Cannot delete edition that has associated campaigns or schedules",
+    //   });
+    // }
 
     await c.get("prisma").edition.delete({ where: { id } });
 

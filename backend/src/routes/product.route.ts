@@ -10,12 +10,18 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import withPrisma from "@/lib/prisma";
-import z from "zod";
+import {z} from "zod";
 
 export const productRoutes = new Hono<ContextWithPrisma>()
   // Get all products with filtering and pagination
   .get("/", withPrisma, async (c) => {
-    const products = c.get("prisma").product.findMany();
+    const products = c.get("prisma").product.findMany({
+      include: {
+        prices: true,
+        edition: { include: {course: true} },
+        campaing: true,
+      }
+    });
     return c.json(products, 200);
   })
   .get("/categories", withPrisma, async (c) => {
@@ -36,7 +42,7 @@ export const productRoutes = new Hono<ContextWithPrisma>()
       where: { id },
       include: {
         prices: true,
-        edition: true,
+        edition: { include: {course: true}},
         category: true,
         orders_details: true,
       },

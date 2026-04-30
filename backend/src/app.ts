@@ -3,13 +3,13 @@ import { logger } from "hono/logger";
 import { leadRoutes } from "@/routes/lead.route";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
-import { userRoutes } from "./routes/user.route";
 import { courseRoutes } from "./routes/course.route";
 import { campaingRoutes } from "./routes/campaing.route";
 import { productRoutes } from "./routes/product.route";
 import { orderRoutes } from "./routes/order.route";
 import { paymentRoutes } from "./routes/payment.route";
 import type {ErrorResponse} from "shared"
+import { apiRoutes } from "./routes/api.route";
 
 export const app = new Hono();
 
@@ -26,15 +26,9 @@ export type SuccessResponse<T = undefined> = T extends undefined
   : { success: true; message: string; data: T };
 
 // TODO: refactor this routing
-export const apiRoutes = app
+export const appRoutes = app
   .basePath("/api")
-  .route("/leads", leadRoutes)
-  .route("/users", userRoutes)
-  .route("/courses", courseRoutes)
-  .route("/campaings", campaingRoutes)
-  .route("/products", productRoutes)
-  .route("/orders", orderRoutes)
-  .route("/payments", paymentRoutes)
+  .route("/", apiRoutes)
 
   // error handling for http errors
 app.onError((err, c) => {

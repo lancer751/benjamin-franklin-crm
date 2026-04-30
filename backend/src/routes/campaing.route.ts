@@ -21,20 +21,9 @@ export const campaingRoutes = new Hono<ContextWithPrisma>()
     const { id } = c.req.param();
     const campaing = await c.get("prisma").campaing.findUnique({
       where: { id },
-      omit: { edition_id: true },
+      omit: { product_id: true },
       include: {
-        edition: {
-          select: {
-            id: true,
-            edition_code: true,
-            edition_status: true,
-            modality: true,
-            course: {
-              select: { id: true, name: true },
-            },
-            edition_number: true,
-          },
-        },
+        relatedProduct: true,
         members: true,
       },
     });

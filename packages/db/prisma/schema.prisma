@@ -107,21 +107,58 @@ model Role {
 }
 
 model SellerProfile {
-  id                String   @id @default(uuid()) @db.Char(36)
-  user_id           String   @unique
-  sales_target      Int      @default(0)
+  id                     String  @id @default(uuid()) @db.Char(36)
+  user_id                String  @unique
+  sales_target           Int     @default(0)
   // these fields are filled by the system based on the orders registered and the campaigns assigned to the seller, they are useful for reporting and performance tracking
-  total_sales Int     @default(0)
-  total_orders Int     @default(0)
-  completed_orders Int     @default(0)
-  canceled_orders Int     @default(0)
-  return_rate Decimal @default(0) @db.Decimal(5, 2)
-  response_time_avg Decimal     @default(0) @db.Decimal(10,2) // in seconds
-  user            User              @relation(fields: [user_id], references: [id])
-  campaignMembers CampaignMember[]
-  orders          Order[]           @relation("SELLER_ORDERS")
-  LeadInteraction LeadInteraction[]
-  assignedCampaing       CampaignSeller[]
+  total_sales            Int     @default(0)
+  total_orders           Int     @default(0)
+  completed_orders       Int     @default(0)
+  canceled_orders        Int     @default(0)
+  return_rate            Decimal @default(0) @db.Decimal(5, 2)
+  response_time_avg      Decimal @default(0) @db.Decimal(10, 2) // in seconds
+  assigned_supervisor_id String
+
+  user             User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  campaignMembers  CampaignMember[]
+  orders           Order[]                @relation("SELLER_ORDERS")
+  LeadInteraction  LeadInteraction[]
+  assignedCampaing CampaignSeller[]
+  supervisor       SalesSupervisorProfile @relation(fields: [assigned_supervisor_id], references: [id])
+}
+
+model SalesSupervisorProfile {
+  id      String @id @default(uuid()) @db.Char(36)
+  user_id String @unique
+
+  // team management
+  team_name   String?
+  max_sellers Int     @default(10)
+
+  // permissions / supervision scope
+  can_assign_leads        Boolean @default(true)
+  can_reassign_leads      Boolean @default(true)
+  can_approve_discounts   Boolean @default(true)
+  can_cancel_orders       Boolean @default(true)
+  can_view_all_team_sales Boolean @default(true)
+
+  // approval rules
+  discount_limit_percent Decimal  @default(10) @db.Decimal(5, 2)
+  max_manual_discount    Decimal? @default(0) @db.Decimal(10, 2) // max discount zamount that the supervisor can apply manually without needing approval from a higher role
+
+  // performance metrics (system-calculated)
+  supervised_sellers     Int     @default(0) // how many sellers belong to this supervisor
+  active_sellers         Int     @default(0) // how many of those sellers are currently working
+  total_team_sales       Int     @default(0)
+  total_team_orders      Int     @default(0)
+  completed_team_orders  Int     @default(0)
+  cancelled_team_orders  Int     @default(0)
+  team_conversion_rate   Decimal @default(0) @db.Decimal(5, 2)
+  avg_team_response_time Decimal @default(0) @db.Decimal(10, 2) // in seconds
+
+  // team management
+  user            User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  assignedSellers SellerProfile[]
 }
 
 model CampaignSeller {
@@ -142,24 +179,29 @@ model MarketingProfile {
   id      String @id @default(uuid()) @db.Char(36)
   user_id String @unique
 
-  user User @relation(fields: [user_id], references: [id])
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id          String            @id @default(uuid()) @db.Char(36)
-  first_name  String
-  middle_name String
-  last_name   String
-  email       String?           @unique
-  cellphone   String?           @db.Char(9)
-  role_id     String
-  is_active   Boolean           @default(true)
-  password    String
-  created_at  DateTime          @default(now())
-  updated_at  DateTime          @updatedAt
-  role        Role              @relation(fields: [role_id], references: [id])
-  marketing   MarketingProfile?
-  seller      SellerProfile?
+  id                  String    @id @default(uuid()) @db.Char(36)
+  first_name          String
+  middle_name         String
+  last_name           String
+  email               String?   @unique
+  corporate_email     String?   @unique
+  cellphone           String?   @db.Char(9)
+  corporate_cellphone String?   @db.Char(9)
+  role_id             String
+  is_active           Boolean   @default(true)
+  password            String
+  birth_date          DateTime?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  role            Role                    @relation(fields: [role_id], references: [id])
+  marketing       MarketingProfile?
+  seller          SellerProfile?
+  salesSupervisor SalesSupervisorProfile?
 }
 
 enum PhoneType {
@@ -278,27 +320,27 @@ enum CourseType {
 }
 
 model CourseBenefit {
-  id String @id @default(uuid()) @db.Char(36)
-  course_id String
+  id          String  @id @default(uuid()) @db.Char(36)
+  course_id   String
   description String
-  image_url String?
+  image_url   String?
 
   course Course @relation(fields: [course_id], references: [id])
 }
 
 model Course {
-  id          String    @id @default(uuid()) @db.Char(36)
-  type CourseType
-  name        String
-  description String?
+  id             String     @id @default(uuid()) @db.Char(36)
+  type           CourseType
+  name           String
+  description    String?
   classes_number Int
-  image_url   String?
-  code        String    @db.Char(7)
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
-  
-  editions    Edition[]
-  benefits    CourseBenefit[]
+  image_url      String?
+  code           String     @db.Char(7)
+  created_at     DateTime   @default(now())
+  updated_at     DateTime   @updatedAt
+
+  editions Edition[]
+  benefits CourseBenefit[]
 }
 
 model Campaing {
@@ -313,12 +355,12 @@ model Campaing {
   is_organic     Boolean
   created_at     DateTime         @default(now())
   updated_at     DateTime         @updatedAt
-  edition_id     String           @unique
+  product_id     String           @unique
 
-  members CampaignMember[]
-  leads   Lead[]           @relation("PrimaryCampaign")
-  edition Edition          @relation(fields: [edition_id], references: [id])
-  sellers CampaignSeller[]
+  members        CampaignMember[]
+  leads          Lead[]           @relation("PrimaryCampaign")
+  relatedProduct Product          @relation(fields: [product_id], references: [id])
+  sellers        CampaignSeller[]
 }
 
 enum WeekDays {
@@ -377,62 +419,62 @@ enum Modality {
 }
 
 model Edition {
-  id             String   @id @default(uuid()) @db.Char(36)
-  course_id      String
-  edition_number Int
-  start_date     DateTime @db.Date
-  hours_amount Int
-  classes_number Int // you cand define them or take them from the course table
-  duration_value          Int 
-  duration_unit DurationUnit
-  end_date         DateTime      @db.Date
-  modality Modality
-  moodle_course_id Int?          @unique
-  teacher_fullname String
-  meet_link        String?  // optional: PACKED modalities do not have one
+  id                  String        @id @default(uuid()) @db.Char(36)
+  course_id           String
+  edition_number      Int
+  start_date          DateTime      @db.Date
+  hours_amount        Int
+  classes_number      Int // you cand define them or take them from the course table
+  duration_value      Int
+  duration_unit       DurationUnit
+  end_date            DateTime      @db.Date
+  modality            Modality
+  moodle_course_id    Int?          @unique
+  teacher_fullname    String
+  meet_link           String? // optional: PACKED modalities do not have one
   whatsapp_group_link String? // optional: PACKED modalities do not have one
-  edition_status   EditionStatus @default(DRAFT)
-  edition_code     String        @unique @db.Char(13) //generated based on the course-code + year + ednumber
+  edition_status      EditionStatus @default(DRAFT)
+  edition_code        String        @unique @db.Char(13) //generated based on the course-code + year + ednumber
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  course     Course   @relation(fields: [course_id], references: [id])
-  campaing         Campaing?
-  schedules EditionSchedule[]
+  course       Course            @relation(fields: [course_id], references: [id])
+  schedules    EditionSchedule[]
   ownedProduct Product?
 }
 
 model Category {
-  id   String @id @default(uuid()) @db.Char(36)
-  name String @unique
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  products Product[]
+  id         String    @id @default(uuid()) @db.Char(36)
+  name       String    @unique
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  products   Product[]
 }
 
 model Product {
-  id                  String      @id @default(uuid()) @db.Char(36)
-  name                String // you can write a new name or define it from the course and edition.
-  slug                String?
-  description         String?
-  image_url String? // optional, you can take it from the course or edition or write a new one
-  short_description   String?
-  presale_price       Decimal?     @db.Decimal(10, 2)
-  edition_id String @unique
-  category_id            String
+  id                      String      @id @default(uuid()) @db.Char(36)
+  name                    String // you can write a new name or define it from the course and edition.
+  slug                    String?
+  description             String?
+  image_url               String? // optional, you can take it from the course or edition or write a new one
+  short_description       String?
+  presale_price           Decimal?    @db.Decimal(10, 2)
+  edition_id              String      @unique
+  category_id             String
   installments_max_number Int
   installments_min_number Int
-  discount_price      Decimal?    @default(0) @db.Decimal(10, 2)
-  discount_expires_at DateTime?
-  sales_status        SalesStatus @default(DRAFT)
-  created_at          DateTime    @default(now())
-  updated_at          DateTime    @updatedAt
+  discount_price          Decimal?    @default(0) @db.Decimal(10, 2)
+  discount_expires_at     DateTime?
+  sales_status            SalesStatus @default(DRAFT)
+  created_at              DateTime    @default(now())
+  updated_at              DateTime    @updatedAt
 
   orders_details OrderDetail[]
-  edition       Edition       @relation(fields: [edition_id], references: [id])
+  edition        Edition        @relation(fields: [edition_id], references: [id])
   prices         ProductPrice[]
-  category       Category      @relation(fields: [category_id], references: [id])
+  category       Category       @relation(fields: [category_id], references: [id])
+  campaing       Campaing?
 }
 
 enum AttendanceMode {
@@ -440,13 +482,14 @@ enum AttendanceMode {
   PRESENCIAL
   HEREDADO
 }
+
 model ProductPrice {
   id                String         @id @default(uuid()) @db.Char(36)
   product_id        String
   attendance_mode   AttendanceMode // select between virtual or presencial when the edition has a HIBRID modalitity in frontend if not take the attendance mode from the edition modality and set it to the price
   cash_price        Decimal        @db.Decimal(10, 2)
   installment_price Decimal        @db.Decimal(10, 2)
-  enrollment_fee Decimal @db.Decimal(10, 2) // amount to pay if the lead wants to enroll to an edition and pay later the full price
+  enrollment_fee    Decimal        @db.Decimal(10, 2) // amount to pay if the lead wants to enroll to an edition and pay later the full price
 
   product Product @relation(fields: [product_id], references: [id])
 
@@ -454,14 +497,14 @@ model ProductPrice {
 }
 
 model Order {
-  id           String      @id @default(uuid()) @db.Char(36)
+  id           String  @id @default(uuid()) @db.Char(36)
   lead_id      String
   generated_by String? // seller that created the order, optional because it can be generated by the system when a lead enrolls to an edition from the website
-  sub_total    Decimal     @db.Decimal(10, 2)
-  total_amount Decimal     @db.Decimal(10, 2)
+  sub_total    Decimal @db.Decimal(10, 2)
+  total_amount Decimal @db.Decimal(10, 2)
   // be carefull with those fields, they can be easily desynchronized in the frontend, therefore the backend should check these imputs out before creating the order
 
-  discount     Decimal?     @default(0) @db.Decimal(10, 2) // optional because sellers needs approval to apply discounts
+  discount     Decimal?    @default(0) @db.Decimal(10, 2) // optional because sellers needs approval to apply discounts
   order_status OrderStatus @default(PENDING) // the seller doesn't have to update this field, it will be updated by the system based on the payments registered and the payment plan if it applies
   order_code   String      @unique @db.Char(7) // generated randomly by the frontend but should be checked in the backend to avoid duplicates
 
@@ -553,7 +596,7 @@ model ScheduledPayment {
   due_date        DateTime
   due_amount      Decimal           @db.Decimal(10, 2)
   payment_plan_id String
-  number          Int               
+  number          Int
   status          InstallmentStatus @default(PENDING)
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt

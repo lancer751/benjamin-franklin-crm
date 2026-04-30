@@ -1,0 +1,5 @@
+export * from "./overall/users.schema"
+export * from "./roles/roles.schema"
+export * from "./marketing/marketers.schema"
+export * from "./sellers/sellers.schema"
+export * from "./sales_supervisor/salesSupervisor.schema"
