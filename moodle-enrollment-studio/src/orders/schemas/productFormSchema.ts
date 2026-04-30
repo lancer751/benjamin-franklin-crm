@@ -15,10 +15,12 @@ export const productFormSchema = z.object({
   slug: z.string().min(1, "El slug es requerido"),
   short_description: z.string().optional(),
   description: z.string().optional(),
+  presale_price: z.string().regex(/^\d+(\.\d{1,2})?$/, "Debe ser un decimal válido").optional().or(z.literal("")),
   installments_min_number: z.number().min(1, "El mínimo de cuotas es 1"),
   installments_max_number: z.number().min(1, "El máximo de cuotas es requerido"),
   discount_price: z.string().regex(/^\d+(\.\d{1,2})?$/, "Debe ser un decimal válido").optional().or(z.literal("")),
   discount_expires_at: z.string().optional(),
+  image_url: z.string().optional().default(""),
   prices: z.array(priceSchema).min(1, "Se requiere al menos 1 precio configurado"),
 }).refine(data => data.installments_max_number >= data.installments_min_number, {
   message: "El máximo de cuotas no puede ser menor al mínimo",

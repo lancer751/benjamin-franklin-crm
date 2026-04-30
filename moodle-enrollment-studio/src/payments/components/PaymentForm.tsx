@@ -42,7 +42,7 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const queryClient = useQueryClient();
 
   const { data: ordersRes } = useQuery({
@@ -82,8 +82,8 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
   const filteredOrders = useMemo(() => {
     if (!searchQuery) return enrichedOrders;
     const q = searchQuery.toLowerCase();
-    return enrichedOrders.filter((o: any) => 
-      o.order_code.toLowerCase().includes(q) || 
+    return enrichedOrders.filter((o: any) =>
+      o.order_code.toLowerCase().includes(q) ||
       o.client.toLowerCase().includes(q)
     );
   }, [searchQuery, enrichedOrders]);
@@ -121,10 +121,10 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
     if (valid.includes(f.type) && f.size <= 5 * 1024 * 1024) setFile(f);
   };
 
-  const onDrop = (e: DragEvent) => { 
-    e.preventDefault(); 
-    setIsDragging(false); 
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); 
+  const onDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
   };
 
   // Mutación
@@ -215,7 +215,7 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
               )}
             </div>
             {errors.clienteOrden && <p className="text-xs text-destructive mt-1">{errors.clienteOrden.message}</p>}
-            
+
             {searchOpen && (
               <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-lg bg-card border border-border shadow-lg overflow-hidden">
                 <div className="p-2 border-b border-border">
@@ -293,11 +293,10 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
             <button
               type="button"
               onClick={() => setValue("tipoPago", "FULL", { shouldValidate: true })}
-              className={`py-4 rounded-lg text-left px-4 transition-all ${
-                tipoPagoWatch === "FULL"
+              className={`py-4 rounded-lg text-left px-4 transition-all ${tipoPagoWatch === "FULL"
                   ? "border-2 border-primary bg-primary/5"
                   : "border-2 border-transparent bg-muted"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${tipoPagoWatch === "FULL" ? "border-primary" : "border-muted-foreground"}`}>
@@ -310,11 +309,10 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
             <button
               type="button"
               onClick={() => setValue("tipoPago", "INSTALLMENTS", { shouldValidate: true })}
-              className={`py-4 rounded-lg text-left px-4 transition-all ${
-                tipoPagoWatch === "INSTALLMENTS"
+              className={`py-4 rounded-lg text-left px-4 transition-all ${tipoPagoWatch === "INSTALLMENTS"
                   ? "border-2 border-primary bg-primary/5"
                   : "border-2 border-transparent bg-muted"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${tipoPagoWatch === "INSTALLMENTS" ? "border-primary" : "border-muted-foreground"}`}>
@@ -433,9 +431,8 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={onDrop}
-              className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-8 cursor-pointer transition-colors ${
-                isDragging ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-              }`}
+              className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-8 cursor-pointer transition-colors ${isDragging ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                }`}
             >
               <Upload size={24} className="text-muted-foreground" />
               <p className="text-sm text-foreground font-medium">Haz clic o arrastra el comprobante de pago (Voucher)</p>

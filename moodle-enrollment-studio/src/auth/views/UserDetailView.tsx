@@ -146,7 +146,7 @@ export default function UserDetailView() {
                       <span className="text-sm font-medium">Meta de Ventas</span>
                     </div>
                     <span className="text-2xl font-bold text-foreground">
-                      S/ {Number(seller.sales_target || 0).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                      {seller.sales_target || 0}
                     </span>
                   </div>
 
@@ -157,7 +157,7 @@ export default function UserDetailView() {
                       <span className="text-sm font-medium">Ventas Totales</span>
                     </div>
                     <span className="text-2xl font-bold text-emerald-700">
-                      S/ {Number(seller.total_sales || 0).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                      {seller.total_sales || 0}
                     </span>
                   </div>
 
@@ -198,7 +198,7 @@ export default function UserDetailView() {
                   <div className="flex flex-col p-4 rounded-xl border border-border/50 bg-card">
                     <div className="flex items-center gap-2 text-muted-foreground mb-2">
                       <Percent size={16} className="text-orange-500" />
-                      <span className="text-sm font-medium">Tasa de Devolución</span>
+                      <span className="text-sm font-medium">Tasa de Conversión</span>
                     </div>
                     <span className="text-2xl font-bold text-foreground">
                       {seller.return_rate || "0"}%

@@ -1,8 +1,4 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, BookOpen, Calendar as CalendarIcon, MapPin, Plus, Edit, MoreVertical, Eye, Trash, Video } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCourseById, deleteCourseEdition } from "../services/courseService";
+import { ArrowLeft, BookOpen, Calendar as CalendarIcon, MapPin, Plus, Edit, MoreVertical, Eye, Trash } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { Badge } from "@/core/components/ui/badge";
 import { Card, CardContent } from "@/core/components/ui/card";
@@ -28,64 +24,18 @@ import {
 } from "@/core/components/ui/alert-dialog";
 import EditionFormModal from "../components/EditionFormModal";
 import EditionDetailModal from "../components/EditionDetailModal";
-import { toast } from "sonner";
-import { addMinutes } from "date-fns";
+import { useCourseDetail } from "../hooks/useCourseDetail";
 
 export default function CourseDetailView() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  
-  // Modals state
-  const [showEditionModal, setShowEditionModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-  
-  const [selectedEditionId, setSelectedEditionId] = useState<string | null>(null);
-  const [editionIdToEdit, setEditionIdToEdit] = useState<string | null>(null);
-
-  const { data: response, isLoading, isError } = useQuery({
-    queryKey: ["course", id],
-    queryFn: () => getCourseById(id as string),
-    enabled: !!id,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteCourseEdition,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["course", id] });
-      setShowDeleteAlert(false);
-      setSelectedEditionId(null);
-      toast.success("Edición eliminada exitosamente");
-    },
-    onError: () => {
-      toast.error("Ocurrió un error al intentar eliminar la edición.");
-    }
-  });
-
-  const course = response?.success ? response.data : null;
-
-  const goBack = () => navigate("/admin/cursos");
-
-  const openDetail = (editionId: string) => {
-    setSelectedEditionId(editionId);
-    setShowDetailModal(true);
-  };
-
-  const openDelete = (editionId: string) => {
-    setSelectedEditionId(editionId);
-    setShowDeleteAlert(true);
-  };
-  
-  const openEditEdition = (editionId: string) => {
-    setEditionIdToEdit(editionId);
-    setShowEditionModal(true);
-  };
-
-  const adjustDateTz = (dateStr: string) => {
-    const rawDate = new Date(dateStr);
-    return addMinutes(rawDate, rawDate.getTimezoneOffset());
-  };
+  const {
+    course,
+    isLoading,
+    isError,
+    modals,
+    selection,
+    actions,
+    deleteIsPending,
+  } = useCourseDetail();
 
   if (isLoading) {
     return (
@@ -106,7 +56,7 @@ export default function CourseDetailView() {
         <p className="text-muted-foreground max-w-[400px]">
           Ha ocurrido un error al intentar cargar el curso, o quizás fue eliminado permanentemente del sistema.
         </p>
-        <Button onClick={goBack} variant="outline" className="mt-4 border-border/80">
+        <Button onClick={actions.goBack} variant="outline" className="mt-4 border-border/80">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Volver al Catálogo
         </Button>
@@ -119,7 +69,7 @@ export default function CourseDetailView() {
       {/* Botón de regreso */}
       <div>
         <Button 
-          onClick={goBack} 
+          onClick={actions.goBack} 
           variant="ghost" 
           className="text-muted-foreground hover:text-foreground hover:bg-muted/50 pl-2 pr-4 transition-colors"
         >
@@ -177,10 +127,7 @@ export default function CourseDetailView() {
           </div>
           <Button 
             className="flex items-center gap-2 shadow-sm rounded-lg shrink-0"
-            onClick={() => {
-              setEditionIdToEdit(null);
-              setShowEditionModal(true);
-            }}
+            onClick={() => actions.openEditEdition(null as any)}
           >
             <Plus size={16} />
             Programar Nueva Edición
@@ -201,10 +148,7 @@ export default function CourseDetailView() {
               </p>
               <Button 
                 className="gap-2 rounded-full px-6"
-                onClick={() => {
-                  setEditionIdToEdit(null);
-                  setShowEditionModal(true);
-                }}
+                onClick={() => actions.openEditEdition(null as any)}
               >
                 <Plus size={16} />
                 Programar la Primera Edición
@@ -234,7 +178,7 @@ export default function CourseDetailView() {
                       <div className="flex items-center gap-2 whitespace-nowrap text-sm">
                         <CalendarIcon size={14} className="text-muted-foreground/60" />
                         <span>
-                          {edition.start_date ? adjustDateTz(edition.start_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "TBD"}
+                          {edition.start_date ? actions.adjustDateTz(edition.start_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "TBD"}
                         </span>
                       </div>
                     </TableCell>
@@ -242,7 +186,7 @@ export default function CourseDetailView() {
                       <div className="flex items-center gap-2 whitespace-nowrap text-sm">
                         <CalendarIcon size={14} className="text-muted-foreground/60" />
                         <span>
-                          {edition.end_date ? adjustDateTz(edition.end_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "TBD"}
+                          {edition.end_date ? actions.adjustDateTz(edition.end_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "TBD"}
                         </span>
                       </div>
                     </TableCell>
@@ -274,16 +218,16 @@ export default function CourseDetailView() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openDetail(edition.id)} className="gap-2 cursor-pointer">
+                          <DropdownMenuItem onClick={() => actions.openDetail(edition.id)} className="gap-2 cursor-pointer">
                             <Eye size={15} className="text-muted-foreground" />
                             <span>Ver Detalle</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEditEdition(edition.id)} className="gap-2 cursor-pointer">
+                          <DropdownMenuItem onClick={() => actions.openEditEdition(edition.id)} className="gap-2 cursor-pointer">
                             <Edit size={15} className="text-muted-foreground" />
                             <span>Editar Edición</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => openDelete(edition.id)} 
+                            onClick={() => actions.openDelete(edition.id)} 
                             className="gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
                           >
                             <Trash size={15} />
@@ -301,26 +245,21 @@ export default function CourseDetailView() {
       </div>
 
       <EditionFormModal 
-        open={showEditionModal} 
-        onClose={() => {
-          setShowEditionModal(false);
-          setTimeout(() => setEditionIdToEdit(null), 300);
-        }}
+        open={modals.showEditionModal} 
+        onClose={actions.closeEditionModal}
         courseId={course.id} 
         courseCode={course.code}
-        editionId={editionIdToEdit}
+        editionId={selection.editionIdToEdit}
+        courseClassesNumber={course.classes_number}
       />
       
       <EditionDetailModal 
-        open={showDetailModal}
-        onClose={() => {
-          setShowDetailModal(false);
-          setSelectedEditionId(null);
-        }}
-        editionId={selectedEditionId}
+        open={modals.showDetailModal}
+        onClose={actions.closeDetailModal}
+        editionId={selection.selectedEditionId}
       />
 
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+      <AlertDialog open={modals.showDeleteAlert} onOpenChange={modals.setShowDeleteAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro de eliminar esta edición?</AlertDialogTitle>
@@ -329,13 +268,13 @@ export default function CourseDetailView() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteIsPending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => selectedEditionId && deleteMutation.mutate(selectedEditionId)}
-              disabled={deleteMutation.isPending}
+              onClick={actions.confirmDelete}
+              disabled={deleteIsPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? "Eliminando..." : "Sí, eliminar edición"}
+              {deleteIsPending ? "Eliminando..." : "Sí, eliminar edición"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

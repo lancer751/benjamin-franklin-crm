@@ -17,15 +17,16 @@ interface EditionFormModalProps {
   courseId?: string | null;
   courseCode?: string | null;
   editionId?: string | null;
+  courseClassesNumber?: number | null;
 }
 
-export default function EditionFormModal({ open, onClose, courseId, courseCode, editionId }: EditionFormModalProps) {
+export default function EditionFormModal({ open, onClose, courseId, courseCode, editionId, courseClassesNumber }: EditionFormModalProps) {
   const {
     form, mode, courses,
     isLoadingEdition, isErrorEdition, isLoadingCourses,
     startMonth, setStartMonth, endMonth, setEndMonth,
     isPending, onSubmit
-  } = useEditionFormModal(open, onClose, courseId, courseCode, editionId);
+  } = useEditionFormModal(open, onClose, courseId, courseCode, editionId, courseClassesNumber);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

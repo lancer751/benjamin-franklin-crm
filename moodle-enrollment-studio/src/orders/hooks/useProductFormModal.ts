@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCourseEditions } from "@/academic/services/courseService";
 import { getCategories } from "../services/categoryService";
 import { createProduct, updateProduct } from "../services/productService";
+import { uploadImageToCloudinary } from "@/academic/services/uploadService";
 import { toast } from "sonner";
 import { ProductFormValues, productFormSchema } from "../schemas/productFormSchema";
 import { z } from "zod";
@@ -34,10 +35,12 @@ const emptyData: ProductFormValues = {
   slug: "",
   short_description: "",
   description: "",
+  presale_price: "",
   installments_min_number: 1,
   installments_max_number: 1,
   discount_price: "",
   discount_expires_at: "",
+  image_url: "",
   prices: [], // Will be filled dynamically
 };
 
@@ -45,17 +48,20 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   const isEdit = !!initialData;
   const [form, setForm] = useState<ProductFormValues>(emptyData);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const [hasCustomImage, setHasCustomImage] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (initialData && open) {
-
       setForm({
         ...emptyData,
         ...initialData,
         slug: initialData.slug || generateSlug(initialData.name || ""),
+        presale_price: initialData.presale_price != null ? String(initialData.presale_price) : "",
         discount_price: initialData.discount_price != null ? String(initialData.discount_price) : "",
         discount_expires_at: initialData.discount_expires_at ? new Date(initialData.discount_expires_at).toISOString().split('T')[0] : "",
+        image_url: initialData.image_url || "",
         prices: initialData.prices?.length ? initialData.prices.map((p: any) => ({
           ...p,
           cash_price: String(p.cash_price || "0.00"),
@@ -64,9 +70,11 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         })) : [],
         category_id: initialData.category_id || initialData.category || "",
       });
+      setHasCustomImage(!!initialData.image_url);
       setErrors({});
     } else if (open) {
       setForm(emptyData);
+      setHasCustomImage(false);
       setErrors({});
     }
   }, [initialData, open]);
@@ -86,39 +94,89 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   const editions = editionsRes?.success ? editionsRes.data : [];
   const selectedEdition = editions.find((e: any) => e.id === form.edition_id);
   
-  const rawCategories = Array.isArray(categoriesRes) ? categoriesRes : (categoriesRes as any)?.data || [];
-  const categories = rawCategories;
+  const categories = useMemo(() => {
+    if (!categoriesRes) return [];
+    if (Array.isArray(categoriesRes)) return categoriesRes;
+    if ("data" in categoriesRes && Array.isArray(categoriesRes.data)) {
+      return categoriesRes.data;
+    }
+    return [];
+  }, [categoriesRes]);
 
-  // Dynamic Modality & Auto-fill logic
+  // Dynamic Modality, Name & Image Auto-fill logic
   useEffect(() => {
-    if (!selectedEdition || isEdit) return; // Only auto-fill prices and name on create
+    if (!selectedEdition) return;
 
-    // 1. Auto-generate Name & Slug
-    const courseName = selectedEdition.course?.name || "";
-    const cohort = selectedEdition.edition_code || "";
-    const generatedName = `${courseName} - ${cohort}`.trim();
-    const generatedSlug = generateSlug(generatedName);
+    // 1. Auto-generate Name & Slug (Solo si el nombre está vacío y no estamos en edición)
+    if (!isEdit) {
+      const courseName = selectedEdition.course?.name || "";
+      const cohort = selectedEdition.edition_code || "";
+      const generatedName = `${courseName} - ${cohort}`.trim();
+      const generatedSlug = generateSlug(generatedName);
+      const courseImage = selectedEdition.course?.image_url || "";
 
-    // 2. Determine Modality for Prices
-    let newPrices: ProductFormValues["prices"] = [createEmptyPrice("HEREDADO")];
+      setForm(prev => ({
+        ...prev,
+        name: prev.name || generatedName,
+        slug: prev.slug || generatedSlug,
+        image_url: hasCustomImage ? prev.image_url : (courseImage || prev.image_url),
+      }));
+    }
 
-    setForm(prev => ({
-      ...prev,
-      name: prev.name || generatedName,
-      slug: prev.slug || generatedSlug,
-      prices: newPrices,
-    }));
-  }, [selectedEdition, isEdit]);
+    // 2. Manejo de modalidad y precios (Incluso en edición si cambiamos la edición vinculada)
+    const modalityRaw = (selectedEdition as any).modality;
+    const editionModality = typeof modalityRaw === 'object' ? modalityRaw.name : modalityRaw;
+    
+    setForm(prev => {
+      let newPrices = [...prev.prices];
+      
+      if (editionModality === "HIBRIDO") {
+        // Necesitamos 2 objetos: PRESENCIAL y VIRTUAL
+        const hasPresencial = newPrices.some(p => p.attendance_mode === "PRESENCIAL");
+        const hasVirtual = newPrices.some(p => p.attendance_mode === "VIRTUAL");
+        
+        const presencial = newPrices.find(p => p.attendance_mode === "PRESENCIAL") || createEmptyPrice("PRESENCIAL");
+        const virtual = newPrices.find(p => p.attendance_mode === "VIRTUAL") || createEmptyPrice("VIRTUAL");
+        
+        newPrices = [presencial, virtual];
+      } else if (editionModality === "VIRTUAL" || editionModality === "PRESENCIAL") {
+        // Solo 1 objeto del tipo correspondiente
+        const existing = newPrices.find(p => p.attendance_mode === editionModality) || createEmptyPrice(editionModality);
+        newPrices = [existing];
+      } else {
+        // Default o HEREDADO
+        if (newPrices.length === 0) newPrices = [createEmptyPrice("HEREDADO")];
+      }
+
+      return { ...prev, prices: newPrices };
+    });
+  }, [selectedEdition, isEdit, hasCustomImage]);
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      setIsUploading(true);
+      const url = await uploadImageToCloudinary(file);
+      setFieldValue("image_url", url);
+      setHasCustomImage(true); // Marcamos que el usuario subió una imagen propia
+      toast.success("Imagen subida correctamente");
+    } catch (error) {
+      toast.error("Error al subir la imagen");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: async (payload: ProductFormValues) => {
-      // Clean JSON for Backend (Keep prices as strings to prevent decimal precision loss, numbers for installments)
+      // Clean JSON for Backend (Strings for prices as required by ProductPriceSchema)
       const parsedPayload = {
         ...payload,
         installments_min_number: Number(payload.installments_min_number),
         installments_max_number: Number(payload.installments_max_number),
-        discount_price: payload.discount_price ? String(payload.discount_price) : null,
+        presale_price: payload.presale_price && payload.presale_price !== "" ? String(payload.presale_price) : null,
+        discount_price: payload.discount_price && payload.discount_price !== "" ? String(payload.discount_price) : null,
         discount_expires_at: payload.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
+        image_url: payload.image_url || "",
         prices: payload.prices.map(p => ({
           attendance_mode: p.attendance_mode,
           cash_price: String(p.cash_price),
@@ -128,9 +186,9 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
       };
 
       if (isEdit && initialData?.id) {
-        return await updateProduct(initialData.id, parsedPayload);
+        return await updateProduct(initialData.id, parsedPayload as any);
       } else {
-        return await createProduct(parsedPayload);
+        return await createProduct(parsedPayload as any);
       }
     },
     onSuccess: () => {
@@ -224,6 +282,8 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     categories,
     isLoadingCategories,
     selectedEdition,
+    isUploading,
+    handleImageUpload,
     isPending: mutation.isPending,
     isEdit
   };

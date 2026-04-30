@@ -55,7 +55,7 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
   // get lead interactions without specifying a campaing
   // TODO: add filtering and sortering and pagination
   .get(
-    `/${UUID_ROUTE}/interactions`,
+    `/:id/interactions`,
     withPrisma,
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {

@@ -8,7 +8,7 @@ import { getCourses, createCourseEdition, getCourseEditionById, updateCourseEdit
 import { editionFormSchema, type EditionFormValues, defaultEditionFormValues } from "../schemas/editionFormSchema";
 
 
-export const useEditionFormModal = (open: boolean, onClose: () => void, courseId?: string | null, courseCode?: string | null, editionId?: string | null) => {
+export const useEditionFormModal = (open: boolean, onClose: () => void, courseId?: string | null, courseCode?: string | null, editionId?: string | null, courseClassesNumber?: number | null) => {
   const queryClient = useQueryClient();
   const mode = editionId ? "edit" : "create";
 
@@ -38,7 +38,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
   const { data: coursesRes, isLoading: isLoadingCourses } = useQuery({
     queryKey: ["courses"],
     queryFn: getCourses,
-    enabled: !courseId && mode !== "edit" && open,
+    enabled: mode !== "edit" && open,
   });
 
   const courses = useMemo(() => coursesRes?.success ? coursesRes.data : [], [coursesRes]);
@@ -54,6 +54,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
       form.reset({
         course_id: courseId || "",
         edition_status: "SCHEDULED",
+        classes_number: courseClassesNumber || ("" as unknown as number),
       });
     } else if (editionRes) {
       const data = editionRes?.success ? editionRes.data : null;
@@ -88,7 +89,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
         });
       }
     }
-  }, [open, editionRes, courseId, mode, form]);
+  }, [open, editionRes, courseId, mode, form, courseClassesNumber]);
 
   // 🧠 2. AUTO-GENERADOR DE CÓDIGO EN TIEMPO REAL
   const watchCourseId = form.watch("course_id");
@@ -112,13 +113,51 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
         
         const generatedCode = `${paddedCourse}${edStr}${yearStr}`;
         
-        // Comprobamos si el código generado es diferente al actual para no interrumpir al usuario si está escribiendo manualmente
         if (form.getValues("edition_code") !== generatedCode) {
           form.setValue("edition_code", generatedCode, { shouldValidate: true, shouldDirty: true });
         }
       }
     }
   }, [watchCourseId, watchEditionNumber, watchStartDate, courseId, courseCode, courses, mode, isLoadingEdition, form]);
+
+  // 3. AUTO-RELLENAR NÚMERO DE CLASES SEGÚN EL CURSO SELECCIONADO
+  const [lastCourseId, setLastCourseId] = useState("");
+
+  useEffect(() => {
+    if (mode === "create" && watchCourseId) {
+      let targetClassesNumber: number | null = null;
+      
+      // Caso A: Buscar en la lista de cursos cargados
+      if (courses.length > 0) {
+        const selectedCourse = courses.find((c: any) => c.id === watchCourseId);
+        if (selectedCourse?.classes_number) {
+          targetClassesNumber = selectedCourse.classes_number;
+        }
+      }
+      
+      // Caso B: Lógica de Fallback para vista detalle en OnMount
+      if (!targetClassesNumber && courseClassesNumber && watchCourseId === courseId) {
+        targetClassesNumber = courseClassesNumber;
+      }
+      
+      if (targetClassesNumber) {
+        const currentClassesNumber = form.getValues("classes_number");
+        
+        // Evitar bucles: Solo rellenar si está vacío o si el curso acaba de cambiar
+        if (!currentClassesNumber || watchCourseId !== lastCourseId) {
+          form.setValue("classes_number", targetClassesNumber, { 
+            shouldValidate: true, 
+            shouldDirty: true 
+          });
+        }
+      }
+      
+      // Sincronizar el último courseId analizado
+      if (watchCourseId !== lastCourseId) {
+        setLastCourseId(watchCourseId);
+      }
+    }
+  }, [watchCourseId, courses, mode, courseId, courseClassesNumber, lastCourseId, form]);
 
 
   // 3. Mutaciones y Envío

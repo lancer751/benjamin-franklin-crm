@@ -4,6 +4,7 @@ import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
 import { Label } from "@/core/components/ui/label";
 import { Textarea } from "@/core/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UploadCloud, X, ImagePlus } from "lucide-react";
 import { createCourse, updateCourse } from "../services/courseService";
@@ -24,6 +25,8 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [type, setType] = useState("COURSE");
+  const [classesNumber, setClassesNumber] = useState<number | "">("");
   
   // Estados para la carga de imágenes
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -36,6 +39,8 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
       setCode(initialData.code || "");
       setName(initialData.name || "");
       setDescription(initialData.description || "");
+      setType(initialData.type || "COURSE");
+      setClassesNumber(initialData.classes_number || "");
       
       if (initialData.image_url) {
         setPreviewUrl(initialData.image_url);
@@ -48,6 +53,8 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
       setCode("");
       setName("");
       setDescription("");
+      setType("COURSE");
+      setClassesNumber("");
       setPreviewUrl(null);
       setImageFile(null);
     }
@@ -105,6 +112,8 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
       const payload = {
         code: code.toUpperCase(), // Forzamos mayúsculas por convención
         name,
+        type,
+        classes_number: Number(classesNumber) || 0,
         description,
         image_url: finalImageUrl 
       };
@@ -150,11 +159,12 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
                   id="code" 
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  placeholder="Ej: PYTHON" 
+                  placeholder="Ej: PYTHONC" 
                   required 
+                  minLength={7}
                   maxLength={7} 
                 />
-                <p className="text-[10px] text-muted-foreground">Máximo 7 caracteres (según backend).</p>
+                <p className="text-[10px] text-muted-foreground">Exactamente 7 caracteres requeridos.</p>
               </div>
 
               <div className="grid gap-2">
@@ -167,6 +177,38 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ej: Python para Análisis de Datos" 
                   required 
+                  minLength={8}
+                />
+                <p className="text-[10px] text-muted-foreground">Mínimo 8 caracteres.</p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label className="text-sm font-medium">
+                  Tipo de Registro <span className="text-destructive">*</span>
+                </Label>
+                <Select value={type} onValueChange={setType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COURSE">Curso</SelectItem>
+                    <SelectItem value="PROGRAM">Programa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="classes_number" className="text-sm font-medium">
+                  Número de Clases <span className="text-destructive">*</span>
+                </Label>
+                <Input 
+                  id="classes_number" 
+                  type="number"
+                  value={classesNumber}
+                  onChange={(e) => setClassesNumber(e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder="Ej: 12" 
+                  required 
+                  min={1}
                 />
               </div>
 

@@ -1,57 +1,18 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { getProductById } from "../services/productService";
-import { getCourseEditions } from "@/academic/services/courseService";
-// 🧠 Importaremos el nuevo modal dinámico que creará Antigravity
+import { useNavigate } from "react-router-dom";
+import { useProductDetail } from "../hooks/useProductDetail";
 import DynamicProductModal from "@/orders/components/DynamicProductModal"; 
-import { ArrowLeft, Edit, Loader2, Tag, BookOpen, DollarSign, Calendar } from "lucide-react";
+import ProductStatusBadge from "@/orders/components/ProductStatusBadge";
+import { 
+  ArrowLeft, Edit, Loader2, Tag, BookOpen, DollarSign, 
+  Calendar, Clock, User, Layers, Info, CheckCircle2 
+} from "lucide-react";
 import { Card } from "@/core/components/ui/card";
-import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 
 const ProductDetailView = () => {
-  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
-  // 🧠 NUEVO ESTADO: Maneja qué parte del modal queremos abrir
-  const [modalMode, setModalMode] = useState<'MARKETING' | 'PRICING' | 'LINK' | null>(null);
-
-  const { data: productRes, isLoading, isError } = useQuery({
-    queryKey: ["product", id],
-    queryFn: () => getProductById(id as string),
-    enabled: !!id,
-  });
-
-  const { data: editionsRes } = useQuery({
-    queryKey: ["editions"],
-    queryFn: getCourseEditions,
-  });
-
-  const product = productRes?.success ? productRes.data : null;
-  const editions = editionsRes?.success ? editionsRes.data : [];
-  const modalities: any[] = [];
-  
-  const selectedEdition = editions.find((e: any) => e.id === product?.edition_id);
-  const selectedModality = modalities.find((m: any) => m.id === selectedEdition?.modality_id);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "ON_SALE": return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">ON_SALE</Badge>;
-      case "DRAFT": return <Badge variant="secondary">DRAFT</Badge>;
-      case "PUBLISHED": return <Badge className="bg-blue-100 text-blue-800 border-blue-200">PUBLISHED</Badge>;
-      case "COMPLETED": return <Badge className="bg-purple-100 text-purple-800 border-purple-200">COMPLETED</Badge>;
-      case "CANCELLED": return <Badge variant="destructive">CANCELLED</Badge>;
-      default: return <Badge variant="outline">{status || "UNKNOWN"}</Badge>;
-    }
-  };
-
-  const formatCurrency = (amount: number | null | undefined) => {
-    if (amount == null) return "N/A";
-    return `S/ ${Number(amount).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-  };
+  const { product, isLoading, isError, actions } = useProductDetail();
+  const { modalMode, setModalMode, formatCurrency, formatDate, formatAttendanceMode } = actions;
 
   if (isLoading) {
     return (
@@ -71,173 +32,267 @@ const ProductDetailView = () => {
     );
   }
 
+  const edition = product.edition;
+
   return (
-    <div className="flex flex-col gap-6 w-full fade-in pb-10">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0 text-muted-foreground hover:text-foreground">
-            <ArrowLeft size={20} />
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">Detalle del Producto</h1>
-              {getStatusBadge(product.sales_status)}
+    <div className="flex flex-col gap-8 w-full fade-in pb-20">
+      {/* 1. HERO SECTION & HEADER */}
+      <div className="flex flex-col md:flex-row gap-8 items-start">
+        {/* Banner/Imagen */}
+        <div className="w-full md:w-1/3 lg:w-1/4 shrink-0">
+          <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-slate-100 relative group">
+            {product.image_url ? (
+              <img 
+                src={product.image_url} 
+                alt={product.name} 
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-primary/10 to-primary/5">
+                <BookOpen size={64} strokeWidth={1} className="text-primary/30 mb-4" />
+                <span className="text-sm font-bold text-primary/60 uppercase tracking-widest">{product.name || "Curso"}</span>
+              </div>
+            )}
+            <div className="absolute top-4 left-4">
+              <ProductStatusBadge status={product.sales_status} />
             </div>
-            <p className="text-sm text-muted-foreground mt-1 font-mono">
-              ID: {product.id}
-            </p>
+          </div>
+        </div>
+
+        {/* Info Principal */}
+        <div className="flex-1 space-y-4 pt-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate(-1)} 
+            className="mb-2 -ml-2 text-muted-foreground hover:text-foreground hover:bg-transparent"
+          >
+            <ArrowLeft size={16} className="mr-2" /> Volver al catálogo
+          </Button>
+          
+          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 leading-none">
+            {product.name}
+          </h1>
+          
+          <div className="flex flex-wrap gap-3 items-center">
+            <span className="px-4 py-1.5 rounded-full bg-slate-900 text-white text-xs font-bold uppercase tracking-widest">
+              {product.category?.name || "Sin Categoría"}
+            </span>
+            <span className="text-slate-400 font-mono text-xs">ID: {product.id}</span>
+          </div>
+
+          <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                <DollarSign className="text-emerald-600" size={24} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest">Precio Contado desde</p>
+                <p className="text-2xl font-black text-emerald-950">{formatCurrency(product.prices?.[0]?.cash_price)}</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                <Layers className="text-indigo-600" size={24} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-indigo-800 uppercase tracking-widest">Financiamiento</p>
+                <p className="text-lg font-black text-indigo-950">
+                  {product.installments_min_number} a {product.installments_max_number} Cuotas
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Layout Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Columna Principal - span 2 */}
-        <div className="md:col-span-2 flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* COLUMNA IZQUIERDA (CONTENIDO) */}
+        <div className="lg:col-span-2 space-y-8">
           
-          {/* Card: Contenido de Marketing */}
-          <Card className="p-6 border-border/60 shadow-sm relative">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2 text-foreground font-semibold">
-                <Tag size={18} className="text-primary" />
-                <h3>Contenido de Marketing</h3>
-              </div>
-              {/* 🧠 ABRE EL MODAL EN MODO MARKETING */}
-              <Button variant="ghost" size="sm" onClick={() => setModalMode('MARKETING')} className="text-muted-foreground hover:text-primary">
-                <Edit size={16} className="mr-1.5" /> Editar
+          {/* Card: Información de Marketing */}
+          <Card className="p-8 rounded-[2rem] border-slate-200/60 shadow-xl shadow-slate-200/40 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8">
+              <Button variant="outline" size="sm" onClick={() => setModalMode('MARKETING')} className="rounded-full">
+                <Edit size={14} className="mr-2" /> Editar Contenido
               </Button>
             </div>
             
-            <div className="grid gap-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-muted-foreground block mb-1">Categoría</label>
-                  <p className="text-foreground font-medium uppercase">{product.category || "Sin Categoría"}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground block mb-1">Slug (URL amigable)</label>
-                  <p className="text-foreground font-medium">{product.slug || "No configurado"}</p>
-                </div>
+            <div className="flex items-center gap-3 text-slate-800 font-bold text-lg mb-8">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Tag size={20} className="text-primary" />
               </div>
+              Descripción del Producto
+            </div>
 
+            <div className="space-y-6">
               <div>
-                <label className="text-sm text-muted-foreground block mb-1">Descripción Corta</label>
-                <p className="text-foreground font-medium bg-muted/30 p-3 rounded-lg border border-border/50 text-sm">
-                  {product.short_description || "Sin descripción corta"}
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Resumen Comercial</p>
+                <p className="text-lg text-slate-600 font-medium leading-relaxed italic border-l-4 border-primary/20 pl-6">
+                  "{product.short_description || "Sin descripción corta disponible."}"
                 </p>
               </div>
 
               <div>
-                <label className="text-sm text-muted-foreground block mb-1">Descripción Detallada</label>
-                <div className="text-foreground font-medium bg-muted/30 p-3 rounded-lg border border-border/50 text-sm whitespace-pre-wrap min-h-[100px]">
-                  {product.description || "Sin descripción detallada"}
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Detalle Completo</p>
+                <div className="text-slate-600 leading-relaxed whitespace-pre-wrap bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                  {product.description || "No se ha proporcionado una descripción detallada para este producto."}
                 </div>
               </div>
             </div>
           </Card>
 
-          {/* Card: Vínculo Académico */}
-          <Card className="p-6 border-border/60 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2 text-foreground font-semibold">
-                <BookOpen size={18} className="text-primary" />
-                <h3>Vínculo Académico</h3>
-              </div>
-              {/* 🧠 ABRE EL MODAL EN MODO VÍNCULO */}
-              <Button variant="ghost" size="sm" onClick={() => setModalMode('LINK')} className="text-muted-foreground hover:text-primary">
-                <Edit size={16} className="mr-1.5" /> Cambiar Vínculo
+          {/* Card: Detalles Académicos */}
+          <Card className="p-8 rounded-[2rem] border-slate-200/60 shadow-xl shadow-slate-200/40 relative">
+            <div className="absolute top-0 right-0 p-8">
+              <Button variant="outline" size="sm" onClick={() => setModalMode('LINK')} className="rounded-full">
+                <Edit size={14} className="mr-2" /> Cambiar Vínculo
               </Button>
             </div>
-            
-            {selectedEdition ? (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="text-sm text-muted-foreground block mb-1">Programa Académico</label>
-                  <p className="text-foreground font-medium">{selectedEdition.course?.name || "Sin Nombre"}</p>
-                  <p className="text-sm text-muted-foreground font-mono mt-0.5">{selectedEdition.edition_code}</p>
+
+            <div className="flex items-center gap-3 text-slate-800 font-bold text-lg mb-8">
+              <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                <BookOpen size={20} className="text-orange-600" />
+              </div>
+              Vínculo Académico: {edition?.edition_code}
+            </div>
+
+            {edition ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <User size={14} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Profesor Principal</span>
+                  </div>
+                  <p className="font-bold text-slate-900">{edition.teacher_fullname || "Por asignar"}</p>
                 </div>
-                <div>
-                  <label className="text-sm text-muted-foreground block mb-1">Fecha de Inicio</label>
-                  <p className="text-foreground font-medium">
-                    {selectedEdition.start_date ? format(new Date(selectedEdition.start_date), "dd/MM/yyyy") : "No definida"}
-                  </p>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Clock size={14} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Carga Académica</span>
+                  </div>
+                  <p className="font-bold text-slate-900">{edition.hours_amount || 0} Horas Totales</p>
+                  <p className="text-xs text-slate-500">{edition.classes_number || 0} Clases programadas</p>
                 </div>
-                <div>
-                  <label className="text-sm text-muted-foreground block mb-1">Fecha de Fin</label>
-                  <p className="text-foreground font-medium">
-                    {selectedEdition.end_date ? format(new Date(selectedEdition.end_date), "dd/MM/yyyy") : "No definida"}
-                  </p>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Calendar size={14} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Duración</span>
+                  </div>
+                  <p className="font-bold text-slate-900">{edition.duration_value} {edition.duration_unit || "Sesiones"}</p>
                 </div>
-                <div className="col-span-2">
-                  <label className="text-sm text-muted-foreground block mb-1">Modalidad</label>
-                  <p className="text-foreground font-medium uppercase">{selectedModality?.name || selectedEdition.modality || "No definida"}</p>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 col-span-full grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="text-primary" size={18} />
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Inicia</span>
+                      <span className="font-bold text-slate-700">{formatDate(edition.start_date, "PPP")}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="text-slate-400" size={18} />
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Finaliza</span>
+                      <span className="font-bold text-slate-700">{formatDate(edition.end_date, "PPP")}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-muted/50 p-6 rounded-lg text-center border border-dashed border-border/60">
-                <p className="text-muted-foreground mb-2">Edición no encontrada o eliminada</p>
-                <div className="inline-flex items-center gap-2 font-mono text-sm text-muted-foreground bg-background px-3 py-1.5 rounded border border-border/50">
-                  <BookOpen size={14} />
-                  {product?.edition_id || "No vinculado"}
-                </div>
+              <div className="p-10 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                <p className="text-slate-400 font-medium">Este producto no tiene un vínculo académico activo.</p>
               </div>
             )}
           </Card>
         </div>
 
-        {/* Columna Lateral - span 1 */}
-        <div className="md:col-span-1 flex flex-col gap-6">
-          
-          {/* Card: Precios y Ofertas */}
-          <Card className="p-6 border-border/60 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2 text-foreground font-semibold">
-                <DollarSign size={18} className="text-emerald-500" />
-                <h3>Precios y Ofertas</h3>
+        {/* COLUMNA DERECHA (PRECIOS Y ESTRUCTURA) */}
+        <div className="space-y-8">
+          <Card className="p-8 rounded-[2rem] border-slate-200/60 shadow-xl shadow-slate-200/40 sticky top-6">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3 text-slate-800 font-bold text-lg">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                  <DollarSign size={20} className="text-emerald-600" />
+                </div>
+                Configuración de Precios
               </div>
-              {/* 🧠 ABRE EL MODAL EN MODO PRECIOS */}
-              <Button variant="ghost" size="sm" onClick={() => setModalMode('PRICING')} className="text-muted-foreground hover:text-primary">
+              <Button variant="ghost" size="icon" onClick={() => setModalMode('PRICING')} className="rounded-full">
                 <Edit size={16} />
               </Button>
             </div>
 
-            <div className="flex flex-col gap-5">
-              <div className="flex justify-between items-center py-2 border-b border-border/50 border-dashed">
-                <span className="text-sm text-muted-foreground">Precio Base (Efectivo)</span>
-                <span className="text-foreground font-bold">{formatCurrency(product.cash_price)}</span>
-              </div>
-              
-              <div className="flex justify-between items-center py-2 border-b border-border/50 border-dashed">
-                <span className="text-sm text-muted-foreground">Precio en Cuotas</span>
-                <span className="text-foreground font-medium">{formatCurrency(product.installment_price)}</span>
-              </div>
-
-              <div className="flex justify-between items-center py-2 border-b border-border/50 border-dashed">
-                <span className="text-sm text-muted-foreground">Precio con Descuento</span>
-                <span className="text-foreground font-medium text-emerald-600">
-                  {product.discount_price ? formatCurrency(product.discount_price) : "Sin descuento"}
-                </span>
-              </div>
-
-              {product.discount_expires_at && (
-                <div className="bg-amber-50/50 border border-amber-200/60 p-3 rounded-lg flex items-start gap-2 mt-2">
-                  <Calendar size={16} className="text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-semibold text-amber-800">Expiración del Descuento</p>
-                    <p className="text-sm text-amber-700 mt-0.5">
-                      {format(new Date(product.discount_expires_at), "dd 'de' MMMM, yyyy", { locale: es })}
-                    </p>
+            <div className="space-y-6">
+              {product.prices && product.prices.length > 0 ? (
+                product.prices.map((p: any, i: number) => (
+                  <div key={i} className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                      <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+                        Modalidad {formatAttendanceMode(p.attendance_mode)}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500 font-medium">Matrícula</span>
+                        <span className="font-bold text-slate-900">{formatCurrency(p.enrollment_fee)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 text-sm font-medium">Contado</span>
+                        <span className="text-xl font-black text-emerald-600">{formatCurrency(p.cash_price)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm pt-2 border-t border-slate-200/60 border-dashed">
+                        <span className="text-slate-500 font-medium">Total en Cuotas</span>
+                        <span className="font-bold text-slate-900">{formatCurrency(p.installment_price)}</span>
+                      </div>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-slate-400 italic text-sm">
+                  No hay configuraciones de precio disponibles.
                 </div>
               )}
+
+              {product.discount_price && (
+                <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Tag size={14} className="text-emerald-600" />
+                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest">Precio Oferta</span>
+                  </div>
+                  <span className="font-black text-emerald-700">{formatCurrency(product.discount_price)}</span>
+                </div>
+              )}
+
+              {product.presale_price && (
+                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Info size={14} className="text-amber-600" />
+                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-widest">Precio Preventa</span>
+                  </div>
+                  <span className="font-black text-amber-700">{formatCurrency(product.presale_price)}</span>
+                </div>
+              )}
+
+              <div className="pt-4 space-y-3">
+                <div className="flex items-center gap-2 text-slate-400 px-1">
+                  <Layers size={14} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Política de Cuotas</span>
+                </div>
+                <div className="p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Rango permitido</span>
+                  <span className="font-black text-slate-900">{product.installments_min_number} - {product.installments_max_number} Meses</span>
+                </div>
+              </div>
             </div>
           </Card>
         </div>
       </div>
 
-      {/* 🧠 EL MODAL DINÁMICO RECIBE LOS DATOS */}
       <DynamicProductModal 
         open={!!modalMode} 
         mode={modalMode} 

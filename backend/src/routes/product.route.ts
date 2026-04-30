@@ -15,7 +15,7 @@ import {z} from "zod";
 export const productRoutes = new Hono<ContextWithPrisma>()
   // Get all products with filtering and pagination
   .get("/", withPrisma, async (c) => {
-    const products = c.get("prisma").product.findMany({
+    const products = await c.get("prisma").product.findMany({
       include: {
         prices: true,
         edition: { include: {course: true} },

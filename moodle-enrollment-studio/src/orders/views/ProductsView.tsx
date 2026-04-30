@@ -1,19 +1,16 @@
-import { useState, useEffect } from "react";
-import { Plus, GraduationCap, MoreVertical, Loader2 } from "lucide-react";
-import EditionPricingForm from "@/orders/components/ProductFormModal";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getProducts, deleteProduct } from "../services/productService";
-import { getCourseEditions } from "@/academic/services/courseService";
-import { useSearchStore } from "@/store/useSearchStore";
+import { 
+  Plus, GraduationCap, MoreVertical, Loader2, User, Calendar, 
+  AlertCircle, Clock 
+} from "lucide-react";
+import ProductFormModal from "@/orders/components/ProductFormModal";
+import { useProductsView } from "../hooks/useProductsView";
 import { Badge } from "@/core/components/ui/badge";
-import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/core/components/ui/dropdown-menu";
-import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,101 +21,39 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/core/components/ui/alert-dialog";
+import { format, formatDistanceToNow, differenceInDays } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/core/lib/utils";
+import ProductStatusBadge from "@/orders/components/ProductStatusBadge";
 
 const ProductsView = () => {
-  const [showForm, setShowForm] = useState(false);
-  const [productToEdit, setProductToEdit] = useState<any>(null);  
-  // 🧠 Estados para la alerta de eliminación
-  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<any>(null);
+  const { 
+    products, 
+    isLoading, 
+    isError, 
+    stats, 
+    searchQuery, 
+    actions, 
+    modals 
+  } = useProductsView();
 
-  const navigate = useNavigate();
-  const queryClient = useQueryClient(); // Pedimos acceso al motor que está en main.tsx
-  const { searchQuery, setPlaceholder, setSearchQuery } = useSearchStore();
-
-  useEffect(() => {
-    setPlaceholder("Buscar por ID de edición o categoría...");
-    return () => setSearchQuery("");
-  }, [setPlaceholder, setSearchQuery]);
-
-  // 1. Usamos React Query para conectar con Hono RPC
-  const { data: productsRes, isLoading, isError } = useQuery({
-    queryKey: ["products"],
-    queryFn: getProducts,
-  });
-
-  // 2. Traemos las ediciones (para cruzar los nombres)
-  const { data: editionsRes } = useQuery({
-    queryKey: ["editions"],
-    queryFn: getCourseEditions,
-  });
-
-  const products = Array.isArray(productsRes) ? productsRes : [];
-  const editions = Array.isArray(editionsRes) ? editionsRes : ((editionsRes as any)?.data || []);
-
-  // 🚀 MUTACIÓN PARA ELIMINAR (DELETE)
-  const deleteMutation = useMutation({
-    mutationFn: deleteProduct,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] }); // Refresca la tabla al instante
-      toast.success("Producto eliminado exitosamente");
-      setShowDeleteAlert(false);
-      setProductToDelete(null);
-    },
-    onError: (error) => {
-      console.error(error);
-      toast.error("Error al eliminar el producto. Puede tener ventas asociadas.");
-      setShowDeleteAlert(false);
-    }
-  });
-
-  // 1. Productos Activos (Los que están publicados o en venta)
-  const activeProductsCount = products.filter(
-    (p: any) => p.sales_status === "ON_SALE" || p.sales_status === "PUBLISHED"
-  ).length;
-
-  // 2. Ediciones Únicas (¿A cuántas ediciones distintas les hemos puesto precio?)
-  const uniqueEditionsCount = new Set(products.map((p: any) => p.edition_id)).size;
-
-  // 3. Precio Promedio del Catálogo
-  const averagePrice = products.length > 0 
-    ? products.reduce((acc: number, p: any) => acc + Number(p.cash_price || 0), 0) / products.length 
-    : 0;
-
-  // 4. Total Inscritos
-  const totalInscritos = 0;
-
-  const filteredProducts = products.filter((p: any) => {
-    const query = (searchQuery || "").toLowerCase();
-    const matchCategory = (p.category || "").toLowerCase().includes(query);
-    const matchEditionId = (p.edition_id || "").toLowerCase().includes(query);
-    return matchCategory || matchEditionId;
-  });
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "ON_SALE":
-        return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-200">ON_SALE</Badge>;
-      case "DRAFT":
-        return <Badge variant="secondary">DRAFT</Badge>;
-      case "PUBLISHED":
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200">PUBLISHED</Badge>;
-      case "COMPLETED":
-        return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-200">COMPLETED</Badge>;
-      case "CANCELLED":
-        return <Badge variant="destructive">CANCELLED</Badge>;
-      default:
-        return <Badge variant="outline">{status || "UNKNOWN"}</Badge>;
-    }
+  const getModalityBadge = (modality: string) => {
+    const mod = (modality || "").toUpperCase();
+    if (mod === "VIRTUAL") return <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-none">VIRTUAL</Badge>;
+    if (mod === "PRESENCIAL") return <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none">PRESENCIAL</Badge>;
+    if (mod === "HIBRIDO") return <Badge className="bg-purple-500 hover:bg-purple-600 text-white border-none">HÍBRIDO</Badge>;
+    return <Badge variant="outline">{modality || "S/M"}</Badge>;
   };
 
-  const formatCurrency = (amount: number) => `S/ ${Number(amount).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-  
-  // 🧠 Busca el nombre del curso basado en el edition_id del producto
-  const getCourseName = (editionId: string) => {
-    if (!editions.length) return "Cargando curso...";
-    const edition = editions.find((ed: any) => ed.id === editionId);
-    return edition?.course?.name || "Curso Desconocido";
+  const formatCurrency = (amount: number | string | null | undefined) => {
+    const num = Number(amount || 0);
+    return `S/ ${num.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+  };
+
+  const isUrgent = (date: string | null | undefined) => {
+    if (!date) return false;
+    const days = differenceInDays(new Date(date), new Date());
+    return days >= 0 && days <= 7;
   };
 
   return (
@@ -129,193 +64,212 @@ const ProductsView = () => {
           <h1 className="text-2xl font-bold text-foreground">Catálogo de Productos</h1>
           <p className="text-sm text-muted-foreground mt-1">Gestiona cursos, ediciones y precios del ecosistema académico.</p>
         </div>
-        <button 
-          onClick={() => {
-            setProductToEdit(null); // Limpiamos cualquier edición previa
-            setShowForm(true);
-          }} 
-          className="btn-primary"
-        >
+        <button onClick={() => modals.setShowForm(true)} className="btn-primary">
           <Plus size={18} /> Nuevo Producto
-      </button>
+        </button>
       </div>
 
       {/* --- STATS DINÁMICOS --- */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-xl bg-card border border-border p-5 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Productos Activos</p>
           <p className="text-2xl font-bold text-foreground mt-2">
-            {isLoading ? <Loader2 size={24} className="animate-spin text-muted-foreground" /> : activeProductsCount}
+            {isLoading ? <Loader2 size={24} className="animate-spin text-muted-foreground" /> : stats.activeProductsCount}
           </p>
         </div>
         
         <div className="rounded-xl bg-card border border-border p-5 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ediciones con Precio</p>
           <p className="text-2xl font-bold text-foreground mt-2">
-            {isLoading ? <Loader2 size={24} className="animate-spin text-muted-foreground" /> : uniqueEditionsCount}
+            {isLoading ? <Loader2 size={24} className="animate-spin text-muted-foreground" /> : stats.uniqueEditionsCount}
           </p>
         </div>
         
         <div className="rounded-xl bg-card border border-border p-5 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Inscritos</p>
           <p className="text-2xl font-bold text-foreground mt-2">
-            {isLoading ? "-" : totalInscritos}
+            {isLoading ? "-" : stats.totalInscritos}
           </p>
-          <p className="text-[10px] text-muted-foreground mt-1">Requiere módulo de ventas</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Módulo de ventas</p>
         </div>
         
         <div className="rounded-xl bg-card border border-border p-5 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Precio Promedio</p>
           <p className="text-2xl font-bold text-foreground mt-2">
-            {isLoading ? "-" : `S/ ${averagePrice.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            {isLoading ? "-" : `S/ ${stats.averagePrice.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </p>
         </div>
       </div>
 
-      {/* --- TABLE CON ESTADOS DE CARGA Y ERROR --- */}
+      {/* --- TABLE --- */}
       <div className="rounded-xl bg-card border border-border overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2 className="font-bold text-foreground">Todos los Productos</h2>
         </div>
 
-        {/* MANEJO DE ESTADOS DE REACT QUERY */}
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary" />
-            <p>Cargando productos desde la base de datos...</p>
+            <p>Cargando catálogo...</p>
           </div>
         ) : isError ? (
-          <div className="flex flex-col items-center justify-center py-20 text-destructive">
+          <div className="flex flex-col items-center justify-center py-20 text-destructive text-center p-4">
             <p className="font-bold">Error al conectar con el servidor.</p>
-            <p className="text-sm mt-2">Asegúrate de que el backend (Hono) esté corriendo.</p>
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <GraduationCap className="h-12 w-12 mb-4 opacity-20" />
-            <p>{searchQuery ? "No se encontraron productos coincidentes." : "No hay productos registrados. Haz clic en 'Nuevo Producto' para empezar."}</p>
+            <p>{searchQuery ? "No se encontraron productos coincidentes." : "No hay productos registrados."}</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Producto</th>
-                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Precio Base</th>
-                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</th>
-                <th className="px-6 py-4"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map((p: any) => (
-                  <tr 
-                    key={p.id} 
-                    className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/productos/${p.id}`)}
-                  >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <GraduationCap size={18} className="text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground truncate max-w-[250px]" title={getCourseName(p.edition_id)}>
-                          {getCourseName(p.edition_id)}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="outline" className="text-[9px] uppercase h-5">
-                            {p.category}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground font-mono" title={`Edición ID: ${p.edition_id}`}>
-                            {p.edition_id?.substring(0, 8)}
-                          </span>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-slate-50/50">
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Programa Académico</th>
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Calendario e Inicio</th>
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Modalidad</th>
+                  <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Precios y Frescura</th>
+                  <th className="px-6 py-4"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((p: any) => {
+                  const basePrice = p.prices?.[0]?.cash_price || 0;
+                  const startDate = p.edition?.start_date;
+                  const urgent = isUrgent(startDate);
+
+                  return (
+                    <tr 
+                      key={p.id} 
+                      className="border-b border-border last:border-0 hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                      onClick={() => actions.navigate(`/productos/${p.id}`)}
+                    >
+                    {/* 1. Programa Académico */}
+                    <td className="px-6 py-4 min-w-[300px]">
+                      <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                          <GraduationCap size={20} className="text-primary" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="font-bold text-slate-900 leading-tight">
+                            {p.name || "Sin nombre"}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <User size={12} className="shrink-0" />
+                            <span className="truncate max-w-[180px]">
+                              {p.edition?.teacher_fullname || "Profesor por asignar"}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-semibold text-foreground">
-                    <div className="flex flex-col">
-                      <span>{formatCurrency(p.cash_price || 0)}</span>
-                      {p.discount_price && (
-                        <span className="text-[11px] text-muted-foreground line-through font-normal">
-                          {formatCurrency(p.discount_price)}
+                    </td>
+
+                    {/* 2. Calendario e Inicio */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={cn(
+                        "flex flex-col gap-1",
+                        urgent ? "text-orange-600" : "text-slate-700"
+                      )}>
+                        <div className="flex items-center gap-2 font-semibold">
+                          <Calendar size={14} className={urgent ? "animate-pulse" : ""} />
+                          {startDate ? format(new Date(startDate), "d 'de' MMMM, yyyy", { locale: es }) : "S/F"}
+                          {urgent && <AlertCircle size={14} />}
+                        </div>
+                        <p className="text-[10px] uppercase font-bold tracking-widest opacity-60">
+                          {urgent ? "Inscripciones Urgentes" : "Fecha de Lanzamiento"}
+                        </p>
+                      </div>
+                    </td>
+
+                    {/* 3. Modalidad */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getModalityBadge(p.edition?.modality)}
+                      <div className="mt-1">
+                        <ProductStatusBadge status={p.sales_status} />
+                      </div>
+                    </td>
+
+                    {/* 4. Precios y Frescura */}
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-base font-black text-slate-900">
+                          S/ {Number(p.prices?.[0]?.cash_price || 0).toFixed(2)}
                         </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {getStatusBadge(p.sales_status)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button 
-                          className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                          onClick={(e) => e.stopPropagation()} // 👈 Evita navegar al detalle al abrir menú
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => {
-                          e.stopPropagation();
-                          // 🧠 PASAMOS LOS DATOS DE LA FILA AL ESTADO Y ABRIMOS EL MODAL
-                          setProductToEdit(p); 
-                          setShowForm(true);
-                        }}>
-                          Edición Rápida
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-                          onClick={(e) => {
-                            e.stopPropagation(); // 👈 Evita navegar al detalle al hacer clic en eliminar
-                            setProductToDelete(p);
-                            setShowDeleteAlert(true);
-                          }}
-                        >
-                          Eliminar Producto
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        <div className="flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground font-medium">
+                          <Clock size={10} />
+                          {p.updated_at 
+                            ? `Actualizado hace ${formatDistanceToNow(new Date(p.updated_at), { locale: es })}`
+                            : "Sin registro de cambios"
+                          }
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Acciones */}
+                    <td className="px-6 py-4 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button 
+                            className="text-muted-foreground hover:text-slate-900 transition-colors p-2 hover:bg-slate-100 rounded-lg"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical size={18} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            actions.handleEdit(p);
+                          }} className="gap-2">
+                            <Plus size={14} /> Edición Rápida
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive focus:bg-destructive focus:text-destructive-foreground gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              actions.handleDeleteRequest(p);
+                            }}
+                          >
+                            <AlertCircle size={14} /> Eliminar Producto
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                );
+              })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* --- FORMULARIO DE CREACIÓN / EDICIÓN RÁPIDA --- */}
-      <EditionPricingForm 
-        // 🧠 EL TRUCO EXPERTO: Cambiar la 'key' obliga a React a reiniciar el componente.
-        // Así evitamos que se queden pegados los datos del producto anterior.
-        key={productToEdit ? productToEdit.id : 'new-product-form'} 
-        open={showForm} 
-        initialData={productToEdit} // Le pasamos la data
-        onClose={() => {
-          setShowForm(false);
-          // Retrasamos un poquito la limpieza para que no se vea feo mientras hace la animación de cierre
-          setTimeout(() => setProductToEdit(null), 200); 
-        }}
+      {/* --- MODALES --- */}
+      <ProductFormModal 
+        key={modals.productToEdit ? modals.productToEdit.id : 'new-product-form'} 
+        open={modals.showForm} 
+        initialData={modals.productToEdit} 
+        onClose={modals.closeForm}
       />
 
-      {/* --- ALERTA DE ELIMINACIÓN --- */}
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+      <AlertDialog open={modals.showDeleteAlert} onOpenChange={modals.setShowDeleteAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar este producto?</AlertDialogTitle>
             <AlertDialogDescription>
-              Estás a punto de eliminar el producto de la categoría <b className="uppercase">{productToDelete?.category}</b> 
-              {" "} asociado a la edición <b className="font-mono">{productToDelete?.edition_id?.substring(0, 8)}</b>. 
-              Esta acción no se puede deshacer.
+              Estás a punto de eliminar el producto <b className="text-foreground">{modals.productToDelete?.name}</b>. 
+              Esta acción no se puede deshacer y afectará la visibilidad en el catálogo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={modals.isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => productToDelete?.id && deleteMutation.mutate(productToDelete.id)}
-              disabled={deleteMutation.isPending}
+              onClick={actions.confirmDelete}
+              disabled={modals.isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? (
+              {modals.isDeleting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Eliminando...
