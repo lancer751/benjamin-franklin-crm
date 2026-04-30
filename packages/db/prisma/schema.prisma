@@ -124,7 +124,8 @@ model SellerProfile {
   orders           Order[]                @relation("SELLER_ORDERS")
   LeadInteraction  LeadInteraction[]
   assignedCampaing CampaignSeller[]
-  supervisor       SalesSupervisorProfile @relation(fields: [assigned_supervisor_id], references: [id])
+  // TODO evaluate this and then change the deletion mode of the supervisor relation to SET_NULL
+  supervisor       SalesSupervisorProfile @relation(fields: [assigned_supervisor_id], references: [id], onDelete: Cascade)
 }
 
 model SalesSupervisorProfile {
