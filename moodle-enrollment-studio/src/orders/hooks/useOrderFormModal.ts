@@ -12,7 +12,7 @@ import { getAllLeads } from "@/leads/services/leadService";
 
 // Mock Auth Hook as requested
 const useAuth = () => ({
-  user: { id: "dd8abf54-f343-4b90-a15a-91f426f359b2" } // Simulado
+  user: { id: "eb64d572-a59a-4215-b5f3-23660e71bc94" } // Simulado
 });
 
 export const useOrderFormModal = (open: boolean, onClose: () => void, initialData?: any) => {

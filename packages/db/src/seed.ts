@@ -10,15 +10,19 @@ import {
   DurationUnit,
 } from "../generated/prisma/client";
 
+
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("❌ DATABASE_URL no definida");
+
 
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+
 async function main() {
   console.log("🌱 Iniciando SEED PROFESIONAL...");
+
 
   // 1. ROLES
   const roles = await Promise.all([
@@ -27,6 +31,7 @@ async function main() {
     prisma.role.upsert({ where: { name: RoleAccess.MARKETING }, update: {}, create: { name: RoleAccess.MARKETING } }),
     prisma.role.upsert({ where: { name: RoleAccess.SALES_SUPERVISOR }, update: {}, create: { name: RoleAccess.SALES_SUPERVISOR } }),
   ]);
+
 
   // 2. USUARIOS (40)
   console.log("⏳ Generando 40 usuarios...");
@@ -49,10 +54,12 @@ async function main() {
     createdUsers.push(...batch);
   }
 
+
   // 2.1 CREAR UN SUPERVISOR (Necesario para los vendedores)
   console.log("⏳ Creando perfil de supervisor...");
-  const adminUser = createdUsers.find(u => u.role_id === roles.find(r => r.name === RoleAccess.ADMIN)?.id) 
+  const adminUser = createdUsers.find(u => u.role_id === roles.find(r => r.name === RoleAccess.ADMIN)?.id)
                  || createdUsers[0];
+
 
   const supervisor = await prisma.salesSupervisorProfile.create({
     data: {
@@ -60,10 +67,11 @@ async function main() {
     }
   });
 
+
   // 2.5 VENDEDORES (Conectados al supervisor)
   console.log("⏳ Creando perfiles de vendedor vinculados al supervisor...");
   await Promise.all(
-    createdUsers.slice(1, 16).map((user) => 
+    createdUsers.slice(1, 16).map((user) =>
       prisma.sellerProfile.create({
         data: {
           user: { connect: { id: user.id } },
@@ -77,12 +85,14 @@ async function main() {
     )
   );
 
+
   // 3. CATEGORÍAS Y CURSOS
   const categories = await Promise.all([
     prisma.category.upsert({ where: { name: "Ingeniería" }, update: {}, create: { name: "Ingeniería" } }),
     prisma.category.upsert({ where: { name: "Arquitectura" }, update: {}, create: { name: "Arquitectura" } }),
     prisma.category.upsert({ where: { name: "Gestión" }, update: {}, create: { name: "Gestión" } }),
   ]);
+
 
   console.log("⏳ Generando cursos y ediciones...");
   const courses = await Promise.all(
@@ -98,6 +108,7 @@ async function main() {
       })
     )
   );
+
 
   // 4. EDICIONES Y PRODUCTOS (Lógica de Modalidad Corregida)
   const allProducts: any[] = [];
@@ -119,10 +130,12 @@ async function main() {
       }
     });
 
+
     // Sincronizar precios con modalidad
-    const modesToCreate = edition.modality === "HIBRIDO" 
-      ? ["VIRTUAL", "PRESENCIAL"] 
+    const modesToCreate = edition.modality === "HIBRIDO"
+      ? ["VIRTUAL", "PRESENCIAL"]
       : [edition.modality];
+
 
     const product = await prisma.product.create({
       data: {
@@ -146,11 +159,12 @@ async function main() {
     allProducts.push(product);
   }
 
+
   // 5. CAMPAÑAS (Sin repetir productos para evitar P2002)
   console.log("⏳ Generando campañas...");
   const shuffledProducts = [...allProducts].sort(() => 0.5 - Math.random());
   const campaigns = await Promise.all(
-    Array.from({ length: 5 }).map((_, i) => 
+    Array.from({ length: 5 }).map((_, i) =>
       prisma.campaing.create({
         data: {
           campaing_name: `Camp. ${fakerES.company.catchPhrase()} ${fakerES.string.nanoid(3)}`,
@@ -164,6 +178,7 @@ async function main() {
       })
     )
   );
+
 
   // 6. LEADS (100)
   console.log("⏳ Generando 100 leads...");
@@ -181,8 +196,10 @@ async function main() {
     });
   }
 
+
   console.log("🚀 SEED COMPLETADO CON ÉXITO.");
 }
+
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => {
   await prisma.$disconnect();

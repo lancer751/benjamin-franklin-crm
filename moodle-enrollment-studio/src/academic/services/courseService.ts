@@ -1,8 +1,6 @@
 import { api } from "@/core/lib/api";
 import { InferRequestType, InferResponseType } from "hono/client";
-
-// 1. Definimos la constante del path dinámico tal como está en el backend
-const UUID_PATH = ":id{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}}" as const;
+import {UUID_PATH} from '@/core/lib/constants'
 
 // ==========================================
 // TIPOS INFERIDOS

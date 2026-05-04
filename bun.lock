@@ -181,6 +181,7 @@
       },
       "devDependencies": {
         "@eslint/js": "^10.0.1",
+        "@faker-js/faker": "^10.4.0",
         "@types/bun": "latest",
         "@types/pg": "^8.20.0",
         "prisma": "^7.7.0",

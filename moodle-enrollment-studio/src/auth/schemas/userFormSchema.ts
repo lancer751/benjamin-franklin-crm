@@ -20,7 +20,20 @@ export const userFormSchema = z.object({
     
   role_id: z.string().min(1, "Debes seleccionar un rol para este usuario"),
   is_active: z.boolean().default(true),
+  
+  // Campos de Vendedor (Sales Rep)
   sales_target: z.coerce.number().min(0, "La meta no puede ser negativa").optional(),
+  assigned_supervisor_id: z.string().optional(),
+
+  // Campos de Supervisor
+  team_name: z.string().optional(),
+  max_sellers: z.coerce.number().min(0).optional(),
+  discount_limit_percent: z.coerce.number().min(0).max(100).optional(),
+  can_assign_leads: z.boolean().optional(),
+  can_approve_discounts: z.boolean().optional(),
+  can_reassign_leads: z.boolean().optional(),
+  can_cancel_orders: z.boolean().optional(),
+  can_view_all_team_sales: z.boolean().optional(),
 });
 
 export type UserFormValues = z.infer<typeof userFormSchema>;

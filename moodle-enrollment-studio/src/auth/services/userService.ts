@@ -1,32 +1,31 @@
+import { UUID_PATH } from "@/core/lib/constants";
 import { api } from "@/core/lib/api";
 import { InferRequestType, InferResponseType } from "hono/client";
 
-// Constante para las rutas dinámicas de User (con el regex del backend)
-const UUID_PATH = ":id{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}}" as const;
-
 // ==========================================
-// TIPOS INFERIDOS
+// TIPOS INFERIDOS: USUARIOS
 // ==========================================
-
-// Usuarios
 type UsersRes = InferResponseType<typeof api.users.$get>;
 type UserByIdRes = InferResponseType<(typeof api.users)[typeof UUID_PATH]["$get"]>;
 type CreateUserReq = InferRequestType<typeof api.users.$post>["json"];
 type UpdateUserReq = InferRequestType<(typeof api.users)[typeof UUID_PATH]["$put"]>["json"];
-type DeleteUserRes = InferResponseType<(typeof api.users)[typeof UUID_PATH]["$delete"]>;
-
-// Sellers (Vendedores) - Aquí Hono simplificó a ":id" por la anidación
-type SellersRes = InferResponseType<typeof api.users.sellers.$get>;
-type SellerProfileByIdRes = InferResponseType<typeof api.users.sellers[":id"]["$get"]>;
-type CreateSellerProfileReq = InferRequestType<typeof api.users.sellers.$post>["json"];
-type UpdateSellerProfileReq = InferRequestType<typeof api.users.sellers[":id"]["$put"]>["json"];
-
-// Marketers & Roles
-type MarketersRes = InferResponseType<typeof api.users.marketers.$get>;
 type RolesRes = InferResponseType<typeof api.users.roles.$get>;
 
 // ==========================================
-// SERVICIOS: USUARIOS (Basado en userRoutes)
+// TIPOS INFERIDOS: PERFILES
+// ==========================================
+
+// Supervisores
+type SupervisorsRes = InferResponseType<(typeof api.users)["sales-supervisors"]["$get"]>;
+type SupervisorByIdRes = InferResponseType<(typeof api.users)["sales-supervisors"][typeof UUID_PATH]["$get"]>;
+
+// Sellers
+type SellersRes = InferResponseType<typeof api.users.sellers.$get>;
+type SellerProfileByIdRes = InferResponseType<(typeof api.users.sellers.sellers)[":id"]["$get"]>; 
+type UpdateSellerProfileReq = InferRequestType<(typeof api.users.sellers.sellers)[":id"]["$put"]>["json"];
+
+// ==========================================
+// SERVICIOS: USUARIOS GENERALES
 // ==========================================
 
 export const getUsers = async (): Promise<UsersRes> => {
@@ -44,16 +43,22 @@ export const createUser = async (data: CreateUserReq) => {
   return await res.json();
 };
 
+// ✨ AGREGADO: Esta es la función que te faltaba y causaba el error de export
 export const updateUser = async (id: string, data: UpdateUserReq) => {
   const res = await api.users[UUID_PATH].$put({ 
-    param: { id },
+    param: { id }, 
     json: data 
   });
   return await res.json();
 };
 
-export const deleteUser = async (id: string): Promise<DeleteUserRes> => {
+export const deleteUser = async (id: string) => {
   const res = await api.users[UUID_PATH].$delete({ param: { id } });
+  return await res.json();
+};
+
+export const getRoles = async (): Promise<RolesRes> => {
+  const res = await api.users.roles.$get();
   return await res.json();
 };
 
@@ -67,33 +72,23 @@ export const getSellers = async (): Promise<SellersRes> => {
 };
 
 export const getSellerProfileById = async (id: string): Promise<SellerProfileByIdRes> => {
-  const res = await api.users.sellers[":id"].$get({ param: { id } });
-  return await res.json();
-};
-
-export const createSellerProfile = async (data: CreateSellerProfileReq) => {
-  const res = await api.users.sellers.$post({ json: data });
+  const res = await api.users.sellers.sellers[":id"].$get({ param: { id } });
   return await res.json();
 };
 
 export const updateSellerProfile = async (id: string, data: UpdateSellerProfileReq) => {
-  const res = await api.users.sellers[":id"].$put({ 
-    param: { id },
+  const res = await api.users.sellers.sellers[":id"].$put({ 
+    param: { id }, 
     json: data 
   });
   return await res.json();
 };
 
 // ==========================================
-// SERVICIOS: MARKETING Y ROLES
+// SERVICIOS: SUPERVISORES
 // ==========================================
 
-export const getMarketers = async (): Promise<MarketersRes> => {
-  const res = await api.users.marketers.$get();
-  return await res.json();
-};
-
-export const getRoles = async (): Promise<RolesRes> => {
-  const res = await api.users.roles.$get();
+export const getSupervisors = async (): Promise<SupervisorsRes> => {
+  const res = await api.users["sales-supervisors"].$get();
   return await res.json();
 };
