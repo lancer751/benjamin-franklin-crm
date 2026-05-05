@@ -188,7 +188,7 @@ model User {
   first_name          String
   middle_name         String
   last_name           String
-  email               String?   @unique
+  email               String   @unique
   corporate_email     String?   @unique
   cellphone           String?   @db.Char(9)
   corporate_cellphone String?   @db.Char(9)

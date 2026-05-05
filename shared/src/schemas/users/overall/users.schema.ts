@@ -10,7 +10,7 @@ export const UserSchema = z.object({
     .min(2, "First name must be at least 2 characters long"),
   middle_name: z.string(),
   last_name: z.string().min(2, "Last name must be at least 2 characters long"),
-  email: z.email("Invalid email address").optional().nullable(),
+  email: z.email("Invalid email address"),
   corporate_email: z
     .email("Invalid corporate email address")
     .optional()

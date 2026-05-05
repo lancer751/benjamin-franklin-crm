@@ -8,6 +8,7 @@ import type { RoleAccess } from "@repo/database";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { CreateUserSchema } from "shared";
+import { hash } from "bcrypt";
 
 export const userGeneralRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
@@ -64,6 +65,14 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
     const prisma = c.get("prisma");
     const { role, ...profilesAndUserFields } = structuredClone(userData);
 
+    const existingUser = await c.get("prisma").user.findUnique({
+      where: { email: userData.email },
+    });
+
+    if (existingUser) {
+      throw new HTTPException(400, { message: "Email already in use" });
+    }
+
     // Verify role exists
     const existingRole = await prisma.role.findUnique({
       where: { id: profilesAndUserFields.role_id },
@@ -79,6 +88,8 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
       });
     }
 
+
+
     // Strip all possible profile fields — they're unknown at this point
     const {
       seller_profile,
@@ -92,9 +103,11 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
       ...profilesAndUserFields, // actual values override the undefined defaults above
     };
 
+    const hashedPassword = await hash(userData.password, 10)
+
     const newUserAccountAndProfile = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: { ...userFields },
+        data: { ...userFields, password: hashedPassword },
         include: { role: { select: { name: true } } },
       });
 
