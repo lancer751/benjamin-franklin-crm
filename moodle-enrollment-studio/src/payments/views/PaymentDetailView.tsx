@@ -2,41 +2,15 @@ import { useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Edit, CheckCircle2, XCircle, Upload, Download, RefreshCw,
-  CreditCard, Receipt, User, FileText, ImageIcon, AlertCircle
+  CreditCard, Receipt, User, FileText, ImageIcon, AlertCircle, Loader2
 } from "lucide-react";
 import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { Separator } from "@/core/components/ui/separator";
-import { toast } from "@/core/hooks/use-toast";
-
-// MOCK DATA Alineada con Zod PaymentSchema
-const paymentsData: Record<string, any> = {
-  "PAY-001": {
-    id: "PAY-001", order_id: "ORD-001", amount: 1200, currency: "PEN",
-    payment_method: "YAPE", type: "FULL", payment_status: "CONFIRMED", payment_date: "2024-06-28 14:32",
-    transaccion_id: "YPE-8827391042", receipt: "/placeholder.svg",
-    client: { name: "Jorge Castillo", email: "j.castillo@email.com", phone: "+51 987 654 321" },
-  },
-  "PAY-002": {
-    id: "PAY-002", order_id: "ORD-002", amount: 450, currency: "PEN",
-    payment_method: "TRANSFERENCIA", type: "INSTALLMENTS", payment_status: "PENDING", payment_date: "2024-06-25 09:15",
-    transaccion_id: "TRF-0042819200", receipt: null,
-    client: { name: "Ana Mendoza", email: "a.mendoza@email.com", phone: "+51 912 345 678" },
-  },
-  "PAY-003": {
-    id: "PAY-003", order_id: "ORD-003", amount: 2100, currency: "PEN",
-    payment_method: "POS", type: "FULL", payment_status: "FAILED", payment_date: "2024-06-22 17:45",
-    transaccion_id: "POS-5539281746", receipt: null,
-    client: { name: "Roberto Sánchez", email: "r.sanchez@email.com", phone: "+51 945 678 901" },
-  },
-  "PAY-004": {
-    id: "PAY-004", order_id: "ORD-002", amount: 500, currency: "PEN",
-    payment_method: "EFECTIVO", type: "INSTALLMENTS", payment_status: "REFUNDED", payment_date: "2024-06-20 11:00",
-    transaccion_id: "EFE-0000000000", receipt: "/placeholder.svg",
-    client: { name: "Lucía Paredes", email: "l.paredes@email.com", phone: "+51 956 789 012" },
-  },
-};
+import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getPaymentById, updatePayment } from "@/payments/services/paymentService";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   PENDING: { label: "Pendiente", className: "bg-yellow-100 text-yellow-700 border-yellow-200" },
@@ -52,13 +26,55 @@ const methodLabels: Record<string, string> = {
 const PaymentDetailView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const payment = paymentsData[id || ""] || paymentsData["PAY-001"];
-  const statusInfo = statusConfig[payment.payment_status];
-  const hasReceipt = !!payment.receipt;
+  // Integración de Datos Reales
+  const { data: response, isLoading, isError } = useQuery({
+    queryKey: ["payment", id],
+    queryFn: () => getPaymentById(id!),
+    enabled: !!id,
+  });
+
+  // Mutación para Validar Pago
+  const validateMutation = useMutation({
+    mutationFn: (newStatus: string) => updatePayment(id!, { payment_status: newStatus as any }),
+    onSuccess: () => {
+      toast.success("Pago validado correctamente");
+      queryClient.invalidateQueries({ queryKey: ["payment", id] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+    },
+    onError: () => {
+      toast.error("No se pudo validar el pago");
+    }
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-muted-foreground">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <p>Cargando detalles de la transacción...</p>
+      </div>
+    );
+  }
+
+  if (isError || !response?.data) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-destructive">
+        <p className="font-bold text-lg">No se pudo cargar el pago o no existe.</p>
+        <Button onClick={() => navigate("/pagos")} variant="outline" className="mt-4">Volver a Pagos</Button>
+      </div>
+    );
+  }
+
+  const payment = response.data;
+  const statusInfo = statusConfig[payment.payment_status] || statusConfig.PENDING;
+  const hasReceipt = !!payment.payment_receipt;
+  
+  // Mapeo dinámico de moneda
+  const currencySymbol = payment.currency === "PEN" ? "S/" : "$";
 
   const handleFileSelect = (file: File) => {
     const valid = ["image/png", "image/jpeg", "application/pdf"];
@@ -71,7 +87,8 @@ const PaymentDetailView = () => {
       return;
     }
     setUploadedFile(file);
-    toast({ title: "Comprobante adjuntado", description: file.name });
+    toast.success(`Comprobante adjuntado: ${file.name}`);
+    // TODO: Conectar con endpoint de subida de archivos
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -96,15 +113,26 @@ const PaymentDetailView = () => {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
-            <Edit size={16} className="mr-1" /> Editar Transacción
+            <Edit size={16} className="mr-1" /> Editar
           </Button>
-          {payment.payment_status !== "CONFIRMED" && (
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              <CheckCircle2 size={16} className="mr-1" /> Validar Pago
+          {payment.payment_status === "PENDING" && (
+            <Button 
+              size="sm" 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => validateMutation.mutate("CONFIRMED")}
+              disabled={validateMutation.isPending}
+            >
+              {validateMutation.isPending ? <Loader2 size={16} className="mr-1 animate-spin" /> : <CheckCircle2 size={16} className="mr-1" />}
+              Validar Pago
             </Button>
           )}
-          <Button variant="destructive" size="sm">
-            <XCircle size={16} className="mr-1" /> {payment.payment_status === "CONFIRMED" ? "Reembolsar" : "Marcar Fallido"}
+          <Button 
+            variant="destructive" 
+            size="sm"
+            onClick={() => validateMutation.mutate("FAILED")}
+            disabled={validateMutation.isPending}
+          >
+            <XCircle size={16} className="mr-1" /> Marcar Fallido
           </Button>
         </div>
       </div>
@@ -119,9 +147,9 @@ const PaymentDetailView = () => {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Monto del Pago</p>
                 <p className="text-4xl font-bold text-foreground">
-                  S/ {payment.amount.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                  {currencySymbol} {Number(payment.amount).toLocaleString("es-PE", { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-sm text-muted-foreground mt-1">Moneda: {payment.currency}</p>
+                <p className="text-sm text-muted-foreground mt-1">Moneda: {payment.currency} • {payment.payment_status}</p>
               </div>
               <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <CreditCard size={32} className="text-primary" />
@@ -143,18 +171,25 @@ const PaymentDetailView = () => {
                   <p className="font-semibold text-foreground">{methodLabels[payment.payment_method] || payment.payment_method}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Tipo</p>
-                  <Badge variant="secondary" className="font-mono text-xs">
-                    {payment.type === "FULL" ? "Pago Único" : "Cuota"}
-                  </Badge>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Tipo de Pago</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="font-medium">
+                      {payment.type === "FULL" ? "Pago Total" : "Pago de Cuota"}
+                    </Badge>
+                    {payment.type === "INSTALLMENTS" && payment.schedulePayment && (
+                      <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                        Cuota #{payment.schedulePayment.number}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Fecha de Pago</p>
                   <p className="text-foreground">{payment.payment_date}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">ID Transacción</p>
-                  <p className="font-mono text-sm text-foreground">{payment.transaccion_id}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">ID Transacción / Voucher</p>
+                  <p className="font-mono text-sm text-foreground bg-muted px-2 py-0.5 rounded border">{payment.transaccion_id || "N/A"}</p>
                 </div>
               </div>
             </CardContent>
@@ -169,12 +204,16 @@ const PaymentDetailView = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">
-                  {payment.client.name.split(" ").map((n: string) => n[0]).join("")}
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg">
+                  {payment.order?.lead?.first_name?.[0]}{payment.order?.lead?.middle_name?.[0]}
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">{payment.client.name}</p>
-                  <p className="text-sm text-muted-foreground">{payment.client.email} • {payment.client.phone}</p>
+                  <p className="font-semibold text-foreground">
+                    {`${payment.order?.lead?.first_name} ${payment.order?.lead?.middle_name} ${payment.order?.lead?.last_name}`}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {payment.order?.lead?.email} • {payment.order?.lead?.phone}
+                  </p>
                 </div>
               </div>
               <Separator />
@@ -202,59 +241,59 @@ const PaymentDetailView = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {hasReceipt || uploadedFile ? (
+              {hasReceipt ? (
                 <div className="space-y-4">
                   {/* Preview */}
-                  <div className="rounded-lg border border-border bg-muted/50 overflow-hidden">
-                    {uploadedFile ? (
-                      <div className="flex flex-col items-center justify-center p-8">
-                        <FileText size={48} className="text-primary/40 mb-2" />
-                        <p className="font-semibold text-foreground text-sm">{uploadedFile.name}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {(uploadedFile.size / 1024).toFixed(1)} KB
-                        </p>
-                      </div>
-                    ) : (
-                      <img
-                        src={payment.receipt}
-                        alt="Comprobante"
-                        className="w-full h-64 object-cover"
-                      />
-                    )}
+                  <div className="rounded-lg border border-border bg-muted/50 overflow-hidden group relative">
+                    <img
+                      src={payment.payment_receipt}
+                      alt="Comprobante"
+                      className="w-full h-auto max-h-80 object-contain mx-auto transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button variant="secondary" size="sm" asChild>
+                        <a href={payment.payment_receipt} target="_blank" rel="noreferrer" className="flex items-center">
+                          <Eye size={14} className="mr-1" /> Pantalla Completa
+                        </a>
+                      </Button>
+                    </div>
                   </div>
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Download size={14} className="mr-1" /> Descargar
+                    <Button variant="outline" size="sm" className="flex-1" asChild>
+                      <a href={payment.payment_receipt} target="_blank" rel="noopener noreferrer">
+                        <Download size={14} className="mr-1" /> Descargar
+                      </a>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => { setUploadedFile(null); fileInputRef.current?.click(); }}
+                      onClick={() => fileInputRef.current?.click()}
                     >
                       <RefreshCw size={14} className="mr-1" /> Reemplazar
                     </Button>
                   </div>
                 </div>
               ) : (
-                /* Upload Zone */
-                <div
-                  className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${
-                    isDragging
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-muted-foreground hover:bg-muted/50"
-                  }`}
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleDrop}
-                >
-                  <Upload size={40} className="mx-auto text-muted-foreground mb-3" />
-                  <p className="font-semibold text-foreground text-sm">
-                    Haz clic o arrastra el comprobante
+                /* Soft Alert State */
+                <div className="flex flex-col items-center justify-center py-10 px-4 text-center rounded-lg border-2 border-dashed border-border bg-muted/20">
+                  <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center mb-3">
+                    <AlertCircle size={24} className="text-amber-500" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground">Sin Comprobante Digital</p>
+                  <p className="text-[11px] text-muted-foreground mt-1 max-w-[200px]">
+                    No se ha registrado un respaldo visual para esta transacción en el servidor.
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG o PDF. Máx 5MB</p>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-5 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload size={14} className="mr-1" /> Subir Comprobante
+                  </Button>
                 </div>
               )}
 

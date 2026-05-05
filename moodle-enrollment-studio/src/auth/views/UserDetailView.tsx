@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   ArrowLeft, Loader2, User, Phone, Mail, Calendar, 
   Target, Briefcase, TrendingUp, ShoppingCart, CheckCircle,
-  XCircle, Percent, Clock
+  XCircle, Percent, Clock, ShieldCheck, Users, CheckSquare, Square, Users2
 } from "lucide-react";
-import { getUserById, getSellerProfileById } from "../services/userService";
+import { getUserById, getSellerProfileById, getSupervisorById } from "../services/userService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { Button } from "@/core/components/ui/button";
 import { Badge } from "@/core/components/ui/badge";
@@ -33,7 +33,10 @@ export default function UserDetailView() {
   
   const user = userResponse?.success ? userResponse.data : null;
   const isSales = user?.role?.name === "SALES_REP";
+  const isSupervisor = user?.role?.name === "SALES_SUPERVISOR";
+
   const sellerId = user?.seller?.id || user?.seller_profile?.id || user?.seller_profile_id;
+  const supervisorId = user?.salesSupervisor?.id;
 
   // 2. Consulta del perfil de vendedor (Solo si es SALES_REP y hay sellerId)
   const { data: sellerResponse, isLoading: isLoadingSeller } = useQuery({
@@ -42,7 +45,15 @@ export default function UserDetailView() {
     enabled: !!sellerId && isSales,
   });
 
+  // 3. Consulta del perfil de supervisor (Solo si es SALES_SUPERVISOR y hay supervisorId)
+  const { data: supervisorResponse, isLoading: isLoadingSupervisor } = useQuery({
+    queryKey: ["supervisorProfile", supervisorId],
+    queryFn: () => getSupervisorById(supervisorId as string),
+    enabled: !!supervisorId && isSupervisor,
+  });
+
   const seller = sellerResponse?.success ? sellerResponse.data : user?.seller;
+  const supervisor = supervisorResponse?.success ? supervisorResponse.data : null;
 
   if (!isLoadingUser && !user) {
     return (
@@ -157,8 +168,8 @@ export default function UserDetailView() {
           </CardContent>
         </Card>
 
-        {/* DASHBOARD DE VENTAS O EMPTY STATE (Ocupa 2 columnas) */}
-        {isLoadingUser || (isSales && isLoadingSeller) ? (
+        {/* DASHBOARD DE VENTAS, SUPERVISIÓN O EMPTY STATE (Ocupa 2 columnas) */}
+        {isLoadingUser || (isSales && isLoadingSeller) || (isSupervisor && isLoadingSupervisor) ? (
            <div className="md:col-span-2 space-y-6">
              <Card className="shadow-sm border-border/60 h-full">
                <CardHeader className="pb-4">
@@ -269,6 +280,117 @@ export default function UserDetailView() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : isSupervisor && supervisor ? (
+          <div className="md:col-span-2 space-y-6">
+            <Card className="shadow-sm border-border/60 h-full bg-muted/30">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <ShieldCheck size={16} className="text-primary" />
+                  Dashboard de Supervisión
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* KPI 1: Equipo a Cargo */}
+                  <div className="flex flex-col p-4 rounded-xl border border-border/50 bg-card">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <Users size={16} className="text-blue-500" />
+                      <span className="text-sm font-medium">Equipo a Cargo</span>
+                    </div>
+                    <span className="text-xl font-bold text-foreground">
+                      {supervisor.team_name || "Sin equipo asignado"}
+                    </span>
+                  </div>
+
+                  {/* KPI 2: Vendedores Activos */}
+                  <div className="flex flex-col p-4 rounded-xl border border-border/50 bg-card">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <Users2 size={16} className="text-amber-500" />
+                      <span className="text-sm font-medium">Vendedores Activos</span>
+                    </div>
+                    <span className="text-2xl font-bold text-foreground">
+                      {supervisor.active_sellers || 0} / {supervisor.max_sellers || 0}
+                    </span>
+                  </div>
+
+                  {/* KPI 3: Ventas Totales del Equipo */}
+                  <div className="flex flex-col p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                    <div className="flex items-center gap-2 text-emerald-700 mb-2">
+                      <TrendingUp size={16} />
+                      <span className="text-sm font-medium">Ventas Totales (Equipo)</span>
+                    </div>
+                    <span className="text-2xl font-bold text-emerald-700">
+                      {supervisor.total_team_sales || 0}
+                    </span>
+                  </div>
+
+                  {/* KPI 4: Conversión del Equipo */}
+                  <div className="flex flex-col p-4 rounded-xl border border-border/50 bg-card">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <Percent size={16} className="text-indigo-500" />
+                      <span className="text-sm font-medium">Conversión del Equipo</span>
+                    </div>
+                    <span className="text-2xl font-bold text-foreground">
+                      {supervisor.team_conversion_rate || 0}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* PRIVILEGIOS DE GESTIÓN */}
+                <div className="bg-card p-4 rounded-xl border border-border/50">
+                  <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                    <CheckSquare size={16} className="text-primary" />
+                    Privilegios de Gestión
+                  </h4>
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      { label: "Asignar Leads", value: supervisor.can_assign_leads },
+                      { label: "Aprobar Descuentos", value: supervisor.can_approve_discounts },
+                      { label: "Cancelar Órdenes", value: supervisor.can_cancel_orders },
+                    ].map((priv, idx) => (
+                      <Badge 
+                        key={idx}
+                        variant={priv.value ? "secondary" : "outline"}
+                        className={priv.value ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "opacity-60"}
+                      >
+                        {priv.value ? <ShieldCheck size={12} className="mr-1" /> : <Square size={12} className="mr-1" />}
+                        {priv.label}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* TABLA DE VENDEDORES */}
+                <div className="bg-card p-4 rounded-xl border border-border/50">
+                  <h4 className="text-sm font-semibold mb-4">Vendedores Asignados</h4>
+                  {supervisor.assignedSellers && supervisor.assignedSellers.length > 0 ? (
+                    <div className="overflow-hidden border rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50 border-b">
+                          <tr>
+                            <th className="px-4 py-2 text-left font-medium text-muted-foreground">Nombre del Vendedor</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {supervisor.assignedSellers.map((s: any, idx: number) => (
+                            <tr key={idx} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-4 py-2.5 font-medium">
+                                {s.user ? `${s.user.first_name} ${s.user.last_name}` : s.full_name || "Vendedor desconocido"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4 italic">
+                      No hay vendedores asignados a este supervisor.
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>

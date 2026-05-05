@@ -17,7 +17,15 @@ type RolesRes = InferResponseType<typeof api.users.roles.$get>;
 
 // Supervisores
 type SupervisorsRes = InferResponseType<(typeof api.users)["sales-supervisors"]["$get"]>;
-type SupervisorByIdRes = InferResponseType<(typeof api.users)["sales-supervisors"][typeof UUID_PATH]["$get"]>;
+type SupervisorDetailRes = InferResponseType<
+  (typeof api.users)["sales-supervisors"][typeof UUID_PATH]["$get"]
+>;
+
+// Tipo para la actualización del perfil del supervisor
+type UpdateSupervisorProfileReq = InferRequestType<
+  (typeof api.users)["sales-supervisors"][typeof UUID_PATH]["$put"]
+>["json"];
+
 
 // Sellers
 type SellersRes = InferResponseType<typeof api.users.sellers.$get>;
@@ -90,5 +98,23 @@ export const updateSellerProfile = async (id: string, data: UpdateSellerProfileR
 
 export const getSupervisors = async (): Promise<SupervisorsRes> => {
   const res = await api.users["sales-supervisors"].$get();
+  return await res.json();
+};
+
+export const getSupervisorById = async (id: string): Promise<SupervisorDetailRes> => {
+  const res = await api.users["sales-supervisors"][UUID_PATH].$get({
+    param: { id },
+  });
+  return await res.json();
+};
+
+export const updateSupervisorProfile = async (
+  id: string, 
+  data: UpdateSupervisorProfileReq
+) => {
+  const res = await api.users["sales-supervisors"][UUID_PATH].$put({
+    param: { id },
+    json: data,
+  });
   return await res.json();
 };

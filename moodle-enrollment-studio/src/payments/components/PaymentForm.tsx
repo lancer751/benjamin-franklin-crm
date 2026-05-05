@@ -15,7 +15,8 @@ import { toast } from "sonner";
 
 import { getOrders } from "@/orders/services/orderService";
 import { getAllLeads } from "@/leads/services/leadService";
-import { createManualPayment } from "@/payments/services/paymentService";
+import { createPayment } from "@/payments/services/paymentService";
+import { uploadImageToCloudinary } from "@/academic/services/uploadService";
 
 const paymentSchema = z.object({
   clienteOrden: z.string().min(1, "Seleccione una orden o cliente"),
@@ -25,6 +26,7 @@ const paymentSchema = z.object({
   monto: z.string().min(1, "Ingrese un monto válido"),
   idTransaccion: z.string().optional(),
   dueDate: z.date().optional(),
+  payment_receipt: z.string().optional(),
 });
 
 type PaymentFormValues = z.infer<typeof paymentSchema>;
@@ -38,6 +40,7 @@ interface PaymentFormProps {
 const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
   const isEdit = !!initialData;
   const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,6 +101,7 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
       monto: initialData?.monto || "0.00",
       idTransaccion: initialData?.idTransaccion || "",
       dueDate: initialData?.dueDate || undefined,
+      payment_receipt: initialData?.payment_receipt || "",
     }
   });
 
@@ -116,9 +120,24 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
     setSearchQuery("");
   };
 
-  const handleFile = (f: File) => {
+  const handleFile = async (f: File) => {
     const valid = ["image/png", "image/jpeg", "application/pdf"];
-    if (valid.includes(f.type) && f.size <= 5 * 1024 * 1024) setFile(f);
+    if (valid.includes(f.type) && f.size <= 5 * 1024 * 1024) {
+      setFile(f);
+      try {
+        setIsUploading(true);
+        const url = await uploadImageToCloudinary(f);
+        setValue("payment_receipt", url, { shouldValidate: true });
+        toast.success("Comprobante subido correctamente");
+      } catch (error) {
+        toast.error("Error al subir el comprobante a la nube");
+        setFile(null);
+      } finally {
+        setIsUploading(false);
+      }
+    } else {
+      toast.error("Formato no válido o archivo demasiado grande (máx 5MB)");
+    }
   };
 
   const onDrop = (e: DragEvent) => {
@@ -129,7 +148,7 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
 
   // Mutación
   const mutation = useMutation({
-    mutationFn: (payload: any) => createManualPayment(payload),
+    mutationFn: (payload: any) => createPayment(payload),
     onSuccess: () => {
       toast.success("Pago registrado correctamente");
       queryClient.invalidateQueries({ queryKey: ["payments"] });
@@ -151,6 +170,8 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
       type: data.tipoPago,
       payment_status: "CONFIRMED",
       payment_date: new Date().toISOString(),
+      payment_receipt: data.payment_receipt || null,
+      transaccion_id: data.idTransaccion || null,
     };
 
     if (data.tipoPago === "INSTALLMENTS") {
@@ -187,10 +208,10 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
       maxWidth="max-w-lg"
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose} disabled={mutation.isPending}>Cancelar</button>
-          <button className="btn-primary" onClick={handleSubmit(onSubmitForm)} disabled={mutation.isPending}>
-            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEdit ? "Actualizar" : "Registrar Pago"}
+          <button className="btn-secondary" onClick={onClose} disabled={mutation.isPending || isUploading}>Cancelar</button>
+          <button className="btn-primary" onClick={handleSubmit(onSubmitForm)} disabled={mutation.isPending || isUploading}>
+            {(mutation.isPending || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isUploading ? "Subiendo Comprobante..." : (isEdit ? "Actualizar" : "Registrar Pago")}
           </button>
         </>
       }
@@ -417,22 +438,41 @@ const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
           {file ? (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3">
               <div className="flex items-center gap-3 min-w-0">
-                <FileImage size={20} className="text-primary shrink-0" />
+                {isUploading ? (
+                  <Loader2 size={20} className="text-primary animate-spin shrink-0" />
+                ) : (
+                  <FileImage size={20} className="text-primary shrink-0" />
+                )}
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isUploading ? "Subiendo a la nube..." : `${(file.size / 1024).toFixed(0)} KB`}
+                  </p>
                 </div>
               </div>
-              <button type="button" onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="p-1 rounded hover:bg-muted text-muted-foreground"><X size={16} /></button>
+              {!isUploading && (
+                <button 
+                  type="button" 
+                  onClick={() => { 
+                    setFile(null); 
+                    setValue("payment_receipt", "");
+                    if (fileInputRef.current) fileInputRef.current.value = ""; 
+                  }} 
+                  className="p-1 rounded hover:bg-muted text-muted-foreground"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
           ) : (
             <div
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onClick={() => !isUploading && fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); !isUploading && setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={onDrop}
-              className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-8 cursor-pointer transition-colors ${isDragging ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-                }`}
+              className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-8 cursor-pointer transition-colors ${
+                isDragging ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+              } ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <Upload size={24} className="text-muted-foreground" />
               <p className="text-sm text-foreground font-medium">Haz clic o arrastra el comprobante de pago (Voucher)</p>

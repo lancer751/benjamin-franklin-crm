@@ -1,18 +1,31 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, SlidersHorizontal, Download, ChevronLeft, ChevronRight, TrendingUp, CheckCircle2, XCircle, Eye, Loader2 } from "lucide-react";
+import { Plus, SlidersHorizontal, Download, ChevronLeft, ChevronRight, TrendingUp, CheckCircle2, XCircle, Eye, Loader2, Pencil, Trash2 } from "lucide-react";
 import PaymentForm from "@/payments/components/PaymentForm";
-import { useQuery } from "@tanstack/react-query";
-
-import { getPayments } from "@/payments/services/paymentService";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getPayments, deletePayment } from "@/payments/services/paymentService";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/core/components/ui/alert-dialog";
 import { getOrders } from "@/orders/services/orderService";
 import { getAllLeads } from "@/leads/services/leadService";
 
 const PaymentsView = () => {
   const [showForm, setShowForm] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Paso 1: Múltiple Fetching
   const { data: paymentsRes, isLoading: isLoadingPayments } = useQuery({
@@ -28,6 +41,19 @@ const PaymentsView = () => {
   const { data: leadsRes } = useQuery({
     queryKey: ["leads"],
     queryFn: getAllLeads,
+  });
+
+  // Mutación para Eliminar
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deletePayment(id),
+    onSuccess: () => {
+      toast.success("Pago eliminado correctamente");
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      setPaymentToDelete(null);
+    },
+    onError: () => {
+      toast.error("No se pudo eliminar el pago. Asegúrate de que no esté CONFIRMADO.");
+    }
   });
 
   const paymentsData = Array.isArray(paymentsRes) ? paymentsRes : (paymentsRes as any)?.data || [];
@@ -81,7 +107,13 @@ const PaymentsView = () => {
           <h1 className="text-2xl font-bold text-foreground">Registro de Pagos</h1>
           <p className="text-sm text-muted-foreground mt-1">Administra y valida los ingresos provenientes de las inscripciones activas y nuevas matrículas.</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-primary">
+        <button 
+          onClick={() => {
+            setSelectedPayment(null);
+            setShowForm(true);
+          }} 
+          className="btn-primary"
+        >
           <Plus size={18} /> Registrar Pago
         </button>
       </div>
@@ -175,12 +207,44 @@ const PaymentsView = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/pagos/${p.id}`); }}
-                          className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-                        >
-                          <Eye size={14} /> Ver Detalle
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setSelectedPayment({
+                                ...p,
+                                clienteOrden: p.order_id,
+                                metodoPago: p.payment_method,
+                                tipoPago: p.type,
+                                monto: String(p.amount),
+                                idTransaccion: p.transaccion_id,
+                                payment_receipt: p.payment_receipt
+                              });
+                              setShowForm(true); 
+                            }}
+                            className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                            title="Editar Pago"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setPaymentToDelete(p);
+                            }}
+                            className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            title="Eliminar Pago"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/pagos/${p.id}`); }}
+                            className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                            title="Ver Detalle"
+                          >
+                            <Eye size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -237,7 +301,37 @@ const PaymentsView = () => {
         )}
       </div>
 
-      <PaymentForm open={showForm} onClose={() => setShowForm(false)} />
+      <PaymentForm 
+        open={showForm} 
+        onClose={() => {
+          setShowForm(false);
+          setSelectedPayment(null);
+        }} 
+        initialData={selectedPayment}
+      />
+
+      {/* Diálogo de Confirmación de Eliminación */}
+      <AlertDialog open={!!paymentToDelete} onOpenChange={(open) => !open && setPaymentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente el registro del pago de la base de datos.
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deleteMutation.mutate(paymentToDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Eliminando..." : "Eliminar Pago"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

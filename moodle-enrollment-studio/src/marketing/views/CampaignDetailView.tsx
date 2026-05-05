@@ -35,9 +35,10 @@ const CampaignDetailView = () => {
   }
 
   const campaign = data.data;
-
+  
+  // Convertir strings de presupuesto a números para cálculos y visualización
   const initialBudget = Number(campaign.initial_budget) || 0;
-  const totalSpent = Number(campaign.total_spent) || 0;
+  const totalSpent = campaign.total_spent ? Number(campaign.total_spent) : 0;
   const spentPercent = initialBudget > 0 ? Math.round((totalSpent / initialBudget) * 100) : 0;
 
   const formatDate = (dateString: string | undefined | null) => {
@@ -62,6 +63,7 @@ const CampaignDetailView = () => {
           <p className="text-sm text-muted-foreground mt-1">ID: {campaign.id} • Plataforma: {campaign.platform}</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Este botón usará la ruta /campaignsellers en el futuro */}
           <Button variant="outline" size="sm"><UserPlus size={16} className="mr-1" /> Asignar Vendedor</Button>
           <Button variant="outline" size="sm"><Edit size={16} className="mr-1" /> Editar Campaña</Button>
           <Button variant="destructive" size="sm"><Trash2 size={16} className="mr-1" /> Eliminar</Button>
@@ -90,69 +92,71 @@ const CampaignDetailView = () => {
         ))}
       </div>
 
-      {/* Edition Info */}
+      {/* Product Info */}
       <Card>
         <CardHeader className="flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg">Edición del Curso</CardTitle>
-          <Button variant="outline" size="sm"><Edit size={14} className="mr-1" /> Editar Edición</Button>
+          <CardTitle className="text-lg">Producto / Curso Relacionado</CardTitle>
+          <Button variant="outline" size="sm"><Edit size={14} className="mr-1" /> Editar Producto</Button>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Curso</p>
-              <p className="font-semibold text-foreground">{campaign.edition?.course?.name || "N/D"}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Nombre del Producto</p>
+              <p className="font-semibold text-foreground">{campaign.relatedProduct?.name || "N/D"}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Modalidad</p>
-              <div className="flex items-center gap-2">
-                <Monitor size={14} className="text-primary" />
-                <p className="text-foreground">{campaign.edition?.modality?.name || "N/D"}</p>
-              </div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Slug / Identificador</p>
+              <p className="text-foreground font-mono text-sm">{campaign.relatedProduct?.slug || "N/D"}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Horario</p>
-              <p className="text-foreground text-muted-foreground">N/D</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Capacidad</p>
-              <div className="flex items-center gap-2">
-                <Users size={14} className="text-primary" />
-                <p className="text-foreground text-muted-foreground">-</p>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Inicio de Clases</p>
-              <p className="text-foreground">
-                {campaign.edition?.start_date ? formatDate(campaign.edition.start_date) : "N/D"}
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Estado de Venta</p>
+              <Badge variant="secondary" className="font-medium">
+                {campaign.relatedProduct?.sales_status || "N/D"}
+              </Badge>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Sellers Table */}
+      {/* Members / Leads Table */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Vendedores Asignados</CardTitle>
+          <CardTitle className="text-lg">Leads / Prospectos de la Campaña</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Vendedor</th>
-                <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Leads Asignados</th>
-                <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Conversiones</th>
-                <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tasa</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground/70">
-                  No hay datos de vendedores disponibles desde el servidor
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          {!campaign.members || campaign.members.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border-t">
+              <Users size={48} className="mb-3 opacity-20" />
+              <p className="text-sm font-medium">Aún no hay leads registrados en esta campaña</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Prospecto</th>
+                  <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Email</th>
+                  <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Teléfono</th>
+                  <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {campaign.members.map((member: any) => (
+                  <tr key={member.id} className="border-b border-border hover:bg-muted/5 transition-colors">
+                    <td className="px-6 py-4 font-medium text-foreground">
+                      {`${member.first_name || ""} ${member.middle_name || ""} ${member.last_name || ""}`.trim() || "S/N"}
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground">{member.email || "N/D"}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{member.phone || "N/D"}</td>
+                    <td className="px-6 py-4">
+                      <Badge variant="outline" className={member.lead_status === 'ACTIVE' ? "text-emerald-600 border-emerald-200 bg-emerald-50/50" : ""}>
+                        {member.lead_status || "N/D"}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
     </div>
