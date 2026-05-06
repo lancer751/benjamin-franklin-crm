@@ -1,7 +1,7 @@
 import type { RoleAccess } from "@repo/database";
 import { sign } from "hono/jwt";
 import type { JWTPayload } from "hono/utils/jwt/types";
-
+import crypto from "node:crypto"
 
 export type AuthTokenPayload = {
   userId: string;
@@ -35,4 +35,9 @@ export function createRefreshToken(
   };
 
   return sign(payload, process.env.REFRESH_TOKEN_SECRET!, "HS256");
+}
+
+
+export function createCsrfToken() {
+  return crypto.randomBytes(32).toString("hex")
 }

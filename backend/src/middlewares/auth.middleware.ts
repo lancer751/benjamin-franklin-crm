@@ -1,5 +1,5 @@
-import type { AuthContext } from "@/lib/contextVariables";
-import { ACCESS_COOKIE_NAME } from "@/utils/cookie";
+import type { AuthContext, ContextWithPrisma } from "@/lib/contextVariables";
+import { ACCESS_COOKIE_NAME, CSRF_COOKIE_NAME } from "@/utils/cookie";
 import type { AuthTokenPayload } from "@/utils/jwt";
 import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
@@ -10,7 +10,6 @@ import { verify } from "hono/jwt";
 export const verifyUserAccessAuth = createMiddleware<AuthContext>(
   async (c: Context, next: Next) => {
     const accessToken = getCookie(c, ACCESS_COOKIE_NAME);
-    console.log(accessToken)
     if (!accessToken) {
       throw new HTTPException(401, { message: "Unathorized" });
     }
@@ -29,6 +28,34 @@ export const verifyUserAccessAuth = createMiddleware<AuthContext>(
       userId: decoded.userId,
       role: decoded.role,
     });
+
+    await next();
+  },
+);
+
+export const verifyCsrfCookieCredentials = createMiddleware<AuthContext>(
+  async (c: Context, next: Next) => {
+    const csrfCookieValue = getCookie(c, CSRF_COOKIE_NAME);
+    const csrfCookieHeader = c.req.header("xxx-csrf-access-token");
+
+    if (
+      !csrfCookieValue ||
+      !csrfCookieHeader ||
+      csrfCookieHeader !== csrfCookieValue
+    ) {
+      throw new HTTPException(403, { message: "Invalid csrf token" });
+    }
+    await next();
+  },
+);
+
+export const verifyUserRoleAccess = createMiddleware<ContextWithPrisma>(
+  async (c, next) => {
+    if (!c.var.authUser || c.var.authUser.role !== "ADMIN") {
+      throw new HTTPException(403, {
+        message: "Forbidden or you don't have access to this route",
+      });
+    }
 
     await next();
   },

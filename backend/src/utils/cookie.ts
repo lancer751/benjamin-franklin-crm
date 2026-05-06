@@ -1,11 +1,12 @@
 import type { RoleAccess } from "@repo/database";
 import type { Context } from "hono";
 import type { CookieOptions } from "hono/utils/cookie";
-import { createAccessToken, createRefreshToken } from "./jwt";
+import { createAccessToken, createCsrfToken, createRefreshToken } from "./jwt";
 import { deleteCookie, setCookie } from "hono/cookie";
 
-export const ACCESS_COOKIE_NAME = "bf_access_token"
-export const REFRESH_COOKIE_NAME = "bf_refresh_token"
+export const ACCESS_COOKIE_NAME = "bf_access_token";
+export const REFRESH_COOKIE_NAME = "bf_refresh_token";
+export const CSRF_COOKIE_NAME = "xxx-csrf-access-token";
 
 function createCookieOptions(maxAge: number): CookieOptions {
   return {
@@ -29,25 +30,46 @@ function createCsrfCookieOptions(maxAge: number): CookieOptions {
   };
 }
 
+export async function setAuthCookies(
+  c: Context,
+  userId: string,
+  role: RoleAccess,
+) {
+  const accessToken = await createAccessToken(userId, role);
+  const refreshToken = await createRefreshToken(userId, role);
+  const csrfToken = createCsrfToken();
 
-export async function setAuthCookies(c: Context, userId: string, role: RoleAccess) {
-    const accessToken = await createAccessToken(userId, role)
-    const refreshToken = await createRefreshToken(userId, role)
+  const accessMaxAge = 60 * 15; // 15 minutes in seconds
+  const refreshMaxAge = 60 * 60 * 24 * 7; // 7 days in seconds
 
-    const accessMaxAge = 60 * 15; // 15 minutes in seconds
-    const refreshMaxAge = 60 * 60 * 24 * 7; // 7 days in seconds
-
-    setCookie(c, ACCESS_COOKIE_NAME, accessToken, createCookieOptions(accessMaxAge))
-    setCookie(c, REFRESH_COOKIE_NAME, refreshToken, createCookieOptions(refreshMaxAge))
+  setCookie(
+    c,
+    ACCESS_COOKIE_NAME,
+    accessToken,
+    createCookieOptions(accessMaxAge),
+  );
+  setCookie(
+    c,
+    REFRESH_COOKIE_NAME,
+    refreshToken,
+    createCookieOptions(refreshMaxAge),
+  );
+  setCookie(
+    c,
+    CSRF_COOKIE_NAME,
+    csrfToken,
+    createCsrfCookieOptions(refreshMaxAge),
+  );
 }
 
 export function clearAuthCookies(c: Context) {
-    const clearOptions: CookieOptions = {
-        secure: Boolean(process.env.COOKIE_SECURE!),
-        sameSite: process.env.COOKE_SAME_SITE! as CookieOptions["sameSite"],
-        path: "/",
-    }
+  const clearOptions: CookieOptions = {
+    secure: Boolean(process.env.COOKIE_SECURE!),
+    sameSite: process.env.COOKE_SAME_SITE! as CookieOptions["sameSite"],
+    path: "/",
+  };
 
-    deleteCookie(c, ACCESS_COOKIE_NAME, clearOptions)
-    deleteCookie(c, REFRESH_COOKIE_NAME, clearOptions)
+  deleteCookie(c, ACCESS_COOKIE_NAME, clearOptions);
+  deleteCookie(c, REFRESH_COOKIE_NAME, clearOptions);
+  deleteCookie(c, CSRF_COOKIE_NAME, clearOptions);
 }

@@ -6,8 +6,18 @@ import z from "zod";
 import { HTTPException } from "hono/http-exception";
 import { compare } from "bcrypt";
 import type { SuccessResponse } from "@/app";
-import { clearAuthCookies, setAuthCookies } from "@/utils/cookie";
-import { verifyUserAccessAuth } from "@/middlewares/auth.middleware";
+import {
+  clearAuthCookies,
+  REFRESH_COOKIE_NAME,
+  setAuthCookies,
+} from "@/utils/cookie";
+import {
+  verifyCsrfCookieCredentials,
+  verifyUserAccessAuth,
+} from "@/middlewares/auth.middleware";
+import { verify } from "hono/jwt";
+import { getCookie } from "hono/cookie";
+import type { AuthTokenPayload } from "@/utils/jwt";
 
 export const authRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
@@ -61,7 +71,35 @@ export const authRoutes = new Hono<ContextWithPrisma>()
       );
     },
   )
-  .post("/logout", verifyUserAccessAuth, async (c) => {
+  .post("/refresh-access-token", verifyCsrfCookieCredentials, async (c) => {
+    const refreshToken = getCookie(c, REFRESH_COOKIE_NAME);
+
+    if (!refreshToken) {
+      throw new HTTPException(403, { message: "No refresh token available" });
+    }
+
+    const decodedPayload = (await verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET!,
+      "HS256",
+    )) as AuthTokenPayload;
+
+    if (decodedPayload.type !== "refresh") {
+      throw new HTTPException(403, {
+        message: "Invalid refresh token provided",
+      });
+    }
+
+    await setAuthCookies(c, decodedPayload.userId, decodedPayload.role);
+    return c.json<SuccessResponse>(
+      {
+        success: true,
+        message: "Token refreshed",
+      },
+      200,
+    );
+  })
+  .post("/logout", verifyCsrfCookieCredentials, async (c) => {
     clearAuthCookies(c);
     return c.json({ success: true, message: "Logged out successfully" }, 200);
   });
