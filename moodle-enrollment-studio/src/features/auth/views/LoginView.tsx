@@ -6,6 +6,8 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { login, getMe } from "../services/authService";
+import { useAuthStore } from "@/store/useAuthStore";
 
 import {
   Card,
@@ -36,6 +38,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 const LoginView = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const setUser = useAuthStore((state) => state.setUser);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -47,23 +50,25 @@ const LoginView = () => {
 
   const loginMutation = useMutation({
     mutationFn: async (values: LoginFormValues) => {
-      // Simulación de petición al backend (Mock)
-      return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          if (values.email === "admin@moodle.com" && values.password === "admin") {
-            resolve({ token: "fake-jwt-token" });
-          } else {
-            reject(new Error("Credenciales incorrectas"));
-          }
-        }, 1500);
-      });
+      const loginRes = await login(values);
+      if (!loginRes.success) {
+        throw new Error(loginRes.error || "Credenciales incorrectas");
+      }
+
+      const meRes = await getMe();
+      if (!meRes.success) {
+        throw new Error(meRes.error || "Error al obtener datos del usuario");
+      }
+
+      return meRes.data;
     },
-    onSuccess: () => {
+    onSuccess: (userData) => {
+      setUser(userData);
       toast.success("Inicio de sesión exitoso");
-      // navigate("/dashboard"); // Redirigir al dashboard real cuando esté integrado
+      navigate("/dashboard");
     },
-    onError: () => {
-      toast.error("Correo electrónico o contraseña incorrectos");
+    onError: (error: any) => {
+      toast.error(error.message || "Correo electrónico o contraseña incorrectos");
     },
   });
 

@@ -2,29 +2,17 @@ import { UserFormValues } from "../schemas/userFormSchema";
 
 export const userAdapter = {
   /**
-   * Transforma los datos recibidos del backend al formato que espera el formulario.
+   * Transforma los datos recibidos del backend al formato plano del formulario.
    */
   toForm: (user: any, roles: any[]): UserFormValues => {
     if (!user) {
       return {
-        first_name: "",
-        middle_name: "",
-        last_name: "",
-        email: "",
-        password: "",
-        cellphone: "",
-        role_id: "",
-        is_active: true,
-        sales_target: 0,
-        assigned_supervisor_id: "",
-        team_name: "",
-        max_sellers: 0,
-        discount_limit_percent: 0,
-        can_assign_leads: false,
-        can_approve_discounts: false,
-        can_reassign_leads: false,
-        can_cancel_orders: false,
-        can_view_all_team_sales: false,
+        first_name: "", middle_name: "", last_name: "", email: "", password: "",
+        cellphone: "", role_id: "", is_active: true,
+        sales_target: 0, assigned_supervisor_id: "",
+        team_name: "", max_sellers: 0, discount_limit_percent: 0,
+        can_assign_leads: false, can_approve_discounts: false,
+        can_reassign_leads: false, can_cancel_orders: false, can_view_all_team_sales: false,
       };
     }
 
@@ -35,31 +23,32 @@ export const userAdapter = {
       middle_name: user.middle_name || "",
       last_name: user.last_name || "",
       email: user.email || "",
-      password: "", // Nunca mapeamos el password de vuelta
+      password: "", 
       cellphone: user.cellphone || "",
       role_id: user.role_id || matchedRole?.id || "",
       is_active: user.is_active ?? true,
       
-      // Datos de vendedor
+      // ✅ CORRECCIÓN 1: El Adapter se encarga de leer el nombre correcto del backend
       sales_target: user.seller?.sales_target || 0,
       assigned_supervisor_id: user.seller?.assigned_supervisor_id || "",
       
-      // Datos de supervisor
-      team_name: user.supervisor?.team_name || "",
-      max_sellers: user.supervisor?.max_sellers || 0,
-      discount_limit_percent: user.supervisor?.discount_limit_percent || 0,
-      can_assign_leads: user.supervisor?.can_assign_leads || false,
-      can_approve_discounts: user.supervisor?.can_approve_discounts || false,
-      can_reassign_leads: user.supervisor?.can_reassign_leads || false,
-      can_cancel_orders: user.supervisor?.can_cancel_orders || false,
-      can_view_all_team_sales: user.supervisor?.can_view_all_team_sales || false,
+      // Usamos user.salesSupervisor (como viene de Prisma) y lo aplanamos
+      team_name: user.salesSupervisor?.team_name || "",
+      max_sellers: user.salesSupervisor?.max_sellers || 0,
+      discount_limit_percent: user.salesSupervisor?.discount_limit_percent || 0,
+      can_assign_leads: user.salesSupervisor?.can_assign_leads || false,
+      can_approve_discounts: user.salesSupervisor?.can_approve_discounts || false,
+      can_reassign_leads: user.salesSupervisor?.can_reassign_leads || false,
+      can_cancel_orders: user.salesSupervisor?.can_cancel_orders || false,
+      can_view_all_team_sales: user.salesSupervisor?.can_view_all_team_sales || false,
     };
   },
 
   /**
-   * Transforma los datos del formulario al Payload que espera el Backend para Crear/Actualizar.
+   * Transforma los datos del formulario al Payload que espera el Backend.
    */
-  toPayload: (values: UserFormValues, isSeller: boolean, isSupervisor: boolean, isUpdate: boolean) => {
+  // ✅ CORRECCIÓN 2: Recibimos roleName como parámetro
+  toPayload: (values: UserFormValues, roleName: string, isSeller: boolean, isSupervisor: boolean, isUpdate: boolean) => {
     const payload: any = {
       first_name: values.first_name,
       middle_name: values.middle_name || "",
@@ -68,6 +57,7 @@ export const userAdapter = {
       password: values.password?.trim() ? values.password : undefined,
       cellphone: values.cellphone?.trim() ? values.cellphone : null,
       role_id: values.role_id,
+      role: roleName, // 👈 ¡ESTA ES LA LLAVE MÁGICA PARA ZOD!
       is_active: values.is_active,
     };
 

@@ -67,21 +67,10 @@ useEffect(() => {
   const fullUserDetails = fullUserRes?.success ? fullUserRes.data : null;
 
   useEffect(() => {
-    if (fullUserDetails?.seller) {
-      form.setValue("sales_target", fullUserDetails.seller.sales_target || 0);
-      form.setValue("assigned_supervisor_id", fullUserDetails.seller.assigned_supervisor_id || "");
+    if (fullUserDetails) {
+      form.reset(userAdapter.toForm(fullUserDetails, roles));
     }
-    if (fullUserDetails?.supervisor) {
-      form.setValue("team_name", fullUserDetails.supervisor.team_name || "");
-      form.setValue("max_sellers", fullUserDetails.supervisor.max_sellers || 0);
-      form.setValue("discount_limit_percent", fullUserDetails.supervisor.discount_limit_percent || 0);
-      form.setValue("can_assign_leads", fullUserDetails.supervisor.can_assign_leads || false);
-      form.setValue("can_approve_discounts", fullUserDetails.supervisor.can_approve_discounts || false);
-      form.setValue("can_reassign_leads", fullUserDetails.supervisor.can_reassign_leads || false);
-      form.setValue("can_cancel_orders", fullUserDetails.supervisor.can_cancel_orders || false);
-      form.setValue("can_view_all_team_sales", fullUserDetails.supervisor.can_view_all_team_sales || false);
-    }
-  }, [fullUserDetails, form]);
+  }, [fullUserDetails, roles, form]);
 
   const closeAndReset = () => {
     form.reset();
@@ -91,7 +80,8 @@ useEffect(() => {
   // 5. Mutación para Guardar (Corregida)
   const mutation = useMutation({
     mutationFn: async (values: UserFormValues) => {
-      const userData = userAdapter.toPayload(values, isSeller, isSupervisor, !!user);
+      const roleName = roles.find((r: any) => r.id === values.role_id)?.name || "";
+      const userData = userAdapter.toPayload(values, roleName, isSeller, isSupervisor, !!user);
 
       if (!user) {
         await createUser(userData);
@@ -138,6 +128,7 @@ useEffect(() => {
     loadingRoles,
     loadingSupervisors,
     isSeller,
+    isSupervisor,
     isPending: mutation.isPending,
     closeAndReset,
     onSubmit,

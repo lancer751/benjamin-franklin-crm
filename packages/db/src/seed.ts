@@ -74,7 +74,7 @@ async function main() {
   );
 
   // Usaremos el primer supervisor creado para asignar a los vendedores en este seed
-  const mainSupervisorId = createdSupervisors[0].id;
+  const mainSupervisorId = createdSupervisors[0]!.id;
 
   // 4. PERFILES DE VENDEDOR (Solo para los que tienen el rol SALES_REP)
   console.log("⏳ Creando perfiles para los Vendedores reales...");
@@ -173,7 +173,7 @@ async function main() {
           campaing_name: `Camp. ${fakerES.company.catchPhrase()} ${fakerES.string.nanoid(3)}`,
           initial_budget: 1500.00,
           status: "ACTIVE",
-          product_id: shuffledProducts[i].id,
+          product_id: shuffledProducts[i]!.id,
           start_date: new Date(),
           platform: fakerES.helpers.arrayElement(["FACEBOOK", "TIKTOK", "WEBSITE"]),
           is_organic: false,

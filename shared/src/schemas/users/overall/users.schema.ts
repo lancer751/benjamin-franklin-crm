@@ -46,6 +46,8 @@ export const checkAtLeastOneProfileField = (data: any) => {
   if (!hasAtLeastOneField) {
     return false;
   }
+
+  return true;
 };
 
 export const CreateUserSchema = z.discriminatedUnion("role", [

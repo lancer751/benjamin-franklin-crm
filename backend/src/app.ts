@@ -12,7 +12,14 @@ app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: "*",
+    // 1. Puerto exacto (8080)
+    origin: "http://localhost:8080", 
+    
+    // 2. Permite explícitamente el uso de cookies
+    credentials: true, 
+    
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
