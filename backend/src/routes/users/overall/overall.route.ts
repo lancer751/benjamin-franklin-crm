@@ -48,6 +48,8 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
         where: { id },
         include: {
           role: { select: { name: true } },
+          seller: true,
+          salesSupervisor: true
         },
       });
 
