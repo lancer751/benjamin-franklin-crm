@@ -2,9 +2,10 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
-import type {ErrorResponse} from "shared"
+import type { ErrorResponse } from "shared";
 import { apiRoutes } from "./routes/api.route";
 import { prisma } from "@repo/database";
+import { secureHeaders } from "hono/secure-headers";
 
 export const app = new Hono();
 
@@ -12,7 +13,10 @@ app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: "*",
+    origin: "http://localhost:8080",
+    credentials: true,
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowHeaders: ["Content-Type", "Authorization", "xxx-csrf-access-token"],
   }),
 );
 
@@ -21,11 +25,9 @@ export type SuccessResponse<T = undefined> = T extends undefined
   : { success: true; message: string; data: T };
 
 // TODO: refactor this routing
-export const appRoutes = app
-  .basePath("/api")
-  .route("/", apiRoutes)
+export const appRoutes = app.basePath("/api").route("/", apiRoutes);
 
-  // error handling for http errors
+// error handling for http errors
 app.onError((err, c) => {
   if (err instanceof HTTPException) {
     console.log("Error caause:", err.cause);
@@ -69,12 +71,17 @@ app.get("/health", async (c) => {
     await prisma.$queryRaw`SELECT 1`;
     return c.json({ status: "ok", database: "connected" });
   } catch (error) {
-    return c.json({ status: "error", database: "disconnected", error: String(error) }, 503);
+    return c.json(
+      { status: "error", database: "disconnected", error: String(error) },
+      503,
+    );
   }
 });
 
+app.use(secureHeaders());
+
 export default {
-  port: Number(process.env.PORT) || 3000, 
-  hostname: '0.0.0.0', 
-  fetch: app.fetch, 
-}
+  port: Number(process.env.PORT) || 3000,
+  hostname: "0.0.0.0",
+  fetch: app.fetch,
+};
