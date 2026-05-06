@@ -8,38 +8,39 @@ import MainLayout from "@/core/components/MainLayout";
 import NotFound from "@/core/views/NotFound";
 
 // Vistas Generales
-import DashboardView from "@/dashboard/views/DashboardView";
+import DashboardView from "@/features/dashboard/views/DashboardView";
 
 // Módulo de Administración (Auth & Académico)
-import UsersView from "@/auth/views/UsersView";
-import CoursesAdminView from "@/academic/views/CoursesAdminView";
-import CourseDetailView from "./academic/views/CourseDetailView";
-import AcademicCalendarView from "@/academic/views/AcademicCalendarView";
+import LoginView from "@/features/auth/views/LoginView";
+import UsersView from "@/features/auth/views/UsersView";
+import CoursesAdminView from "@/features/academic/views/CoursesAdminView";
+import CourseDetailView from "@/features/academic/views/CourseDetailView";
+import AcademicCalendarView from "@/features/academic/views/AcademicCalendarView";
 
 // Módulo de Leads
-import ProspectsView from "@/leads/views/ProspectsView";
-import LeadDetailView from "@/leads/views/LeadDetailView";
-import PipelineView from "@/leads/views/PipelineView";
+import ProspectsView from "@/features/leads/views/ProspectsView";
+import LeadDetailView from "@/features/leads/views/LeadDetailView";
+import PipelineView from "@/features/leads/views/PipelineView";
 
 // Módulo de Ventas (Orders & Products)
-import OrdersView from "@/orders/views/OrdersView"; // Nueva Orden
-import OrderDetailView from "@/orders/views/OrderDetailView";
-import ProductsView from "@/orders/views/ProductsView";
-import ProductDetailView from "@/orders/views/ProductDetailView";
+import OrdersView from "@/features/orders/views/OrdersView"; // Nueva Orden
+import OrderDetailView from "@/features/orders/views/OrderDetailView";
+import ProductsView from "@/features/orders/views/ProductsView";
+import ProductDetailView from "@/features/orders/views/ProductDetailView";
 
 // Módulo de Finanzas
-import FinanceDashboardView from "@/payments/views/FinanceDashboardView";
-import PaymentsView from "@/payments/views/PaymentsView";
-import PaymentDetailView from "@/payments/views/PaymentDetailView";
-import PaymentPlansView from "@/payments/views/PaymentPlansView";
-import OverdueView from "@/payments/views/OverdueView";
+import FinanceDashboardView from "@/features/payments/views/FinanceDashboardView";
+import PaymentsView from "@/features/payments/views/PaymentsView";
+import PaymentDetailView from "@/features/payments/views/PaymentDetailView";
+import PaymentPlansView from "@/features/payments/views/PaymentPlansView";
+import OverdueView from "@/features/payments/views/OverdueView";
 
 // Módulo de Marketing
-import MarketingDashboardView from "@/marketing/views/MarketingDashboardView";
-import CampaignsView from "@/marketing/views/CampaignsView";
-import CampaignDetailView from "@/marketing/views/CampaignDetailView";
-import LeadSourcesView from "@/marketing/views/LeadSourcesView";
-import UserDetailView from "./auth/views/UserDetailView";
+import MarketingDashboardView from "@/features/marketing/views/MarketingDashboardView";
+import CampaignsView from "@/features/marketing/views/CampaignsView";
+import CampaignDetailView from "@/features/marketing/views/CampaignDetailView";
+import LeadSourcesView from "@/features/marketing/views/LeadSourcesView";
+import UserDetailView from "@/features/auth/views/UserDetailView";
 
 
 const App = () => (
@@ -48,6 +49,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Rutas Públicas */}
+          <Route path="/login" element={<LoginView />} />
+          
           <Route path="/" element={<MainLayout />}>
             {/* Redirección por defecto */}
             <Route index element={<Navigate to="/dashboard" replace />} />

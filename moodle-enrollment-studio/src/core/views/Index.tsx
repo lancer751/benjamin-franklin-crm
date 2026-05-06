@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Search, Bell, HelpCircle, Plus, Trash2, Pencil } from "lucide-react";
 import AppSidebar from "@/core/components/AppSidebar";
-import ProspectForm from "@/leads/components/ProspectForm";
-import CampaignForm from "@/marketing/components/CampaignForm";
-import EditionPricingForm from "@/orders/components/ProductFormModal";
-import PaymentForm from "@/payments/components/PaymentForm";
+import ProspectForm from "@/features/leads/components/ProspectForm";
+import CampaignForm from "@/features/marketing/components/CampaignForm";
+import EditionPricingForm from "@/features/orders/components/ProductFormModal";
+import PaymentForm from "@/features/payments/components/PaymentForm";
 import DeleteConfirmModal from "@/core/components/DeleteConfirmModal";
-import AcademicCalendarView from "@/academic/views/AcademicCalendarView";
+import AcademicCalendarView from "@/features/academic/views/AcademicCalendarView";
 
 const Index = () => {
   const [activePage, setActivePage] = useState("prospectos");
