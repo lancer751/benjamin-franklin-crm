@@ -1,15 +1,10 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
-import { leadRoutes } from "@/routes/lead.route";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
-import { courseRoutes } from "./routes/course.route";
-import { campaingRoutes } from "./routes/campaing.route";
-import { productRoutes } from "./routes/product.route";
-import { orderRoutes } from "./routes/order.route";
-import { paymentRoutes } from "./routes/payment.route";
 import type {ErrorResponse} from "shared"
 import { apiRoutes } from "./routes/api.route";
+import { prisma } from "@repo/database";
 
 export const app = new Hono();
 
@@ -67,6 +62,15 @@ app.onError((err, c) => {
 
 app.get("/", (c) => {
   return c.json({ status: "ok" });
+});
+
+app.get("/health", async (c) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return c.json({ status: "ok", database: "connected" });
+  } catch (error) {
+    return c.json({ status: "error", database: "disconnected", error: String(error) }, 503);
+  }
 });
 
 export default {

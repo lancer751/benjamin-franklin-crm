@@ -50,6 +50,7 @@
     "noEmit": false,
     "rootDir": "./",
     "emitDecoratorMetadata": true,
+    "types": ["bun"]
   },
   "include": [
     "src/**/*",

@@ -1,7 +1,20 @@
-import type { PrismaClient } from "@repo/database"
+import type { PrismaClient, RoleAccess } from "@repo/database";
 
 export type ContextWithPrisma = {
   Variables: {
-    prisma: PrismaClient
-  }
-}
+    prisma: PrismaClient,
+    authUser: {
+      userId: string;
+      role: RoleAccess;
+    };
+  };
+};
+
+export type AuthContext = {
+  Variables: {
+    authUser: {
+      userId: string;
+      role: RoleAccess;
+    };
+  };
+};

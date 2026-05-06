@@ -10,7 +10,7 @@ export const UserSchema = z.object({
     .min(2, "First name must be at least 2 characters long"),
   middle_name: z.string(),
   last_name: z.string().min(2, "Last name must be at least 2 characters long"),
-  email: z.email("Invalid email address").optional().nullable(),
+  email: z.email("Invalid email address"),
   corporate_email: z
     .email("Invalid corporate email address")
     .optional()
@@ -33,20 +33,61 @@ export const UserSchema = z.object({
   updated_at: z.coerce.date(),
 });
 
-export const CreateUserSchema = UserSchema.omit({
+const BaseCreateUserSchema = UserSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
-}).extend({
-  seller_profile: CreateSellerProfileSchema.optional(),
-  sales_supervisor_profile: createSalesSupervisorProfileSchema.optional(),
-  marketing_profile: CreateMarketingProfileSchema.optional()
-})
+});
 
-export const UpdateUserSchema = CreateUserSchema.partial().refine(
-  (data) => Object.keys(data).length > 0,
-  { message: "At least one field must be provided" },
-);
+export const checkAtLeastOneProfileField = (data: any) => {
+  const hasAtLeastOneField = Object.values(data).some(
+    (value) => value !== undefined,
+  );
+  if (!hasAtLeastOneField) {
+    return false;
+  }
+};
+
+export const CreateUserSchema = z.discriminatedUnion("role", [
+  BaseCreateUserSchema.extend({
+    role: z.literal("SALES_REP"),
+    seller_profile: CreateSellerProfileSchema.refine(
+      (data) => checkAtLeastOneProfileField(data),
+      {
+        message:
+          "At least the assigned supervisor field must be provided in seller_profile",
+      },
+    ),
+  }),
+  BaseCreateUserSchema.extend({
+    role: z.literal("SALES_SUPERVISOR"),
+    sales_supervisor_profile: createSalesSupervisorProfileSchema
+      .omit({ user_id: true }) // is not necessary when creating the user account and profile
+      .refine(
+        (data) => {
+          const hasAtLeastOneField = Object.values(data).some(
+            (value) => value !== undefined,
+          );
+          if (!hasAtLeastOneField) {
+            return false;
+          }
+        },
+        {
+          message:
+            "At least one profile field must be provided in sales_supervisor_profile",
+        },
+      ),
+  }),
+  BaseCreateUserSchema.extend({
+    role: z.literal("MARKETING"),
+    marketing_profile: CreateMarketingProfileSchema.omit({ user_id: true }),
+  }),
+  // Each no-profile role gets its own literal entry
+  BaseCreateUserSchema.extend({ role: z.literal("ADMIN") }),
+  BaseCreateUserSchema.extend({ role: z.literal("COLLECTIONS") }),
+]);
+
+export const UpdateUserSchema = BaseCreateUserSchema.partial()
 
 export type User = z.infer<typeof UserSchema>;
 export type CreateUserDTO = z.infer<typeof CreateUserSchema>;
