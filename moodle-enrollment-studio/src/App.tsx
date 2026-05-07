@@ -1,11 +1,18 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Toaster as Sonner } from "@/core/components/ui/sonner";
 import { Toaster } from "@/core/components/ui/toaster";
 import { TooltipProvider } from "@/core/components/ui/tooltip";
 
+// Auth & Store
+import { useAuthStore } from "@/store/useAuthStore";
+import { getMe } from "@/features/auth/services/authService";
+
 // Layout y Core
 import MainLayout from "@/core/components/MainLayout";
 import NotFound from "@/core/views/NotFound";
+import { ProtectedRoute } from "@/core/components/ProtectedRoute";
 
 // Vistas Generales
 import DashboardView from "@/features/dashboard/views/DashboardView";
@@ -43,56 +50,87 @@ import LeadSourcesView from "@/features/marketing/views/LeadSourcesView";
 import UserDetailView from "@/features/auth/views/UserDetailView";
 
 
-const App = () => (
+const App = () => {
+  const { setUser, setLoading, isLoading } = useAuthStore();
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const res = await getMe();
+        if (res && res.id) {
+          setUser(res);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, [setUser, setLoading]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+      </div>
+    );
+  }
+
+  return (
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
         <Routes>
           {/* Rutas Públicas */}
-          <Route path="/login" element={<LoginView />} />
+          <Route path="/" element={<LoginView />} />
+          <Route path="/login" element={<Navigate to="/" replace />} />
           
-          <Route path="/" element={<MainLayout />}>
-            {/* Redirección por defecto */}
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            
-            {/* Dashboard General */}
-            <Route path="dashboard" element={<DashboardView />} />
-            
-            {/* Administración */}
-            <Route path="admin/usuarios" element={<UsersView />} />
-            <Route path="usuarios/:id" element={<UserDetailView />} />
-            <Route path="admin/cursos" element={<CoursesAdminView />} />
-            <Route path="admin/cursos/:id" element={<CourseDetailView />} />
-            <Route path="admin/calendario" element={<AcademicCalendarView />} />
-            
-            {/* Ventas & Prospectos */}
-            <Route path="prospectos" element={<ProspectsView />} />
-            <Route path="prospectos/:id" element={<LeadDetailView />} />
-            <Route path="pipeline" element={<PipelineView />} />
-            <Route path="ordenes" element={<OrdersView />} />
-            <Route path="ordenes/:id" element={<OrderDetailView />} />
-            <Route path="productos" element={<ProductsView />} />
-            <Route path="/productos/:id" element={<ProductDetailView />} />
-            
-            {/* Finanzas */}
-            <Route path="finanzas" element={<FinanceDashboardView />} />
-            <Route path="pagos" element={<PaymentsView />} />
-            <Route path="pagos/:id" element={<PaymentDetailView />} />
-            <Route path="planes-pago" element={<PaymentPlansView />} />
-            <Route path="morosos" element={<OverdueView />} />
-            
-            {/* Marketing */}
-            <Route path="marketing" element={<MarketingDashboardView />} />
-            <Route path="campanas" element={<CampaignsView />} />
-            <Route path="campanas/:id" element={<CampaignDetailView />} />
-            <Route path="origen-leads" element={<LeadSourcesView />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<MainLayout />}>
+              {/* Dashboard General */}
+              <Route path="/dashboard" element={<DashboardView />} />
+              
+              {/* Administración */}
+              <Route path="/admin/usuarios" element={<UsersView />} />
+              <Route path="/usuarios/:id" element={<UserDetailView />} />
+              <Route path="/admin/cursos" element={<CoursesAdminView />} />
+              <Route path="/admin/cursos/:id" element={<CourseDetailView />} />
+              <Route path="/admin/calendario" element={<AcademicCalendarView />} />
+              
+              {/* Ventas & Prospectos */}
+              <Route path="/prospectos" element={<ProspectsView />} />
+              <Route path="/prospectos/:id" element={<LeadDetailView />} />
+              <Route path="/pipeline" element={<PipelineView />} />
+              <Route path="/ordenes" element={<OrdersView />} />
+              <Route path="/ordenes/:id" element={<OrderDetailView />} />
+              <Route path="/productos" element={<ProductsView />} />
+              <Route path="/productos/:id" element={<ProductDetailView />} />
+              
+              {/* Finanzas */}
+              <Route path="/finanzas" element={<FinanceDashboardView />} />
+              <Route path="/pagos" element={<PaymentsView />} />
+              <Route path="/pagos/:id" element={<PaymentDetailView />} />
+              <Route path="/planes-pago" element={<PaymentPlansView />} />
+              <Route path="/morosos" element={<OverdueView />} />
+              
+              {/* Marketing */}
+              <Route path="/marketing" element={<MarketingDashboardView />} />
+              <Route path="/campanas" element={<CampaignsView />} />
+              <Route path="/campanas/:id" element={<CampaignDetailView />} />
+              <Route path="/origen-leads" element={<LeadSourcesView />} />
+            </Route>
           </Route>
           
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
-);
+  );
+};
 
 export default App;

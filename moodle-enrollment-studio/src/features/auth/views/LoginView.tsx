@@ -8,7 +8,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { login, getMe } from "../services/authService";
 import { useAuthStore } from "@/store/useAuthStore";
-
+import { useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -30,7 +30,7 @@ import { Button } from "@/core/components/ui/button";
 
 const loginSchema = z.object({
   email: z.string().min(1, "El correo electrónico es requerido").email("Formato de correo inválido"),
-  password: z.string().min(1, "La contraseña es requerida"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -39,6 +39,22 @@ const LoginView = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const setUser = useAuthStore((state) => state.setUser);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-950 dark:to-slate-900">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+      </div>
+    );
+  }
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -56,16 +72,14 @@ const LoginView = () => {
       }
 
       const meRes = await getMe();
-      if (!meRes.success) {
-        throw new Error(meRes.error || "Error al obtener datos del usuario");
-      }
+      if (!meRes || !meRes.id) throw new Error("Error al recuperar el perfil");
 
-      return meRes.data;
+      return meRes;
     },
     onSuccess: (userData) => {
       setUser(userData);
-      toast.success("Inicio de sesión exitoso");
-      navigate("/dashboard");
+      toast.success(`¡Bienvenido, ${userData.first_name}!`);
+      navigate("/dashboard", { replace: true });
     },
     onError: (error: any) => {
       toast.error(error.message || "Correo electrónico o contraseña incorrectos");

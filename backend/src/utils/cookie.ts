@@ -23,7 +23,7 @@ function createCsrfCookieOptions(maxAge: number): CookieOptions {
   return {
     path: "/",
     secure: Boolean(process.env.COOKIE_SECURE!),
-    httpOnly: true,
+    httpOnly: false,
     maxAge,
     expires: new Date(Date.UTC(2000, 11, 24, 10, 30, 59, 900)),
     sameSite: process.env.COOKE_SAME_SITE! as CookieOptions["sameSite"],

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -26,8 +26,13 @@ import {
   Wallet,
   Speaker,
   CalendarDays,
+  Loader2,
 } from "lucide-react";
 import { useSearchStore } from "@/store/useSearchStore";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { logout } from "@/features/auth/services/authService";
 
 const sidebarSections = [
   {
@@ -79,8 +84,22 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 
 const MainLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const { searchQuery, setSearchQuery, placeholder } = useSearchStore();
+  const setUser = useAuthStore((state) => state.setUser);
+
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      toast.success("Sesión cerrada");
+      setUser(null);
+      navigate("/login");
+    },
+    onError: () => {
+      toast.error("Error al cerrar sesión");
+    }
+  });
 
   // Auto-open sections that contain the active route
   const getInitialOpen = () => {
@@ -164,8 +183,13 @@ const MainLayout = () => {
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors">
             <Settings size={16} /> Ajustes
           </button>
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors">
-            <LogOut size={16} /> Cerrar Sesión
+          <button 
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {logoutMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
+            {logoutMutation.isPending ? "Cerrando..." : "Cerrar Sesión"}
           </button>
         </div>
 

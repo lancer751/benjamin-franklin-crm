@@ -3,7 +3,7 @@ import { create } from 'zustand';
 interface User {
   id: string;
   first_name: string;
-  role: { name: 'ADMIN' | 'SALES_REP' | 'SUPERVISOR' }; // Ajusta según tus enums
+  role: { name: 'ADMIN' | 'SALES_REP' | 'SUPERVISOR' };
 }
 
 interface AuthState {
@@ -18,6 +18,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true, // Empezamos cargando para validar la sesión al inicio
-  setUser: (user) => set({ user, isAuthenticated: !!user, isLoading: false }),
+  setUser: (user) => set({ user: user?.id ? user : null, isAuthenticated: !!user?.id, isLoading: false }),
   setLoading: (loading) => set({ isLoading: loading }),
 }));
