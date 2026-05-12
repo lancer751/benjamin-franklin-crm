@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getRoles, createUser, updateUser, getUserById, getSupervisors } from "../services/userService";
+import { getRoles, createUser, updateUser, getUserById, getSupervisors, updateSupervisorProfile, updateSellerProfile } from "../services/userService";
 import { userFormSchema, type UserFormValues } from "../schemas/userFormSchema";
 import { userAdapter } from "../adapters/userAdapter";
 
@@ -83,16 +83,45 @@ useEffect(() => {
       const roleName = roles.find((r: any) => r.id === values.role_id)?.name || "";
       const userData = userAdapter.toPayload(values, roleName, isSeller, isSupervisor, !!user);
 
+      // 2. Intercepción y Coerción de Datos (Fix Zod)
+      if (userData.sales_supervisor_profile) {
+        userData.sales_supervisor_profile.discount_limit_percent = String(userData.sales_supervisor_profile.discount_limit_percent || "0");
+        if (userData.sales_supervisor_profile.max_manual_discount !== undefined) {
+          userData.sales_supervisor_profile.max_manual_discount = String(userData.sales_supervisor_profile.max_manual_discount || "0");
+        }
+      }
+
       if (!user) {
         await createUser(userData);
         return "create";
       } else {
-        await updateUser(user.id, userData);
+        // 3. Enrutamiento Dinámico del PUT (Modo Edición)
+        const updatePromises: Promise<any>[] = [];
+        
+        // Siempre actualizamos la información del usuario base
+        updatePromises.push(updateUser(user.id, userData));
+
+        if (isSupervisor) {
+          const supervisorId = user.sales_supervisor_profile?.id || user.salesSupervisor?.id;
+          if (supervisorId && userData.sales_supervisor_profile) {
+            updatePromises.push(updateSupervisorProfile(supervisorId, userData.sales_supervisor_profile));
+          }
+        } else if (isSeller) {
+          const sellerId = user.seller_profile?.id || user.seller?.id;
+          if (sellerId && userData.seller_profile) {
+            updatePromises.push(updateSellerProfile(sellerId, userData.seller_profile));
+          }
+        }
+
+        await Promise.all(updatePromises);
         return "update";
       }
     },
     onSuccess: (actionType) => {
+      // 4. Limpieza (Invalidación asegurada sin importar la ruta)
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["supervisors"] });
+      queryClient.invalidateQueries({ queryKey: ["sellers"] });
       if (user?.id) {
         queryClient.invalidateQueries({ queryKey: ["user", user.id] });
       }

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, Calendar as CalendarIcon, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Calendar as CalendarIcon, User, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/core/components/ui/card';
 import { Input } from '@/core/components/ui/input';
 import { Button } from '@/core/components/ui/button';
@@ -7,80 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/core/components/ui/avatar
 import { ToggleGroup, ToggleGroupItem } from '@/core/components/ui/toggle-group';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/core/components/ui/hover-card';
 import { Progress } from '@/core/components/ui/progress';
-
-// Mock Data
-const mockEditions = [
-  {
-    id: "1",
-    course_id: "c_python",
-    course_name: "Python para Análisis de Datos",
-    course_type: "Certificación Profesional",
-    edition_name: "Edición Q1",
-    edition_number: 1,
-    year: 2026,
-    edition_code: "#PYTH00112026",
-    start_date: "2026-01-10T00:00:00",
-    end_date: "2026-03-25T23:59:59",
-    edition_status: "COMPLETED",
-    teacher_fullname: "Alberto Ruiz",
-  },
-  {
-    id: "2",
-    course_id: "c_python",
-    course_name: "Python para Análisis de Datos",
-    course_type: "Certificación Profesional",
-    edition_name: "Edición Q2",
-    edition_number: 2,
-    year: 2026,
-    edition_code: "#PYTH00212026",
-    start_date: "2026-04-05T00:00:00",
-    end_date: "2026-06-20T23:59:59",
-    edition_status: "IN_PROGRESS",
-    teacher_fullname: "Laura Martínez",
-  },
-  {
-    id: "3",
-    course_id: "c_dsf",
-    course_name: "Data Science Fundamentals",
-    course_type: "Master Degree Track",
-    edition_name: "Bootcamp Spring 26",
-    edition_number: 1,
-    year: 2026,
-    edition_code: "#DSF-B-2026-S",
-    start_date: "2026-06-15T00:00:00",
-    end_date: "2026-09-10T23:59:59",
-    edition_status: "SCHEDULED",
-    teacher_fullname: "Carlos Vega",
-  },
-  {
-    id: "4",
-    course_id: "c_dsf",
-    course_name: "Data Science Fundamentals",
-    course_type: "Master Degree Track",
-    edition_name: "Summer Intensive",
-    edition_number: 2,
-    year: 2026,
-    edition_code: "#DSF-INT-2026-02",
-    start_date: "2026-08-01T00:00:00",
-    end_date: "2026-10-31T23:59:59",
-    edition_status: "SCHEDULED_GRAY",
-    teacher_fullname: "Elena Soto",
-  },
-  {
-    id: "5",
-    course_id: "c_ia",
-    course_name: "Inteligencia Artificial Aplicada",
-    course_type: "Executive Program",
-    edition_name: "Edición Global V2",
-    edition_number: 1,
-    year: 2026,
-    edition_code: "#IA-GLOB-26-01",
-    start_date: "2026-11-05T00:00:00",
-    end_date: "2026-12-20T23:59:59",
-    edition_status: "SCHEDULED",
-    teacher_fullname: "Miguel Rojas",
-  }
-];
+import { useAcademicCalendarView } from '../hooks/useAcademicCalendarView';
+import { formatToLocalTime, displayFriendlyDate } from '@/core/utils/date-utils';
 
 const getStatusStyles = (status: string) => {
   switch (status) {
@@ -88,6 +16,7 @@ const getStatusStyles = (status: string) => {
       return 'bg-emerald-100 text-emerald-800 border-l-4 border-emerald-500';
     case 'IN_PROGRESS':
       return 'bg-blue-100 text-blue-800 border-l-4 border-blue-500';
+    case 'OPEN':
     case 'SCHEDULED':
       return 'bg-amber-100 text-amber-800 border-l-4 border-amber-500';
     case 'SCHEDULED_GRAY':
@@ -101,6 +30,7 @@ const getStatusText = (status: string) => {
   switch (status) {
     case 'COMPLETED': return 'Completado';
     case 'IN_PROGRESS': return 'En Progreso';
+    case 'OPEN': return 'Programado';
     case 'SCHEDULED': return 'Programado';
     case 'SCHEDULED_GRAY': return 'Programado';
     default: return status;
@@ -108,9 +38,10 @@ const getStatusText = (status: string) => {
 };
 
 export const AcademicCalendarView = () => {
+  const { editions: mockEditions, isLoading } = useAcademicCalendarView();
   const [viewMode, setViewMode] = useState<"Mes" | "Semestre" | "Año">("Año");
 
-  const [referenceDate, setReferenceDate] = useState(new Date('2026-04-24T12:00:00'));
+  const [referenceDate, setReferenceDate] = useState(new Date());
   const currentYear = referenceDate.getFullYear();
   const currentMonth = referenceDate.getMonth(); // 0-11
   const currentSemester = currentMonth < 6 ? 1 : 2;
@@ -136,7 +67,7 @@ export const AcademicCalendarView = () => {
   };
 
   const handleToday = () => {
-    setReferenceDate(new Date('2026-04-24T12:00:00'));
+    setReferenceDate(new Date());
   };
 
   const getDynamicLabel = () => {
@@ -205,8 +136,11 @@ export const AcademicCalendarView = () => {
     const { start: viewStart, end: viewEnd } = viewRange;
     const viewDuration = viewEnd - viewStart;
 
-    const itemStart = new Date(startDateStr).getTime();
-    const itemEnd = new Date(endDateStr).getTime();
+    const localStartDate = formatToLocalTime(startDateStr);
+    const localEndDate = formatToLocalTime(endDateStr);
+
+    const itemStart = localStartDate.setHours(0, 0, 0, 0);
+    const itemEnd = localEndDate.setHours(23, 59, 59, 999);
 
     // Out of bounds
     if (itemEnd < viewStart || itemStart > viewEnd) return { display: 'none' };
@@ -226,7 +160,7 @@ export const AcademicCalendarView = () => {
   const getTodayMarkerPosition = () => {
     const { start: viewStart, end: viewEnd } = viewRange;
     const viewDuration = viewEnd - viewStart;
-    const today = new Date('2026-04-24T12:00:00').getTime();
+    const today = new Date().getTime();
 
     if (today < viewStart || today > viewEnd) return { display: 'none' };
 
@@ -292,7 +226,7 @@ export const AcademicCalendarView = () => {
     });
 
     return result;
-  }, [viewRange]);
+  }, [viewRange, mockEditions]);
 
   // Variables para Stacking UI
   const isMonthView = viewMode === 'Mes';
@@ -305,6 +239,14 @@ export const AcademicCalendarView = () => {
   const visibleEditionsCount = groupedCourses.reduce((acc, course) => acc + course.editions.length, 0);
   const inProgressCount = mockEditions.filter(ed => ed.edition_status === 'IN_PROGRESS' && getBarPosition(ed.start_date, ed.end_date).display !== 'none').length;
   const occupancyRate = 76; // Static for demo
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full bg-slate-50 min-h-screen p-6 space-y-6 overflow-hidden items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-slate-50 min-h-screen p-6 space-y-6 overflow-hidden">
@@ -506,8 +448,8 @@ export const AcademicCalendarView = () => {
                                  <div>
                                    <span className="text-muted-foreground block text-xs mb-1">Fechas</span>
                                    <span className="font-medium">
-                                     {new Date(ed.start_date).toLocaleDateString()} <br /> 
-                                     {new Date(ed.end_date).toLocaleDateString()}
+                                     {displayFriendlyDate(ed.start_date)} <br /> 
+                                     {displayFriendlyDate(ed.end_date)}
                                    </span>
                                  </div>
                                </div>
