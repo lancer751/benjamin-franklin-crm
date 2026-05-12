@@ -104,6 +104,22 @@ model Role {
   description String?
   is_active   Boolean    @default(true)
   users       User[]
+
+
+model Professor {
+  id                 String              @id @default(uuid()) @db.Char(36)
+  name               String
+  lastname           String
+  corporate_email    String
+  email String @unique
+  cellphone          String
+  // be careful with this part because if you change the id without requesting the moodle api, an error will appears due to moodle incosistency data.
+  moddle_account_id  Int                 @unique
+  moodle_user_status MoodleAccountStatus @default(ACTIVE)
+  created_at  DateTime              @default(now())
+  update_at DateTime @updatedAt
+
+  assigned_editions ProffessorsOnEditions[]
 }
 
 model SellerProfile {
@@ -188,7 +204,7 @@ model User {
   first_name          String
   middle_name         String
   last_name           String
-  email               String   @unique
+  email               String    @unique
   corporate_email     String?   @unique
   cellphone           String?   @db.Char(9)
   corporate_cellphone String?   @db.Char(9)
@@ -245,7 +261,7 @@ enum LeadStatus {
   INACTIVE
 }
 
-enum MoodleStudentStatus {
+enum MoodleAccountStatus {
   ACTIVE
   SUSPENDED
 }
@@ -255,7 +271,7 @@ model CustomerProfile {
   lead_id            String              @unique
   moodle_user_name   String
   moodle_user_id     Int?                @unique
-  moodle_user_status MoodleStudentStatus @default(ACTIVE)
+  moodle_user_status MoodleAccountStatus @default(ACTIVE)
   password           String
 
   lead Lead @relation(fields: [lead_id], references: [id])
@@ -419,6 +435,17 @@ enum Modality {
   ASINCRONICO
 }
 
+model ProffessorsOnEditions {
+  professor_id String
+  edition_id   String
+  assignedAt   DateTime @default(now())
+
+  professors Professor @relation(fields: [professor_id], references: [id])
+  editions   Edition   @relation(fields: [edition_id], references: [id])
+
+  @@id([professor_id, edition_id])
+}
+
 model Edition {
   id                  String        @id @default(uuid()) @db.Char(36)
   course_id           String
@@ -431,7 +458,6 @@ model Edition {
   end_date            DateTime      @db.Date
   modality            Modality
   moodle_course_id    Int?          @unique
-  teacher_fullname    String
   meet_link           String? // optional: PACKED modalities do not have one
   whatsapp_group_link String? // optional: PACKED modalities do not have one
   edition_status      EditionStatus @default(DRAFT)
@@ -440,9 +466,10 @@ model Edition {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  course       Course            @relation(fields: [course_id], references: [id])
-  schedules    EditionSchedule[]
-  ownedProduct Product?
+  course              Course                  @relation(fields: [course_id], references: [id])
+  schedules           EditionSchedule[]
+  assigned_professors ProffessorsOnEditions[]
+  ownedProduct        Product?
 }
 
 model Category {
@@ -538,7 +565,6 @@ model OrderDetail {
   order      Order    @relation(fields: [order_id], references: [id])
 }
 
-// TODO add fields and a model to manage cuotas and cash payments
 enum PaymentType {
   FULL
   INSTALLMENTS
