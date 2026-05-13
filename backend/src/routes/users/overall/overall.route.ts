@@ -9,7 +9,6 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { CreateUserSchema } from "shared";
 import { hash } from "bcrypt";
-import { verifyUserAccessAuth, verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 
 export const userGeneralRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)

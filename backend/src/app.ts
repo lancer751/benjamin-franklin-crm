@@ -6,6 +6,7 @@ import type { ErrorResponse } from "shared";
 import { apiRoutes } from "./routes/api.route";
 import { prisma } from "@repo/database";
 import { secureHeaders } from "hono/secure-headers";
+import { rateLimiter } from "hono-rate-limiter";
 
 export const app = new Hono();
 
@@ -18,6 +19,19 @@ app.use(
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowHeaders: ["Content-Type", "Authorization", "xxx-csrf-access-token"],
   }),
+);
+app.use(secureHeaders());
+// Apply rate limiting middleware
+app.use(
+  rateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    standardHeaders: true,
+    limit: 200, // Limit each client to 100 requests per window
+    keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "", // Use IP address as key
+    message: {
+      message: "Too many requests, please try again later"
+    }
+  })
 );
 
 export type SuccessResponse<T = undefined> = T extends undefined
@@ -78,7 +92,6 @@ app.get("/health", async (c) => {
   }
 });
 
-app.use(secureHeaders());
 
 export default {
   port: Number(process.env.PORT) || 3000,
