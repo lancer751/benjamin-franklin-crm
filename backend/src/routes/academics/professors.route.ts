@@ -16,6 +16,22 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
 
     c.json(professors, 200);
   })
+  .get(UUID_ROUTE, zValidator("param", validateIdParamSchema), async (c) => {
+    const prisma = c.get("prisma");
+    const { id } = c.req.valid("param");
+
+    const professorProfile = await prisma.professor.findUnique({
+      where: { id },
+      include: {
+        assigned_editions: true,
+      },
+    });
+    if (!professorProfile) {
+      throw new HTTPException(404, { message: "Professor not found" });
+    }
+
+    c.json(professorProfile, 200);
+  })
   .post("/", zValidator("json", BaseCreateProfessorSchema), async (c) => {
     const prisma = c.get("prisma");
     const professorData = c.req.valid("json");
@@ -66,4 +82,19 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
         data: updatedProfessor,
       });
     },
-  );
+  )
+  .delete(UUID_ROUTE, zValidator("param", validateIdParamSchema), async (c) => {
+    const { id } = c.req.valid("param");
+
+    const existingProfessor = await c
+      .get("prisma")
+      .professor.findUnique({ where: { id } });
+    if (!existingProfessor) {
+      throw new HTTPException(404, { message: "Professor not found" });
+    }
+
+    return c.json<SuccessResponse>(
+      { success: true, message: "Deletion Successful" },
+      200,
+    );
+  });

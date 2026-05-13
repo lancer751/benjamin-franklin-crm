@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AssignProfessorsOnEditionSchema, BaseCreateProfessorSchema } from "../types";
 
 // ---- Enums ----
 export const CourseTypeSchema = z.enum(["COURSE", "PROGRAM"]);
@@ -56,7 +57,7 @@ export const CreateCourseSchema = CourseSchema.omit({
 
 export const UpdateCourseSchema = CreateCourseSchema.partial().refine(
   (data) => Object.keys(data).length > 0,
-  { message: "At least one field must be provided" }
+  { message: "At least one field must be provided" },
 );
 
 export const CreateCourseBenefitSchema = CourseBenefitSchema.omit({
@@ -64,10 +65,11 @@ export const CreateCourseBenefitSchema = CourseBenefitSchema.omit({
   course_id: true,
 });
 
-export const UpdateCourseBenefitSchema = CreateCourseBenefitSchema.partial().refine(
-  (data) => Object.keys(data).length > 0,
-  { message: "At least one field must be provided" }
-);
+export const UpdateCourseBenefitSchema =
+  CreateCourseBenefitSchema.partial().refine(
+    (data) => Object.keys(data).length > 0,
+    { message: "At least one field must be provided" },
+  );
 
 // ---- Edition ----
 export type CourseType = z.infer<typeof CourseTypeSchema>;
@@ -87,18 +89,12 @@ export const EditionSchema = z.object({
   duration_unit: DurationUnitSchema,
   modality: ModalitySchema,
   moodle_course_id: z.number().int().optional().nullable(),
-  teacher_fullname: z
-    .string()
-    .regex(
-      /^[\p{L}\s]+$/u,
-      "Teacher fullname must contain only letters and spaces"
-    )
-    .refine(
-      (name) => name.trim().length > 0,
-      "Teacher fullname cannot be empty"
-    ),
+  assigned_professors: z.array(AssignProfessorsOnEditionSchema).min(1),
   meet_link: z.url("Invalid meet link URL").optional().nullable(),
-  whatsapp_group_link: z.url("Invalid WhatsApp group URL").optional().nullable(),
+  whatsapp_group_link: z
+    .url("Invalid WhatsApp group URL")
+    .optional()
+    .nullable(),
   edition_status: EditionStatusSchema,
   edition_code: z
     .string()
@@ -115,7 +111,7 @@ export const CreateEditionSchema = EditionSchema.omit({
 
 export const UpdateEditionSchema = CreateEditionSchema.partial().refine(
   (obj) => Object.keys(obj).length > 0,
-  "At least one field must be provided"
+  "At least one field must be provided",
 );
 
 // ---- Query schemas ----
@@ -134,6 +130,10 @@ export type UpdateCourseInput = z.infer<typeof UpdateCourseSchema>;
 export type Edition = z.infer<typeof EditionSchema>;
 export type CreateEditionInput = z.infer<typeof CreateEditionSchema>;
 export type UpdateEditionInput = z.infer<typeof UpdateEditionSchema>;
-export type CreateCourseBenefitInput = z.infer<typeof CreateCourseBenefitSchema>;
-export type UpdateCourseBenefitInput = z.infer<typeof UpdateCourseBenefitSchema>;
+export type CreateCourseBenefitInput = z.infer<
+  typeof CreateCourseBenefitSchema
+>;
+export type UpdateCourseBenefitInput = z.infer<
+  typeof UpdateCourseBenefitSchema
+>;
 export type CourseQuery = z.infer<typeof CourseQuerySchema>;
