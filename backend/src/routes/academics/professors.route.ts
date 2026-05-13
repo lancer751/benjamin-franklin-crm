@@ -14,7 +14,14 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
     const prisma = c.get("prisma");
     const professors = await prisma.professor.findMany();
 
-    c.json(professors, 200);
+    return c.json<SuccessResponse<typeof professors>>(
+      {
+        message: "Data retrieved Successfully",
+        data: professors,
+        success: true,
+      },
+      200,
+    );
   })
   .get(UUID_ROUTE, zValidator("param", validateIdParamSchema), async (c) => {
     const prisma = c.get("prisma");
@@ -30,7 +37,7 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
       throw new HTTPException(404, { message: "Professor not found" });
     }
 
-    c.json(professorProfile, 200);
+    return c.json(professorProfile, 200);
   })
   .post("/", zValidator("json", BaseCreateProfessorSchema), async (c) => {
     const prisma = c.get("prisma");
@@ -48,7 +55,7 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
       data: professorData,
     });
 
-    c.json<SuccessResponse<typeof newProfessor>>({
+    return c.json<SuccessResponse<typeof newProfessor>>({
       message: "Professor created Successfully",
       success: true,
       data: newProfessor,
@@ -76,7 +83,7 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
         data: professorData,
       });
 
-      c.json<SuccessResponse<typeof updatedProfessor>>({
+      return c.json<SuccessResponse<typeof updatedProfessor>>({
         message: "Professor updated Successfully",
         success: true,
         data: updatedProfessor,

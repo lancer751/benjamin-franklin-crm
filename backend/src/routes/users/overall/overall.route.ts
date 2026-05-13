@@ -13,7 +13,7 @@ import { hash } from "bcrypt";
 export const userGeneralRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
   // all users
-  .get("/",  async (c) => {
+  .get("/", async (c) => {
     const users = await c.get("prisma").user.findMany({
       include: {
         role: { select: { id: true, name: true } },
@@ -38,7 +38,7 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
   // user details by id
   .get(
     UUID_ROUTE,
-    
+
     zValidator("param", validateIdParamSchema),
     async (c) => {
       const { id } = c.req.valid("param");
@@ -67,7 +67,7 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
   // Create a new user and its profile based on the role
   .post(
     "/",
-    
+
     zValidator("json", CreateUserSchema),
     async (c) => {
       const userData = c.req.valid("json");
@@ -211,7 +211,7 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
   // )
   .delete(
     UUID_ROUTE,
-    
+
     zValidator("param", validateIdParamSchema),
     async (c) => {
       const { id } = c.req.valid("param");
@@ -241,7 +241,7 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
     },
   )
   // get all roles
-  .get("/roles",  async (c) => {
+  .get("/roles", async (c) => {
     const roles = await c.get("prisma").role.findMany({});
 
     return c.json(

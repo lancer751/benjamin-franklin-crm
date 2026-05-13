@@ -1,28 +1,34 @@
 import { useEffect, useState } from "react";
 import { benjaminCrmApi } from "./lib/apiConnection";
 
-type UsersResponse = Awaited<ReturnType<typeof benjaminCrmApi.users.$get>>;
-type PublicUser = Awaited<ReturnType<UsersResponse["json"]>>["data"][number]
+type ProfessorsResponse = Awaited<
+  ReturnType<typeof benjaminCrmApi.academic.professors.$get>
+>;
+type PublicUser = Awaited<
+  ReturnType<ProfessorsResponse["json"]>
+>["data"][number];
 
 function App() {
-  const [users, setUsers] = useState<PublicUser[]>([]);
-  console.log(users)
+  const [professors, setUsers] = useState<PublicUser[]>([]);
   useEffect(() => {
-    async function getUsers() {
-      const res: UsersResponse= await benjaminCrmApi.users.$get();
+    async function getProffesors() {
+      const res: ProfessorsResponse =
+        await benjaminCrmApi.academic.professors.$get();
       const data = await res.json();
       setUsers(data.data);
     }
 
-    getUsers();
+    getProffesors();
   }, []);
 
   return (
-    <>
-      {users.map((u) => (
-        <p key={u.id}>{u.first_name}</p>
+    <div>
+      {professors.length === 0 ? <p>Add a new professor to see them here.</p> : professors.map((pr) => (
+        <div className="p-3 rounded-md border-gray-300 text-lg capitalize" key={pr.id}>
+          {pr.name} {pr.lastname}
+        </div>
       ))}
-    </>
+    </div>
   );
 }
 
