@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, Calendar as CalendarIcon, User, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/core/components/ui/card';
 import { Input } from '@/core/components/ui/input';
 import { Button } from '@/core/components/ui/button';
@@ -419,9 +419,6 @@ export const AcademicCalendarView = () => {
                                  {/* Extra Info (solo en Mes por el espacio) */}
                                  {isMonthView && (
                                    <div className="text-[10px] opacity-80 truncate flex items-center gap-1.5 bg-white/20 px-2 py-0.5 rounded-full ml-auto">
-                                     <User size={10} />
-                                     <span className="truncate">{ed.teacher_fullname}</span>
-                                     <span className="opacity-50">|</span>
                                      <span className="font-mono truncate">{ed.edition_code}</span>
                                    </div>
                                  )}
@@ -435,16 +432,7 @@ export const AcademicCalendarView = () => {
                                  <p className="text-sm text-muted-foreground">{ed.edition_name} (Ed. {ed.edition_number})</p>
                                  <p className="text-xs font-mono text-slate-400 mt-0.5">{ed.edition_code}</p>
                                </div>
-                               <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-slate-100">
-                                 <div>
-                                   <span className="text-muted-foreground block text-xs mb-1">Docente</span>
-                                   <span className="font-medium flex items-center gap-2">
-                                     <Avatar className="h-5 w-5">
-                                       <AvatarFallback className="text-[10px]">{ed.teacher_fullname.charAt(0)}</AvatarFallback>
-                                     </Avatar>
-                                     {ed.teacher_fullname}
-                                   </span>
-                                 </div>
+                               <div className="grid grid-cols-1 gap-4 text-sm pt-2 border-t border-slate-100">
                                  <div>
                                    <span className="text-muted-foreground block text-xs mb-1">Fechas</span>
                                    <span className="font-medium">

@@ -24,7 +24,6 @@ export const useAcademicCalendarView = () => {
       start_date: edition.start_date,
       end_date: edition.end_date,
       edition_status: edition.edition_status,
-      teacher_fullname: edition.teacher_fullname,
     };
   }) || [];
 
