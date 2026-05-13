@@ -105,7 +105,10 @@ model Role {
   is_active   Boolean    @default(true)
   users       User[]
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/backend
 
 model Professor {
   id                 String              @id @default(uuid()) @db.Char(36)

@@ -9,12 +9,12 @@ import { secureHeaders } from "hono/secure-headers";
 import { rateLimiter } from "hono-rate-limiter";
 
 export const app = new Hono();
-
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 app.use("*", logger());
 app.use(
   "*",
   cors({
-    origin: "http://localhost:8080",
+    origin: allowedOrigins,
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowHeaders: ["Content-Type", "Authorization", "xxx-csrf-access-token"],

@@ -7,7 +7,7 @@ import { verifyUserAccessAuth, verifyUserRoleAccess } from "@/middlewares/auth.m
 
 
 export const userRoutes = new Hono().use(verifyUserAccessAuth).use(verifyUserRoleAccess)
-userRoutes.route("/", userGeneralRoutes)
-userRoutes.route("/sellers", sellersRoutes)
-userRoutes.route("/sales-supervisors", salesSupervisorsRoutes)
-userRoutes.route("/marketers", marketersRoute)
+.route("/", userGeneralRoutes)
+.route("/sellers", sellersRoutes)
+.route("/sales-supervisors", salesSupervisorsRoutes)
+.route("/marketers", marketersRoute)

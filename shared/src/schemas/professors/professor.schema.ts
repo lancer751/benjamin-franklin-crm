@@ -21,10 +21,7 @@ export const BaseCreateProfessorSchema = BaseProfessorSchema.omit({
   updated_at: true,
 });
 
-export const AssignProfessorsOnEditionSchema = BaseProfessorSchema.omit({
-  created_at: true,
-  updated_at: true,
-})
+export const AssignProfessorsOnEditionSchema = BaseProfessorSchema.pick({id: true})
 
 export const UpdateProfessorSchema = BaseCreateProfessorSchema.partial();
 

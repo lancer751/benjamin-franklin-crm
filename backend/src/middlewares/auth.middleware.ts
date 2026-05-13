@@ -56,7 +56,6 @@ export const verifyUserRoleAccess = createMiddleware<ContextWithPrisma>(
         message: "Forbidden or you don't have access to this route",
       });
     }
-
     await next();
   },
 );
