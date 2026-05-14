@@ -11,14 +11,7 @@ import { Button } from "@/core/components/ui/button";
 import { Badge } from "@/core/components/ui/badge";
 import { Skeleton } from "@/core/components/ui/skeleton";
 import { Progress } from "@/core/components/ui/progress";
-
-const ROLE_TRANSLATIONS: Record<string, string> = {
-  ADMIN: "Administrador",
-  MARKETING: "Marketing",
-  SALES_SUPERVISOR: "Supervisor de Ventas",
-  SALES_REP: "Asesor de Ventas",
-  COLLECTIONS: "Cobranzas",
-};
+import { translateEnum, RoleTranslationsMap } from "@/core/utils/dictionaries";
 
 export default function UserDetailView() {
   const { id } = useParams();
@@ -101,7 +94,7 @@ export default function UserDetailView() {
                       : "border-gray-200 text-gray-700 bg-gray-50/50"
                     }
                   >
-                    {user?.role?.name ? ROLE_TRANSLATIONS[user.role.name] || user.role.name : "Sin Rol"}
+                    {translateEnum(user?.role?.name, RoleTranslationsMap)}
                   </Badge>
                   <Badge
                     variant="secondary"
@@ -293,7 +286,7 @@ export default function UserDetailView() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* KPI 1: Equipo a Cargo */}
                   <div className="flex flex-col p-4 rounded-xl border border-border/50 bg-card">
                     <div className="flex items-center gap-2 text-muted-foreground mb-2">
@@ -312,7 +305,7 @@ export default function UserDetailView() {
                       <span className="text-sm font-medium">Vendedores Activos</span>
                     </div>
                     <span className="text-2xl font-bold text-foreground">
-                      {supervisor.active_sellers || 0} / {supervisor.max_sellers || 0}
+                      {supervisor.assignedSellers?.filter((s: any) => s.user?.is_active).length || 0} / {supervisor.max_sellers || 0}
                     </span>
                   </div>
 
@@ -337,6 +330,28 @@ export default function UserDetailView() {
                       {supervisor.team_conversion_rate || 0}%
                     </span>
                   </div>
+
+                  {/* KPI 5: Órdenes del Equipo */}
+                  <div className="flex flex-col p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                    <div className="flex items-center gap-2 text-emerald-700 mb-2">
+                      <ShoppingCart size={16} />
+                      <span className="text-sm font-medium">Órdenes del Equipo</span>
+                    </div>
+                    <span className="text-2xl font-bold text-emerald-700">
+                      {supervisor.completed_team_orders || 0} / {supervisor.total_team_orders || 0}
+                    </span>
+                  </div>
+
+                  {/* KPI 6: Tiempo de Respuesta Promedio */}
+                  <div className="flex flex-col p-4 rounded-xl border border-border/50 bg-card">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <Clock size={16} className="text-amber-500" />
+                      <span className="text-sm font-medium">Tiempo de Respuesta</span>
+                    </div>
+                    <span className="text-2xl font-bold text-foreground">
+                      {supervisor.avg_team_response_time || 0} min
+                    </span>
+                  </div>
                 </div>
 
                 {/* PRIVILEGIOS DE GESTIÓN */}
@@ -350,6 +365,8 @@ export default function UserDetailView() {
                       { label: "Asignar Leads", value: supervisor.can_assign_leads },
                       { label: "Aprobar Descuentos", value: supervisor.can_approve_discounts },
                       { label: "Cancelar Órdenes", value: supervisor.can_cancel_orders },
+                      { label: "Reasignar Leads", value: supervisor.can_reassign_leads },
+                      { label: "Ver Ventas Globales", value: supervisor.can_view_all_team_sales },
                     ].map((priv, idx) => (
                       <Badge 
                         key={idx}
@@ -404,7 +421,7 @@ export default function UserDetailView() {
                 Perfil Administrativo/Supervisión
               </h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                El rol actual ({user?.role?.name ? ROLE_TRANSLATIONS[user.role.name] || user.role.name : "Sin Rol"}) tiene acceso a métricas globales desde sus módulos, pero no genera reportes de ventas individuales.
+                El rol actual ({translateEnum(user?.role?.name, RoleTranslationsMap)}) tiene acceso a métricas globales desde sus módulos, pero no genera reportes de ventas individuales.
               </p>
             </Card>
           </div>

@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/core/components/ui/alert";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/core/components/ui/accordion";
 import { useEditionFormModal } from "../hooks/useEditionFormModal";
+import { ModalityMap, EditionStatusMap, DurationUnitMap } from "@/core/utils/dictionaries";
 
 interface EditionFormModalProps {
   open: boolean;
@@ -127,10 +128,9 @@ export default function EditionFormModal({ open, onClose, courseId, courseCode, 
                                 <SelectTrigger><SelectValue placeholder="Elige la modalidad" /></SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="PRESENCIAL">Presencial</SelectItem>
-                                <SelectItem value="VIRTUAL">Virtual</SelectItem>
-                                <SelectItem value="HIBRIDO">Híbrido</SelectItem>
-                                <SelectItem value="ASINCRONICO">Asíncrono</SelectItem>
+                                {Object.entries(ModalityMap).map(([key, value]) => (
+                                  <SelectItem key={key} value={key}>{value}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -146,10 +146,9 @@ export default function EditionFormModal({ open, onClose, courseId, courseCode, 
                                 <SelectTrigger><SelectValue placeholder="Selecciona el estado" /></SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="SCHEDULED">Programada (Aún no iniciada)</SelectItem>
-                                <SelectItem value="OPEN">Abierta a Inscripciones</SelectItem>
-                                <SelectItem value="IN_PROGRESS">En Progreso (Dictado Módulo)</SelectItem>
-                                <SelectItem value="COMPLETED">Completada</SelectItem>
+                                {Object.entries(EditionStatusMap).map(([key, value]) => (
+                                  <SelectItem key={key} value={key}>{value}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -223,8 +222,9 @@ export default function EditionFormModal({ open, onClose, courseId, courseCode, 
                                   <SelectTrigger><SelectValue placeholder="Unidad" /></SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="WEEKS">Semanas</SelectItem>
-                                  <SelectItem value="MONTHS">Meses</SelectItem>
+                                  {Object.entries(DurationUnitMap).map(([key, value]) => (
+                                    <SelectItem key={key} value={key}>{value}</SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />

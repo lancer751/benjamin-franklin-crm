@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/core/components/ui/card';
 import { Input } from '@/core/components/ui/input';
 import { Button } from '@/core/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/core/components/ui/avatar';
+import { Badge } from '@/core/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '@/core/components/ui/toggle-group';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/core/components/ui/hover-card';
 import { Progress } from '@/core/components/ui/progress';
@@ -38,6 +40,7 @@ const getStatusText = (status: string) => {
 };
 
 export const AcademicCalendarView = () => {
+  const navigate = useNavigate();
   const { editions: mockEditions, isLoading } = useAcademicCalendarView();
   const [viewMode, setViewMode] = useState<"Mes" | "Semestre" | "Año">("Año");
 
@@ -408,6 +411,7 @@ export const AcademicCalendarView = () => {
                          <HoverCard>
                            <HoverCardTrigger asChild>
                              <div 
+                               onClick={() => navigate(`/admin/academic/editions/${ed.id}`)}
                                className={`w-full h-full rounded-sm rounded-l-none font-medium shadow-sm pointer-events-auto cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-md flex flex-col justify-center px-3 overflow-hidden ${getStatusStyles(ed.edition_status)}`}
                              >
                                <div className="flex items-center justify-between w-full truncate gap-2">
@@ -427,12 +431,21 @@ export const AcademicCalendarView = () => {
                            </HoverCardTrigger>
                            <HoverCardContent className="w-80 p-4 z-50 pointer-events-auto" align="start" sideOffset={8}>
                              <div className="space-y-3">
-                               <div>
-                                 <h4 className="text-sm font-semibold">{course.course_name}</h4>
-                                 <p className="text-sm text-muted-foreground">{ed.edition_name} (Ed. {ed.edition_number})</p>
-                                 <p className="text-xs font-mono text-slate-400 mt-0.5">{ed.edition_code}</p>
+                               <div className="flex justify-between items-start gap-2">
+                                 <div className="min-w-0 flex-1">
+                                   <h4 className="text-sm font-semibold truncate">{course.course_name}</h4>
+                                   <p className="text-sm text-muted-foreground truncate">{ed.edition_name} (Ed. {ed.edition_number})</p>
+                                   <p className="text-xs font-mono text-slate-400 mt-0.5 truncate">{ed.edition_code}</p>
+                                 </div>
+                                 <Badge variant="outline" className="text-[10px] shrink-0">
+                                   {getStatusText(ed.edition_status)}
+                                 </Badge>
                                </div>
-                               <div className="grid grid-cols-1 gap-4 text-sm pt-2 border-t border-slate-100">
+                               <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-slate-100">
+                                 <div>
+                                   <span className="text-muted-foreground block text-xs mb-1">Modalidad</span>
+                                   <span className="font-medium capitalize">{ed.modality || "Virtual"}</span>
+                                 </div>
                                  <div>
                                    <span className="text-muted-foreground block text-xs mb-1">Fechas</span>
                                    <span className="font-medium">

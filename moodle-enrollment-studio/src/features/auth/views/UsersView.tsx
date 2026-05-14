@@ -11,14 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/core/components/ui/alert-dialog";
 import { UserFormModal } from "../components/UserFormModal";
 import { useUsersView } from "../hooks/useUsersView";
-
-const ROLE_TRANSLATIONS: Record<string, string> = {
-  ADMIN: "Administrador",
-  MARKETING: "Marketing",
-  SALES_SUPERVISOR: "Supervisor de Ventas",
-  SALES_REP: "Asesor de Ventas",
-  COLLECTIONS: "Cobranzas",
-};
+import { translateEnum, RoleTranslationsMap } from "@/core/utils/dictionaries";
 
 export default function UsersView() {
   const navigate = useNavigate();
@@ -166,7 +159,7 @@ export default function UsersView() {
                             : "border-gray-200 text-gray-700 bg-gray-50/50 hover:bg-gray-50/80"
                         }
                       >
-                        {user.role?.name ? ROLE_TRANSLATIONS[user.role.name] || user.role.name : "Sin Rol"}
+                        {translateEnum(user.role?.name, RoleTranslationsMap)}
                       </Badge>
                     </TableCell>
                     <TableCell>

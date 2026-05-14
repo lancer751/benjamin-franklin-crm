@@ -23,10 +23,12 @@ import {
   AlertDialogTitle,
 } from "@/core/components/ui/alert-dialog";
 import EditionFormModal from "../components/EditionFormModal";
-import EditionDetailModal from "../components/EditionDetailModal";
 import { useCourseDetail } from "../hooks/useCourseDetail";
+import { translateEnum, EditionStatusMap, ModalityMap } from "@/core/utils/dictionaries";
+import { useNavigate } from "react-router-dom";
 
 export default function CourseDetailView() {
+  const navigate = useNavigate();
   const {
     course,
     isLoading,
@@ -193,7 +195,7 @@ export default function CourseDetailView() {
                     <TableCell>
                       <Badge variant="outline" className="bg-muted/20 text-muted-foreground hover:bg-muted/40 font-medium">
                         <MapPin className="mr-1.5 h-3 w-3 opacity-70" />
-                        {edition.modality?.name || edition.modality || "No definida"}
+                        {translateEnum(edition.modality?.name || edition.modality, ModalityMap)}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -207,7 +209,7 @@ export default function CourseDetailView() {
                             : "bg-zinc-100 text-zinc-700 hover:bg-zinc-100 border-transparent shadow-none"
                         }
                       >
-                        {edition.edition_status || "DRAFT"}
+                        {translateEnum(edition.edition_status, EditionStatusMap)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right pr-5">
@@ -218,7 +220,7 @@ export default function CourseDetailView() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => actions.openDetail(edition.id)} className="gap-2 cursor-pointer">
+                          <DropdownMenuItem onClick={() => navigate(`/admin/academic/editions/${edition.id}`)} className="gap-2 cursor-pointer">
                             <Eye size={15} className="text-muted-foreground" />
                             <span>Ver Detalle</span>
                           </DropdownMenuItem>
@@ -253,11 +255,6 @@ export default function CourseDetailView() {
         courseClassesNumber={course.classes_number}
       />
       
-      <EditionDetailModal 
-        open={modals.showDetailModal}
-        onClose={actions.closeDetailModal}
-        editionId={selection.selectedEditionId}
-      />
 
       <AlertDialog open={modals.showDeleteAlert} onOpenChange={modals.setShowDeleteAlert}>
         <AlertDialogContent>
