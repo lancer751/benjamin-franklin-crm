@@ -6,10 +6,12 @@ import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { verify } from "hono/jwt";
+import type { RoleAccess } from "shared";
 
 export const verifyUserAccessAuth = createMiddleware<AuthContext>(
   async (c: Context, next: Next) => {
     const accessToken = getCookie(c, ACCESS_COOKIE_NAME);
+    //TODO: Handle JWT errors
     if (!accessToken) {
       throw new HTTPException(401, { message: "Unathorized" });
     }
@@ -49,13 +51,12 @@ export const verifyCsrfCookieCredentials = createMiddleware<AuthContext>(
   },
 );
 
-export const verifyUserRoleAccess = createMiddleware<ContextWithPrisma>(
-  async (c, next) => {
-    if (!c.var.authUser || c.var.authUser.role !== "ADMIN") {
+export const verifyUserRoleAccess = (...allowedRoles: RoleAccess[]) =>
+  createMiddleware<ContextWithPrisma>(async (c, next) => {
+    if (!c.var.authUser || !allowedRoles.includes(c.var.authUser.role)) {
       throw new HTTPException(403, {
         message: "Forbidden or you don't have access to this route",
       });
     }
     await next();
-  },
-);
+  });

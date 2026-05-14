@@ -23,12 +23,18 @@ export const authRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
   .get("/me", verifyUserAccessAuth, async (c) => {
     const authenticatedUser = c.var.authUser;
-
+    console.log(authenticatedUser);
     const user = await c.get("prisma").user.findUnique({
       where: { id: authenticatedUser.userId },
       include: { role: true },
       omit: { role_id: true, password: true },
     });
+
+    if (!user) {
+      throw new HTTPException(404, {
+        message: "User not found while retrieving profile",
+      });
+    }
 
     return c.json(user, 200);
   })
@@ -54,7 +60,7 @@ export const authRoutes = new Hono<ContextWithPrisma>()
         throw new HTTPException(401, { message: "Invalid email or password" });
       }
 
-      const checkPassword = await compare(password, user?.password);
+      const checkPassword = await compare(password, user.password);
 
       if (!checkPassword) {
         throw new HTTPException(401, { message: "Invalid email or password" });
