@@ -14,9 +14,6 @@ import withPrisma from "@/lib/prisma";
 export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
   .get("/", withPrisma, async (c) => {
     const courses = await c.get("prisma").course.findMany({
-      include: {
-        benefits: true,
-      },
       orderBy: {
         created_at: "desc",
       },
@@ -40,7 +37,6 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
       const course = await c.get("prisma").course.findUnique({
         where: { id },
         include: {
-          benefits: true,
           editions: {
             include: {
               ownedProduct: true,
@@ -68,9 +64,6 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
 
     const newCourse = await c.get("prisma").course.create({
       data: courseData,
-      include: {
-        benefits: true,
-      },
     });
 
     return c.json<SuccessResponse<typeof newCourse>>(
@@ -102,9 +95,6 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
       const updatedCourse = await c.get("prisma").course.update({
         where: { id },
         data: courseData,
-        include: {
-          benefits: true,
-        },
       });
 
       return c.json<SuccessResponse<typeof updatedCourse>>(

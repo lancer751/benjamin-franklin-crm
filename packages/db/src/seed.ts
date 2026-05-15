@@ -1,5 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
+import { fakeProfessors } from "./workflows/product-launch/fake-data/professors";
+import { CoursesWorkflow } from "./workflows/product-launch/orchestator";
 
 const databaseUrl = `${process.env.DATABASE_URL}`;
 if (!databaseUrl) {
@@ -49,7 +51,8 @@ async function main() {
     }),
   ]);
 
-
+  await CoursesWorkflow();
+  console.log("🎉 Seeding complete.");
 }
 
 main()
