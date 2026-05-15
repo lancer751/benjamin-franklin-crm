@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createProfessor, updateProfessor, getProfessorById } from "../services/professorService";
 import { professorFormSchema, type ProfessorFormValues } from "../schemas/professorFormSchema";
+import { professorAdapter } from "../adapters/professorAdapter";
 
 export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, professor?: any | null) => {
   const queryClient = useQueryClient();
@@ -12,14 +13,7 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
   const form = useForm<ProfessorFormValues>({
     resolver: zodResolver(professorFormSchema),
     mode: "onTouched",
-    defaultValues: {
-      name: "",
-      last_name: "",
-      email: "",
-      corporate_email: "",
-      cellphone: "",
-      moddle_account_id: undefined,
-    },
+    defaultValues: professorAdapter.toForm(null),
   });
 
   const { data: fullProfessorRes, isLoading: isLoadingProfessor } = useQuery({
@@ -35,50 +29,22 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
     if (!isOpen) return;
 
     if (fullProfessorDetails) {
-      form.reset({
-        name: fullProfessorDetails.name || "",
-        last_name: fullProfessorDetails.last_name || "",
-        email: fullProfessorDetails.email || "",
-        corporate_email: fullProfessorDetails.corporate_email || "",
-        cellphone: fullProfessorDetails.cellphone || "",
-        moddle_account_id: fullProfessorDetails.moddle_account_id || undefined,
-      });
+      form.reset(professorAdapter.toForm(fullProfessorDetails));
     } else if (!professor) {
-      form.reset({
-        name: "",
-        last_name: "",
-        email: "",
-        corporate_email: "",
-        cellphone: "",
-        moddle_account_id: undefined,
-      });
+      form.reset(professorAdapter.toForm(null));
     } else if (professor && !fullProfessorDetails) {
-      form.reset({
-        name: professor.name || "",
-        last_name: professor.last_name || "",
-        email: professor.email || "",
-        corporate_email: professor.corporate_email || "",
-        cellphone: professor.cellphone || "",
-        moddle_account_id: professor.moddle_account_id || undefined,
-      });
+      form.reset(professorAdapter.toForm(professor));
     }
   }, [fullProfessorDetails, professor, isOpen, form]);
 
   const closeAndReset = () => {
-    form.reset();
+    form.reset(professorAdapter.toForm(null));
     onClose();
   };
 
   const mutation = useMutation({
     mutationFn: async (values: ProfessorFormValues) => {
-      const payload: any = {
-        name: values.name,
-        last_name: values.last_name,
-        email: values.email,
-        corporate_email: values.corporate_email || null,
-        cellphone: values.cellphone || null,
-        moddle_account_id: values.moddle_account_id || null,
-      };
+      const payload = professorAdapter.toPayload(values);
 
       if (!professor) {
         await createProfessor(payload);

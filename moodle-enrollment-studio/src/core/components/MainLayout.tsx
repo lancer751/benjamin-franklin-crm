@@ -1,31 +1,13 @@
 import { useState } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
   Users,
-  Kanban,
-  FileText,
-  Package,
-  CreditCard,
-  CalendarCheck,
-  AlertTriangle,
-  Megaphone,
-  Target,
   Settings,
   LogOut,
   Search,
   Bell,
   HelpCircle,
-  DollarSign,
-  BarChart3,
   ChevronDown,
-  ShieldCheck,
-  Shield,
-  GraduationCap,
-  TrendingUp,
-  Wallet,
-  Speaker,
-  CalendarDays,
   Loader2,
 } from "lucide-react";
 import { useSearchStore } from "@/store/useSearchStore";
@@ -33,47 +15,8 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { logout } from "@/features/auth/services/authService";
+import { sidebarSections } from "@/core/config/menu";
 
-const sidebarSections = [
-  {
-    title: "Administración",
-    icon: ShieldCheck,
-    items: [
-      { to: "/admin/usuarios", label: "Usuarios", icon: Users },
-      { to: "/admin/cursos", label: "Cursos & Ediciones", icon: GraduationCap },
-      { to: "/admin/calendario", label: "Calendario Académico", icon: CalendarDays },
-    ],
-  },
-  {
-    title: "Ventas",
-    icon: TrendingUp,
-    items: [
-      { to: "/prospectos", label: "Prospectos", icon: Users },
-      { to: "/pipeline", label: "Pipeline", icon: Kanban },
-      { to: "/ordenes", label: "Órdenes", icon: FileText },
-      { to: "/productos", label: "Productos", icon: Package },
-    ],
-  },
-  {
-    title: "Finanzas",
-    icon: Wallet,
-    items: [
-      // { to: "/finanzas", label: "Dashboard", icon: DollarSign },
-      { to: "/pagos", label: "Pagos", icon: CreditCard },
-      // { to: "/planes-pago", label: "Planes de Pago", icon: CalendarCheck },
-      // { to: "/morosos", label: "Morosos", icon: AlertTriangle },
-    ],
-  },
-  {
-    title: "Marketing",
-    icon: Speaker,
-    items: [
-      // { to: "/marketing", label: "Dashboard", icon: BarChart3 },
-      { to: "/campanas", label: "Campañas", icon: Megaphone },
-      // { to: "/origen-leads", label: "Origen de Leads", icon: Target },
-    ],
-  },
-];
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${

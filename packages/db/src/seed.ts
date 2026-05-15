@@ -9,38 +9,57 @@ const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log("🌱 Seeding...");
-  const roles = await Promise.all([
+  console.log("🌱 Seeding Roles...");
+  await Promise.all([
     prisma.role.upsert({
-      where: {
-        name: "SALES_REP",
-      },
+      where: { name: "SALES_REP" },
       update: {},
-      create: {
-        name: "SALES_REP",
-      },
+      create: { name: "SALES_REP" },
     }),
     prisma.role.upsert({
-      where: {
-        name: "MARKETING",
-      },
+      where: { name: "MARKETING" },
       update: {},
-      create: {
-        name: "MARKETING",
-      },
+      create: { name: "MARKETING" },
     }),
     prisma.role.upsert({
-      where: {
-        name: "SALES_SUPERVISOR",
-      },
+      where: { name: "SALES_SUPERVISOR" },
       update: {},
-      create: {
-        name: "SALES_SUPERVISOR",
-      },
+      create: { name: "SALES_SUPERVISOR" },
+    }),
+    // 💡 Agregué los roles faltantes según tu Enum RoleAccess
+    prisma.role.upsert({
+      where: { name: "ADMIN" },
+      update: {},
+      create: { name: "ADMIN" },
+    }),
+    prisma.role.upsert({
+      where: { name: "COLLECTIONS" },
+      update: {},
+      create: { name: "COLLECTIONS" },
     }),
   ]);
 
+  console.log("🌱 Seeding Categories...");
+  // 💡 Seeding de las 3 categorías principales para Productos
+  await Promise.all([
+    prisma.category.upsert({
+      where: { name: "Construcción" },
+      update: {},
+      create: { name: "Construcción" },
+    }),
+    prisma.category.upsert({
+      where: { name: "Tecnología" },
+      update: {},
+      create: { name: "Tecnología" },
+    }),
+    prisma.category.upsert({
+      where: { name: "Textil y Confecciones" },
+      update: {},
+      create: { name: "Textil y Confecciones" },
+    }),
+  ]);
 
+  console.log("✅ Seeding completed successfully!");
 }
 
 main()
