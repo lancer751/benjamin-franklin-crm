@@ -30,3 +30,7 @@ export const UpdateCourseSchema = CreateCourseSchema.partial().refine(
   (data) => Object.keys(data).length > 0,
   { message: "At least one field must be provided" },
 );
+
+export type Course = z.infer<typeof CourseSchema>;
+export type CreateCourseInput = z.infer<typeof CreateCourseSchema>;
+export type UpdateCourseInput = z.infer<typeof UpdateCourseSchema>;
