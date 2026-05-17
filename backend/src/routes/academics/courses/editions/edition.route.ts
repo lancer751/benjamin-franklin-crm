@@ -1,6 +1,7 @@
 import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
+import withPrisma from "@/lib/prisma";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -9,7 +10,12 @@ import { z } from "zod";
 import withPrisma from "@/lib/prisma";
 
 export const editionRoutes = new Hono<ContextWithPrisma>()
+<<<<<<< HEAD
   .get("/", withPrisma, async (c) => {
+=======
+  .use(withPrisma)
+  .get("/", async (c) => {
+>>>>>>> origin/backend
     const courseEditions = await c.get("prisma").edition.findMany({
       include: {
         course: {

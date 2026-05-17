@@ -9,22 +9,23 @@ import {
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import withPrisma from "@/lib/prisma";
-import {z} from "zod";
+import { z } from "zod";
+import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 
 export const productRoutes = new Hono<ContextWithPrisma>()
+  .use(verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"))
   // Get all products with filtering and pagination
-  .get("/", withPrisma, async (c) => {
+  .get("/", async (c) => {
     const products = await c.get("prisma").product.findMany({
       include: {
         prices: true,
-        edition: { include: {course: true} },
+        edition: { include: { course: true } },
         campaing: true,
-      }
+      },
     });
     return c.json(products, 200);
   })
-  .get("/categories", withPrisma, async (c) => {
+  .get("/categories", async (c) => {
     const categories = await c.get("prisma").category.findMany();
     return c.json<SuccessResponse<typeof categories>>(
       {
@@ -36,13 +37,13 @@ export const productRoutes = new Hono<ContextWithPrisma>()
     );
   })
   // Get product details
-  .get(UUID_ROUTE, withPrisma, async (c) => {
+  .get(UUID_ROUTE, async (c) => {
     const { id } = c.req.param();
     const product = await c.get("prisma").product.findUnique({
       where: { id },
       include: {
         prices: true,
-        edition: { include: {course: true}},
+        edition: { include: { course: true } },
         category: true,
         orders_details: true,
       },
@@ -62,7 +63,7 @@ export const productRoutes = new Hono<ContextWithPrisma>()
     );
   })
   // Create new product
-  .post("/", withPrisma, zValidator("json", CreateProductSchema), async (c) => {
+  .post("/", zValidator("json", CreateProductSchema), async (c) => {
     const { prices, ...productData } = c.req.valid("json");
 
     const existingEdition = await c.get("prisma").edition.findUnique({
@@ -113,7 +114,7 @@ export const productRoutes = new Hono<ContextWithPrisma>()
   //create new category
   .post(
     "/categories",
-    withPrisma,
+
     zValidator("json", CreateCategorySchema),
     async (c) => {
       const categoryData = c.req.valid("json");
@@ -144,7 +145,7 @@ export const productRoutes = new Hono<ContextWithPrisma>()
   // Update product
   .put(
     UUID_ROUTE,
-    withPrisma,
+
     zValidator("json", UpdateProductSchema),
     async (c) => {
       const { id } = c.req.param();
@@ -197,7 +198,7 @@ export const productRoutes = new Hono<ContextWithPrisma>()
     },
   )
   // Delete product
-  .delete(UUID_ROUTE, withPrisma, async (c) => {
+  .delete(UUID_ROUTE, async (c) => {
     const { id } = c.req.param();
 
     const existingProduct = await c.get("prisma").product.findUnique({
@@ -232,7 +233,7 @@ export const productRoutes = new Hono<ContextWithPrisma>()
   })
   .delete(
     "/categories/:id",
-    withPrisma,
+
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.param();

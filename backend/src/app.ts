@@ -7,9 +7,11 @@ import { apiRoutes } from "./routes/api.route";
 import { prisma } from "@repo/database";
 import { secureHeaders } from "hono/secure-headers";
 import { rateLimiter } from "hono-rate-limiter";
+import { csrf } from "hono/csrf";
 
 export const app = new Hono();
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
+const proofOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 app.use("*", logger());
 app.use(
   "*",
@@ -20,6 +22,16 @@ app.use(
     allowHeaders: ["Content-Type", "Authorization", "xxx-csrf-access-token"],
   }),
 );
+
+app.use(
+  "/products/*",
+  cors({
+    origin: proofOrigins,
+    allowMethods: ["GET"],
+    allowHeaders: ["api-key-authorization"],
+  }),
+);
+app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
 app.use(secureHeaders());
 // Apply rate limiting middleware
 app.use(
@@ -29,9 +41,9 @@ app.use(
     limit: 200, // Limit each client to 100 requests per window
     keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "", // Use IP address as key
     message: {
-      message: "Too many requests, please try again later"
-    }
-  })
+      message: "Too many requests, please try again later",
+    },
+  }),
 );
 
 export type SuccessResponse<T = undefined> = T extends undefined
@@ -91,7 +103,6 @@ app.get("/health", async (c) => {
     );
   }
 });
-
 
 export default {
   port: Number(process.env.PORT) || 3000,

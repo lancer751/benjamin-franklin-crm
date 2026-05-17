@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AssignProfessorsOnEditionSchema, BaseCreateProfessorSchema } from "../types";
+import { AssignProfessorsOnEditionSchema } from "../types";
 
 // ---- Enums ----
 export const CourseTypeSchema = z.enum(["COURSE", "PROGRAM"]);

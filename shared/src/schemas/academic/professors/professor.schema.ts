@@ -21,8 +21,6 @@ export const BaseCreateProfessorSchema = BaseProfessorSchema.omit({
   updated_at: true,
 });
 
-export const AssignProfessorsOnEditionSchema = BaseProfessorSchema.pick({id: true})
-
 export const UpdateProfessorSchema = BaseCreateProfessorSchema.partial();
 
 export type Professor = z.infer<typeof BaseProfessorSchema>;
