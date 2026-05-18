@@ -7,15 +7,10 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { CreateEditionSchema, UpdateEditionSchema } from "shared";
 import { z } from "zod";
-import withPrisma from "@/lib/prisma";
 
 export const editionRoutes = new Hono<ContextWithPrisma>()
-<<<<<<< HEAD
-  .get("/", withPrisma, async (c) => {
-=======
   .use(withPrisma)
   .get("/", async (c) => {
->>>>>>> origin/backend
     const courseEditions = await c.get("prisma").edition.findMany({
       include: {
         course: {
@@ -43,7 +38,7 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
   })
   .get(
     UUID_ROUTE,
-    withPrisma,
+
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
@@ -78,11 +73,11 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
   // Create new edition
   .post(
     "/",
-    withPrisma,
+
     zValidator("json", CreateEditionSchema),
     async (c) => {
       const editionData = c.req.valid("json");
-      const { assigned_professors, ...plainEditionData } =
+      const { assigned_professors, schedules, ...plainEditionData } =
         structuredClone(editionData);
 
       const newEdition = await c.get("prisma").$transaction(async (tx) => {
@@ -92,7 +87,7 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
 
         await c.get("prisma").proffessorsOnEditions.createMany({
           data: assigned_professors.map((professor) => ({
-            professor_id: professor.id,
+            professor_id: professor.professor_id,
             edition_id: createdEdition.id,
           })),
         });
@@ -119,7 +114,6 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
   // Update edition
   .put(
     UUID_ROUTE,
-    withPrisma,
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     zValidator("json", UpdateEditionSchema),
     async (c) => {
@@ -127,6 +121,7 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
       const editionData = c.req.valid("json");
       const {
         assigned_professors: professorsUpdatedData,
+        schedules,
         ...editionUpdatesPlainData
       } = structuredClone(editionData);
 
@@ -170,7 +165,7 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
   // Delete edition
   .delete(
     UUID_ROUTE,
-    withPrisma,
+
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");

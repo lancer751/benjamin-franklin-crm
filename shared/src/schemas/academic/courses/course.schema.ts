@@ -1,5 +1,6 @@
 import z from "zod";
 import { OptionalUrl, UUIDField } from "../../helpers";
+import { EditionStatusSchema, DurationUnitSchema, ModalitySchema } from "../../course.schema";
 
 export const CourseTypeSchema = z.enum(["COURSE", "PROGRAM"]);
 

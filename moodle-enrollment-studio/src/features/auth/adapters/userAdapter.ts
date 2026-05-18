@@ -9,10 +9,14 @@ export const userAdapter = {
       return {
         first_name: "", middle_name: "", last_name: "", email: "", password: "",
         cellphone: "", role_id: "", is_active: true,
-        sales_target: 0, assigned_supervisor_id: "",
-        team_name: "", max_sellers: 0, discount_limit_percent: 0,
-        can_assign_leads: false, can_approve_discounts: false,
-        can_reassign_leads: false, can_cancel_orders: false, can_view_all_team_sales: false,
+        seller_profile: {
+          sales_target: 0, assigned_supervisor_id: "",
+        },
+        sales_supervisor_profile: {
+          team_name: "", max_sellers: 0, discount_limit_percent: 0,
+          can_assign_leads: false, can_approve_discounts: false,
+          can_reassign_leads: false, can_cancel_orders: false, can_view_all_team_sales: false,
+        }
       };
     }
 
@@ -27,20 +31,23 @@ export const userAdapter = {
       cellphone: user.cellphone || "",
       role_id: user.role_id || matchedRole?.id || "",
       is_active: user.is_active ?? true,
-      
       // ✅ CORRECCIÓN 1: El Adapter se encarga de leer el nombre correcto del backend
-      sales_target: user.seller?.sales_target || 0,
-      assigned_supervisor_id: user.seller?.assigned_supervisor_id || "",
+      seller_profile: {
+        sales_target: user.seller?.sales_target || 0,
+        assigned_supervisor_id: user.seller?.assigned_supervisor_id || "",
+      },
       
       // Usamos user.salesSupervisor (como viene de Prisma) y lo aplanamos
-      team_name: user.salesSupervisor?.team_name || "",
-      max_sellers: user.salesSupervisor?.max_sellers || 0,
-      discount_limit_percent: user.salesSupervisor?.discount_limit_percent || 0,
-      can_assign_leads: user.salesSupervisor?.can_assign_leads || false,
-      can_approve_discounts: user.salesSupervisor?.can_approve_discounts || false,
-      can_reassign_leads: user.salesSupervisor?.can_reassign_leads || false,
-      can_cancel_orders: user.salesSupervisor?.can_cancel_orders || false,
-      can_view_all_team_sales: user.salesSupervisor?.can_view_all_team_sales || false,
+      sales_supervisor_profile: {
+        team_name: user.salesSupervisor?.team_name || "",
+        max_sellers: user.salesSupervisor?.max_sellers || 0,
+        discount_limit_percent: user.salesSupervisor?.discount_limit_percent || 0,
+        can_assign_leads: user.salesSupervisor?.can_assign_leads || false,
+        can_approve_discounts: user.salesSupervisor?.can_approve_discounts || false,
+        can_reassign_leads: user.salesSupervisor?.can_reassign_leads || false,
+        can_cancel_orders: user.salesSupervisor?.can_cancel_orders || false,
+        can_view_all_team_sales: user.salesSupervisor?.can_view_all_team_sales || false,
+      }
     };
   },
 
@@ -62,25 +69,25 @@ export const userAdapter = {
     };
 
     if (isSeller) {
-      if (!values.assigned_supervisor_id || values.assigned_supervisor_id === "unassigned") {
+      if (!values.seller_profile?.assigned_supervisor_id || values.seller_profile.assigned_supervisor_id === "unassigned") {
         throw new Error("VALIDATION_SUPERVISOR");
       }
       payload.seller_profile = {
-        sales_target: Number(values.sales_target) || 0,
-        assigned_supervisor_id: values.assigned_supervisor_id,
+        sales_target: Number(values.seller_profile?.sales_target) || 0,
+        assigned_supervisor_id: values.seller_profile.assigned_supervisor_id,
       };
     }
 
     if (isSupervisor) {
       payload.sales_supervisor_profile = {
-        team_name: values.team_name || "Equipo Sin Nombre",
-        max_sellers: Number(values.max_sellers) || 0,
-        discount_limit_percent: Number(values.discount_limit_percent) || 0,
-        can_assign_leads: values.can_assign_leads ?? false,
-        can_approve_discounts: values.can_approve_discounts ?? false,
-        can_reassign_leads: values.can_reassign_leads ?? false,
-        can_cancel_orders: values.can_cancel_orders ?? false,
-        can_view_all_team_sales: values.can_view_all_team_sales ?? false,
+        team_name: values.sales_supervisor_profile?.team_name || "Equipo Sin Nombre",
+        max_sellers: Number(values.sales_supervisor_profile?.max_sellers) || 0,
+        discount_limit_percent: Number(values.sales_supervisor_profile?.discount_limit_percent) || 0,
+        can_assign_leads: values.sales_supervisor_profile?.can_assign_leads ?? false,
+        can_approve_discounts: values.sales_supervisor_profile?.can_approve_discounts ?? false,
+        can_reassign_leads: values.sales_supervisor_profile?.can_reassign_leads ?? false,
+        can_cancel_orders: values.sales_supervisor_profile?.can_cancel_orders ?? false,
+        can_view_all_team_sales: values.sales_supervisor_profile?.can_view_all_team_sales ?? false,
       };
     }
 
