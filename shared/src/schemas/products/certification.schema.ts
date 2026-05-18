@@ -13,13 +13,20 @@ export const CertificationSchema = z.object({
   registry_validity: OptionalString,
 });
 
-export const CreateCertificationSchema = CertificationSchema.omit({
+const CreateCertificationSchema = CertificationSchema.omit({
   id: true,
   product_id: true,
-}).refine(({ has_digital, has_physical }) => has_digital || has_physical, {
-  message: "At least one delivery format (digital or physical) must be enabled",
-  path: ["has_digital"],
 });
+
+export const CreateRefinedCertificationSchema =
+  CreateCertificationSchema.refine(
+    ({ has_digital, has_physical }) => has_digital || has_physical,
+    {
+      message:
+        "At least one delivery format (digital or physical) must be enabled",
+      path: ["has_digital"],
+    },
+  );
 
 export const UpdateCertificationSchema =
   CreateCertificationSchema.partial().refine(

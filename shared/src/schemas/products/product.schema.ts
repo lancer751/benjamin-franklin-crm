@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { CreateProductPriceSchema, type UpdateProductPriceSchema } from "./price.schema";
-import { CreateCertificationSchema } from "./certification.schema";
+import { CreateRefinedProductPriceSchema } from "./price.schema";
+import { CreateRefinedCertificationSchema } from "./certification.schema";
 import { CreateFAQSchema } from "./faq.schema";
 import { DecimalField, OptionalUrl, UUIDField } from "../helpers";
 
@@ -12,83 +12,80 @@ export const SalesStatusSchema = z.enum([
   "CANCELLED",
 ]);
 
-export const ProductSchema = z
-  .object({
-    id: UUIDField,
-    edition_id: UUIDField,
-    category_id: UUIDField,
-    name: z
-      .string()
-      .min(4, "Product name must be at least 4 characters"),
-    slug: z
-      .string()
-      .regex(
-        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-        "Slug must be lowercase with hyphens only"
-      )
-      .optional()
-      .nullable(),
-    description: z
-      .string()
-      .max(2000, "Description must be at most 2000 characters")
-      .optional()
-      .nullable(),
-    short_description: z
-      .string()
-      .max(160, "Short description must be at most 160 characters")
-      .optional()
-      .nullable(),
-    image_url: OptionalUrl,
-    presale_price: DecimalField.optional().nullable(),
-    discount_price: DecimalField.optional().nullable().default(0),
-    discount_expires_at: z.coerce.date().optional().nullable(),
-    installments_max_number: z.number().int().min(1).max(24),
-    installments_min_number: z.number().int().min(1),
-    sales_status: SalesStatusSchema.default("DRAFT"),
-    // Nested on create
-    prices: z
-      .array(CreateProductPriceSchema)
-      .min(1, "At least one price must be defined"),
-    benefit_ids: z
-      .array(UUIDField)
-      .min(1, "At least one benefit must be linked"),
-    faqs: z.array(CreateFAQSchema).optional().default([]),
-    certifications: z.array(CreateCertificationSchema).optional().default([]),
-    created_at: z.coerce.date(),
-    updated_at: z.coerce.date(),
-  })
-  .refine(
-    ({ installments_min_number, installments_max_number }) =>
-      installments_max_number >= installments_min_number,
-    {
-      message:
-        "installments_max_number must be greater than or equal to installments_min_number",
-      path: ["installments_max_number"],
-    }
-  )
-  .refine(
-    ({ discount_price, discount_expires_at }) => {
-      // If a discount is set, an expiry date should accompany it
-      if (discount_price && discount_price > 0) return !!discount_expires_at;
-      return true;
-    },
-    {
-      message: "discount_expires_at is required when a discount_price is set",
-      path: ["discount_expires_at"],
-    }
-  );
- 
+export const ProductSchema = z.object({
+  id: UUIDField,
+  edition_id: UUIDField,
+  category_id: UUIDField,
+  name: z.string().min(4, "Product name must be at least 4 characters"),
+  slug: z
+    .string()
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "Slug must be lowercase with hyphens only",
+    )
+    .optional()
+    .nullable(),
+  description: z
+    .string()
+    .max(2000, "Description must be at most 2000 characters")
+    .optional()
+    .nullable(),
+  short_description: z
+    .string()
+    .max(160, "Short description must be at most 160 characters")
+    .optional()
+    .nullable(),
+  image_url: OptionalUrl,
+  presale_price: DecimalField.optional().nullable(),
+  discount_price: DecimalField.optional().nullable().default(0),
+  discount_expires_at: z.coerce.date().optional().nullable(),
+  installments_max_number: z.number().int().min(1).max(24),
+  installments_min_number: z.number().int().min(1),
+  sales_status: SalesStatusSchema.default("DRAFT"),
+  // Nested on create
+  prices: z
+    .array(CreateRefinedProductPriceSchema)
+    .min(1, "At least one price must be defined"),
+  benefit_ids: z.array(UUIDField).min(1, "At least one benefit must be linked"),
+  faqs: z.array(CreateFAQSchema).optional().default([]),
+  certifications: z
+    .array(CreateRefinedCertificationSchema)
+    .optional()
+    .default([]),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+});
+
 export const CreateProductSchema = ProductSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
 });
- 
-export const UpdateProductSchema = CreateProductSchema.partial().refine(
-  (data) => Object.keys(data).length > 0,
-  { message: "At least one field must be provided" }
+
+const CreateRefinedProductSchema = CreateProductSchema.refine(
+  ({ installments_min_number, installments_max_number }) =>
+    installments_max_number >= installments_min_number,
+  {
+    message:
+      "installments_max_number must be greater than or equal to installments_min_number",
+    path: ["installments_max_number"],
+  },
+).refine(
+  ({ discount_price, discount_expires_at }) => {
+    // If a discount is set, an expiry date should accompany it
+    if (discount_price && discount_price > 0) return !!discount_expires_at;
+    return true;
+  },
+  {
+    message: "discount_expires_at is required when a discount_price is set",
+    path: ["discount_expires_at"],
+  },
 );
 
+export const UpdateProductSchema = CreateProductSchema.partial().refine(
+  (data) => Object.keys(data).length > 0,
+  { message: "At least one field must be provided" },
+);
 
 // ---- Params & Query ----
 export const ProductParamsSchema = z.object({

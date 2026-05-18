@@ -27,6 +27,7 @@
     "eslint": "^10.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-zod": "^4.5.1",
     "globals": "^17.3.0",
     "jiti": "^2.6.1",
     "madge": "^8.0.0",

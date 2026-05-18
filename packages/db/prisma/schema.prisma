@@ -421,7 +421,7 @@ model Campaing {
 }
 
 enum WeekDays {
-  LUES
+  LUNES
   MARTES
   MIERCOLES
   JUEVES

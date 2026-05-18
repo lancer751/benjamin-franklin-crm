@@ -1,7 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
-import { fakeProfessors } from "./workflows/product-launch/fake-data/professors";
 import { CoursesWorkflow } from "./workflows/product-launch/orchestator";
+import { hash } from "bcrypt";
 
 const databaseUrl = `${process.env.DATABASE_URL}`;
 if (!databaseUrl) {
@@ -50,6 +50,21 @@ async function main() {
       },
     }),
   ]);
+
+  const users = await prisma.user.create({
+    data: {
+      first_name: "Angel",
+      middle_name: "Julca",
+      last_name: "Perez",
+      email: "angel.julca@gmail.com",
+      corporate_email: "julcaangel@bfedu.pe",
+      cellphone: "987456125",
+      corporate_cellphone: "987253658",
+      role_id: roles[0].id,
+      is_active: true,
+      password: await hash("password123#", 10),
+    },
+  });
 
   await CoursesWorkflow();
   console.log("🎉 Seeding complete.");

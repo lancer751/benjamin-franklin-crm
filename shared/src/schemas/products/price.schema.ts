@@ -16,10 +16,12 @@ export const ProductPriceSchema = z.object({
   enrollment_fee: DecimalField,
 });
 
-export const CreateProductPriceSchema = ProductPriceSchema.omit({
+const CreateProductPriceSchema = ProductPriceSchema.omit({
   id: true,
   product_id: true,
-}).refine(
+});
+
+export const CreateRefinedProductPriceSchema = CreateProductPriceSchema.refine(
   ({ installment_price, cash_price }) => installment_price >= cash_price,
   {
     message: "installment_price must be greater than or equal to cash_price",
