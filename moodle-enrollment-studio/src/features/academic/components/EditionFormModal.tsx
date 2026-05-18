@@ -5,11 +5,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/core/components/ui/popover";
 import { Calendar } from "@/core/components/ui/calendar";
-import { Loader2, CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { Loader2, CalendarIcon, Plus, Trash2, X } from "lucide-react";
 import { useFieldArray } from "react-hook-form";
 import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/core/components/ui/alert";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/core/components/ui/accordion";
+import { Badge } from "@/core/components/ui/badge";
 import { useEditionFormModal } from "../hooks/useEditionFormModal";
 import { ModalityMap, EditionStatusMap, DurationUnitMap } from "@/core/utils/dictionaries";
 
@@ -33,6 +34,11 @@ export default function EditionFormModal({ open, onClose, courseId, courseCode, 
   const { fields: scheduleFields, append: appendSchedule, remove: removeSchedule } = useFieldArray({
     control: form.control,
     name: "schedules"
+  });
+
+  const { fields: professorFields, append: appendProfessor, remove: removeProfessor } = useFieldArray({
+    control: form.control,
+    name: "assigned_professors"
   });
 
   return (
@@ -366,30 +372,68 @@ export default function EditionFormModal({ open, onClose, courseId, courseCode, 
                     <AccordionContent className="pt-4 pb-2">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Docente */}
-                        <FormField control={form.control} name={`assigned_professors.0.professor_id`} render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>Docente Encargado <span className="text-destructive">*</span></FormLabel>
-                            {isLoadingProfessors ? (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" /> Cargando...</div>
+                        <div className="md:col-span-2 space-y-2">
+                          <FormLabel>
+                            Docente Encargado <span className="text-destructive">*</span>
+                          </FormLabel>
+                          
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {professorFields.length === 0 ? (
+                              <Badge variant="outline" className="text-muted-foreground border-dashed">
+                                Ningún docente asignado aún
+                              </Badge>
                             ) : (
-                              <Select onValueChange={(val) => {
-                                const current = form.getValues("assigned_professors") || [];
-                                current[0] = { professor_id: val };
-                                form.setValue("assigned_professors", current, { shouldValidate: true, shouldDirty: true });
-                              }} value={form.watch("assigned_professors")?.[0]?.professor_id || ""}>
-                                <FormControl>
-                                  <SelectTrigger><SelectValue placeholder="Selecciona un profesor" /></SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {professors.map((p: any) => (
-                                    <SelectItem key={p.id} value={p.id}>{p.user.first_name} {p.user.last_name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              professorFields.map((field, index) => {
+                                const p = professors.find((prof: any) => prof.id === (field as any).professor_id);
+                                return (
+                                  <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                    {p ? `${p.name} ${p.lastname}` : "Docente"}
+                                    <button
+                                      type="button"
+                                      className="ml-1 text-muted-foreground hover:text-foreground rounded-full"
+                                      onClick={() => removeProfessor(index)}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </Badge>
+                                );
+                              })
                             )}
-                            <FormMessage />
-                          </FormItem>
-                        )} />
+                          </div>
+
+                          {form.formState.errors.assigned_professors && professorFields.length === 0 && (
+                            <p className="text-[0.8rem] font-medium text-destructive">
+                              {form.formState.errors.assigned_professors.message as string || "Debe asignar al menos un docente"}
+                            </p>
+                          )}
+
+                          {isLoadingProfessors ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="animate-spin h-4 w-4" /> Cargando...
+                            </div>
+                          ) : (
+                            <Select
+                              onValueChange={(val) => {
+                                const exists = form.getValues("assigned_professors")?.some((f: any) => f.professor_id === val);
+                                if (!exists) {
+                                  appendProfessor({ professor_id: val });
+                                }
+                              }}
+                              value=""
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona un profesor para agregar" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {professors.map((p: any) => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    {p.name} {p.lastname}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
 
                         {/* Enlace Virtual */}
                         <FormField control={form.control} name="meet_link" render={({ field }) => (
