@@ -109,7 +109,7 @@ export async function fakeEditions(
         schedules: {
           create: [
             {
-              day_of_week: "LUES",
+              day_of_week: "LUNES",
               type: "REGULAR",
               slots: { create: [{ start_time: "20:00", end_time: "22:00" }] },
             },

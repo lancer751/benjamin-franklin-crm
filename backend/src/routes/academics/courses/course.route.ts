@@ -1,10 +1,7 @@
 import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
-import {
-  CreateCourseSchema,
-  UpdateCourseSchema,
-} from "shared";
+import { CreateCourseSchema, UpdateCourseSchema } from "shared";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -37,11 +34,12 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
       const course = await c.get("prisma").course.findUnique({
         where: { id },
         include: {
-          editions: {
-            include: {
-              ownedProduct: true,
-            },
-          },
+          editions: true,
+          studyPlans: {
+            include:  {
+              modules: true
+            }
+          }
         },
       });
 
