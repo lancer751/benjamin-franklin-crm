@@ -32,33 +32,31 @@ export const useSaveUserMutation = (
         await createUser(userData);
         return "create";
       } else {
-        const updatePromises: Promise<any>[] = [];
-        
-        // Siempre actualizamos la información del usuario base
-        updatePromises.push(updateUser(user.id, userData));
-
         if (isSupervisor) {
           const supervisorId = user.sales_supervisor_profile?.id || user.salesSupervisor?.id;
           if (supervisorId && userData.sales_supervisor_profile) {
-            updatePromises.push(updateSupervisorProfile(supervisorId, userData.sales_supervisor_profile));
+            await updateSupervisorProfile(supervisorId, userData.sales_supervisor_profile);
           }
         } else if (isSeller) {
           const sellerId = user.seller_profile?.id || user.seller?.id;
           if (sellerId && userData.seller_profile) {
-            updatePromises.push(updateSellerProfile(sellerId, userData.seller_profile));
+            userData.seller_profile.sales_target = Number(userData.seller_profile.sales_target);
+            await updateSellerProfile(sellerId, userData.seller_profile);
           }
+        } else {
+          // Bloque residual (Ej: ADMIN u otros roles)
+          await updateUser(user.id, userData);
         }
 
-        await Promise.all(updatePromises);
         return "update";
       }
     },
-    onSuccess: (actionType) => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      queryClient.invalidateQueries({ queryKey: ["supervisors"] });
-      queryClient.invalidateQueries({ queryKey: ["sellers"] });
+    onSuccess: async (actionType) => {
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
+      await queryClient.invalidateQueries({ queryKey: ["supervisors"] });
+      await queryClient.invalidateQueries({ queryKey: ["sellers"] });
       if (user?.id) {
-        queryClient.invalidateQueries({ queryKey: ["user", user.id] });
+        await queryClient.invalidateQueries({ queryKey: ["user", user.id] });
       }
       
       if (actionType === "create") {

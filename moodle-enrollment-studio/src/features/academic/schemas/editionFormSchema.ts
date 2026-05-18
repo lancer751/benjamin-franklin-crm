@@ -10,9 +10,6 @@ export const editionFormSchema = z.object({
   start_date: z.date({ required_error: "La fecha de inicio es obligatoria" }),
   end_date: z.date({ required_error: "La fecha de fin es obligatoria" }),
   modality: z.enum(["PRESENCIAL", "VIRTUAL", "HIBRIDO", "ASINCRONICO"], { required_error: "Debes seleccionar una modalidad" }),
-  teacher_fullname: z.string()
-    .regex(/^[\p{L}\s]+$/u, "Solo debe contener letras y espacios")
-    .min(2, "El nombre es obligatorio"),
   meet_link: z.string()
     .url("Debe ser una URL válida (ej: https://meet.google.com/...)")
     .optional()
@@ -33,6 +30,17 @@ export const editionFormSchema = z.object({
   }).min(1, "Debe ser al menos 1"),
   duration_unit: z.enum(["WEEKS", "MONTHS"]).default("WEEKS"),
   whatsapp_group_link: z.string().url("Debe ser una URL válida").optional().or(z.literal("")),
+  moodle_course_id: z.coerce.number().optional().nullable(),
+  assigned_professors: z.array(z.object({
+    professor_id: z.string().uuid("Selecciona un profesor")
+  })).min(1, "Selecciona un profesor"),
+  schedules: z.array(z.object({
+    day: z.string(),
+    slots: z.array(z.object({
+      start_time: z.string(),
+      end_time: z.string()
+    }))
+  }))
 });
 
 export type EditionFormValues = z.infer<typeof editionFormSchema>;
@@ -43,7 +51,6 @@ export const defaultEditionFormValues: Partial<EditionFormValues> = {
   start_date: undefined,
   end_date: undefined,
   modality: undefined,
-  teacher_fullname: "",
   meet_link: "",
   edition_status: "SCHEDULED",
   hours_amount: "" as unknown as number,
@@ -51,4 +58,7 @@ export const defaultEditionFormValues: Partial<EditionFormValues> = {
   duration_value: "" as unknown as number,
   duration_unit: "WEEKS",
   whatsapp_group_link: "",
+  moodle_course_id: "" as unknown as number,
+  assigned_professors: [{ professor_id: "" }],
+  schedules: [],
 };

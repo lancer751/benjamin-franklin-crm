@@ -5,8 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, addMinutes } from "date-fns";
 import { getCourses, createCourseEdition, getCourseEditionById, updateCourseEdition } from "../services/courseService";
+import { getProfessors } from "../services/professorService";
 import { editionFormSchema, type EditionFormValues, defaultEditionFormValues } from "../schemas/editionFormSchema";
-
 
 export const useEditionFormModal = (open: boolean, onClose: () => void, courseId?: string | null, courseCode?: string | null, editionId?: string | null, courseClassesNumber?: number | null) => {
   const queryClient = useQueryClient();
@@ -41,7 +41,14 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     enabled: mode !== "edit" && open,
   });
 
+  const { data: professorsRes, isLoading: isLoadingProfessors } = useQuery({
+    queryKey: ["professors"],
+    queryFn: getProfessors,
+    enabled: open,
+  });
+
   const courses = useMemo(() => coursesRes?.success ? coursesRes.data : [], [coursesRes]);
+  const professors = useMemo(() => professorsRes?.success ? professorsRes.data : [], [professorsRes]);
 
   // 1. Efecto para Resetear o Llenar Datos Iniciales
   useEffect(() => {
@@ -52,6 +59,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
 
     if (mode === "create") {
       form.reset({
+        ...defaultEditionFormValues,
         course_id: courseId || "",
         edition_status: "SCHEDULED",
         classes_number: courseClassesNumber || ("" as unknown as number),
@@ -71,6 +79,20 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
 
         let mappedModality = data.modality || "";
 
+        // Map backend's assigned_professors correctly
+        const mappedProfessors = data.assigned_professors?.map((ap: any) => ({
+          professor_id: ap.professor_id || ap.id || ""
+        })) || [{ professor_id: "" }];
+
+        // Map backend's schedules correctly
+        const mappedSchedules = data.schedules?.map((s: any) => ({
+          day: s.day || "LUNES",
+          slots: s.slots?.map((sl: any) => ({
+            start_time: sl.start_time || "08:00",
+            end_time: sl.end_time || "10:00"
+          })) || []
+        })) || [];
+
         form.reset({
           course_id: courseId || data.course?.id || data.course_id || "",
           edition_number: data.edition_number || ("" as unknown as number),
@@ -78,7 +100,6 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
           start_date: adjustedStartDate,
           end_date: adjustedEndDate,
           modality: mappedModality,
-          teacher_fullname: data.teacher_fullname || "",
           meet_link: data.meet_link || "",
           edition_status: data.edition_status || "SCHEDULED",
           hours_amount: data.hours_amount || ("" as unknown as number),
@@ -86,6 +107,9 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
           duration_value: data.duration_value || ("" as unknown as number),
           duration_unit: data.duration_unit || "WEEKS",
           whatsapp_group_link: data.whatsapp_group_link || "",
+          moodle_course_id: data.moodle_course_id || ("" as unknown as number),
+          assigned_professors: mappedProfessors,
+          schedules: mappedSchedules,
         });
       }
     }
@@ -159,7 +183,6 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     }
   }, [watchCourseId, courses, mode, courseId, courseClassesNumber, lastCourseId, form]);
 
-
   // 3. Mutaciones y Envío
   const createEditionMutation = useMutation({ mutationFn: createCourseEdition });
   const updateEditionMutation = useMutation({ mutationFn: (data: any) => updateCourseEdition(editionId as string, data) });
@@ -177,7 +200,6 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
       edition_number: Number(values.edition_number),
       start_date: values.start_date ? values.start_date.toISOString() : null,
       end_date: values.end_date ? values.end_date.toISOString() : null,
-      teacher_fullname: values.teacher_fullname,
       meet_link: values.meet_link?.trim() ? values.meet_link : null, 
       edition_status: values.edition_status,
       hours_amount: Number(values.hours_amount),
@@ -185,6 +207,9 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
       duration_value: Number(values.duration_value),
       duration_unit: values.duration_unit,
       whatsapp_group_link: values.whatsapp_group_link?.trim() ? values.whatsapp_group_link : null,
+      moodle_course_id: values.moodle_course_id ? Number(values.moodle_course_id) : null,
+      assigned_professors: values.assigned_professors,
+      schedules: values.schedules,
     };
 
     const mutationPromise = mode === "create" 
@@ -211,9 +236,11 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     form,
     mode,
     courses,
+    professors,
     isLoadingEdition,
     isErrorEdition,
     isLoadingCourses,
+    isLoadingProfessors,
     startMonth,
     setStartMonth,
     endMonth,

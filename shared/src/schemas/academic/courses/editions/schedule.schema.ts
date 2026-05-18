@@ -33,7 +33,7 @@ export const CreateEditionScheduleSlotSchema = EditionScheduleSlotBase.omit({
 );
 
 export const WeekDaysSchema = z.enum([
-  "LUES",
+  "LUNES",
   "MARTES",
   "MIERCOLES",
   "JUEVES",
