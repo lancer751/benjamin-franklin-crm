@@ -1,10 +1,6 @@
 import z from "zod";
 import { OptionalUrl, UUIDField } from "../../../helpers";
-<<<<<<< HEAD
-import { CreateEditionScheduleSchema } from "./schedule.schema";
-=======
 import { CreateRefinedEditionScheduleSchema } from "./schedule.schema";
->>>>>>> origin/backend
 
 export const EditionStatusSchema = z.enum([
   "IN_PROGRESS",
@@ -24,23 +20,12 @@ export const ModalitySchema = z.enum([
 
 export const DurationUnitSchema = z.enum(["WEEKS", "MONTHS"]);
 
-export const ModalitySchema = z.enum([
-  "PRESENCIAL",
-  "VIRTUAL",
-  "HIBRIDO",
-  "ASINCRONICO",
-]);
-
+/** Assign professors payload accepted on create/update */
 export const AssignProfessorsOnEditionSchema = z.object({
   professor_id: UUIDField,
 });
 
-<<<<<<< HEAD
-// --- EDITION BASE ---
-const EditionBaseObject = z.object({
-=======
 export const EditionSchema = z.object({
->>>>>>> origin/backend
   id: UUIDField,
   course_id: UUIDField,
   edition_number: z
@@ -59,10 +44,7 @@ export const EditionSchema = z.object({
   meet_link: OptionalUrl,
   whatsapp_group_link: OptionalUrl,
   edition_status: EditionStatusSchema.default("DRAFT"),
-<<<<<<< HEAD
-=======
   // Char(13) in DB  — e.g. "LP-001-25-01"
->>>>>>> origin/backend
   edition_code: z
     .string()
     .length(13, "Edition code must be exactly 13 characters"),
@@ -70,73 +52,19 @@ export const EditionSchema = z.object({
     .array(AssignProfessorsOnEditionSchema)
     .min(1, "At least one professor must be assigned"),
   schedules: z
-<<<<<<< HEAD
-    .array(CreateEditionScheduleSchema)
-=======
     .array(CreateRefinedEditionScheduleSchema)
->>>>>>> origin/backend
     .min(1, "At least one schedule must be provided"),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
 });
 
-<<<<<<< HEAD
-export const EditionSchema = EditionBaseObject.refine(
-  ({ end_date, start_date }) => end_date > start_date, 
-  {
-    message: "end_date must be after start_date",
-    path: ["end_date"],
-  }
-).refine(
-  ({ modality, meet_link }) => {
-    if (modality === "ASINCRONICO" || modality === "PRESENCIAL") return true;
-    return !!meet_link;
-  },
-  {
-    message: "meet_link is required for VIRTUAL and HIBRIDO modalities",
-    path: ["meet_link"],
-  }
-);
-// 🧠 1. El Create se mantiene usando el objeto base limpio (sin mutar) para que no rompa el .omit()
-export const CreateEditionSchema = EditionBaseObject.omit({
-=======
 
 const CreateEditionSchema = EditionSchema.omit({
->>>>>>> origin/backend
   id: true,
   created_at: true,
   updated_at: true,
 });
 
-<<<<<<< HEAD
-// 🛠️ 2. REPARACIÓN DEL ERROR: Hacemos el .partial() sobre el Create limpio (que no tiene refines).
-// Luego, le encadenamos los refinamientos al final de la declaración.
-export const UpdateEditionSchema = CreateEditionSchema.partial()
-  .refine(({ end_date, start_date }) => {
-    // Como los campos ahora son opcionales en el update, validamos solo si ambos vienen en el body
-    if (end_date && start_date) return end_date > start_date;
-    return true;
-  }, {
-    message: "end_date must be after start_date",
-    path: ["end_date"],
-  })
-  .refine(
-    ({ modality, meet_link }) => {
-      // Validamos solo si se está enviando la modalidad para actualizar
-      if (modality === "ASINCRONICO" || modality === "PRESENCIAL") return true;
-      if (modality && (modality === "VIRTUAL" || modality === "HIBRIDO")) return !!meet_link;
-      return true;
-    },
-    {
-      message: "meet_link is required for VIRTUAL and HIBRIDO modalities",
-      path: ["meet_link"],
-    },
-  )
-  .refine(
-    (obj) => Object.keys(obj).length > 0,
-    "At least one field must be provided"
-  );
-=======
 export const CreateRefinedEditionSchema = CreateEditionSchema.refine(
   ({ end_date, start_date }) => end_date > start_date,
   {
@@ -159,4 +87,3 @@ export const UpdateEditionSchema = CreateEditionSchema.partial().refine(
   (obj) => Object.keys(obj).length > 0,
   "At least one field must be provided",
 );
->>>>>>> origin/backend

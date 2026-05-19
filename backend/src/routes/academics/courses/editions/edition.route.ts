@@ -83,15 +83,7 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
     const { assigned_professors, schedules, course_id, ...editionFields } =
       c.req.valid("json");
 
-<<<<<<< HEAD
-    zValidator("json", CreateEditionSchema),
-    async (c) => {
-      const editionData = c.req.valid("json");
-      const { assigned_professors, schedules, ...plainEditionData } =
-        structuredClone(editionData);
-=======
     const prisma = c.get("prisma");
->>>>>>> origin/backend
 
     // ── Verify the course exists before opening a transaction ──────────────────
     const courseExists = await prisma.course.findUnique({
@@ -147,19 +139,12 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
           },
         });
 
-<<<<<<< HEAD
-        await c.get("prisma").proffessorsOnEditions.createMany({
-          data: assigned_professors.map((professor) => ({
-            professor_id: professor.professor_id,
-            edition_id: createdEdition.id,
-=======
         // Professors join table — safe to createMany here because there are no
         // further nested relations to write
         await tx.proffessorsOnEditions.createMany({
           data: professorIds.map((professor_id) => ({
             professor_id,
             edition_id: created.id,
->>>>>>> origin/backend
           })),
         });
 
@@ -221,18 +206,11 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
     async (c) => {
       const { id } = c.req.valid("param");
       const {
-<<<<<<< HEAD
-        assigned_professors: professorsUpdatedData,
-        schedules,
-        ...editionUpdatesPlainData
-      } = structuredClone(editionData);
-=======
         assigned_professors: incomingProfessors,
         schedules: incomingSchedules,
         course_id,
         ...plainFields
       } = c.req.valid("json");
->>>>>>> origin/backend
 
       const prisma = c.get("prisma");
 

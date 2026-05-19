@@ -1,8 +1,7 @@
 import z from "zod";
 import { OptionalString, OptionalUrl, UUIDField } from "../helpers";
 
-// 🧠 1. Creamos el objeto base puro (Sin .refine()) para que Zod pueda usar .omit() y .partial() libremente
-const CertificationBaseObject = z.object({
+export const CertificationSchema = z.object({
   id: UUIDField,
   product_id: UUIDField,
   title: z.string().min(4, "Certification title must be at least 4 characters"),
@@ -14,42 +13,11 @@ const CertificationBaseObject = z.object({
   registry_validity: OptionalString,
 });
 
-<<<<<<< HEAD
-// Esquema completo para lectura (Con el refine aplicado al final)
-export const CertificationSchema = CertificationBaseObject;
-
-// 🧠 2. Para la creación, usamos el objeto base puro para hacer el .omit() primero, y LUEGO refinamos
-export const CreateCertificationSchema = CertificationBaseObject.omit({
-=======
 const CreateCertificationSchema = CertificationSchema.omit({
->>>>>>> origin/backend
   id: true,
   product_id: true,
 });
 
-<<<<<<< HEAD
-// 🧠 3. Para la actualización, aplicamos .partial() sobre el esquema de creación LIMPIO (antes de que se refine)
-// y le encadenamos las reglas de negocio al final
-export const UpdateCertificationSchema = CertificationBaseObject.omit({
-  id: true,
-  product_id: true,
-})
-  .partial()
-  .refine(
-    (data) => {
-      // Si se envían los formatos, validamos que al menos uno sea verdadero
-      if (data.has_digital !== undefined || data.has_physical !== undefined) {
-        return (data.has_digital ?? true) || (data.has_physical ?? true);
-      }
-      return true;
-    },
-    {
-      message: "At least one delivery format (digital or physical) must be enabled",
-      path: ["has_digital"],
-    }
-  )
-  .refine(
-=======
 export const CreateRefinedCertificationSchema =
   CreateCertificationSchema.refine(
     ({ has_digital, has_physical }) => has_digital || has_physical,
@@ -62,21 +30,14 @@ export const CreateRefinedCertificationSchema =
 
 export const UpdateCertificationSchema =
   CreateCertificationSchema.partial().refine(
->>>>>>> origin/backend
     (data) => Object.keys(data).length > 0,
-    { message: "At least one field must be provided" }
+    { message: "At least one field must be provided" },
   );
 
-// ---- Tipos ----
 export type Certification = z.infer<typeof CertificationSchema>;
-<<<<<<< HEAD
-export type CreateCertificationInput = z.infer<typeof CreateCertificationSchema>;
-export type UpdateCertificationInput = z.infer<typeof UpdateCertificationSchema>;
-=======
 export type CreateCertificationInput = z.infer<
   typeof CreateCertificationSchema
 >;
 export type UpdateCertificationInput = z.infer<
   typeof UpdateCertificationSchema
 >;
->>>>>>> origin/backend

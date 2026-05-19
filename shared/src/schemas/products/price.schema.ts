@@ -7,8 +7,7 @@ export const AttendanceModeSchema = z.enum([
   "HEREDADO",
 ]);
 
-// 🧠 Objeto base puro (sin refines) para que .omit() y .partial() funcionen nativamente
-const ProductPriceBaseObject = z.object({
+export const ProductPriceSchema = z.object({
   id: UUIDField,
   product_id: UUIDField,
   attendance_mode: AttendanceModeSchema,
@@ -17,13 +16,7 @@ const ProductPriceBaseObject = z.object({
   enrollment_fee: DecimalField,
 });
 
-<<<<<<< HEAD
-export const ProductPriceSchema = ProductPriceBaseObject;
-
-export const CreateProductPriceSchema = ProductPriceBaseObject.omit({
-=======
 const CreateProductPriceSchema = ProductPriceSchema.omit({
->>>>>>> origin/backend
   id: true,
   product_id: true,
 });
@@ -36,25 +29,8 @@ export const CreateRefinedProductPriceSchema = CreateProductPriceSchema.refine(
   },
 );
 
-// 🧠 Aplicamos .partial() sobre el base limpio y metemos la lógica al final
-export const UpdateProductPriceSchema = ProductPriceBaseObject.omit({
-  id: true,
-  product_id: true,
-})
-  .partial()
-  .refine(
-    ({ installment_price, cash_price }) => {
-      if (installment_price !== undefined && cash_price !== undefined) {
-        return installment_price >= cash_price;
-      }
-      return true;
-    },
-    {
-      message: "installment_price must be greater than or equal to cash_price",
-      path: ["installment_price"],
-    },
-  )
-  .refine(
+export const UpdateProductPriceSchema =
+  CreateProductPriceSchema.partial().refine(
     (data) => Object.keys(data).length > 0,
     { message: "At least one field must be provided" },
   );
