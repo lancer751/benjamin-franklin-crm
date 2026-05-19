@@ -112,7 +112,7 @@ model Professor {
   lastname           String
   corporate_email    String
   email              String              @unique
-  cellphone          String @unique
+  cellphone          String              @unique
   // be careful with this part because if you change the id without requesting the moodle api, an error will appears due to moodle incosistency data.
   moddle_account_id  Int                 @unique
   moodle_user_status MoodleAccountStatus @default(ACTIVE)
@@ -354,6 +354,7 @@ model BenefitsOnProduct {
   @@id([product_id, benefit_id])
 }
 
+// TODO: this should be related to editions table
 model StudyPlan {
   id          String            @id @default(uuid()) @db.Char(36)
   course_id   String
@@ -385,19 +386,19 @@ model StudyPlanTopic {
 }
 
 model Course {
-  id             String     @id @default(uuid()) @db.Char(36)
-  type           CourseType
-  name           String
-  description    String?
-  classes_number Int
-  image_url      String?
-  code           String    @unique @db.Char(7)
-  created_at     DateTime   @default(now())
-  updated_at     DateTime   @updatedAt
-  enrolled_students Int @default(0) // filled by the system
+  id                String     @id @default(uuid()) @db.Char(36)
+  type              CourseType
+  name              String
+  description       String?
+  classes_number    Int
+  image_url         String?
+  code              String     @unique @db.Char(7)
+  created_at        DateTime   @default(now())
+  updated_at        DateTime   @updatedAt
+  enrolled_students Int        @default(0) // filled by the system
 
-  editions    Edition[]
-  studyPlans  StudyPlan[]
+  editions   Edition[]
+  studyPlans StudyPlan[]
 }
 
 model Campaing {
@@ -510,6 +511,8 @@ model Edition {
   schedules           EditionSchedule[]
   assigned_professors ProffessorsOnEditions[]
   ownedProduct        Product?
+
+  @@unique([edition_number, edition_code])
 }
 
 model Category {
@@ -548,6 +551,7 @@ model Product {
   relatedCertifications Certification[]
 }
 
+// TODO: make FAQ 
 model FAQ {
   id         String @id @default(uuid()) @db.Char(36)
   product_id String

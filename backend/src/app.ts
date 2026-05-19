@@ -23,15 +23,8 @@ app.use(
   }),
 );
 
-app.use(
-  "/products/*",
-  cors({
-    origin: proofOrigins,
-    allowMethods: ["GET"],
-    allowHeaders: ["api-key-authorization"],
-  }),
-);
-app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
+
+// app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
 app.use(secureHeaders());
 // Apply rate limiting middleware
 app.use(
