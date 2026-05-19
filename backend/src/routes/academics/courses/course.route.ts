@@ -34,7 +34,18 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
       const course = await c.get("prisma").course.findUnique({
         where: { id },
         include: {
-          editions: true,
+          editions: {
+            select: {
+              id: true,
+              edition_code: true,
+              modality: true,
+              duration_unit: true,
+              duration_value: true,
+              created_at: true,
+              edition_status: true,
+              edition_number: true
+            }
+          },
           studyPlans: {
             include:  {
               modules: true
