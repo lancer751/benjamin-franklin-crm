@@ -7,10 +7,30 @@ import { format, addMinutes } from "date-fns";
 import { getCourses, createCourseEdition, getCourseEditionById, updateCourseEdition } from "../services/courseService";
 import { getProfessors } from "../services/professorService";
 import { editionFormSchema, type EditionFormValues, defaultEditionFormValues } from "../schemas/editionFormSchema";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 
-export const useEditionFormModal = (open: boolean, onClose: () => void, courseId?: string | null, courseCode?: string | null, editionId?: string | null, courseClassesNumber?: number | null) => {
+export const useEditionFormModal = (
+  open = true,
+  onClose?: () => void,
+  courseId?: string | null,
+  courseCode?: string | null,
+  editionId?: string | null,
+  courseClassesNumber?: number | null
+) => {
   const queryClient = useQueryClient();
-  const mode = editionId ? "edit" : "create";
+  const navigate = useNavigate();
+  const { id: paramEditionId } = useParams<{ id: string }>();
+  const location = useLocation();
+
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+
+  // Shadow parameters with resolved values from router or parameters
+  const actualEditionId = editionId || paramEditionId || null;
+  const actualCourseId = courseId || queryParams.get("courseId") || location.state?.courseId || null;
+  const actualCourseCode = courseCode || queryParams.get("courseCode") || location.state?.courseCode || null;
+  const actualCourseClassesNumber = courseClassesNumber || (queryParams.get("courseClassesNumber") ? Number(queryParams.get("courseClassesNumber")) : null) || location.state?.courseClassesNumber || null;
+
+  const mode = actualEditionId ? "edit" : "create";
 
   const [startMonth, setStartMonth] = useState<Date>(new Date());
   const [endMonth, setEndMonth] = useState<Date>(new Date());
@@ -20,7 +40,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     mode: "onTouched",
     defaultValues: {
       ...defaultEditionFormValues,
-      course_id: courseId || "",
+      course_id: actualCourseId || "",
     },
   });
 
@@ -30,9 +50,9 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
   };
 
   const { data: editionRes, isLoading: isLoadingEdition, isError: isErrorEdition } = useQuery({
-    queryKey: ["edition", editionId],
-    queryFn: () => getCourseEditionById(editionId as string),
-    enabled: !!editionId && open,
+    queryKey: ["edition", actualEditionId],
+    queryFn: () => getCourseEditionById(actualEditionId as string),
+    enabled: !!actualEditionId && open,
   });
 
   const { data: coursesRes, isLoading: isLoadingCourses } = useQuery({
@@ -61,9 +81,9 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     if (mode === "create") {
       form.reset({
         ...defaultEditionFormValues,
-        course_id: courseId || "",
+        course_id: actualCourseId || "",
         edition_status: "SCHEDULED",
-        classes_number: courseClassesNumber || ("" as unknown as number),
+        classes_number: actualCourseClassesNumber || ("" as unknown as number),
       });
     } else if (editionRes && editionRes.success && editionRes.data) {
       const data = editionRes.data;
@@ -93,7 +113,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
       })) || [];
 
       form.reset({
-        course_id: courseId || data.course?.id || data.course_id || "",
+        course_id: actualCourseId || data.course?.id || data.course_id || "",
         edition_number: data.edition_number || ("" as unknown as number),
         edition_code: data.edition_code || "",
         start_date: adjustedStartDate,
@@ -111,7 +131,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
         schedules: mappedSchedules,
       });
     }
-  }, [open, editionRes, courseId, mode, form, courseClassesNumber]);
+  }, [open, editionRes, actualCourseId, mode, form, actualCourseClassesNumber]);
 
   // Nuevo useEffect para forzar la actualización de los selects de Radix cuando la data esté disponible
   useEffect(() => {
@@ -130,11 +150,11 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
     // Evitamos sobreescribir el código si el usuario está en modo edición
     if (mode === "edit") return;
 
-    const finalCourseId = courseId || watchCourseId;
+    const finalCourseId = actualCourseId || watchCourseId;
 
     // Solo generamos el código si tenemos el curso y un número válido (1-9)
     if (finalCourseId && watchEditionNumber > 0 && watchEditionNumber < 10) {
-      const selectedCourseCodeStr = courseCode || courses.find((c: any) => c.id === finalCourseId)?.code;
+      const selectedCourseCodeStr = actualCourseCode || courses.find((c: any) => c.id === finalCourseId)?.code;
 
       if (selectedCourseCodeStr) {
         let paddedCourse = selectedCourseCodeStr.substring(0, 7).toUpperCase().padEnd(7, 'X');
@@ -148,7 +168,7 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
         }
       }
     }
-  }, [watchCourseId, watchEditionNumber, watchStartDate, courseId, courseCode, courses, mode, isLoadingEdition, form]);
+  }, [watchCourseId, watchEditionNumber, watchStartDate, actualCourseId, actualCourseCode, courses, mode, isLoadingEdition, form]);
 
   // 3. AUTO-RELLENAR NÚMERO DE CLASES SEGÚN EL CURSO SELECCIONADO
   const [lastCourseId, setLastCourseId] = useState("");
@@ -166,8 +186,8 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
       }
 
       // Caso B: Lógica de Fallback para vista detalle en OnMount
-      if (!targetClassesNumber && courseClassesNumber && watchCourseId === courseId) {
-        targetClassesNumber = courseClassesNumber;
+      if (!targetClassesNumber && actualCourseClassesNumber && watchCourseId === actualCourseId) {
+        targetClassesNumber = actualCourseClassesNumber;
       }
 
       if (targetClassesNumber) {
@@ -187,11 +207,11 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
         setLastCourseId(watchCourseId);
       }
     }
-  }, [watchCourseId, courses, mode, courseId, courseClassesNumber, lastCourseId, form]);
+  }, [watchCourseId, courses, mode, actualCourseId, actualCourseClassesNumber, lastCourseId, form]);
 
   // 3. Mutaciones y Envío
   const createEditionMutation = useMutation({ mutationFn: createCourseEdition });
-  const updateEditionMutation = useMutation({ mutationFn: (data: any) => updateCourseEdition(editionId as string, data) });
+  const updateEditionMutation = useMutation({ mutationFn: (data: any) => updateCourseEdition(actualEditionId as string, data) });
 
   const onSubmit = async (values: EditionFormValues) => {
     if (values.start_date && values.end_date && values.end_date < values.start_date) {
@@ -233,12 +253,16 @@ export const useEditionFormModal = (open: boolean, onClose: () => void, courseId
       loading: mode === "create" ? "Programando edición..." : "Actualizando edición...",
       success: () => {
         queryClient.invalidateQueries({ queryKey: ["editions"] });
-        if (editionId) queryClient.invalidateQueries({ queryKey: ["edition", editionId] });
-        const relevantCourseId = courseId || values.course_id;
+        if (actualEditionId) queryClient.invalidateQueries({ queryKey: ["edition", actualEditionId] });
+        const relevantCourseId = actualCourseId || values.course_id;
         if (relevantCourseId) queryClient.invalidateQueries({ queryKey: ["course", relevantCourseId] });
         else queryClient.invalidateQueries({ queryKey: ["courses"] });
 
-        onClose();
+        if (onClose) {
+          onClose();
+        } else {
+          navigate(relevantCourseId ? `/admin/cursos/${relevantCourseId}` : "/admin/cursos");
+        }
         return mode === "create" ? "Edición programada exitosamente" : "Edición actualizada correctamente";
       },
       error: () => "Hubo un error al guardar la edición. Revisa los datos."

@@ -13,7 +13,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
 
 // Componentes importados
 import CourseFormModal from "../components/CourseFormModal";
-import EditionFormModal from "../components/EditionFormModal";
 
 // 🧠 Importamos el hook
 import { useCoursesAdminView } from "../hooks/useCoursesAdminView";
@@ -59,7 +58,7 @@ export default function CoursesAdminView() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleOpenCourseForm()}>Nuevo Curso/Programa</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowEditionForm(true)}>Programar Edición</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/admin/academic/editions/nuevo")}>Programar Edición</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -181,7 +180,6 @@ export default function CoursesAdminView() {
 
       {/* Modales */}
       <CourseFormModal open={modals.showCourseForm} onClose={handleCloseCourseForm} initialData={modals.selectedCourse} />
-      <EditionFormModal open={modals.showEditionForm} onClose={() => setShowEditionForm(false)} />
 
       <AlertDialog open={modals.showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent>

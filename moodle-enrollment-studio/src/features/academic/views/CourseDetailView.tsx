@@ -22,7 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/core/components/ui/alert-dialog";
-import EditionFormModal from "../components/EditionFormModal";
 import { useCourseDetail } from "../hooks/useCourseDetail";
 import { translateEnum, EditionStatusMap, ModalityMap } from "@/core/utils/dictionaries";
 import { useNavigate } from "react-router-dom";
@@ -129,7 +128,7 @@ export default function CourseDetailView() {
           </div>
           <Button 
             className="flex items-center gap-2 shadow-sm rounded-lg shrink-0"
-            onClick={() => actions.openEditEdition(null as any)}
+            onClick={() => navigate(`/admin/academic/editions/nuevo?courseId=${course.id}&courseCode=${course.code || ""}&courseClassesNumber=${course.classes_number || ""}`)}
           >
             <Plus size={16} />
             Programar Nueva Edición
@@ -150,7 +149,7 @@ export default function CourseDetailView() {
               </p>
               <Button 
                 className="gap-2 rounded-full px-6"
-                onClick={() => actions.openEditEdition(null as any)}
+                onClick={() => navigate(`/admin/academic/editions/nuevo?courseId=${course.id}&courseCode=${course.code || ""}&courseClassesNumber=${course.classes_number || ""}`)}
               >
                 <Plus size={16} />
                 Programar la Primera Edición
@@ -224,7 +223,7 @@ export default function CourseDetailView() {
                             <Eye size={15} className="text-muted-foreground" />
                             <span>Ver Detalle</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => actions.openEditEdition(edition.id)} className="gap-2 cursor-pointer">
+                          <DropdownMenuItem onClick={() => navigate(`/admin/academic/editions/${edition.id}/editar`)} className="gap-2 cursor-pointer">
                             <Edit size={15} className="text-muted-foreground" />
                             <span>Editar Edición</span>
                           </DropdownMenuItem>
@@ -246,14 +245,6 @@ export default function CourseDetailView() {
         </Card>
       </div>
 
-      <EditionFormModal 
-        open={modals.showEditionModal} 
-        onClose={actions.closeEditionModal}
-        courseId={course.id} 
-        courseCode={course.code}
-        editionId={selection.editionIdToEdit}
-        courseClassesNumber={course.classes_number}
-      />
       
 
       <AlertDialog open={modals.showDeleteAlert} onOpenChange={modals.setShowDeleteAlert}>
