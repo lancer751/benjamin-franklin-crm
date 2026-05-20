@@ -2,7 +2,6 @@ import {
   Plus, GraduationCap, MoreVertical, Loader2, User, Calendar, 
   AlertCircle, Clock 
 } from "lucide-react";
-import ProductFormModal from "@/features/orders/components/ProductFormModal";
 import { useProductsView } from "../hooks/useProductsView";
 import { Badge } from "@/core/components/ui/badge";
 import {
@@ -64,7 +63,7 @@ const ProductsView = () => {
           <h1 className="text-2xl font-bold text-foreground">Catálogo de Productos</h1>
           <p className="text-sm text-muted-foreground mt-1">Gestiona cursos, ediciones y precios del ecosistema académico.</p>
         </div>
-        <button onClick={() => modals.setShowForm(true)} className="btn-primary">
+        <button onClick={() => actions.navigate("/productos/nuevo")} className="btn-primary">
           <Plus size={18} /> Nuevo Producto
         </button>
       </div>
@@ -220,9 +219,9 @@ const ProductsView = () => {
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem onClick={(e) => {
                             e.stopPropagation();
-                            actions.handleEdit(p);
+                            actions.navigate(`/productos/${p.id}/editar`);
                           }} className="gap-2">
-                            <Plus size={14} /> Edición Rápida
+                            <Plus size={14} /> Editar Producto
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive focus:bg-destructive focus:text-destructive-foreground gap-2"
@@ -246,12 +245,6 @@ const ProductsView = () => {
       </div>
 
       {/* --- MODALES --- */}
-      <ProductFormModal 
-        key={modals.productToEdit ? modals.productToEdit.id : 'new-product-form'} 
-        open={modals.showForm} 
-        initialData={modals.productToEdit} 
-        onClose={modals.closeForm}
-      />
 
       <AlertDialog open={modals.showDeleteAlert} onOpenChange={modals.setShowDeleteAlert}>
         <AlertDialogContent>

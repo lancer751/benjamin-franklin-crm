@@ -42,6 +42,9 @@ const emptyData: ProductFormValues = {
   discount_expires_at: "",
   image_url: "",
   prices: [], // Will be filled dynamically
+  benefit_ids: [],
+  faqs: [],
+  certifications: [],
 };
 
 export const useProductFormModal = (open: boolean, onClose: () => void, initialData?: any) => {
@@ -69,6 +72,9 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
           enrollment_fee: String(p.enrollment_fee || "0.00")
         })) : [],
         category_id: initialData.category_id || initialData.category || "",
+        benefit_ids: initialData.benefit_ids || initialData.benefits?.map((b: any) => typeof b === 'object' ? b.id : b) || [],
+        faqs: initialData.faqs || [],
+        certifications: initialData.certifications || [],
       });
       setHasCustomImage(!!initialData.image_url);
       setErrors({});
@@ -128,6 +134,11 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     const editionModality = typeof modalityRaw === 'object' ? modalityRaw.name : modalityRaw;
     
     setForm(prev => {
+      // Guarda crítica: si es edición y ya hay precios cargados, no los sobreescribimos destructivamente
+      if (isEdit && prev.prices && prev.prices.length > 0) {
+        return prev;
+      }
+
       let newPrices = [...prev.prices];
       
       if (editionModality === "HIBRIDO") {
@@ -167,22 +178,30 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   };
 
   const mutation = useMutation({
-    mutationFn: async (payload: ProductFormValues) => {
-      // Clean JSON for Backend (Strings for prices as required by ProductPriceSchema)
+    mutationFn: async (payload: any) => {
+      // Clean JSON for Backend: Convert cash_price, installment_price, enrollment_fee, presale_price, discount_price to numbers
       const parsedPayload = {
-        ...payload,
-        installments_min_number: Number(payload.installments_min_number),
+        name: payload.name || "",
+        edition_id: payload.edition_id || "",
+        category_id: payload.category_id || "",
         installments_max_number: Number(payload.installments_max_number),
-        presale_price: payload.presale_price && payload.presale_price !== "" ? String(payload.presale_price) : null,
-        discount_price: payload.discount_price && payload.discount_price !== "" ? String(payload.discount_price) : null,
-        discount_expires_at: payload.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
+        installments_min_number: Number(payload.installments_min_number),
+        slug: payload.slug || "",
+        description: payload.description || "",
+        short_description: payload.short_description || "",
         image_url: payload.image_url || "",
-        prices: payload.prices.map(p => ({
+        presale_price: payload.presale_price && payload.presale_price !== "" ? Number(payload.presale_price) : null,
+        discount_price: payload.discount_price && payload.discount_price !== "" ? Number(payload.discount_price) : null,
+        discount_expires_at: payload.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
+        prices: payload.prices.map((p: any) => ({
           attendance_mode: p.attendance_mode,
-          cash_price: String(p.cash_price),
-          installment_price: String(p.installment_price),
-          enrollment_fee: String(p.enrollment_fee),
-        }))
+          cash_price: Number(p.cash_price),
+          installment_price: Number(p.installment_price),
+          enrollment_fee: Number(p.enrollment_fee),
+        })),
+        benefit_ids: payload.benefit_ids || [],
+        faqs: payload.faqs || [],
+        certifications: payload.certifications || [],
       };
 
       if (isEdit && initialData?.id) {
@@ -254,9 +273,9 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         return;
       }
 
-      productFormSchema.parse(form);
+      const parsedValues = productFormSchema.parse(form);
       setErrors({});
-      mutation.mutate(form);
+      mutation.mutate(parsedValues);
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};

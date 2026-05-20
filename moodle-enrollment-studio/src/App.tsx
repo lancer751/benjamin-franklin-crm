@@ -36,6 +36,7 @@ import OrdersView from "@/features/orders/views/OrdersView"; // Nueva Orden
 import OrderDetailView from "@/features/orders/views/OrderDetailView";
 import ProductsView from "@/features/orders/views/ProductsView";
 import ProductDetailView from "@/features/orders/views/ProductDetailView";
+import ProductFormView from "@/features/orders/views/ProductFormView";
 
 // Módulo de Finanzas
 import FinanceDashboardView from "@/features/payments/views/FinanceDashboardView";
@@ -113,6 +114,8 @@ const App = () => {
               <Route path="/ordenes" element={<OrdersView />} />
               <Route path="/ordenes/:id" element={<OrderDetailView />} />
               <Route path="/productos" element={<ProductsView />} />
+              <Route path="/productos/nuevo" element={<ProductFormView />} />
+              <Route path="/productos/:id/editar" element={<ProductFormView />} />
               <Route path="/productos/:id" element={<ProductDetailView />} />
               
               {/* Finanzas */}
