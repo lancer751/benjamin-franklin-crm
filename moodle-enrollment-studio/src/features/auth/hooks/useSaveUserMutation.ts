@@ -20,7 +20,7 @@ export const useSaveUserMutation = (
       const roleName = roles.find((r: any) => r.id === values.role_id)?.name || "";
       const userData = userAdapter.toPayload(values, roleName, isSeller, isSupervisor, !!user);
 
-      // Intercepción y Coerción de Datos
+      // 🧠 Intercepción y Coerción de Datos de Supervisor
       if (userData.sales_supervisor_profile) {
         userData.sales_supervisor_profile.discount_limit_percent = String(userData.sales_supervisor_profile.discount_limit_percent || "0");
         if (userData.sales_supervisor_profile.max_manual_discount !== undefined) {
@@ -28,30 +28,48 @@ export const useSaveUserMutation = (
         }
       }
 
+      // 1️⃣ MODO: CREACIÓN (Mantiene tu lógica original perfecta)
       if (!user) {
         await createUser(userData);
         return "create";
-      } else {
-        if (isSupervisor) {
-          const supervisorId = user.sales_supervisor_profile?.id || user.salesSupervisor?.id;
-          if (supervisorId && userData.sales_supervisor_profile) {
-            await updateSupervisorProfile(supervisorId, userData.sales_supervisor_profile);
-          }
-        } else if (isSeller) {
-          const sellerId = user.seller_profile?.id || user.seller?.id;
-          if (sellerId && userData.seller_profile) {
-            userData.seller_profile.sales_target = Number(userData.seller_profile.sales_target);
-            await updateSellerProfile(sellerId, userData.seller_profile);
-          }
-        } else {
-          // Bloque residual (Ej: ADMIN u otros roles)
-          await updateUser(user.id, userData);
-        }
+      } 
+      
+      // 2️⃣ MODO: EDICIÓN (Solución al guardado mixto)
+      const updatePromises: Promise<any>[] = [];
 
-        return "update";
+      // 🎯 A) Siempre agregamos la actualización de los datos comunes del usuario
+      // Mapeamos solo las propiedades base (omitimos los objetos de perfil que el backend general no espera)
+      const { seller_profile, sales_supervisor_profile, marketing_profile, ...baseUserFields } = userData;
+      
+      updatePromises.push(updateUser(user.id, baseUserFields));
+
+      // 🎯 B) Si es Supervisor, disparamos en paralelo la actualización de su perfil
+      if (isSupervisor) {
+        const supervisorId = user.sales_supervisor_profile?.id || user.salesSupervisor?.id;
+        if (supervisorId && userData.sales_supervisor_profile) {
+          updatePromises.push(
+            updateSupervisorProfile(supervisorId, userData.sales_supervisor_profile)
+          );
+        }
+      } 
+      
+      // 🎯 C) Si es Vendedor (Seller), disparamos en paralelo la actualización de su perfil
+      else if (isSeller) {
+        const sellerId = user.seller_profile?.id || user.seller?.id;
+        if (sellerId && userData.seller_profile) {
+          userData.seller_profile.sales_target = Number(userData.seller_profile.sales_target);
+          updatePromises.push(
+            updateSellerProfile(sellerId, userData.seller_profile)
+          );
+        }
       }
+
+      // 🚀 EJECUCIÓN SIMULTÁNEA: Lanza ambos endpoints en paralelo (Ahorra tiempo de red)
+      await Promise.all(updatePromises);
+      return "update";
     },
     onSuccess: async (actionType) => {
+      // Invalida las queries para refrescar la tabla al instante
       await queryClient.invalidateQueries({ queryKey: ["users"] });
       await queryClient.invalidateQueries({ queryKey: ["supervisors"] });
       await queryClient.invalidateQueries({ queryKey: ["sellers"] });
@@ -62,7 +80,7 @@ export const useSaveUserMutation = (
       if (actionType === "create") {
          toast.success(isSeller ? "Usuario y Perfil de Ventas creados" : "Usuario creado con éxito");
       } else {
-         toast.success("Usuario actualizado correctamente");
+         toast.success("Usuario y perfil actualizados correctamente");
       }
       
       closeAndReset();

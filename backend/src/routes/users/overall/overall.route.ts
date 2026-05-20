@@ -192,6 +192,11 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
         }
       }
 
+      if (userData.password) {
+        const hashedPassword = await hash(userData.password, 10)
+        userData.password = hashedPassword
+      }
+
       const updatedUser = await c.get("prisma").user.update({
         where: { id },
         data: userData,
