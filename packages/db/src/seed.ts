@@ -2,6 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
 import { CoursesWorkflow } from "./workflows/product-launch/orchestator";
 import { hash } from "bcrypt";
+import { fakerES } from "@faker-js/faker";
 
 const databaseUrl = `${process.env.DATABASE_URL}`;
 if (!databaseUrl) {
@@ -51,16 +52,16 @@ async function main() {
     }),
   ]);
 
+  const adminRoleId = await prisma.role.findUnique({where: {name: "ADMIN"}, select: {id: true}})
+
   const users = await prisma.user.create({
     data: {
-      first_name: "Angel",
-      middle_name: "Julca",
-      last_name: "Perez",
-      email: "angel.julca@gmail.com",
-      corporate_email: "julcaangel@bfedu.pe",
-      cellphone: "987456125",
-      corporate_cellphone: "987253658",
-      role_id: roles[0].id,
+      first_name: fakerES.person.firstName(),
+      middle_name: fakerES.person.middleName(),
+      last_name: fakerES.person.lastName(),
+      email: fakerES.internet.email(),
+      corporate_email: fakerES.internet.exampleEmail(),
+      role_id: adminRoleId ? adminRoleId.id : roles[0].id,
       is_active: true,
       password: await hash("password123#", 10),
     },

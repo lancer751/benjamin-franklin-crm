@@ -1,7 +1,5 @@
 import { z } from "zod";
 import { CreateRefinedProductPriceSchema } from "./price.schema";
-import { CreateRefinedCertificationSchema } from "./certification.schema";
-import { CreateFAQSchema } from "./faq.schema";
 import { DecimalField, OptionalUrl, UUIDField } from "../helpers";
 
 export const SalesStatusSchema = z.enum([
@@ -47,9 +45,9 @@ export const ProductSchema = z.object({
     .array(CreateRefinedProductPriceSchema)
     .min(1, "At least one price must be defined"),
   benefit_ids: z.array(UUIDField).min(1, "At least one benefit must be linked"),
-  faqs: z.array(CreateFAQSchema).optional().default([]),
-  certifications: z
-    .array(CreateRefinedCertificationSchema)
+  faq_ids: z.array(UUIDField).optional().default([]),
+  certification_ids: z
+    .array(UUIDField)
     .optional()
     .default([]),
   created_at: z.coerce.date(),
@@ -62,7 +60,7 @@ export const CreateProductSchema = ProductSchema.omit({
   updated_at: true,
 });
 
-const CreateRefinedProductSchema = CreateProductSchema.refine(
+export const CreateRefinedProductSchema = CreateProductSchema.refine(
   ({ installments_min_number, installments_max_number }) =>
     installments_max_number >= installments_min_number,
   {

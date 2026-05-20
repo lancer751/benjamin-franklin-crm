@@ -115,7 +115,9 @@ model Professor {
   cellphone          String              @unique
   // be careful with this part because if you change the id without requesting the moodle api, an error will appears due to moodle incosistency data.
   moddle_account_id  Int                 @unique
+  is_active          Boolean             @default(true)
   moodle_user_status MoodleAccountStatus @default(ACTIVE)
+  deleted_at         DateTime?     
   created_at         DateTime            @default(now())
   update_at          DateTime            @updatedAt
 
@@ -542,29 +544,38 @@ model Product {
   updated_at              DateTime    @updatedAt
 
   orders_details        OrderDetail[]
-  edition               Edition             @relation(fields: [edition_id], references: [id])
+  edition               Edition                   @relation(fields: [edition_id], references: [id])
   prices                ProductPrice[]
   relatedBenefits       BenefitsOnProduct[]
-  category              Category            @relation(fields: [category_id], references: [id])
+  category              Category                  @relation(fields: [category_id], references: [id])
   campaing              Campaing?
-  frequentQuestions     FAQ[]
-  relatedCertifications Certification[]
+  frequentQuestions     FAQsOnProduct[]
+  relatedCertifications CertificationsOnProduct[]
 }
 
 // TODO: make FAQ 
 model FAQ {
   id         String @id @default(uuid()) @db.Char(36)
-  product_id String
   question   String
   answer     String @db.Text
   order      Int    @default(0)
 
+  products FAQsOnProduct[]
+}
+
+model FAQsOnProduct {
+  product_id String
+  faq_id     String
+  order      Int    @default(0) // per-product display order
+
   product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  faq     FAQ     @relation(fields: [faq_id], references: [id], onDelete: Cascade)
+
+  @@id([product_id, faq_id])
 }
 
 model Certification {
   id                String  @id @default(uuid()) @db.Char(36)
-  product_id        String  @unique
   title             String // e.g. "Certificado del Curso de Lectura de Planos"
   description       String? @db.Text
   image_url         String?
@@ -573,7 +584,17 @@ model Certification {
   issuing_authority String? // e.g. "Corporación Educativa Benjamin Franklin"
   registry_validity String? // e.g. "Válido para el RETCC"
 
-  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  products CertificationsOnProduct[]
+}
+
+model CertificationsOnProduct {
+  product_id       String
+  certification_id String
+
+  product       Product       @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  certification Certification @relation(fields: [certification_id], references: [id], onDelete: Cascade)
+
+  @@id([product_id, certification_id])
 }
 
 enum AttendanceMode {

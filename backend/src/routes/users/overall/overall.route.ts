@@ -36,130 +36,122 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
     );
   })
   // user details by id
-  .get(
-    UUID_ROUTE,
-    zValidator("param", validateIdParamSchema),
-    async (c) => {
-      const { id } = c.req.valid("param");
+  .get(UUID_ROUTE, zValidator("param", validateIdParamSchema), async (c) => {
+    const { id } = c.req.valid("param");
 
-      const user = await c.get("prisma").user.findUnique({
-        where: { id },
-        include: {
-          role: { select: { name: true } },
-        },
-      });
+    const user = await c.get("prisma").user.findUnique({
+      where: { id },
+      include: {
+        role: { select: { name: true } },
+      },
+    });
 
-      if (!user) {
-        throw new HTTPException(404, { message: "User not found" });
-      }
+    if (!user) {
+      throw new HTTPException(404, { message: "User not found" });
+    }
 
-      return c.json<SuccessResponse<typeof user>>(
-        {
-          success: true,
-          message: "User retrieved successfully",
-          data: user,
-        },
-        200,
-      );
-    },
-  )
+    return c.json<SuccessResponse<typeof user>>(
+      {
+        success: true,
+        message: "User retrieved successfully",
+        data: user,
+      },
+      200,
+    );
+  })
   // Create a new user and its profile based on the role
-  .post(
-    "/",
-    zValidator("json", CreateUserSchema),
-    async (c) => {
-      const userData = c.req.valid("json");
-      const prisma = c.get("prisma");
-      const { role, ...profilesAndUserFields } = structuredClone(userData);
+  .post("/", zValidator("json", CreateUserSchema), async (c) => {
+    const userData = c.req.valid("json");
+    const prisma = c.get("prisma");
+    const { role, ...profilesAndUserFields } = structuredClone(userData);
 
-      const existingUser = await c.get("prisma").user.findUnique({
-        where: { email: userData.email },
+    const existingUser = await c.get("prisma").user.findUnique({
+      where: { email: userData.email },
+    });
+
+    if (existingUser) {
+      throw new HTTPException(400, { message: "Email already in use" });
+    }
+
+    // Verify role exists
+    const existingRole = await prisma.role.findUnique({
+      where: { id: profilesAndUserFields.role_id },
+    });
+
+    if (!existingRole) {
+      throw new HTTPException(400, { message: "Invalid role ID" });
+    }
+
+    if (existingRole.name !== role) {
+      throw new HTTPException(400, {
+        message: `Role mismatch: role_id belongs to '${existingRole.name}' but declared role is '${role}'`,
+      });
+    }
+
+    // Strip all possible profile fields — they're unknown at this point
+    const {
+      seller_profile,
+      sales_supervisor_profile,
+      marketing_profile,
+      ...userFields
+    } = {
+      seller_profile: undefined,
+      sales_supervisor_profile: undefined,
+      marketing_profile: undefined,
+      ...profilesAndUserFields, // actual values override the undefined defaults above
+    };
+
+    const hashedPassword = await hash(userData.password, 10);
+
+    const newUserAccountAndProfile = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { ...userFields, password: hashedPassword },
+        include: { role: { select: { name: true } } },
       });
 
-      if (existingUser) {
-        throw new HTTPException(400, { message: "Email already in use" });
-      }
-
-      // Verify role exists
-      const existingRole = await prisma.role.findUnique({
-        where: { id: profilesAndUserFields.role_id },
-      });
-
-      if (!existingRole) {
-        throw new HTTPException(400, { message: "Invalid role ID" });
-      }
-
-      if (existingRole.name !== role) {
-        throw new HTTPException(400, {
-          message: `Role mismatch: role_id belongs to '${existingRole.name}' but declared role is '${role}'`,
-        });
-      }
-
-      // Strip all possible profile fields — they're unknown at this point
-      const {
-        seller_profile,
-        sales_supervisor_profile,
-        marketing_profile,
-        ...userFields
-      } = {
-        seller_profile: undefined,
-        sales_supervisor_profile: undefined,
-        marketing_profile: undefined,
-        ...profilesAndUserFields, // actual values override the undefined defaults above
+      const profileCreators: Record<RoleAccess, () => Promise<void>> = {
+        SALES_REP: async () => {
+          await tx.sellerProfile.create({
+            data: {
+              user_id: user.id,
+              assigned_supervisor_id: seller_profile!.assigned_supervisor_id,
+              sales_target: seller_profile!.sales_target,
+            },
+          });
+        },
+        SALES_SUPERVISOR: async () => {
+          await tx.salesSupervisorProfile.create({
+            data: { user_id: user.id, ...sales_supervisor_profile! },
+          });
+        },
+        MARKETING: async () => {
+          await tx.marketingProfile.create({
+            data: { user_id: user.id },
+          });
+        },
+        ADMIN: async () => {
+          // Admins don't have a separate profile, so we can just return here
+          return;
+        },
+        COLLECTIONS: async () => {
+          // Collections role doesn't have a separate profile, so we can just return here
+          return;
+        },
       };
 
-      const hashedPassword = await hash(userData.password, 10);
+      await profileCreators[role]?.();
+      return user;
+    });
 
-      const newUserAccountAndProfile = await prisma.$transaction(async (tx) => {
-        const user = await tx.user.create({
-          data: { ...userFields, password: hashedPassword },
-          include: { role: { select: { name: true } } },
-        });
-
-        const profileCreators: Record<RoleAccess, () => Promise<void>> = {
-          SALES_REP: async () => {
-            await tx.sellerProfile.create({
-              data: {
-                user_id: user.id,
-                assigned_supervisor_id: seller_profile!.assigned_supervisor_id,
-                sales_target: seller_profile!.sales_target,
-              },
-            });
-          },
-          SALES_SUPERVISOR: async () => {
-            await tx.salesSupervisorProfile.create({
-              data: { user_id: user.id, ...sales_supervisor_profile! },
-            });
-          },
-          MARKETING: async () => {
-            await tx.marketingProfile.create({
-              data: { user_id: user.id },
-            });
-          },
-          ADMIN: async () => {
-            // Admins don't have a separate profile, so we can just return here
-            return;
-          },
-          COLLECTIONS: async () => {
-            // Collections role doesn't have a separate profile, so we can just return here
-            return;
-          },
-        };
-
-        await profileCreators[role]?.();
-        return user;
-      });
-
-      return c.json<SuccessResponse<typeof newUserAccountAndProfile>>(
-        {
-          success: true,
-          message: "User created successfully",
-          data: newUserAccountAndProfile,
-        },
-        201,
-      );
-    },
-  )
+    return c.json<SuccessResponse<typeof newUserAccountAndProfile>>(
+      {
+        success: true,
+        message: "User created successfully",
+        data: newUserAccountAndProfile,
+      },
+      201,
+    );
+  })
   .put(
     UUID_ROUTE,
     withPrisma,
@@ -188,9 +180,14 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
         }
       }
 
+      if (userData.password) {
+        const hashedPassword = await hash(userData.password, 10)
+        userData.password = hashedPassword
+      }
+
       const updatedUser = await c.get("prisma").user.update({
         where: { id },
-        data: userData,
+        data: { ...userData },
         include: {
           role: { select: { name: true } },
         },

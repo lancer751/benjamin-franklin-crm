@@ -28,6 +28,7 @@
     "studio": "bunx prisma studio"
   },
   "dependencies": {
+    "@faker-js/faker": "^10.4.0",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.6.0",
     "dotenv": "^17.2.3",

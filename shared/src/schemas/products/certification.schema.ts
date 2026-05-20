@@ -3,7 +3,6 @@ import { OptionalString, OptionalUrl, UUIDField } from "../helpers";
 
 export const CertificationSchema = z.object({
   id: UUIDField,
-  product_id: UUIDField,
   title: z.string().min(4, "Certification title must be at least 4 characters"),
   description: OptionalString,
   image_url: OptionalUrl,
@@ -15,7 +14,6 @@ export const CertificationSchema = z.object({
 
 const CreateCertificationSchema = CertificationSchema.omit({
   id: true,
-  product_id: true,
 });
 
 export const CreateRefinedCertificationSchema =
