@@ -86,8 +86,8 @@ const ProductFormView = () => {
   return (
     <div className="space-y-6 pb-12 max-w-7xl mx-auto">
       
-      {/* HEADER SUPERIOR STICKY */}
-      <div className="sticky top-0 z-30 bg-slate-50/90 backdrop-blur-md border-b border-slate-200/80 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 -mx-4 px-4 sm:-mx-6 sm:px-6">
+      {/* HEADER SUPERIOR */}
+      <div className="pt-2 mb-6 border-b border-slate-200/80 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button 
             variant="ghost" 
@@ -446,8 +446,8 @@ const ProductFormView = () => {
 
         </div>
 
-        {/* COLUMNA DERECHA (35% - STICKY) */}
-        <div className="space-y-6 lg:h-fit lg:sticky lg:top-24">
+        {/* COLUMNA DERECHA (35% - STICKY AT BOTTOM) */}
+        <div className="space-y-6 lg:h-fit lg:sticky lg:self-end lg:bottom-4">
           
           {/* CARD 4: PORTADA DEL PRODUCTO */}
           <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
@@ -551,10 +551,15 @@ const ProductFormView = () => {
                 <p className="text-[9px] text-amber-700 mt-1.5 italic">* Opcional. Útil para lanzamientos anticipados.</p>
               </div>
 
-              {/* DETALLE PRECIOS DINÁMICOS DE MODALIDAD */}
               {!selectedEdition && !isEdit ? (
-                <div className="text-center py-6 px-4 border border-dashed border-slate-200 rounded-2xl text-xs text-muted-foreground leading-normal">
-                  Elige primero una Edición/Cohorte en la columna izquierda para configurar precios dinámicos.
+                <div className="flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-200/80 rounded-2xl bg-slate-50/50 min-h-[220px] transition-all">
+                  <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mb-3 text-amber-500 ring-4 ring-amber-100/50">
+                    <Info size={22} />
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-700 mb-1">Precios por Modalidad Bloqueados</h4>
+                  <p className="text-[11px] text-muted-foreground max-w-[200px] leading-normal">
+                    Selecciona una Edición/Cohorte en el buscador para habilitar los campos de precios.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">

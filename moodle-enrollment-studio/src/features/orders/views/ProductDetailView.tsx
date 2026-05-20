@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { useProductDetail } from "../hooks/useProductDetail";
-import DynamicProductModal from "@/features/orders/components/DynamicProductModal"; 
 import ProductStatusBadge from "@/features/orders/components/ProductStatusBadge";
 import { 
   ArrowLeft, Edit, Loader2, Tag, BookOpen, DollarSign, 
