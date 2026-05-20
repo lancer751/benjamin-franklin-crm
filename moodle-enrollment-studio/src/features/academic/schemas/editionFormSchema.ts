@@ -6,7 +6,7 @@ export const editionFormSchema = z.object({
   edition_number: z.coerce.number({
     invalid_type_error: "Ingresa un número",
   }).int().min(1, "Debe ser al menos 1").max(9, "Solo se permite 1 dígito (1-9)"),
-  edition_code: z.string().length(13, "El código debe tener exactamente 13 caracteres"),
+  edition_code: z.string().min(1, "El código es requerido").max(16, "Máximo 16 caracteres"),
   start_date: z.date({ required_error: "La fecha de inicio es obligatoria" }),
   end_date: z.date({ required_error: "La fecha de fin es obligatoria" }),
   modality: z.enum(["PRESENCIAL", "VIRTUAL", "HIBRIDO", "ASINCRONICO"], { required_error: "Debes seleccionar una modalidad" }),
@@ -59,6 +59,6 @@ export const defaultEditionFormValues: Partial<EditionFormValues> = {
   duration_unit: "WEEKS",
   whatsapp_group_link: "",
   moodle_course_id: "" as unknown as number,
-  assigned_professors: [{ professor_id: "" }],
+  assigned_professors: [],
   schedules: [],
 };

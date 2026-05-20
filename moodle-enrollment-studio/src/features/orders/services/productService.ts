@@ -1,15 +1,16 @@
 import { api } from "@/core/lib/api";
 import { InferRequestType, InferResponseType } from "hono/client";
+import {UUID_PATH} from '@/core/lib/constants'
 
 // ==========================================
 // TIPOS INFERIDOS DESDE EL BACKEND
 // ==========================================
 
 type ProductsRes = InferResponseType<typeof api.products.$get>;
-type ProductByIdRes = InferResponseType<typeof api.products[":id"]["$get"]>;
+type ProductByIdRes = InferResponseType<(typeof api.products)[typeof UUID_PATH]["$get"]>;
 type CreateProductReq = InferRequestType<typeof api.products.$post>["json"];
-type UpdateProductReq = InferRequestType<typeof api.products[":id"]["$put"]>["json"];
-type DeleteProductRes = InferResponseType<typeof api.products[":id"]["$delete"]>;
+type UpdateProductReq = InferRequestType<(typeof api.products)[typeof UUID_PATH]["$put"]>["json"];
+type DeleteProductRes = InferResponseType<(typeof api.products)[typeof UUID_PATH]["$delete"]>;
 
 // ==========================================
 // SERVICIOS: PRODUCTOS

@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/core/components/ui/alert";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/core/components/ui/accordion";
 import { Badge } from "@/core/components/ui/badge";
 import { useEditionFormModal } from "../hooks/useEditionFormModal";
-import { ModalityMap, EditionStatusMap, DurationUnitMap } from "@/core/utils/dictionaries";
+import { ModalityMap, EditionStatusMap, DurationUnitMap, DayOfWeekMap } from "@/core/utils/dictionaries";
 
 interface EditionFormModalProps {
   open: boolean;
@@ -121,7 +121,6 @@ export default function EditionFormModal({ open, onClose, courseId, courseCode, 
                             <FormControl>
                               <Input
                                 placeholder="Ej: PROG00112026"
-                                maxLength={12}
                                 className="font-mono uppercase bg-muted/20"
                                 {...field}
                                 onChange={(e) => field.onChange(e.target.value.toUpperCase())}
@@ -135,7 +134,7 @@ export default function EditionFormModal({ open, onClose, courseId, courseCode, 
                         <FormField control={form.control} name="modality" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Modalidad <span className="text-destructive">*</span></FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select key={field.value || "modality-empty"} onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger><SelectValue placeholder="Elige la modalidad" /></SelectTrigger>
                               </FormControl>
@@ -153,7 +152,7 @@ export default function EditionFormModal({ open, onClose, courseId, courseCode, 
                         <FormField control={form.control} name="edition_status" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Estado de la Edición <span className="text-destructive">*</span></FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select key={field.value || "status-empty"} onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger><SelectValue placeholder="Selecciona el estado" /></SelectTrigger>
                               </FormControl>

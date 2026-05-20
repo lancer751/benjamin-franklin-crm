@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BookOpen, Loader2, MoreVertical, LayoutGrid, List } from "lucide-react";
 import { Card } from "@/core/components/ui/card";
@@ -8,6 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/core/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/core/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
 
 // Componentes importados
 import CourseFormModal from "../components/CourseFormModal";
@@ -23,6 +25,12 @@ export default function CoursesAdminView() {
     getInitials, setViewMode, setShowEditionForm, setShowDeleteAlert,
     handleOpenCourseForm, handleCloseCourseForm, handleOpenDeleteAlert, confirmDelete
   } = useCoursesAdminView();
+
+  const [activeType, setActiveType] = useState<"ALL" | "COURSE" | "PROGRAM">("ALL");
+
+  const displayedCourses = activeType === "ALL" 
+    ? filteredCourses 
+    : filteredCourses.filter((c: any) => c.type === activeType);
 
   return (
     <div className="flex flex-col gap-6 w-full fade-in">
@@ -50,7 +58,7 @@ export default function CoursesAdminView() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleOpenCourseForm()}>Nuevo Curso Master</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOpenCourseForm()}>Nuevo Curso/Programa</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setShowEditionForm(true)}>Programar Edición</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -69,16 +77,24 @@ export default function CoursesAdminView() {
           </div>
         </Card>
       ) : (
-        <div className="mt-2">
+        <div className="mt-2 flex flex-col gap-6">
+          <Tabs value={activeType} onValueChange={(val: any) => setActiveType(val)} className="w-full">
+            <TabsList className="bg-muted/40 border border-border/50 p-1">
+              <TabsTrigger value="ALL" className="data-[state=active]:bg-background">Todos</TabsTrigger>
+              <TabsTrigger value="COURSE" className="data-[state=active]:bg-background">Cursos de Especialización</TabsTrigger>
+              <TabsTrigger value="PROGRAM" className="data-[state=active]:bg-background">Programas de Especialización</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           {viewMode === "grid" ? (
             /* =========== VISTA GRID =========== */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCourses.length === 0 ? (
+              {displayedCourses.length === 0 ? (
                 <div className="col-span-full py-20 text-center text-muted-foreground bg-muted/20 border border-dashed rounded-xl">
                   No hay cursos master registrados en el sistema.
                 </div>
               ) : (
-                filteredCourses.map((course: any) => (
+                displayedCourses.map((course: any) => (
                   <Card key={course.id} className="overflow-hidden hover:shadow-md transition-all group cursor-pointer relative flex flex-col border-border/60" onClick={() => navigate(`/admin/cursos/${course.id}`)}>
                     <div className="aspect-video w-full bg-muted/40 relative overflow-hidden flex items-center justify-center">
                       {course.image_url ? (
@@ -129,10 +145,10 @@ export default function CoursesAdminView() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCourses.length === 0 ? (
+                  {displayedCourses.length === 0 ? (
                     <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">No hay cursos master registrados.</TableCell></TableRow>
                   ) : (
-                    filteredCourses.map((course: any) => (
+                    displayedCourses.map((course: any) => (
                       <TableRow key={course.id} className="group transition-colors cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/admin/cursos/${course.id}`)}>
                         <TableCell><Badge variant="outline" className="font-semibold text-muted-foreground bg-muted/30 border-border/60">{course.code || "N/A"}</Badge></TableCell>
                         <TableCell className="font-medium text-foreground">{course.name}</TableCell>

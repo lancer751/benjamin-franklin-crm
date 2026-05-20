@@ -70,12 +70,23 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
       const professorData = c.req.valid("json");
       const { id: professorId } = c.req.valid("param");
 
-      const existingProfessor = await prisma.professor.findUnique({
-        where: { email: professorData.email },
+      const currentProfessor = await prisma.professor.findUnique({
+        where: { id: professorId },
       });
 
-      if (existingProfessor) {
+      if (!currentProfessor) {
         throw new HTTPException(404, { message: "Professor not found" });
+      }
+
+      // 2. Si intenta cambiar el email, validar que no le pertenezca a OTRO profesor
+      if (professorData.email && professorData.email !== currentProfessor.email) {
+        const emailConflict = await prisma.professor.findUnique({
+          where: { email: professorData.email },
+        });
+        
+        if (emailConflict) {
+          throw new HTTPException(400, { message: "Email already in use by another professor" });
+        }
       }
 
       const updatedProfessor = await prisma.professor.update({
@@ -99,6 +110,9 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
     if (!existingProfessor) {
       throw new HTTPException(404, { message: "Professor not found" });
     }
+
+    await c.get("prisma").professor.delete({ where: { id } });
+
 
     return c.json<SuccessResponse>(
       { success: true, message: "Deletion Successful" },

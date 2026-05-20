@@ -13,6 +13,16 @@ export const EditionStatusMap: Record<string, string> = {
     CANCELLED: "Cancelado",
 };
 
+export const DayOfWeekMap: Record<string, string> = {
+    MONDAY: "Lunes",
+    TUESDAY: "Martes",
+    WEDNESDAY: "Miércoles",
+    THURSDAY: "Jueves",
+    FRIDAY: "Viernes",
+    SATURDAY: "Sábado",
+    SUNDAY: "Domingo",
+};
+
 export const DurationUnitMap: Record<string, string> = {
     WEEKS: "Semanas",
     MONTHS: "Meses",

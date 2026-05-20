@@ -9,13 +9,6 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   const { user, isAuthenticated, isLoading } = useAuthStore();
   const location = useLocation();
 
-  console.log("--- PROTECTED ROUTE CHECK ---");
-  console.log("Cargando:", isLoading);
-  console.log("Autenticado:", isAuthenticated);
-  console.log("Usuario:", user);
-  console.log("Rol del Usuario:", user?.role?.name);
-  console.log("Roles Permitidos:", allowedRoles);
-
   if (isLoading) return <div>Cargando sesión...</div>; // O un Spinner
 
   if (!isAuthenticated) {
