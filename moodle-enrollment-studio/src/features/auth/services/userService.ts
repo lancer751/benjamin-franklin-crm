@@ -51,7 +51,6 @@ export const createUser = async (data: CreateUserReq) => {
   return await res.json();
 };
 
-// ✨ AGREGADO: Esta es la función que te faltaba y causaba el error de export
 export const updateUser = async (id: string, data: UpdateUserReq) => {
   const res = await api.users[UUID_PATH].$put({ 
     param: { id }, 

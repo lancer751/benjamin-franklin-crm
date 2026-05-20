@@ -7,7 +7,7 @@ import { zValidator } from "@hono/zod-validator";
 import type { RoleAccess } from "@repo/database";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { CreateUserSchema } from "shared";
+import { CreateUserSchema, UpdateUserSchema } from "shared";
 import { hash } from "bcrypt";
 
 export const userGeneralRoutes = new Hono<ContextWithPrisma>()
@@ -164,53 +164,52 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
       );
     },
   )
-  // Update user
-  // .put(
-  //   UUID_ROUTE,
-  //   withPrisma,
-  //   zValidator("param", validateIdParamSchema),
-  //   zValidator("json", UpdateUserSchema),
-  //   async (c) => {
-  //     const { id } = c.req.valid("param");
-  //     const userData = c.req.valid("json");
+  .put(
+    UUID_ROUTE,
+    withPrisma,
+    zValidator("param", validateIdParamSchema),
+    zValidator("json", UpdateUserSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const userData = c.req.valid("json");
 
-  //     const existingUser = await c.get("prisma").user.findUnique({
-  //       where: { id },
-  //     });
+      const existingUser = await c.get("prisma").user.findUnique({
+        where: { id },
+      });
 
-  //     if (!existingUser) {
-  //       throw new HTTPException(404, { message: "User not found" });
-  //     }
+      if (!existingUser) {
+        throw new HTTPException(404, { message: "User not found" });
+      }
 
-  //     // If role_id is being updated, verify it exists
-  //     if (userData.role_id) {
-  //       const roleExists = await c.get("prisma").role.findUnique({
-  //         where: { id: userData.role_id },
-  //       });
+      // If role_id is being updated, verify it exists
+      if (userData.role_id) {
+        const roleExists = await c.get("prisma").role.findUnique({
+          where: { id: userData.role_id },
+        });
 
-  //       if (!roleExists) {
-  //         throw new HTTPException(400, { message: "Invalid role ID" });
-  //       }
-  //     }
+        if (!roleExists) {
+          throw new HTTPException(400, { message: "Invalid role ID" });
+        }
+      }
 
-  //     const updatedUser = await c.get("prisma").user.update({
-  //       where: { id },
-  //       data: userData,
-  //       include: {
-  //         role: { select: { name: true } },
-  //       },
-  //     });
+      const updatedUser = await c.get("prisma").user.update({
+        where: { id },
+        data: userData,
+        include: {
+          role: { select: { name: true } },
+        },
+      });
 
-  //     return c.json<SuccessResponse<typeof updatedUser>>(
-  //       {
-  //         success: true,
-  //         message: "User updated successfully",
-  //         data: updatedUser,
-  //       },
-  //       200,
-  //     );
-  //   },
-  // )
+      return c.json<SuccessResponse<typeof updatedUser>>(
+        {
+          success: true,
+          message: "User updated successfully",
+          data: updatedUser,
+        },
+        200,
+      );
+    },
+  )
   .delete(
     UUID_ROUTE,
     withPrisma,
