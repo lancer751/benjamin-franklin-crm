@@ -42,22 +42,31 @@ async function main() {
     }),
   ]);
 
-  const adminRoleId = await prisma.role.findUnique({where: {name: "ADMIN"}, select: {id: true}})
+  const adminRole = await prisma.role.findUnique({
+  where: { name: "ADMIN" }, 
+  select: { id: true }
+});
 
-  const users = await prisma.user.create({
-    data: {
-      first_name: fakerES.person.firstName(),
-      middle_name: fakerES.person.middleName(),
-      last_name: fakerES.person.lastName(),
-      email: fakerES.internet.email(),
-      corporate_email: fakerES.internet.exampleEmail(),
-      role_id: adminRoleId ? adminRoleId.id : roles[0].id,
-      is_active: true,
-      password: await hash("password123#", 10),
-    },
-  });
+if (!adminRole) {
+  throw new Error("No se pudo encontrar el rol ADMIN para el seed.");
+}
 
-  console.log("✅ Seeding completed successfully!");
+// 2. Creas el usuario usando adminRole.id
+const users = await prisma.user.create({
+  data: {
+    first_name: fakerES.person.firstName(),
+    middle_name: fakerES.person.middleName(),
+    last_name: fakerES.person.lastName(),
+    email: fakerES.internet.email(),
+    corporate_email: fakerES.internet.exampleEmail(),
+    // 💡 Aquí está la corrección: usamos el ID que encontramos arriba
+    role_id: adminRole.id, 
+    is_active: true,
+    password: await hash("password123#", 10),
+  },
+});
+
+console.log("✅ Seeding completed successfully!");
 }
 
 main()
