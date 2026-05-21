@@ -45,7 +45,7 @@ export const sidebarSections: SidebarSection[] = [
     allowedRoles: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"], // Corregido
     items: [
       { to: "/prospectos", label: "Prospectos", icon: Users, allowedRoles: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"] }, // Corregido
-      { to: "/pipeline", label: "Pipeline", icon: Kanban, allowedRoles: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"] }, // Corregido
+      { to: "/pipeline", label: "Pipeline", icon: Kanban, allowedRoles: ["", "SALES_REP", ""] }, // Corregido
       { to: "/ordenes", label: "Órdenes", icon: FileText, allowedRoles: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"] }, // Corregido
       { to: "/productos", label: "Productos", icon: Package, allowedRoles: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"] }, // Corregido
     ],
