@@ -54,7 +54,20 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
               slots: true,
             },
           },
-          assigned_professors: true,
+          assigned_professors: {
+            include: {
+              professors: {
+                select: {
+                  id: true,
+                  name: true,
+                  lastname: true,
+                  email: true,
+                  corporate_email: true,
+                  cellphone: true,
+                }
+              }
+            }
+          }
         },
       });
 

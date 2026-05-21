@@ -31,11 +31,11 @@ export const sidebarSections: SidebarSection[] = [
   {
     title: "Administración",
     icon: ShieldCheck,
-    allowedRoles: ["ADMIN"],
+    allowedRoles: ["ADMIN", "SALES_SUPERVISOR"],
     items: [
       { to: "/admin/usuarios", label: "Usuarios", icon: Users, allowedRoles: ["ADMIN"] },
-      { to: "/admin/cursos", label: "Cursos & Ediciones", icon: GraduationCap, allowedRoles: ["ADMIN"] },
-      { to: "/admin/calendario", label: "Calendario Académico", icon: CalendarDays, allowedRoles: ["ADMIN"] },
+      { to: "/admin/cursos", label: "Cursos & Ediciones", icon: GraduationCap, allowedRoles: ["ADMIN", "SALES_SUPERVISOR"] },
+      { to: "/admin/calendario", label: "Calendario Académico", icon: CalendarDays, allowedRoles: ["ADMIN", "SALES_SUPERVISOR"] },
       { to: "/admin/profesores", label: "Profesores", icon: GraduationCap, allowedRoles: ["ADMIN"] },
     ],
   },
