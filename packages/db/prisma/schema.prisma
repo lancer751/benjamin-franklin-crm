@@ -559,7 +559,7 @@ model FAQ {
   question   String
   answer     String @db.Text
   order      Int    @default(0)
-
+  
   products FAQsOnProduct[]
 }
 

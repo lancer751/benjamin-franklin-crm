@@ -55,8 +55,7 @@ export const verifyUserRoleAccess = (...allowedRoles: RoleAccess[]) =>
   createMiddleware<ContextWithPrisma>(async (c, next) => {
     if (
       !c.var.authUser ||
-      !allowedRoles.includes(c.var.authUser.role) ||
-      c.var.authUser.role !== "ADMIN"
+      !allowedRoles.includes(c.var.authUser.role)
     ) {
       throw new HTTPException(403, {
         message: "Forbidden or you don't have access to this route",

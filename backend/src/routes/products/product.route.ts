@@ -5,16 +5,9 @@ import { CreateRefinedProductSchema, UpdateProductSchema } from "shared";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import {
-  verifyUserAccessAuth,
-  verifyUserRoleAccess,
-} from "@/middlewares/auth.middleware";
-import withPrisma from "@/lib/prisma";
+import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 
 export const productGeneralRoutes = new Hono<ContextWithPrisma>()
-  .use(withPrisma)
-  .use(verifyUserAccessAuth)
-  .use(verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"))
   .get("/", async (c) => {
     const products = await c.get("prisma").product.findMany({
       include: {
@@ -129,7 +122,7 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
       200,
     );
   })
-  .post("/", zValidator("json", CreateRefinedProductSchema), async (c) => {
+  .post("/", verifyUserRoleAccess("ADMIN"), zValidator("json", CreateRefinedProductSchema), async (c) => {
     const { prices, benefit_ids, faq_ids, certification_ids, ...productData } =
       c.req.valid("json");
 
@@ -273,7 +266,7 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
       201,
     );
   })
-  .put(UUID_ROUTE, zValidator("json", UpdateProductSchema), async (c) => {
+  .put(UUID_ROUTE, verifyUserRoleAccess("ADMIN"), zValidator("json", UpdateProductSchema), async (c) => {
     const { id } = c.req.param();
     const { prices, benefit_ids, faq_ids, certification_ids, ...productData } =
       c.req.valid("json");
@@ -447,7 +440,7 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
       200,
     );
   })
-  .delete(UUID_ROUTE, async (c) => {
+  .delete(UUID_ROUTE, verifyUserRoleAccess("ADMIN"), async (c) => {
     const { id } = c.req.param();
 
     const existingProduct = await c.get("prisma").product.findUnique({
