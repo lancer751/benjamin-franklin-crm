@@ -88,11 +88,6 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
           },
         },
         category: { omit: { created_at: true, updated_at: true } },
-<<<<<<< HEAD
-        relatedBenefits: { select: { benefit_id: true } },
-        frequentQuestions: { select: { faq_id: true } },
-        relatedCertifications: { select: { certification_id: true } },
-=======
         orders_details: true,
         relatedBenefits: {
           select: {
@@ -101,7 +96,6 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
         },
         frequentQuestions: { select: { faq: true } },
         relatedCertifications: { select: { certification: true } },
->>>>>>> origin/backend
       },
       omit: {
         category_id: true,

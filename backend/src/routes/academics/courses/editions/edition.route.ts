@@ -57,11 +57,7 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
             },
           },
           assigned_professors: {
-<<<<<<< HEAD
-            include: {
-=======
             select: {
->>>>>>> origin/backend
               professors: {
                 select: {
                   id: true,
@@ -69,20 +65,12 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
                   lastname: true,
                   email: true,
                   corporate_email: true,
-<<<<<<< HEAD
-                  cellphone: true,
-                }
-              }
-            }
-          }
-=======
                   is_active: true,
                   cellphone: true
                 },
               },
             },
           },
->>>>>>> origin/backend
         },
       });
 
