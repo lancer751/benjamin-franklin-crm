@@ -215,6 +215,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         name: payload.name || "",
         edition_id: payload.edition_id || "",
         category_id: payload.category_id || "",
+        sales_status: payload.sales_status,
         installments_max_number: Number(payload.installments_max_number),
         installments_min_number: Number(payload.installments_min_number),
         slug: payload.slug || "",
@@ -312,6 +313,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
       const parsedValues = productFormSchema.parse(form);
       setErrors({});
+      console.log("Estado seleccionado antes de enviar:", parsedValues.sales_status);
       mutation.mutate(parsedValues);
     } catch (error) {
       if (error instanceof z.ZodError) {
