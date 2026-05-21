@@ -11,46 +11,59 @@ import {
   Wallet,
   Speaker,
   CalendarDays,
+  LucideIcon,
 } from "lucide-react";
 
-export const sidebarSections = [
+export interface SidebarItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  allowedRoles?: string[];
+}
+
+export interface SidebarSection {
+  title: string;
+  icon: LucideIcon;
+  items: SidebarItem[];
+  allowedRoles?: string[];
+}
+export const sidebarSections: SidebarSection[] = [
   {
     title: "Administración",
     icon: ShieldCheck,
+    allowedRoles: ["ADMIN"],
     items: [
-      { to: "/admin/usuarios", label: "Usuarios", icon: Users },
-      { to: "/admin/cursos", label: "Cursos & Ediciones", icon: GraduationCap },
-      { to: "/admin/calendario", label: "Calendario Académico", icon: CalendarDays },
-      { to: "/admin/profesores", label: "Profesores", icon: GraduationCap },
+      { to: "/admin/usuarios", label: "Usuarios", icon: Users, allowedRoles: ["ADMIN"] },
+      { to: "/admin/cursos", label: "Cursos & Ediciones", icon: GraduationCap, allowedRoles: ["ADMIN"] },
+      { to: "/admin/calendario", label: "Calendario Académico", icon: CalendarDays, allowedRoles: ["ADMIN"] },
+      { to: "/admin/profesores", label: "Profesores", icon: GraduationCap, allowedRoles: ["ADMIN"] },
     ],
   },
   {
     title: "Ventas",
     icon: TrendingUp,
+    allowedRoles: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"], // Corregido
     items: [
-      { to: "/prospectos", label: "Prospectos", icon: Users },
-      { to: "/pipeline", label: "Pipeline", icon: Kanban },
-      { to: "/ordenes", label: "Órdenes", icon: FileText },
-      { to: "/productos", label: "Productos", icon: Package },
+      { to: "/prospectos", label: "Prospectos", icon: Users, allowedRoles: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"] }, // Corregido
+      { to: "/pipeline", label: "Pipeline", icon: Kanban, allowedRoles: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"] }, // Corregido
+      { to: "/ordenes", label: "Órdenes", icon: FileText, allowedRoles: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"] }, // Corregido
+      { to: "/productos", label: "Productos", icon: Package, allowedRoles: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"] }, // Corregido
     ],
   },
   {
     title: "Finanzas",
     icon: Wallet,
+    allowedRoles: ["ADMIN", "SALES_SUPERVISOR"], // Corregido
     items: [
-      // { to: "/finanzas", label: "Dashboard", icon: DollarSign },
-      { to: "/pagos", label: "Pagos", icon: CreditCard },
-      // { to: "/planes-pago", label: "Planes de Pago", icon: CalendarCheck },
-      // { to: "/morosos", label: "Morosos", icon: AlertTriangle },
+      { to: "/pagos", label: "Pagos", icon: CreditCard, allowedRoles: ["ADMIN", "SALES_SUPERVISOR"] }, // Corregido
     ],
   },
   {
     title: "Marketing",
     icon: Speaker,
+    allowedRoles: ["ADMIN", "SALES_SUPERVISOR", "SALES_REP"], // Corregido
     items: [
-      // { to: "/marketing", label: "Dashboard", icon: BarChart3 },
-      { to: "/campanas", label: "Campañas", icon: Megaphone },
-      // { to: "/origen-leads", label: "Origen de Leads", icon: Target },
+      { to: "/campanas", label: "Campañas", icon: Megaphone, allowedRoles: ["ADMIN", "SALES_SUPERVISOR", "SALES_REP"] }, // Corregido
     ],
   },
 ];

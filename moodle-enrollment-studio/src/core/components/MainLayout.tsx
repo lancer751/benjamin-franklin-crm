@@ -1,152 +1,17 @@
-import { useState } from "react";
-import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
-import {
-  Users,
-  Settings,
-  LogOut,
-  Search,
-  Bell,
-  HelpCircle,
-  ChevronDown,
-  Loader2,
-} from "lucide-react";
+import { Outlet } from "react-router-dom";
+import { Search, Bell, HelpCircle, Users } from "lucide-react";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { logout } from "@/features/auth/services/authService";
-import { sidebarSections } from "@/core/config/menu";
-
-
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
-    isActive
-      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-      : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-  }`;
+import Sidebar from "./Sidebar";
 
 const MainLayout = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-
   const { searchQuery, setSearchQuery, placeholder } = useSearchStore();
-  const setUser = useAuthStore((state) => state.setUser);
-
-  const logoutMutation = useMutation({
-    mutationFn: logout,
-    onSuccess: () => {
-      toast.success("Sesión cerrada");
-      setUser(null);
-      navigate("/login");
-    },
-    onError: () => {
-      toast.error("Error al cerrar sesión");
-    }
-  });
-
-  // Auto-open sections that contain the active route
-  const getInitialOpen = () => {
-    const open: Record<string, boolean> = {};
-    sidebarSections.forEach((section) => {
-      open[section.title] = section.items.some((item) =>
-        location.pathname.startsWith(item.to)
-      );
-    });
-    return open;
-  };
-
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(getInitialOpen);
-
-  const toggleSection = (title: string) => {
-    setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }));
-  };
+  const user = useAuthStore((state) => state.user);
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      {/* Sidebar */}
-      <aside className="flex w-[230px] flex-col bg-sidebar text-sidebar-foreground shrink-0">
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-            M
-          </div>
-          <div>
-            <p className="text-sm font-bold text-sidebar-accent-foreground">Moodle Manager</p>
-            <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/60">Enrollment Suite</p>
-          </div>
-        </div>
-
-        {/* Navigation sections */}
-        <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
-          {sidebarSections.map((section) => {
-            const isOpen = openSections[section.title] ?? false;
-            const SectionIcon = section.icon;
-
-            return (
-              <div key={section.title}>
-                {/* Section toggle button */}
-                <button
-                  onClick={() => toggleSection(section.title)}
-                  className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-[13px] font-semibold text-sidebar-foreground/80 hover:bg-sidebar-accent/40 transition-colors"
-                >
-                  <span className="flex items-center gap-3">
-                    <SectionIcon size={16} />
-                    {section.title}
-                  </span>
-                  <ChevronDown
-                    size={14}
-                    className={`transition-transform duration-200 text-sidebar-foreground/40 ${
-                      isOpen ? "rotate-0" : "-rotate-90"
-                    }`}
-                  />
-                </button>
-
-                {/* Collapsible children with hierarchy line */}
-                <div
-                  className={`overflow-hidden transition-all duration-200 ${
-                    isOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
-                  }`}
-                >
-                  <div className="ml-[22px] border-l border-sidebar-foreground/15 pl-0 space-y-0.5 py-1">
-                    {section.items.map((item) => (
-                      <NavLink key={item.to} to={item.to} className={navLinkClass}>
-                        <item.icon size={15} />
-                        {item.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </nav>
-
-        {/* Bottom */}
-        <div className="border-t border-sidebar-border px-3 py-3 space-y-0.5">
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors">
-            <Settings size={16} /> Ajustes
-          </button>
-          <button 
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {logoutMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
-            {logoutMutation.isPending ? "Cerrando..." : "Cerrar Sesión"}
-          </button>
-        </div>
-
-        {/* User */}
-        <div className="flex items-center gap-3 border-t border-sidebar-border px-4 py-4">
-          <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center text-xs font-semibold text-sidebar-accent-foreground">
-            AD
-          </div>
-          <div>
-            <p className="text-sm font-medium text-sidebar-accent-foreground">Admin Principal</p>
-            <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/60">ADMIN</p>
-          </div>
-        </div>
-      </aside>
+      {/* Sidebar dinámico y reactivo basado en roles */}
+      <Sidebar />
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -171,7 +36,7 @@ const MainLayout = () => {
               <HelpCircle size={20} />
             </button>
             <div className="flex items-center gap-2 pl-2 border-l border-border">
-              <span className="text-xs text-muted-foreground">Rol: ADMIN</span>
+              <span className="text-xs text-muted-foreground">Rol: {user?.role?.name || "INVITADO"}</span>
               <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
                 <Users size={14} className="text-muted-foreground" />
               </div>

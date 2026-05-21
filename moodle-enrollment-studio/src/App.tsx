@@ -1,5 +1,5 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Toaster as Sonner } from "@/core/components/ui/sonner";
 import { Toaster } from "@/core/components/ui/toaster";
@@ -56,6 +56,7 @@ import UserDetailView from "@/features/auth/views/UserDetailView";
 
 const App = () => {
   const { setUser, setLoading, isLoading } = useAuthStore();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -70,13 +71,14 @@ const App = () => {
         setUser(null);
       } finally {
         setLoading(false);
+        setIsCheckingAuth(false);
       }
     };
 
     initAuth();
   }, [setUser, setLoading]);
 
-  if (isLoading) {
+  if (isLoading || isCheckingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
