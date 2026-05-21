@@ -291,13 +291,6 @@ const ProductDetailView = () => {
           </Card>
         </div>
       </div>
-
-      <DynamicProductModal 
-        open={!!modalMode} 
-        mode={modalMode} 
-        onClose={() => setModalMode(null)} 
-        product={product} 
-      />
     </div>
   );
 };

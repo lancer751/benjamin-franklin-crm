@@ -57,7 +57,21 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
   useEffect(() => {
     if (initialData && open) {
-      setForm({
+      const benefit_ids = initialData.benefit_ids || 
+        initialData.relatedBenefits?.map((rb: any) => rb.benefit_id || rb.id) || 
+        initialData.benefits?.map((b: any) => typeof b === 'object' ? b.id : b) || [];
+
+      const faqs = initialData.faqs || 
+        initialData.frequentQuestions?.map((fq: any) => fq.faq_id || fq.id) || [];
+
+      const certifications = initialData.certifications || 
+        initialData.relatedCertifications?.map((rc: any) => rc.certification_id || rc.id) || [];
+
+      const category_id = initialData.category_id || 
+        (typeof initialData.category === 'object' ? initialData.category?.id : initialData.category) || 
+        "";
+
+      const nextForm = {
         ...emptyData,
         ...initialData,
         slug: initialData.slug || generateSlug(initialData.name || ""),
@@ -71,11 +85,14 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
           installment_price: String(p.installment_price || "0.00"),
           enrollment_fee: String(p.enrollment_fee || "0.00")
         })) : [],
-        category_id: initialData.category_id || initialData.category || "",
-        benefit_ids: initialData.benefit_ids || initialData.benefits?.map((b: any) => typeof b === 'object' ? b.id : b) || [],
-        faqs: initialData.faqs || [],
-        certifications: initialData.certifications || [],
-      });
+        category_id,
+        benefit_ids,
+        faqs,
+        certifications,
+      };
+
+      setForm(nextForm);
+      console.log("Formulario inicializado con estado:", nextForm);
       setHasCustomImage(!!initialData.image_url);
       setErrors({});
     } else if (open) {
@@ -179,6 +196,20 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
   const mutation = useMutation({
     mutationFn: async (payload: any) => {
+      // Obtener la modalidad de la edición seleccionada
+      const targetEdition = editions.find((e: any) => e.id === payload.edition_id);
+      const modalityRaw = targetEdition?.modality;
+      const modality = typeof modalityRaw === 'object' ? modalityRaw.name : modalityRaw;
+
+      // Conversión y sanitización segura de precios opcionales
+      const parseOptionalPrice = (val: any) => {
+        if (val === undefined || val === null) return null;
+        const strVal = String(val).trim();
+        if (strVal === "") return null;
+        const num = Number(strVal);
+        return isNaN(num) ? null : num;
+      };
+
       // Clean JSON for Backend: Convert cash_price, installment_price, enrollment_fee, presale_price, discount_price to numbers
       const parsedPayload = {
         name: payload.name || "",
@@ -190,19 +221,25 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         description: payload.description || "",
         short_description: payload.short_description || "",
         image_url: payload.image_url || "",
-        presale_price: payload.presale_price && payload.presale_price !== "" ? Number(payload.presale_price) : null,
-        discount_price: payload.discount_price && payload.discount_price !== "" ? Number(payload.discount_price) : null,
+        presale_price: parseOptionalPrice(payload.presale_price),
+        discount_price: parseOptionalPrice(payload.discount_price),
         discount_expires_at: payload.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
-        prices: payload.prices.map((p: any) => ({
-          attendance_mode: p.attendance_mode,
-          cash_price: Number(p.cash_price),
-          installment_price: Number(p.installment_price),
-          enrollment_fee: Number(p.enrollment_fee),
-        })),
+        prices: payload.prices.map((p: any) => {
+          // Lógica de modalidad: si es HIBRIDO mantenemos VIRTUAL/PRESENCIAL, de lo contrario forzamos HEREDADO
+          const attendance_mode = modality === "HIBRIDO" ? p.attendance_mode : "HEREDADO";
+          return {
+            attendance_mode,
+            cash_price: Number(p.cash_price),
+            installment_price: Number(p.installment_price),
+            enrollment_fee: Number(p.enrollment_fee),
+          };
+        }),
         benefit_ids: payload.benefit_ids || [],
         faqs: payload.faqs || [],
         certifications: payload.certifications || [],
       };
+
+      console.log("PAYLOAD FINAL TRANSFORMADO:", JSON.stringify(parsedPayload, null, 2));
 
       if (isEdit && initialData?.id) {
         return await updateProduct(initialData.id, parsedPayload as any);

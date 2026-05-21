@@ -28,9 +28,6 @@ export default function Sidebar() {
   const setUser = useAuthStore((state) => state.setUser);
   const isLoading = useAuthStore((state) => state.isLoading);
 
-  // Agregar log de depuración del renderizado
-  console.log("Sidebar rendered with user:", user);
-
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
@@ -59,14 +56,12 @@ export default function Sidebar() {
     }
 
     const userRole = user.role?.name || "";
-    console.log("DEBUG: filtrando con rol:", userRole);
 
     const filtered = sidebarSections
       .map((section) => {
         // 1. Check section roles restriction
         if (section.allowedRoles) {
           const isAllowed = section.allowedRoles.includes(userRole);
-          console.log(`[RBAC Debug] Sección "${section.title}": roles permitidos =`, section.allowedRoles, `vs rol de usuario = "${userRole}" (Coincidencia exacta: ${isAllowed})`);
           if (!isAllowed) {
             return null;
           }
@@ -76,7 +71,6 @@ export default function Sidebar() {
         const filteredItems = section.items.filter((item) => {
           if (item.allowedRoles) {
             const isAllowed = item.allowedRoles.includes(userRole);
-            console.log(`[RBAC Debug] Item "${item.label}": roles permitidos =`, item.allowedRoles, `vs rol de usuario = "${userRole}" (Coincidencia exacta: ${isAllowed})`);
             if (!isAllowed) {
               return false;
             }
@@ -137,9 +131,6 @@ export default function Sidebar() {
       </aside>
     );
   }
-
-  // Agregar console.log justo antes del return final
-  console.log("Sidebar FINAL RENDER con usuario:", user?.first_name, "y rol:", user?.role?.name);
 
   return (
     <aside className="flex w-[230px] flex-col bg-sidebar text-sidebar-foreground shrink-0 border-r border-sidebar-border/40">

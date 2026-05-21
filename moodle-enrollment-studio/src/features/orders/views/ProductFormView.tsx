@@ -7,6 +7,7 @@ import {
   DollarSign, CheckSquare, Gift, Sparkles
 } from "lucide-react";
 import { getProductById } from "../services/productService";
+import { getBenefits } from "../services/benefitService";
 import { useProductFormModal } from "../hooks/useProductFormModal";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/core/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
@@ -16,15 +17,6 @@ import { Button } from "@/core/components/ui/button";
 import { Checkbox } from "@/core/components/ui/checkbox";
 import { cn } from "@/core/lib/utils";
 import ProductStatusBadge, { STATUS_LABELS } from "@/features/orders/components/ProductStatusBadge";
-
-// Lista de beneficios predefinidos con UUIDs válidos para satisfacer la validación estricta de Zod y Hono
-const AVAILABLE_BENEFITS = [
-  { id: "e1a5db4c-12b2-4d22-b51c-8ffc77bb3201", name: "Certificación Oficial Firmada y Sellada" },
-  { id: "a762bd13-14d2-43bb-a5a4-94cce423bc02", name: "Acceso ilimitado de por vida a las grabaciones" },
-  { id: "d3bc90fa-b162-411a-8bb7-f123c5e89a03", name: "Soporte personalizado y tutoría 24/7" },
-  { id: "9b3c4a2a-7d2d-42bc-9d3a-2391b48cd004", name: "Material complementario y plantillas descargables" },
-  { id: "c18ef39d-21ad-467f-9721-a3f2db12dc05", name: "Acceso exclusivo a Bolsa de Trabajo" },
-];
 
 const ProductFormView = () => {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +34,14 @@ const ProductFormView = () => {
   });
 
   const initialData = productRes?.success ? productRes.data : undefined;
+
+  // Obtener beneficios dinámicos de la API
+  const { data: benefitsRes, isLoading: isLoadingBenefits } = useQuery({
+    queryKey: ["benefits"],
+    queryFn: getBenefits,
+  });
+
+  const availableBenefits = benefitsRes?.data || [];
 
   const {
     form,
@@ -406,35 +406,51 @@ const ProductFormView = () => {
                 <p className="text-xs text-muted-foreground italic mb-2">
                   * El backend requiere la asignación de al menos un beneficio activo para habilitar la orden de compra.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {AVAILABLE_BENEFITS.map((benefit) => {
-                    const isChecked = (form.benefit_ids || []).includes(benefit.id);
-                    return (
-                      <div 
-                        key={benefit.id} 
-                        onClick={() => handleToggleBenefit(benefit.id)}
-                        className={cn(
-                          "flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer select-none",
-                          isChecked 
-                            ? "bg-primary/5 border-primary shadow-sm" 
-                            : "bg-white border-slate-200 hover:bg-slate-50"
-                        )}
-                      >
-                        <Checkbox 
-                          id={benefit.id} 
-                          checked={isChecked}
-                          onCheckedChange={() => handleToggleBenefit(benefit.id)}
-                          className="mt-0.5 border-slate-300 data-[state=checked]:bg-primary"
-                        />
-                        <div className="grid gap-1">
-                          <label className="text-xs font-bold text-slate-900 cursor-pointer">
-                            {benefit.name}
-                          </label>
-                        </div>
+                {isLoadingBenefits ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[1, 2, 3, 4].map((n) => (
+                      <div key={n} className="flex items-center gap-3 p-4 rounded-xl border border-slate-100 bg-slate-50/40 animate-pulse">
+                        <div className="w-4.5 h-4.5 rounded bg-slate-200" />
+                        <div className="h-3.5 bg-slate-200 rounded w-3/4" />
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                ) : availableBenefits.length === 0 ? (
+                  <div className="py-8 flex flex-col items-center justify-center gap-2 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                    <Info className="h-5 w-5 text-slate-400" />
+                    <p className="text-xs font-medium text-slate-400">No se encontraron beneficios disponibles.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {availableBenefits.map((benefit: any) => {
+                      const isChecked = (form.benefit_ids || []).includes(benefit.id);
+                      return (
+                        <div 
+                          key={benefit.id} 
+                          onClick={() => handleToggleBenefit(benefit.id)}
+                          className={cn(
+                            "flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer select-none group",
+                            isChecked 
+                              ? "bg-primary/5 border-primary shadow-sm hover:bg-primary/[0.07]" 
+                              : "bg-white border-slate-200 hover:bg-slate-50/80 hover:border-slate-300"
+                          )}
+                        >
+                          <Checkbox 
+                            id={benefit.id} 
+                            checked={isChecked}
+                            onCheckedChange={() => handleToggleBenefit(benefit.id)}
+                            className="mt-0.5 border-slate-300 data-[state=checked]:bg-primary transition-all group-hover:scale-105"
+                          />
+                          <div className="grid gap-1">
+                            <label className="text-xs font-bold text-slate-900 cursor-pointer select-none">
+                              {benefit.description || benefit.name}
+                            </label>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 {errors.benefit_ids && (
                   <p className="text-destructive text-xs mt-3 font-semibold flex items-center gap-1">
                     <Info size={12} /> {errors.benefit_ids}
