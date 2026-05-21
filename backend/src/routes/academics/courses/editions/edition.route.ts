@@ -2,6 +2,7 @@ import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
 import withPrisma from "@/lib/prisma";
+import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -10,6 +11,7 @@ import { z } from "zod";
 
 export const editionRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
+  .use(verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"))
   .get("/", async (c) => {
     const courseEditions = await c.get("prisma").edition.findMany({
       include: {
@@ -55,7 +57,11 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
             },
           },
           assigned_professors: {
+<<<<<<< HEAD
             include: {
+=======
+            select: {
+>>>>>>> origin/backend
               professors: {
                 select: {
                   id: true,
@@ -63,11 +69,20 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
                   lastname: true,
                   email: true,
                   corporate_email: true,
+<<<<<<< HEAD
                   cellphone: true,
                 }
               }
             }
           }
+=======
+                  is_active: true,
+                  cellphone: true
+                },
+              },
+            },
+          },
+>>>>>>> origin/backend
         },
       });
 
@@ -75,107 +90,120 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
         throw new HTTPException(404, { message: "Course edition not found" });
       }
 
-      return c.json<SuccessResponse<typeof courseEdition>>(
+      const formattedData = {
+        ...courseEdition,
+        assigned_professors: courseEdition.assigned_professors.map(
+          (prof) => prof.professors,
+        ),
+      };
+
+      return c.json<SuccessResponse<typeof formattedData>>(
         {
           success: true,
           message: "Course edition retrieved successfully",
-          data: courseEdition,
+          data: formattedData,
         },
         200,
       );
     },
   )
   // TODO: Avoid many concurrent request to the database
-  .post("/", zValidator("json", CreateRefinedEditionSchema), async (c) => {
-    const { assigned_professors, schedules, course_id, ...editionFields } =
-      c.req.valid("json");
+  .post(
+    "/",
+    verifyUserRoleAccess("ADMIN"),
+    zValidator("json", CreateRefinedEditionSchema),
+    async (c) => {
+      const { assigned_professors, schedules, course_id, ...editionFields } =
+        c.req.valid("json");
 
-    const prisma = c.get("prisma");
+      const prisma = c.get("prisma");
 
-    //  Verify the course exists before opening a transaction
-    const courseExists = await prisma.course.findUnique({
-      where: { id: course_id },
-      select: { id: true },
-    });
-
-    if (!courseExists) {
-      throw new HTTPException(404, {
-        message: `Course with id "${course_id}" not found`,
+      //  Verify the course exists before opening a transaction
+      const courseExists = await prisma.course.findUnique({
+        where: { id: course_id },
+        select: { id: true },
       });
-    }
 
-    //  Verify all professors exist
-    const professorIds = assigned_professors.map((p) => p.professor_id);
+      if (!courseExists) {
+        throw new HTTPException(404, {
+          message: `Course with id "${course_id}" not found`,
+        });
+      }
 
-    const foundProfessorsIds = await prisma.professor.findMany({
-      where: { id: { in: professorIds } },
-      select: { id: true },
-    });
+      //  Verify all professors exist
+      const professorIds = assigned_professors.map((p) => p.professor_id);
 
-    if (foundProfessorsIds.length !== professorIds.length) {
-      const foundIds = new Set(foundProfessorsIds.map((p) => p.id));
-      const missing = professorIds.filter((id) => !foundIds.has(id));
-
-      throw new HTTPException(404, {
-        message: `The following professor IDs were not found: ${missing.join(", ")}`,
+      const foundProfessorsIds = await prisma.professor.findMany({
+        where: { id: { in: professorIds } },
+        select: { id: true },
       });
-    }
-    //  Transaction: edition + schedules + slots + professors
-    const newEdition = await prisma.$transaction(async (tx) => {
-      const created = await tx.edition.create({
-        data: {
-          ...editionFields,
-          course_id,
-          // Each schedule needs nested slot creates — createMany doesn't
-          // support nested relations, so we use create with a nested array
-          schedules: {
-            create: schedules.map(({ slots, ...scheduleFields }) => ({
-              ...scheduleFields,
-              slots: {
-                create: slots, // { start_time, end_time }[]
-              },
-            })),
+
+      if (foundProfessorsIds.length !== professorIds.length) {
+        const foundIds = new Set(foundProfessorsIds.map((p) => p.id));
+        const missing = professorIds.filter((id) => !foundIds.has(id));
+
+        throw new HTTPException(404, {
+          message: `The following professor IDs were not found: ${missing.join(", ")}`,
+        });
+      }
+      //  Transaction: edition + schedules + slots + professors
+      const newEdition = await prisma.$transaction(async (tx) => {
+        const created = await tx.edition.create({
+          data: {
+            ...editionFields,
+            course_id,
+            // Each schedule needs nested slot creates — createMany doesn't
+            // support nested relations, so we use create with a nested array
+            schedules: {
+              create: schedules.map(({ slots, ...scheduleFields }) => ({
+                ...scheduleFields,
+                slots: {
+                  create: slots, // { start_time, end_time }[]
+                },
+              })),
+            },
           },
-        },
-      });
+        });
 
-      // Professors join table — safe to createMany here because there are no
-      // further nested relations to write
-      await tx.proffessorsOnEditions.createMany({
-        data: professorIds.map((professor_id) => ({
-          professor_id,
-          edition_id: created.id,
-        })),
-      });
+        // Professors join table — safe to createMany here because there are no
+        // further nested relations to write
+        await tx.proffessorsOnEditions.createMany({
+          data: professorIds.map((professor_id) => ({
+            professor_id,
+            edition_id: created.id,
+          })),
+        });
 
-      return tx.edition.findUniqueOrThrow({
-        where: { id: created.id },
-        include: {
-          course: { select: { id: true, name: true, code: true } },
-          schedules: { include: { slots: true } },
-          assigned_professors: {
-            include: {
-              professors: {
-                select: { id: true, name: true, lastname: true },
+        return tx.edition.findUniqueOrThrow({
+          where: { id: created.id },
+          include: {
+            course: { select: { id: true, name: true, code: true } },
+            schedules: { include: { slots: true } },
+            assigned_professors: {
+              include: {
+                professors: {
+                  select: { id: true, name: true, lastname: true },
+                },
               },
             },
           },
-        },
+        });
       });
-    });
 
-    return c.json<SuccessResponse<typeof newEdition>>(
-      {
-        success: true,
-        message: "Course edition created successfully",
-        data: newEdition,
-      },
-      201,
-    );
-  })
+      return c.json<SuccessResponse<typeof newEdition>>(
+        {
+          success: true,
+          message: "Course edition created successfully",
+          data: newEdition,
+        },
+        201,
+      );
+    },
+  )
   // TODO: Avoid many concurrent request to the database
   .put(
     UUID_ROUTE,
+    verifyUserRoleAccess("ADMIN"),
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     zValidator("json", UpdateEditionSchema),
     async (c) => {
@@ -315,6 +343,7 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
   )
   .delete(
     UUID_ROUTE,
+    verifyUserRoleAccess("ADMIN"),
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");

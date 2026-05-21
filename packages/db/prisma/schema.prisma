@@ -351,7 +351,7 @@ model BenefitsOnProduct {
   benefit_id String
 
   benefits Benefit @relation(fields: [benefit_id], references: [id])
-  products Product @relation(fields: [product_id], references: [id])
+  products Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
 
   @@id([product_id, benefit_id])
 }
@@ -559,7 +559,7 @@ model FAQ {
   question   String
   answer     String @db.Text
   order      Int    @default(0)
-
+  
   products FAQsOnProduct[]
 }
 
@@ -611,7 +611,7 @@ model ProductPrice {
   installment_price Decimal        @db.Decimal(10, 2)
   enrollment_fee    Decimal        @db.Decimal(10, 2) // amount to pay if the lead wants to enroll to an edition and pay later the full price
 
-  product Product @relation(fields: [product_id], references: [id])
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
 
   @@unique([product_id, attendance_mode])
 }

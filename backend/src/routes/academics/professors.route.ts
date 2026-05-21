@@ -3,6 +3,7 @@ import { UUID_ROUTE } from "@/helpers/constants";
 import { validateIdParamSchema } from "@/helpers/params-validator";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
 import withPrisma from "@/lib/prisma";
+import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -10,6 +11,7 @@ import { BaseCreateProfessorSchema, UpdateProfessorSchema } from "shared";
 
 export const professorRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
+  .use(verifyUserRoleAccess("ADMIN"))
   .get("/", async (c) => {
     const prisma = c.get("prisma");
     const professors = await prisma.professor.findMany();

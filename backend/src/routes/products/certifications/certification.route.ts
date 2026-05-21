@@ -5,21 +5,24 @@ import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { CreateBenefitSchema, UpdateBenefitSchema } from "shared";
+import {
+  CreateRefinedCertificationSchema,
+  UpdateCertificationSchema,
+} from "shared";
 import { z } from "zod";
 
-export const benefitRoutes = new Hono<ContextWithPrisma>()
+export const certificationRoutes = new Hono<ContextWithPrisma>()
   .use(verifyUserRoleAccess("ADMIN"))
   .get("/", async (c) => {
-    const benefits = await c.get("prisma").benefit.findMany({
+    const certifications = await c.get("prisma").certification.findMany({
       orderBy: { description: "asc" },
     });
 
-    return c.json<SuccessResponse<typeof benefits>>(
+    return c.json<SuccessResponse<typeof certifications>>(
       {
         success: true,
-        data: benefits,
-        message: "Benefits retrieved successfully",
+        data: certifications,
+        message: "Certifications retrieved successfully",
       },
       200,
     );
@@ -29,20 +32,19 @@ export const benefitRoutes = new Hono<ContextWithPrisma>()
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
-      const benefit = await c.get("prisma").benefit.findUnique({
+      const certification = await c.get("prisma").certification.findUnique({
         where: { id },
-        include: { coursesRelated: true },
       });
 
-      if (!benefit) {
-        throw new HTTPException(404, { message: "Benefit not found" });
+      if (!certification) {
+        throw new HTTPException(404, { message: "certification not found" });
       }
 
-      return c.json<SuccessResponse<typeof benefit>>(
+      return c.json<SuccessResponse<typeof certification>>(
         {
           success: true,
-          data: benefit,
-          message: "Benefit retrieved successfully",
+          data: certification,
+          message: "certification retrieved successfully",
         },
         200,
       );
@@ -50,17 +52,19 @@ export const benefitRoutes = new Hono<ContextWithPrisma>()
   )
   .post(
     "/",
-    zValidator("json", CreateBenefitSchema),
+    zValidator("json", CreateRefinedCertificationSchema),
     async (c) => {
       const data = c.req.valid("json");
 
-      const newBenefit = await c.get("prisma").benefit.create({ data });
+      const newCertification = await c
+        .get("prisma")
+        .certification.create({ data });
 
-      return c.json<SuccessResponse<typeof newBenefit>>(
+      return c.json<SuccessResponse<typeof newCertification>>(
         {
           success: true,
-          data: newBenefit,
-          message: "Benefit created successfully",
+          data: newCertification,
+          message: "Certification created successfully",
         },
         201,
       );
@@ -69,27 +73,27 @@ export const benefitRoutes = new Hono<ContextWithPrisma>()
   .put(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().length(36) })),
-    zValidator("json", UpdateBenefitSchema),
+    zValidator("json", UpdateCertificationSchema),
     async (c) => {
       const { id } = c.req.valid("param");
       const data = c.req.valid("json");
 
       const existing = await c
         .get("prisma")
-        .benefit.findUnique({ where: { id } });
+        .certification.findUnique({ where: { id } });
       if (!existing) {
-        throw new HTTPException(404, { message: "Benefit not found" });
+        throw new HTTPException(404, { message: "Certification not found" });
       }
 
       const updated = await c
         .get("prisma")
-        .benefit.update({ where: { id }, data });
+        .certification.update({ where: { id }, data });
 
       return c.json<SuccessResponse<typeof updated>>(
         {
           success: true,
           data: updated,
-          message: "Benefit updated successfully",
+          message: "Certification updated successfully",
         },
         200,
       );
@@ -103,15 +107,15 @@ export const benefitRoutes = new Hono<ContextWithPrisma>()
 
       const existing = await c
         .get("prisma")
-        .benefit.findUnique({ where: { id } });
+        .certification.findUnique({ where: { id } });
       if (!existing) {
-        throw new HTTPException(404, { message: "Benefit not found" });
+        throw new HTTPException(404, { message: "Certification not found" });
       }
 
-      await c.get("prisma").benefit.delete({ where: { id } });
+      await c.get("prisma").certification.delete({ where: { id } });
 
       return c.json<SuccessResponse>(
-        { success: true, message: "Benefit deleted successfully" },
+        { success: true, message: "Certification deleted successfully" },
         200,
       );
     },

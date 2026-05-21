@@ -6,10 +6,11 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
-import withPrisma from "@/lib/prisma";
+import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 
 export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
-  .get("/", withPrisma, async (c) => {
+  .use(verifyUserRoleAccess("ADMIN", "MARKETING"))
+  .get("/",  async (c) => {
     const courses = await c.get("prisma").course.findMany({
       orderBy: {
         created_at: "desc",
@@ -26,7 +27,7 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
   })
   .get(
     UUID_ROUTE,
-    withPrisma,
+    
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
@@ -70,7 +71,7 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
       );
     },
   )
-  .post("/", withPrisma, zValidator("json", CreateCourseSchema), async (c) => {
+  .post("/", verifyUserRoleAccess("ADMIN"),  zValidator("json", CreateCourseSchema), async (c) => {
     const courseData = c.req.valid("json");
 
     const newCourse = await c.get("prisma").course.create({
@@ -88,7 +89,7 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
   })
   .put(
     UUID_ROUTE,
-    withPrisma,
+    verifyUserRoleAccess("ADMIN"),
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     zValidator("json", UpdateCourseSchema),
     async (c) => {
@@ -120,7 +121,7 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
   )
   .delete(
     UUID_ROUTE,
-    withPrisma,
+    verifyUserRoleAccess("ADMIN"),
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
