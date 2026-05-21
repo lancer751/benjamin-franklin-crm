@@ -54,7 +54,20 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
               slots: true,
             },
           },
-          assigned_professors: true,
+          assigned_professors: {
+            select: {
+              professors: {
+                select: {
+                  id: true,
+                  name: true,
+                  lastname: true,
+                  email: true,
+                  corporate_email: true,
+                  is_active: true
+                }
+              }
+            }
+          },
         },
       });
 
@@ -62,11 +75,16 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
         throw new HTTPException(404, { message: "Course edition not found" });
       }
 
-      return c.json<SuccessResponse<typeof courseEdition>>(
+      const formattedData = {
+        ...courseEdition,
+        assigned_professors: courseEdition.assigned_professors.map(prof => prof.professors)
+      }
+
+      return c.json<SuccessResponse<typeof formattedData>>(
         {
           success: true,
           message: "Course edition retrieved successfully",
-          data: courseEdition,
+          data: formattedData,
         },
         200,
       );

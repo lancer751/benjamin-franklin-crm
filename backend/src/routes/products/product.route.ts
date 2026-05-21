@@ -96,6 +96,13 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
         },
         category: { omit: { created_at: true, updated_at: true } },
         orders_details: true,
+        relatedBenefits: {
+          select: {
+            benefits: true,
+          },
+        },
+        frequentQuestions: { select: { faq: true } },
+        relatedCertifications: { select: { certification: true } },
       },
       omit: {
         category_id: true,
@@ -106,10 +113,17 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
       throw new HTTPException(404, { message: "Product not found" });
     }
 
-    return c.json<SuccessResponse<typeof product>>(
+    const formattedProductProfile = {
+      ...product,
+      relatedBenefits: product.relatedBenefits.map((benObj) => benObj.benefits),
+       frequentQuestions: product.frequentQuestions.map(faqObj => faqObj.faq),
+        relatedCertifications: product.relatedCertifications.map(certObj => certObj.certification),
+    };
+
+    return c.json<SuccessResponse<typeof formattedProductProfile>>(
       {
         success: true,
-        data: product,
+        data: formattedProductProfile,
         message: "Product retrieved successfully",
       },
       200,
