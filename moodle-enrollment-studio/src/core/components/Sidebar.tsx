@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  Settings,
   LogOut,
   ChevronDown,
   Loader2,
@@ -10,7 +9,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { logout } from "@/features/auth/services/authService";
-import { sidebarSections, SidebarSection } from "@/core/config/menu";
+import { sidebarSections, SidebarSection, canAccess as canAccessGlobal } from "@/core/config/menu";
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
@@ -27,6 +26,13 @@ export default function Sidebar() {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const isLoading = useAuthStore((state) => state.isLoading);
+
+  // Auxiliar function 'canAccess(permission: string)' that validates if the user has access to a group or menu item
+  const canAccess = (permission: string): boolean => {
+    if (!user) return false;
+    const userRole = user.role?.name || "";
+    return canAccessGlobal(userRole, permission);
+  };
 
   const logoutMutation = useMutation({
     mutationFn: logout,
@@ -55,27 +61,17 @@ export default function Sidebar() {
       return;
     }
 
-    const userRole = user.role?.name || "";
-
     const filtered = sidebarSections
       .map((section) => {
-        // 1. Check section roles restriction
-        if (section.allowedRoles) {
-          const isAllowed = section.allowedRoles.includes(userRole);
-          if (!isAllowed) {
-            return null;
-          }
+        // 1. Check section permission using our single-parameter canAccess helper
+        const isSectionAllowed = canAccess(section.permission);
+        if (!isSectionAllowed) {
+          return null;
         }
 
-        // 2. Filter child items by roles restriction
+        // 2. Filter child items by permissions restriction using the same helper
         const filteredItems = section.items.filter((item) => {
-          if (item.allowedRoles) {
-            const isAllowed = item.allowedRoles.includes(userRole);
-            if (!isAllowed) {
-              return false;
-            }
-          }
-          return true;
+          return canAccess(item.permission);
         });
 
         // 3. Keep section metadata but use filtered items list
@@ -147,12 +143,15 @@ export default function Sidebar() {
 
       {/* Navigation sections */}
       <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
-        {filteredSections.map((section) => {
+        {filteredSections.map((section, index) => {
           const isOpen = openSections[section.title] ?? false;
           const SectionIcon = section.icon;
 
           return (
-            <div key={section.title}>
+            <div key={section.title} className="space-y-0.5">
+              {/* Modern, subtle visual separator between business domain sections */}
+              {index > 0 && <div className="my-2 border-t border-sidebar-border/25 mx-2" />}
+
               {/* Section toggle button */}
               <button
                 type="button"
@@ -193,9 +192,6 @@ export default function Sidebar() {
 
       {/* Bottom Controls */}
       <div className="border-t border-sidebar-border px-3 py-3 space-y-0.5">
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors">
-          <Settings size={16} /> Ajustes
-        </button>
         <button 
           onClick={() => logoutMutation.mutate()}
           disabled={logoutMutation.isPending}
