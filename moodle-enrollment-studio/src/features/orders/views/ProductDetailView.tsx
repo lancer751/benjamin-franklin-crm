@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useProductDetail } from "../hooks/useProductDetail";
 import { getCourseEditions } from "@/features/academic/services/courseService";
 import { updateProduct } from "../services/productService";
-import { getBenefits } from "../services/benefitService";
 import ProductStatusBadge from "@/features/orders/components/ProductStatusBadge";
 import { toast } from "sonner";
 import { 
@@ -100,43 +99,17 @@ const InfoField = ({
 
 interface BenefitBadgeItemProps {
   rb: any;
-  benefitsList: any[];
 }
 
-const BenefitBadgeItem = ({ rb, benefitsList }: { rb: any; benefitsList: any[] }) => {
-  const description = rb.benefits?.description;
-  const id = rb.benefit_id;
+const BenefitBadgeItem = ({ rb }: BenefitBadgeItemProps) => {
+  const description = rb.description;
 
-  if (description) {
-    return (
-      <div className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-350 hover:bg-slate-50/50 transition-colors duration-200">
-        <CheckCircle2 size={15} className="text-emerald-500 mt-0.5 shrink-0" />
-        <span className="text-xs font-bold text-slate-800">{description}</span>
-      </div>
-    );
-  }
+  if (!description) return null;
 
-  // Lookup in benefitsList
-  const found = benefitsList.find((b: any) => b.id === id);
-  if (found?.description) {
-    return (
-      <div className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-350 hover:bg-slate-50/50 transition-colors duration-200">
-        <CheckCircle2 size={15} className="text-emerald-500 mt-0.5 shrink-0" />
-        <span className="text-xs font-bold text-slate-800">{found.description}</span>
-      </div>
-    );
-  }
-
-  // Fallback to discrete ID badge
   return (
-    <div className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200/80 bg-slate-50/20 hover:border-slate-300 transition-colors duration-200">
-      <Gift size={15} className="text-slate-400 shrink-0" />
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="text-xs font-semibold text-slate-600">Beneficio</span>
-        <Badge variant="outline" className="rounded-lg px-2 py-0.5 bg-slate-100 text-slate-600 border-slate-200 font-mono text-[9px] font-bold">
-          ID: {id ? `${id.substring(0, 8)}...` : 'S/I'}
-        </Badge>
-      </div>
+    <div className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-350 hover:bg-slate-50/50 transition-colors duration-200">
+      <CheckCircle2 size={15} className="text-emerald-500 mt-0.5 shrink-0" />
+      <span className="text-xs font-bold text-slate-800">{description}</span>
     </div>
   );
 };
@@ -517,7 +490,7 @@ const AcademicSection = ({
   );
 };
 
-const BenefitsAndCertificationsSection = ({ product, benefitsList }: { product: any; benefitsList: any[] }) => {
+const BenefitsAndCertificationsSection = ({ product }: { product: any }) => {
   const benefits = product.relatedBenefits || [];
   const certifications = product.relatedCertifications || [];
 
@@ -539,7 +512,7 @@ const BenefitsAndCertificationsSection = ({ product, benefitsList }: { product: 
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {benefits.map((rb: any, idx: number) => (
-                <BenefitBadgeItem key={idx} rb={rb} benefitsList={benefitsList} />
+                <BenefitBadgeItem key={idx} rb={rb} />
               ))}
             </div>
           </div>
@@ -597,11 +570,13 @@ const BenefitsAndCertificationsSection = ({ product, benefitsList }: { product: 
 const PricingCardList = ({ 
   product, 
   formatCurrency, 
-  formatAttendanceMode 
+  formatAttendanceMode,
+  formatDate
 }: { 
   product: any;
   formatCurrency: (amount: any) => string | undefined;
   formatAttendanceMode: (m: any) => string | undefined;
+  formatDate: (date: any, format?: string) => string | undefined;
 }) => {
   const prices = product.prices || [];
   const hasDiscount = product.discount_price != null && product.discount_price !== "";
@@ -653,15 +628,23 @@ const PricingCardList = ({
         {(formattedDiscountPrice || formattedPresalePrice) && (
           <div className="space-y-3 pt-4 border-t border-slate-100">
             {formattedDiscountPrice && formattedDiscountPrice !== "S/ N/A" && formattedDiscountPrice !== "N/A" && (
-              <DiscountBadge 
-                title="Precio Campaña"
-                price={formattedDiscountPrice}
-                icon={Tag}
-                bgColor="bg-emerald-50/80"
-                borderColor="border-emerald-100"
-                textColor="text-emerald-700"
-                iconColor="text-emerald-600"
-              />
+              <div className="space-y-1.5">
+                <DiscountBadge 
+                  title="Precio de Descuento"
+                  price={formattedDiscountPrice}
+                  icon={Tag}
+                  bgColor="bg-emerald-50/80"
+                  borderColor="border-emerald-100"
+                  textColor="text-emerald-700"
+                  iconColor="text-emerald-600"
+                />
+                {product.discount_expires_at && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-semibold px-2">
+                    <Calendar size={12} className="text-slate-400 shrink-0" />
+                    <span>Válido hasta el {formatDate(product.discount_expires_at)}</span>
+                  </div>
+                )}
+              </div>
             )}
 
             {formattedPresalePrice && formattedPresalePrice !== "S/ N/A" && formattedPresalePrice !== "N/A" && (
@@ -686,10 +669,10 @@ const PricingCardList = ({
               <span className="text-[9px] font-bold uppercase tracking-wider">Financiamiento</span>
             </div>
             <div className="p-4 rounded-xl border border-slate-200/80 hover:border-slate-350 transition-colors duration-200 flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-semibold">Cuotas Permitidas</span>
+              <span className="text-xs text-slate-500 font-semibold">Cuotas Disponibles</span>
               <span className="font-black text-slate-900 text-xs">
                 {product.installments_min_number != null ? `${product.installments_min_number} - ` : ""}
-                {product.installments_max_number != null ? `${product.installments_max_number} Meses` : ""}
+                {product.installments_max_number != null ? `${product.installments_max_number} Cuotas` : ""}
               </span>
             </div>
           </div>
@@ -709,13 +692,7 @@ const ProductDetailView = () => {
   const { product, isLoading, isError, actions } = useProductDetail();
   const { formatCurrency, formatDate, formatAttendanceMode, modalMode, setModalMode } = actions;
 
-  // Obtener beneficios dinámicos para el Lookup
-  const { data: benefitsRes } = useQuery({
-    queryKey: ["benefits"],
-    queryFn: getBenefits,
-  });
 
-  const benefitsList = benefitsRes?.data || [];
 
   // Mutación para vincular edición
   const linkMutation = useMutation({
@@ -852,7 +829,7 @@ const ProductDetailView = () => {
             onAssignClick={() => setModalMode('LINK')} 
           />
           
-          <BenefitsAndCertificationsSection product={product} benefitsList={benefitsList} />
+          <BenefitsAndCertificationsSection product={product} />
         </div>
 
         {/* COLUMNA DERECHA (33% - STICKY) */}
@@ -881,6 +858,7 @@ const ProductDetailView = () => {
             product={product} 
             formatCurrency={formatCurrency} 
             formatAttendanceMode={formatAttendanceMode}
+            formatDate={formatDate}
           />
 
         </div>
