@@ -52,6 +52,11 @@ export const productFormSchema = z.object({
   benefit_ids: z.array(z.string().uuid("UUID de beneficio no válido")).min(1, "Debes seleccionar al menos un beneficio"),
   faqs: z.array(z.any()).default([]),
   certifications: z.array(z.any()).default([]),
+  certification_id: z.string().optional().nullable(),
+  certification_title: z.string().optional().nullable(),
+  certification_description: z.string().optional().nullable(),
+  certification_issuing_authority: z.string().optional().nullable(),
+  certification_registry_validity: z.string().optional().nullable(),
 }).refine(data => data.installments_max_number >= data.installments_min_number, {
   message: "El máximo de cuotas no puede ser menor al mínimo",
   path: ["installments_max_number"]

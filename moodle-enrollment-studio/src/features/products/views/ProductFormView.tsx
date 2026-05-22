@@ -10,6 +10,8 @@ import ProductPageHeader from "@/features/products/components/shared/ProductPage
 import AcademicDetailsCard from "@/features/products/components/form/AcademicDetailsCard";
 import CommercialConfigCard from "@/features/products/components/form/CommercialConfigCard";
 import BenefitsCard from "@/features/products/components/form/BenefitsCard";
+import CertificationCard from "@/features/products/components/form/CertificationCard";
+import FAQsSectionCard from "@/features/products/components/form/FAQsSectionCard";
 import CoverImageUploader from "@/features/products/components/form/CoverImageUploader";
 import PricingCard from "@/features/products/components/form/PricingCard";
 import { Button } from "@/core/components/ui/button";
@@ -51,7 +53,8 @@ const ProductFormView = () => {
     selectedEdition,
     isUploading,
     handleImageUpload,
-    isPending
+    isPending,
+    handleLoadDefaultFAQs
   } = useProductFormModal(true, () => navigate("/productos"), initialData);
 
   useEffect(() => {
@@ -139,6 +142,18 @@ const ProductFormView = () => {
             benefitIds={form.benefit_ids || []}
             errors={errors}
             onToggle={handleToggleBenefit}
+          />
+
+          <CertificationCard
+            form={form}
+            errors={errors}
+            setFieldValue={setFieldValue}
+          />
+
+          <FAQsSectionCard
+            form={form}
+            setFieldValue={setFieldValue}
+            handleLoadDefaultFAQs={handleLoadDefaultFAQs}
           />
         </div>
 

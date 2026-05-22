@@ -3,10 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCourseEditions } from "@/features/academic/services/courseService";
 import { getCategories } from "../services/categoryService";
 import { createProduct, updateProduct } from "../services/productService";
+import { createFAQ, updateFAQ } from "../services/faqService";
+import { createCertification, updateCertification } from "../services/certificationService";
 import { uploadImageToCloudinary } from "@/features/academic/services/uploadService";
 import { toast } from "sonner";
 import { ProductFormValues, productFormSchema } from "../schemas/productFormSchema";
 import { z } from "zod";
+import { getCertificationDefaultText, INSTITUTIONAL_FAQS } from "../utils/productTemplates";
 
 const createEmptyPrice = (mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO" = "HEREDADO") => ({
   attendance_mode: mode,
@@ -45,6 +48,11 @@ const emptyData: ProductFormValues = {
   benefit_ids: [],
   faqs: [],
   certifications: [],
+  certification_id: "",
+  certification_title: "",
+  certification_description: "",
+  certification_issuing_authority: "Corporación Educativa Benjamin Franklin",
+  certification_registry_validity: "",
 };
 
 export const useProductFormModal = (open: boolean, onClose: () => void, initialData?: any) => {
@@ -62,10 +70,20 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         initialData.benefits?.map((b: any) => typeof b === 'object' ? b.id : b) || [];
 
       const faqs = initialData.faqs || 
-        initialData.frequentQuestions?.map((fq: any) => fq.faq_id || fq.id) || [];
+        initialData.frequentQuestions?.map((fq: any) => ({
+          id: fq.faq?.id || fq.faq_id || fq.id,
+          question: fq.faq?.question || fq.question || "",
+          answer: fq.faq?.answer || fq.answer || "",
+        })) || [];
 
-      const certifications = initialData.certifications || 
-        initialData.relatedCertifications?.map((rc: any) => rc.certification_id || rc.id) || [];
+      const certRelation = initialData.relatedCertifications?.[0];
+      const cert = certRelation?.certification;
+
+      const certification_id = certRelation?.certification_id || cert?.id || "";
+      const certification_title = cert?.title || "";
+      const certification_description = cert?.description || "";
+      const certification_issuing_authority = cert?.issuing_authority || "Corporación Educativa Benjamin Franklin";
+      const certification_registry_validity = cert?.registry_validity || "";
 
       const category_id = initialData.category_id || 
         (typeof initialData.category === 'object' ? initialData.category?.id : initialData.category) || 
@@ -88,7 +106,12 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         category_id,
         benefit_ids,
         faqs,
-        certifications,
+        certifications: initialData.certifications || initialData.relatedCertifications?.map((rc: any) => rc.certification_id || rc.id) || [],
+        certification_id,
+        certification_title,
+        certification_description,
+        certification_issuing_authority,
+        certification_registry_validity,
       };
 
       setForm(nextForm);
@@ -160,9 +183,6 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
       
       if (editionModality === "HIBRIDO") {
         // Necesitamos 2 objetos: PRESENCIAL y VIRTUAL
-        const hasPresencial = newPrices.some(p => p.attendance_mode === "PRESENCIAL");
-        const hasVirtual = newPrices.some(p => p.attendance_mode === "VIRTUAL");
-        
         const presencial = newPrices.find(p => p.attendance_mode === "PRESENCIAL") || createEmptyPrice("PRESENCIAL");
         const virtual = newPrices.find(p => p.attendance_mode === "VIRTUAL") || createEmptyPrice("VIRTUAL");
         
@@ -180,6 +200,26 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     });
   }, [selectedEdition, isEdit, hasCustomImage]);
 
+  // Dynamic Certification Autogeneration
+  useEffect(() => {
+    if (!isEdit && form.name) {
+      const defaultDesc = getCertificationDefaultText(form.name);
+      setForm(prev => {
+        const isEmptyOrAutogen = !prev.certification_description ||
+          prev.certification_description.startsWith("Al culminar satisfactoriamente y aprobar el programa, el alumno obtendrá: Certificado de ");
+
+        if (isEmptyOrAutogen) {
+          return {
+            ...prev,
+            certification_description: defaultDesc,
+            certification_title: prev.certification_title || `Certificación en ${form.name}`,
+          };
+        }
+        return prev;
+      });
+    }
+  }, [form.name, isEdit]);
+
   const handleImageUpload = async (file: File) => {
     try {
       setIsUploading(true);
@@ -193,6 +233,14 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
       setIsUploading(false);
     }
   };
+
+  const handleLoadDefaultFAQs = useCallback(() => {
+    setFieldValue("faqs", INSTITUTIONAL_FAQS.map(faq => ({
+      question: faq.question,
+      answer: faq.answer,
+    })));
+    toast.success("FAQs Institucionales cargadas con éxito");
+  }, []);
 
   const mutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -210,7 +258,71 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         return isNaN(num) ? null : num;
       };
 
-      // Clean JSON for Backend: Convert cash_price, installment_price, enrollment_fee, presale_price, discount_price to numbers
+      // 1. Guardar/Actualizar FAQs individuales en la base de datos
+      const faq_ids: string[] = [];
+      if (payload.faqs && Array.isArray(payload.faqs)) {
+        for (let i = 0; i < payload.faqs.length; i++) {
+          const faq = payload.faqs[i];
+          const faqData = {
+            question: faq.question || "",
+            answer: faq.answer || "",
+            order: i,
+          };
+          
+          try {
+            if (faq.id && faq.id.length > 10 && !faq.id.startsWith("temp-")) {
+              const res = await updateFAQ(faq.id, faqData);
+              if (res?.success && res.data?.id) {
+                faq_ids.push(res.data.id);
+              } else if (faq.id) {
+                faq_ids.push(faq.id);
+              }
+            } else {
+              const res = await createFAQ(faqData);
+              if (res?.success && res.data?.id) {
+                faq_ids.push(res.data.id);
+              }
+            }
+          } catch (err) {
+            console.error("Error al sincronizar FAQ:", err);
+          }
+        }
+      }
+
+      // 2. Guardar/Actualizar Certificación individual en la base de datos
+      const certification_ids: string[] = [];
+      const hasCertData = payload.certification_title || payload.certification_description;
+      if (hasCertData) {
+        const certData = {
+          title: payload.certification_title || `Certificado de ${payload.name}`,
+          description: payload.certification_description || "",
+          image_url: payload.image_url || "",
+          issuing_authority: payload.certification_issuing_authority || "Corporación Educativa Benjamin Franklin",
+          registry_validity: payload.certification_registry_validity || "",
+          has_digital: true,
+          has_physical: true,
+        };
+
+        try {
+          if (payload.certification_id && payload.certification_id.length > 10 && !payload.certification_id.startsWith("temp-")) {
+            const res = await updateCertification(payload.certification_id, certData);
+            if (res?.success && res.data?.id) {
+              certification_ids.push(res.data.id);
+            } else if (payload.certification_id) {
+              certification_ids.push(payload.certification_id);
+            }
+          } else {
+            const res = await createCertification(certData);
+            if (res?.success && res.data?.id) {
+              certification_ids.push(res.data.id);
+            }
+          }
+        } catch (err) {
+          console.error("Error al sincronizar Certificación:", err);
+        }
+      }
+
+      // Clean JSON for Backend
       const parsedPayload = {
         name: payload.name || "",
         edition_id: payload.edition_id || "",
@@ -226,7 +338,6 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         discount_price: parseOptionalPrice(payload.discount_price),
         discount_expires_at: payload.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
         prices: payload.prices.map((p: any) => {
-          // Lógica de modalidad: si es HIBRIDO mantenemos VIRTUAL/PRESENCIAL, de lo contrario forzamos HEREDADO
           const attendance_mode = modality === "HIBRIDO" ? p.attendance_mode : "HEREDADO";
           return {
             attendance_mode,
@@ -236,8 +347,8 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
           };
         }),
         benefit_ids: payload.benefit_ids || [],
-        faqs: payload.faqs || [],
-        certifications: payload.certifications || [],
+        faq_ids,
+        certification_ids,
       };
 
       console.log("PAYLOAD FINAL TRANSFORMADO:", JSON.stringify(parsedPayload, null, 2));
@@ -266,7 +377,6 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   const setFieldValue = (field: keyof ProductFormValues, value: any) => {
     setForm(prev => {
       const updated = { ...prev, [field]: value };
-      // Auto-update slug if name changes and we are creating
       if (field === "name" && !isEdit) {
         updated.slug = generateSlug(value);
       }
@@ -283,7 +393,6 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   };
 
   const setPriceValue = (index: number, field: string, value: string) => {
-    // Only allow valid decimal numbers being typed
     const cleanValue = value.replace(/[^0-9.]/g, '');
     
     setForm(prev => {
@@ -343,6 +452,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     isUploading,
     handleImageUpload,
     isPending: mutation.isPending,
-    isEdit
+    isEdit,
+    handleLoadDefaultFAQs,
   };
 };
