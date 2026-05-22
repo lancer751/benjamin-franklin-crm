@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useProductDetail } from "../hooks/useProductDetail";
 import { updateProduct } from "../services/productService";
-import ProductStatusBadge from "@/features/orders/components/ProductStatusBadge";
+import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
 import { toast } from "sonner";
 import { Edit, Loader2, Info } from "lucide-react";
 import { Card } from "@/core/components/ui/card";

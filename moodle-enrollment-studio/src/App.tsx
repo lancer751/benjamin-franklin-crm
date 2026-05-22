@@ -35,9 +35,9 @@ import PipelineView from "@/features/leads/views/PipelineView";
 // Módulo de Ventas (Orders & Products)
 import OrdersView from "@/features/orders/views/OrdersView"; // Nueva Orden
 import OrderDetailView from "@/features/orders/views/OrderDetailView";
-import ProductsView from "@/features/orders/views/ProductsView";
-import ProductDetailView from "@/features/orders/views/ProductDetailView";
-import ProductFormView from "@/features/orders/views/ProductFormView";
+import ProductsView from "@/features/products/views/ProductsView";
+import ProductDetailView from "@/features/products/views/ProductDetailView";
+import ProductFormView from "@/features/products/views/ProductFormView";
 
 // Módulo de Finanzas
 import FinanceDashboardView from "@/features/payments/views/FinanceDashboardView";

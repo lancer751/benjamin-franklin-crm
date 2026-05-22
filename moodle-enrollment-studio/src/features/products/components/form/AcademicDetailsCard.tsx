@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/cor
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { cn } from "@/core/lib/utils";
-import { STATUS_LABELS } from "@/features/orders/components/ProductStatusBadge";
+import { STATUS_LABELS } from "@/features/products/components/shared/ProductStatusBadge";
 import EditionCombobox from "./EditionCombobox";
 import EditionInfoPanel from "./EditionInfoPanel";
 

@@ -23,7 +23,7 @@ import {
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/core/lib/utils";
-import ProductStatusBadge from "@/features/orders/components/ProductStatusBadge";
+import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
 
 const ProductsView = () => {
   const { 

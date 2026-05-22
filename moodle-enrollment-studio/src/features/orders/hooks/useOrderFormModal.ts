@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { orderFormSchema, OrderFormValues } from "../schemas/orderFormSchema";
 
 // Servicios
-import { getProducts } from "@/features/orders/services/productService";
+import { getProducts } from "@/features/products/services/productService";
 import { getOrderById, createOrder, updateOrder } from "@/features/orders/services/orderService";
 import { getAllLeads } from "@/features/leads/services/leadService";
 
