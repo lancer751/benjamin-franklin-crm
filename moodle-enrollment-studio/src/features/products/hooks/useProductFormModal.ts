@@ -153,19 +153,21 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   useEffect(() => {
     if (!selectedEdition) return;
 
-    // 1. Auto-generate Name & Slug (Solo si el nombre está vacío y no estamos en edición)
+    // 1. Auto-generate Name, Slug & Certification details (Solo si no estamos en edición)
     if (!isEdit) {
       const courseName = selectedEdition.course?.name || "";
-      const cohort = selectedEdition.edition_code || "";
-      const generatedName = `${courseName} - ${cohort}`.trim();
+      const generatedName = courseName.trim();
       const generatedSlug = generateSlug(generatedName);
       const courseImage = selectedEdition.course?.image_url || "";
+      const defaultDesc = getCertificationDefaultText(generatedName);
 
       setForm(prev => ({
         ...prev,
-        name: prev.name || generatedName,
-        slug: prev.slug || generatedSlug,
+        name: generatedName,
+        slug: generatedSlug,
         image_url: hasCustomImage ? prev.image_url : (courseImage || prev.image_url),
+        certification_description: defaultDesc,
+        certification_title: `Certificado del Curso de ${generatedName}`,
       }));
     }
 
@@ -208,14 +210,15 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         const isEmptyOrAutogen = !prev.certification_description ||
           prev.certification_description.startsWith("Al culminar satisfactoriamente y aprobar el programa, el alumno obtendrá: Certificado de ");
 
-        if (isEmptyOrAutogen) {
-          return {
-            ...prev,
-            certification_description: defaultDesc,
-            certification_title: prev.certification_title || `Certificación en ${form.name}`,
-          };
-        }
-        return prev;
+        const isEmptyOrAutogenTitle = !prev.certification_title ||
+          prev.certification_title.startsWith("Certificación en ") ||
+          prev.certification_title.startsWith("Certificado del Curso de ");
+
+        return {
+          ...prev,
+          certification_description: isEmptyOrAutogen ? defaultDesc : prev.certification_description,
+          certification_title: isEmptyOrAutogenTitle ? `Certificado del Curso de ${form.name}` : prev.certification_title,
+        };
       });
     }
   }, [form.name, isEdit]);
