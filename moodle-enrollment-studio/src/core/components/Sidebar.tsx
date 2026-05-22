@@ -88,27 +88,21 @@ export default function Sidebar() {
     setFilteredSections(filtered);
   }, [user, isLoading]);
 
-  // Collapsible navigation sections state
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  // Collapsible navigation sections state with exclusive accordion behavior
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
 
-  // Dynamically calculate which sections should be initially expanded based on current route
+  // Dynamically calculate which section should be expanded based on current route
   useEffect(() => {
-    setOpenSections((prev) => {
-      const open: Record<string, boolean> = { ...prev };
-      filteredSections.forEach((section) => {
-        const containsActiveRoute = section.items.some((item) =>
-          location.pathname.startsWith(item.to)
-        );
-        if (containsActiveRoute && prev[section.title] === undefined) {
-          open[section.title] = true;
-        }
-      });
-      return open;
-    });
+    const activeSection = filteredSections.find((section) =>
+      section.items.some((item) => location.pathname.startsWith(item.to))
+    );
+    if (activeSection) {
+      setActiveGroup(activeSection.title);
+    }
   }, [location.pathname, filteredSections]);
 
   const toggleSection = (title: string) => {
-    setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }));
+    setActiveGroup((prev) => (prev === title ? null : title));
   };
 
   // Generate dynamic profile details from logged-in user state
@@ -142,9 +136,9 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation sections */}
-      <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto no-scrollbar px-3 pb-4 space-y-1">
         {filteredSections.map((section, index) => {
-          const isOpen = openSections[section.title] ?? false;
+          const isOpen = activeGroup === section.title;
           const SectionIcon = section.icon;
 
           return (
