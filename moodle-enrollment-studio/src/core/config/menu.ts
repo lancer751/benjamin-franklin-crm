@@ -75,7 +75,7 @@ export const canAccess = (userRole: string, permission: string): boolean => {
 
 export const sidebarSections: SidebarSection[] = [
   {
-    title: "Administración & Configuración",
+    title: "Administración",
     icon: ShieldCheck,
     permission: "admin:view",
     items: [
