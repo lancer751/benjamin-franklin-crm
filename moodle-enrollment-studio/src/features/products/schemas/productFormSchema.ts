@@ -59,6 +59,12 @@ export const productFormSchema = z.object({
   certification_registry_validity: z.string().optional().nullable(),
   certification: z.object({
     image_url: z.string().optional().default(""),
+    title: z.string().optional().default(""),
+    description: z.string().optional().default(""),
+    issuing_authority: z.string().optional().default("Corporación Educativa Benjamin Franklin"),
+    registry_validity: z.string().optional().default(""),
+    has_digital: z.boolean().optional().default(true),
+    has_physical: z.boolean().optional().default(true),
   }).optional().nullable(),
 }).refine(data => data.installments_max_number >= data.installments_min_number, {
   message: "El máximo de cuotas no puede ser menor al mínimo",

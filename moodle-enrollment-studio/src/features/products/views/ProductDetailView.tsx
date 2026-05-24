@@ -1,10 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useProductDetail } from "../hooks/useProductDetail";
-import { updateProduct } from "../services/productService";
 import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
-import { toast } from "sonner";
-import { Edit, Loader2, Info } from "lucide-react";
+import { Edit, Loader2, Info, HelpCircle } from "lucide-react";
 import { Card } from "@/core/components/ui/card";
 import { Button } from "@/core/components/ui/button";
 
@@ -14,54 +11,20 @@ import AcademicSection from "@/features/products/components/detail/AcademicSecti
 import BenefitsAndCertificationsSection from "@/features/products/components/detail/BenefitsAndCertificationsSection";
 import PricingCardList from "@/features/products/components/detail/PricingCardList";
 import LinkEditionModal from "@/features/products/components/detail/LinkEditionModal";
+import DetailSection from "@/features/products/components/shared/DetailSection";
 
 const ProductDetailView = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { product, isLoading, isError, actions } = useProductDetail();
-  const { formatCurrency, formatDate, formatAttendanceMode, modalMode, setModalMode } = actions;
-
-  // Mutación para vincular edición
-  const linkMutation = useMutation({
-    mutationFn: async (editionId: string) => {
-      if (!product) throw new Error("No hay producto seleccionado");
-
-      const parsedPayload = {
-        name: product.name,
-        slug: product.slug || "",
-        category_id: product.category?.id || "",
-        sales_status: product.sales_status,
-        short_description: product.short_description || "",
-        description: product.description || "",
-        presale_price: product.presale_price != null ? String(product.presale_price) : "",
-        discount_price: product.discount_price != null ? String(product.discount_price) : "",
-        installments_min_number: product.installments_min_number || 1,
-        installments_max_number: product.installments_max_number || 1,
-        image_url: product.image_url || "",
-        edition_id: editionId,
-        prices: product.prices?.map((p: any) => ({
-          attendance_mode: p.attendance_mode,
-          cash_price: Number(p.cash_price),
-          installment_price: Number(p.installment_price),
-          enrollment_fee: Number(p.enrollment_fee),
-        })) || [],
-        benefit_ids: product.relatedBenefits?.map((rb: any) => rb.benefit_id) || [],
-        faqs: product.frequentQuestions?.map((fq: any) => fq.faq_id || fq.id) || [],
-        certifications: product.relatedCertifications?.map((rc: any) => rc.certification_id) || [],
-      };
-      return await updateProduct(product.id, parsedPayload as any);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product", product?.id] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      toast.success("Edición académica vinculada exitosamente");
-      setModalMode(null);
-    },
-    onError: (err) => {
-      console.error(err);
-      toast.error("Error al vincular la edición académica");
-    }
-  });
+  const { 
+    formatCurrency, 
+    formatDate, 
+    formatAttendanceMode, 
+    modalMode, 
+    setModalMode,
+    linkEdition,
+    isLinking
+  } = actions;
 
   if (isLoading) {
     return (
@@ -92,7 +55,7 @@ const ProductDetailView = () => {
   };
 
   const handleLinkEdition = (editionId: string) => {
-    linkMutation.mutate(editionId);
+    linkEdition(editionId);
   };
 
   return (
@@ -144,6 +107,35 @@ const ProductDetailView = () => {
           />
           
           <BenefitsAndCertificationsSection product={product} />
+
+          {/* PREGUNTAS FRECUENTES (FAQs) */}
+          <DetailSection 
+            title="Preguntas Frecuentes" 
+            description="Preguntas y respuestas comerciales para resolver dudas del alumno."
+            icon={HelpCircle}
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
+          >
+            <div className="space-y-4">
+              {product.faqs && product.faqs.length > 0 ? (
+                product.faqs.map((faq) => (
+                  <div key={faq.id} className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-350 hover:bg-slate-50/50 transition-all duration-200 space-y-1.5">
+                    <h5 className="text-xs font-bold text-slate-800 leading-normal flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                      {faq.question}
+                    </h5>
+                    <p className="text-[11px] text-slate-500 leading-relaxed pl-3.5 border-l border-slate-200">
+                      {faq.answer}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs font-medium text-slate-400 italic text-center py-4 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                  No hay preguntas frecuentes registradas
+                </p>
+              )}
+            </div>
+          </DetailSection>
         </div>
 
         {/* COLUMNA DERECHA (33% - STICKY) */}
@@ -184,7 +176,7 @@ const ProductDetailView = () => {
         isOpen={modalMode === 'LINK'}
         onClose={() => setModalMode(null)}
         onLink={handleLinkEdition}
-        isPending={linkMutation.isPending}
+        isPending={isLinking}
       />
     </div>
   );

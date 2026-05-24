@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { ProductFormValues, productFormSchema } from "../schemas/productFormSchema";
 import { z } from "zod";
 import { getCertificationDefaultText, INSTITUTIONAL_FAQS } from "../utils/productTemplates";
+import { adaptProductToUI } from "../adapters/product.adapter";
+import { BackendProductResponse } from "../types/product.types";
 
 const createEmptyPrice = (mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO" = "HEREDADO") => ({
   attendance_mode: mode,
@@ -55,6 +57,12 @@ const emptyData: ProductFormValues = {
   certification_registry_validity: "",
   certification: {
     image_url: "",
+    title: "",
+    description: "",
+    issuing_authority: "Corporación Educativa Benjamin Franklin",
+    registry_validity: "",
+    has_digital: true,
+    has_physical: true,
   },
 };
 
@@ -68,62 +76,49 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
   useEffect(() => {
     if (initialData && open) {
-      const benefit_ids = initialData.benefit_ids || 
-        initialData.relatedBenefits?.map((rb: any) => rb.benefit_id || rb.id) || 
-        initialData.benefits?.map((b: any) => typeof b === 'object' ? b.id : b) || [];
+      // Adapt raw initialData to UIProduct using our adapter!
+      const product = adaptProductToUI(initialData as BackendProductResponse);
 
-      const faqs = initialData.faqs || 
-        initialData.frequentQuestions?.map((fq: any) => ({
-          id: fq.faq?.id || fq.faq_id || fq.id,
-          question: fq.faq?.question || fq.question || "",
-          answer: fq.faq?.answer || fq.answer || "",
-        })) || [];
+      const benefit_ids = product.benefits?.map((b: any) => b.id) || [];
+      const faqs = product.faqs || [];
 
-      const certRelation = initialData.relatedCertifications?.[0];
-      const cert = certRelation?.certification;
+      const category_id = product.category?.id || "";
 
-      const certification_id = certRelation?.certification_id || cert?.id || "";
-      const certification_title = cert?.title || "";
-      const certification_description = cert?.description || "";
-      const certification_issuing_authority = cert?.issuing_authority || "Corporación Educativa Benjamin Franklin";
-      const certification_registry_validity = cert?.registry_validity || "";
-      const certification_image_url = cert?.image_url || "";
+      const cert = product.certification;
+      const certification = {
+        title: cert?.title || "",
+        description: cert?.description || "",
+        image_url: cert?.imageUrl || "",
+        issuing_authority: cert?.issuingAuthority || "Corporación Educativa Benjamin Franklin",
+        registry_validity: cert?.registryValidity || "",
+        has_digital: cert?.hasDigital !== false,
+        has_physical: cert?.hasPhysical !== false,
+      };
 
-      const category_id = initialData.category_id || 
-        (typeof initialData.category === 'object' ? initialData.category?.id : initialData.category) || 
-        "";
-
-      const nextForm = {
+      const nextForm: ProductFormValues = {
         ...emptyData,
-        ...initialData,
-        slug: initialData.slug || generateSlug(initialData.name || ""),
-        presale_price: initialData.presale_price != null ? String(initialData.presale_price) : "",
-        discount_price: initialData.discount_price != null ? String(initialData.discount_price) : "",
-        discount_expires_at: initialData.discount_expires_at ? new Date(initialData.discount_expires_at).toISOString().split('T')[0] : "",
-        image_url: initialData.image_url || "",
-        prices: initialData.prices?.length ? initialData.prices.map((p: any) => ({
-          ...p,
-          cash_price: String(p.cash_price || "0.00"),
-          installment_price: String(p.installment_price || "0.00"),
-          enrollment_fee: String(p.enrollment_fee || "0.00")
-        })) : [],
+        ...product,
+        slug: product.slug || generateSlug(product.name || ""),
+        presale_price: product.presale_price || "",
+        discount_price: product.discount_price || "",
+        discount_expires_at: product.discount_expires_at || "",
+        image_url: product.image_url || "",
+        prices: product.prices || [],
         category_id,
         benefit_ids,
         faqs,
-        certifications: initialData.certifications || initialData.relatedCertifications?.map((rc: any) => rc.certification_id || rc.id) || [],
-        certification_id,
-        certification_title,
-        certification_description,
-        certification_issuing_authority,
-        certification_registry_validity,
-        certification: {
-          image_url: certification_image_url,
-        },
+        certifications: cert?.id ? [cert.id] : [],
+        certification_id: cert?.id || "",
+        certification_title: cert?.title || "",
+        certification_description: cert?.description || "",
+        certification_issuing_authority: cert?.issuingAuthority || "Corporación Educativa Benjamin Franklin",
+        certification_registry_validity: cert?.registryValidity || "",
+        certification,
       };
 
       setForm(nextForm);
       console.log("Formulario inicializado con estado:", nextForm);
-      setHasCustomImage(!!initialData.image_url);
+      setHasCustomImage(!!product.image_url);
       setErrors({});
     } else if (open) {
       setForm(emptyData);
@@ -301,14 +296,14 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
       // 2. Guardar/Actualizar Certificación individual en la base de datos
       const certification_ids: string[] = [];
-      const hasCertData = payload.certification_title || payload.certification_description;
+      const hasCertData = payload.certification?.title || payload.certification?.description;
       if (hasCertData) {
         const certData = {
-          title: payload.certification_title || `Certificado de ${payload.name}`,
-          description: payload.certification_description || "",
+          title: payload.certification?.title || `Certificado de ${payload.name}`,
+          description: payload.certification?.description || "",
           image_url: payload.certification?.image_url || "",
-          issuing_authority: payload.certification_issuing_authority || "Corporación Educativa Benjamin Franklin",
-          registry_validity: payload.certification_registry_validity || "",
+          issuing_authority: payload.certification?.issuing_authority || "Corporación Educativa Benjamin Franklin",
+          registry_validity: payload.certification?.registry_validity || "",
           has_digital: true,
           has_physical: true,
         };

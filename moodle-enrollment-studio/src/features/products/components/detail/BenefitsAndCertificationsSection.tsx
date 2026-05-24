@@ -4,16 +4,17 @@ import { Gift, Award } from "lucide-react";
 import { cn } from "@/core/lib/utils";
 import DetailSection from "../shared/DetailSection";
 import BenefitBadgeItem from "./BenefitBadgeItem";
+import { UIProduct } from "../../types/product.types";
 
 interface BenefitsAndCertificationsSectionProps {
-  product: any;
+  product: UIProduct;
 }
 
 const BenefitsAndCertificationsSection = ({ product }: BenefitsAndCertificationsSectionProps) => {
-  const benefits = product.relatedBenefits || [];
-  const certifications = product.relatedCertifications || [];
+  const benefits = product.benefits || [];
+  const certification = product.certification;
 
-  if (benefits.length === 0 && certifications.length === 0) return null;
+  if (benefits.length === 0 && !certification) return null;
 
   return (
     <DetailSection 
@@ -37,22 +38,22 @@ const BenefitsAndCertificationsSection = ({ product }: BenefitsAndCertifications
           </div>
         )}
 
-        {certifications.length > 0 && (
+        {certification && (
           <div className={cn(benefits.length > 0 && "pt-4 border-t border-slate-100")}>
             <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <Award size={13} className="text-amber-600" /> Certificaciones Otorgadas
+              <Award size={13} className="text-amber-600" /> Certificación Otorgada
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {certifications.map((rc: any, idx: number) => {
-                const title = rc.certification?.title;
-                const id = rc.certification_id;
-                const description = rc.certification?.description;
-                const hasDigital = rc.certification?.has_digital;
-                const hasPhysical = rc.certification?.has_physical;
-                const imageUrl = rc.certification?.image_url;
+              {(() => {
+                const title = certification.title;
+                const id = certification.id;
+                const description = certification.description;
+                const hasDigital = certification.hasDigital;
+                const hasPhysical = certification.hasPhysical;
+                const imageUrl = certification.imageUrl;
 
                 return (
-                  <div key={idx} className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-350 hover:bg-slate-50/50 transition-all duration-200 flex flex-col justify-between gap-3">
+                  <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-350 hover:bg-slate-50/50 transition-all duration-200 flex flex-col justify-between gap-3">
                     <div className="space-y-2">
                       {title ? (
                         <span className="text-xs font-bold text-slate-800 block leading-tight">{title}</span>
@@ -89,7 +90,7 @@ const BenefitsAndCertificationsSection = ({ product }: BenefitsAndCertifications
                     )}
                   </div>
                 );
-              })}
+              })()}
             </div>
           </div>
         )}

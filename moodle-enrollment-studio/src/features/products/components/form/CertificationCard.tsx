@@ -15,6 +15,12 @@ interface CertificationCardProps {
     certification_registry_validity?: string | null;
     certification?: {
       image_url?: string;
+      title?: string;
+      description?: string;
+      issuing_authority?: string;
+      registry_validity?: string;
+      has_digital?: boolean;
+      has_physical?: boolean;
     } | null;
   };
   errors: Record<string, string>;
@@ -72,8 +78,11 @@ const CertificationCard = ({
                   errors.certification_title && "border-destructive"
                 )}
                 placeholder="Ej. Diplomado de Especialización en React"
-                value={form.certification_title || ""}
-                onChange={(e) => setFieldValue("certification_title", e.target.value)}
+                value={form.certification?.title || ""}
+                onChange={(e) => {
+                  setFieldValue("certification.title", e.target.value);
+                  setFieldValue("certification_title", e.target.value);
+                }}
               />
               {errors.certification_title && (
                 <p className="text-destructive text-xs mt-1">{errors.certification_title}</p>
@@ -90,8 +99,11 @@ const CertificationCard = ({
                   errors.certification_description && "border-destructive"
                 )}
                 placeholder="Escribe la descripción de la certificación..."
-                value={form.certification_description || ""}
-                onChange={(e) => setFieldValue("certification_description", e.target.value)}
+                value={form.certification?.description || ""}
+                onChange={(e) => {
+                  setFieldValue("certification.description", e.target.value);
+                  setFieldValue("certification_description", e.target.value);
+                }}
               />
               {errors.certification_description && (
                 <p className="text-destructive text-xs mt-1">{errors.certification_description}</p>
@@ -113,8 +125,11 @@ const CertificationCard = ({
                     errors.certification_issuing_authority && "border-destructive"
                   )}
                   placeholder="Ej. Corporación Educativa Benjamin Franklin"
-                  value={form.certification_issuing_authority || ""}
-                  onChange={(e) => setFieldValue("certification_issuing_authority", e.target.value)}
+                  value={form.certification?.issuing_authority || ""}
+                  onChange={(e) => {
+                    setFieldValue("certification.issuing_authority", e.target.value);
+                    setFieldValue("certification_issuing_authority", e.target.value);
+                  }}
                 />
                 {errors.certification_issuing_authority && (
                   <p className="text-destructive text-xs mt-1">{errors.certification_issuing_authority}</p>
@@ -132,8 +147,11 @@ const CertificationCard = ({
                     errors.certification_registry_validity && "border-destructive"
                   )}
                   placeholder="Ej. Permanente / 5 años"
-                  value={form.certification_registry_validity || ""}
-                  onChange={(e) => setFieldValue("certification_registry_validity", e.target.value)}
+                  value={form.certification?.registry_validity || ""}
+                  onChange={(e) => {
+                    setFieldValue("certification.registry_validity", e.target.value);
+                    setFieldValue("certification_registry_validity", e.target.value);
+                  }}
                 />
                 {errors.certification_registry_validity && (
                   <p className="text-destructive text-xs mt-1">{errors.certification_registry_validity}</p>
