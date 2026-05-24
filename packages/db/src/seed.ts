@@ -29,7 +29,6 @@ async function main() {
       update: {},
       create: { name: "SALES_SUPERVISOR" },
     }),
-    // 💡 Agregué los roles faltantes según tu Enum RoleAccess
     prisma.role.upsert({
       where: { name: "ADMIN" },
       update: {},
@@ -43,30 +42,54 @@ async function main() {
   ]);
 
   const adminRole = await prisma.role.findUnique({
-  where: { name: "ADMIN" }, 
-  select: { id: true }
-});
+    where: { name: "ADMIN" }, 
+    select: { id: true }
+  });
 
-if (!adminRole) {
-  throw new Error("No se pudo encontrar el rol ADMIN para el seed.");
-}
+  if (!adminRole) {
+    throw new Error("No se pudo encontrar el rol ADMIN para el seed.");
+  }
 
-// 2. Creas el usuario usando adminRole.id
-const users = await prisma.user.create({
-  data: {
-    first_name: fakerES.person.firstName(),
-    middle_name: fakerES.person.middleName(),
-    last_name: fakerES.person.lastName(),
-    email: fakerES.internet.email(),
-    corporate_email: fakerES.internet.exampleEmail(),
-    // 💡 Aquí está la corrección: usamos el ID que encontramos arriba
-    role_id: adminRole.id, 
-    is_active: true,
-    password: await hash("password123#", 10),
-  },
-});
+  console.log("👤 Seeding Admin User...");
+  const adminEmail = "admin@cebf.edu.pe"; 
+  const user = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {},
+    create: {
+      first_name: fakerES.person.firstName(),
+      middle_name: fakerES.person.middleName(),
+      last_name: fakerES.person.lastName(),
+      email: adminEmail,
+      corporate_email: "admin.corporativo@cebf.edu.pe",
+      role_id: adminRole.id, 
+      is_active: true,
+      password: await hash("password123#", 10),
+    },
+  });
 
-console.log("✅ Seeding completed successfully!");
+  // =========================================================
+  // 🚀 SEEDING DE CATEGORÍAS SOLICITADAS
+  // =========================================================
+  console.log("🏷️ Seeding Categories...");
+  const categoriesToSeed = [
+    "Construcción",
+    "Textil y Confecciones",
+    "Tecnologia"
+  ];
+
+  await Promise.all(
+    categoriesToSeed.map((categoryName) =>
+      prisma.category.upsert({
+        where: { name: categoryName },
+        update: {}, 
+        create: {
+          name: categoryName,
+        },
+      })
+    )
+  );
+
+  console.log("✅ Seeding completed successfully!");
 }
 
 main()

@@ -57,6 +57,9 @@ export const productFormSchema = z.object({
   certification_description: z.string().optional().nullable(),
   certification_issuing_authority: z.string().optional().nullable(),
   certification_registry_validity: z.string().optional().nullable(),
+  certification: z.object({
+    image_url: z.string().optional().default(""),
+  }).optional().nullable(),
 }).refine(data => data.installments_max_number >= data.installments_min_number, {
   message: "El máximo de cuotas no puede ser menor al mínimo",
   path: ["installments_max_number"]

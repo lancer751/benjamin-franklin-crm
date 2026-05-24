@@ -49,24 +49,36 @@ const BenefitsAndCertificationsSection = ({ product }: BenefitsAndCertifications
                 const description = rc.certification?.description;
                 const hasDigital = rc.certification?.has_digital;
                 const hasPhysical = rc.certification?.has_physical;
+                const imageUrl = rc.certification?.image_url;
 
                 return (
-                  <div key={idx} className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-350 hover:bg-slate-50/50 transition-all duration-200 space-y-2">
-                    {title ? (
-                      <span className="text-xs font-bold text-slate-800 block leading-tight">{title}</span>
-                    ) : (
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-semibold text-slate-600">Certificación</span>
-                        <Badge variant="outline" className="rounded-lg px-2 py-0.5 bg-slate-100 text-slate-600 border-slate-200 font-mono text-[9px] font-bold">
-                          ID: {id ? `${id.substring(0, 8)}...` : 'S/I'}
-                        </Badge>
-                      </div>
-                    )}
-                    {description && (
-                      <span className="text-[10px] text-slate-500 block leading-normal">{description}</span>
-                    )}
+                  <div key={idx} className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-350 hover:bg-slate-50/50 transition-all duration-200 flex flex-col justify-between gap-3">
+                    <div className="space-y-2">
+                      {title ? (
+                        <span className="text-xs font-bold text-slate-800 block leading-tight">{title}</span>
+                      ) : (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-semibold text-slate-600">Certificación</span>
+                          <Badge variant="outline" className="rounded-lg px-2 py-0.5 bg-slate-100 text-slate-600 border-slate-200 font-mono text-[9px] font-bold">
+                            ID: {id ? `${id.substring(0, 8)}...` : 'S/I'}
+                          </Badge>
+                        </div>
+                      )}
+                      {description && (
+                        <span className="text-[10px] text-slate-500 block leading-normal">{description}</span>
+                      )}
+                      {imageUrl && (
+                        <div className="relative aspect-video rounded-lg overflow-hidden border border-slate-200 bg-slate-100 mt-2">
+                          <img 
+                            src={imageUrl} 
+                            alt={title || "Diploma"} 
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                      )}
+                    </div>
                     {(hasDigital || hasPhysical) && (
-                      <div className="flex gap-1.5 flex-wrap">
+                      <div className="flex gap-1.5 flex-wrap pt-1">
                         {hasDigital && (
                           <span className="px-1.5 py-0.5 rounded bg-blue-50/60 text-blue-700 text-[9px] font-bold border border-blue-100">Digital</span>
                         )}

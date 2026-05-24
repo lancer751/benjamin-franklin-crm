@@ -53,6 +53,9 @@ const emptyData: ProductFormValues = {
   certification_description: "",
   certification_issuing_authority: "Corporación Educativa Benjamin Franklin",
   certification_registry_validity: "",
+  certification: {
+    image_url: "",
+  },
 };
 
 export const useProductFormModal = (open: boolean, onClose: () => void, initialData?: any) => {
@@ -84,6 +87,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
       const certification_description = cert?.description || "";
       const certification_issuing_authority = cert?.issuing_authority || "Corporación Educativa Benjamin Franklin";
       const certification_registry_validity = cert?.registry_validity || "";
+      const certification_image_url = cert?.image_url || "";
 
       const category_id = initialData.category_id || 
         (typeof initialData.category === 'object' ? initialData.category?.id : initialData.category) || 
@@ -112,6 +116,9 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         certification_description,
         certification_issuing_authority,
         certification_registry_validity,
+        certification: {
+          image_url: certification_image_url,
+        },
       };
 
       setForm(nextForm);
@@ -299,7 +306,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         const certData = {
           title: payload.certification_title || `Certificado de ${payload.name}`,
           description: payload.certification_description || "",
-          image_url: payload.image_url || "",
+          image_url: payload.certification?.image_url || "",
           issuing_authority: payload.certification_issuing_authority || "Corporación Educativa Benjamin Franklin",
           registry_validity: payload.certification_registry_validity || "",
           has_digital: true,
@@ -377,11 +384,23 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     }
   });
 
-  const setFieldValue = (field: keyof ProductFormValues, value: any) => {
+  const setFieldValue = (field: string, value: any) => {
     setForm(prev => {
-      const updated = { ...prev, [field]: value };
-      if (field === "name" && !isEdit) {
-        updated.slug = generateSlug(value);
+      let updated: ProductFormValues;
+      if (field.includes('.')) {
+        const [parent, child] = field.split('.');
+        updated = {
+          ...prev,
+          [parent]: {
+            ...((prev as any)[parent] || {}),
+            [child]: value
+          }
+        };
+      } else {
+        updated = { ...prev, [field]: value } as ProductFormValues;
+        if (field === "name" && !isEdit) {
+          updated.slug = generateSlug(value);
+        }
       }
       return updated;
     });

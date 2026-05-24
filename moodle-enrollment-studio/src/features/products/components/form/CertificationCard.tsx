@@ -13,7 +13,9 @@ interface CertificationCardProps {
     certification_description?: string | null;
     certification_issuing_authority?: string | null;
     certification_registry_validity?: string | null;
-    image_url?: string;
+    certification?: {
+      image_url?: string;
+    } | null;
   };
   errors: Record<string, string>;
   setFieldValue: (key: string, value: any) => void;
@@ -33,7 +35,7 @@ const CertificationCard = ({
     try {
       setIsUploadingImage(true);
       const url = await uploadImageToCloudinary(file);
-      setFieldValue("image_url", url);
+      setFieldValue("certification.image_url", url);
       toast.success("Imagen de certificación subida correctamente");
     } catch (error) {
       toast.error("Error al subir la imagen de la certificación");
@@ -147,10 +149,10 @@ const CertificationCard = ({
                 Imagen de la Certificación
               </label>
               <div className="relative aspect-[4/3] rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden bg-slate-50/60 group hover:border-primary/50 transition-colors">
-                {form.image_url ? (
+                {form.certification?.image_url ? (
                   <>
                     <img
-                      src={form.image_url}
+                      src={form.certification.image_url}
                       alt="Diploma"
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
                     />
@@ -198,7 +200,7 @@ const CertificationCard = ({
               />
             </div>
             <p className="text-[10px] text-muted-foreground italic leading-normal pt-2 border-t border-slate-100">
-              * Comparte el asset de imagen del producto. Modificar aquí también actualizará la imagen de portada.
+              * Sube una imagen de certificación independiente de la portada del producto.
             </p>
           </div>
         </div>
