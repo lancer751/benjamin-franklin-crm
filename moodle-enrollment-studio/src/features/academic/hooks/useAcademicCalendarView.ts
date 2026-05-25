@@ -25,6 +25,7 @@ export const useAcademicCalendarView = () => {
       end_date: edition.end_date,
       edition_status: edition.edition_status,
       modality: edition.modality,
+      assigned_professors: edition.assigned_professors || [],
     };
   }) || [];
 

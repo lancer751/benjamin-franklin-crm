@@ -3,6 +3,7 @@ import {
   AlertCircle, Clock 
 } from "lucide-react";
 import { useProductsView } from "../hooks/useProductsView";
+import { formatToLocalTime } from "@/core/utils/date-utils";
 import { Badge } from "@/core/components/ui/badge";
 import {
   DropdownMenu,
@@ -172,7 +173,10 @@ const ProductsView = () => {
                       )}>
                         <div className="flex items-center gap-2 font-semibold">
                           <Calendar size={14} className={urgent ? "animate-pulse" : ""} />
-                          {startDate ? format(new Date(startDate), "d 'de' MMMM, yyyy", { locale: es }) : "S/F"}
+                          {startDate 
+                            ? format(formatToLocalTime(startDate), "d 'de' MMMM, yyyy", { locale: es }) 
+                            : "S/F"
+                          }
                           {urgent && <AlertCircle size={14} />}
                         </div>
                         <p className="text-[10px] uppercase font-bold tracking-widest opacity-60">

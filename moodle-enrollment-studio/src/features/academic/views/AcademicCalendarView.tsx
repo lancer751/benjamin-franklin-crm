@@ -10,7 +10,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/core/components/ui/toggle-group'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/core/components/ui/hover-card';
 import { Progress } from '@/core/components/ui/progress';
 import { useAcademicCalendarView } from '../hooks/useAcademicCalendarView';
-import { formatToLocalTime, displayFriendlyDate } from '@/core/utils/date-utils';
+import { formatToLocalTime, displayFriendlyDate, formatFriendlySpanishDate } from '@/core/utils/date-utils';
 
 const getStatusStyles = (status: string) => {
   switch (status) {
@@ -41,7 +41,8 @@ const getStatusText = (status: string) => {
 
 export const AcademicCalendarView = () => {
   const navigate = useNavigate();
-  const { editions: mockEditions, isLoading } = useAcademicCalendarView();
+  const { editions: rawEditions, isLoading } = useAcademicCalendarView();
+  const editions = rawEditions ?? [];
   const [viewMode, setViewMode] = useState<"Mes" | "Semestre" | "Año">("Año");
 
   const [referenceDate, setReferenceDate] = useState(new Date());
@@ -176,34 +177,40 @@ export const AcademicCalendarView = () => {
     const coursesMap = new Map();
 
     // 1. Filtrar ediciones visibles y adjuntar su posición
-    const visiblePositions = mockEditions.map(ed => {
-      const pos = getBarPosition(ed.start_date, ed.end_date);
+    const visiblePositions = (editions ?? []).map(ed => {
+      const pos = getBarPosition(ed?.start_date, ed?.end_date);
       return { ...ed, pos };
-    }).filter(ed => ed.pos.display !== 'none');
+    }).filter(ed => ed?.pos?.display !== 'none');
 
     // 2. Agrupar por curso
     visiblePositions.forEach(ed => {
-      if (!coursesMap.has(ed.course_id)) {
-        coursesMap.set(ed.course_id, {
-          course_id: ed.course_id,
-          course_name: ed.course_name,
-          course_type: ed.course_type,
-          editions: []
-        });
+      if (ed?.course_id) {
+        if (!coursesMap.has(ed.course_id)) {
+          coursesMap.set(ed.course_id, {
+            course_id: ed.course_id,
+            course_name: ed.course_name,
+            course_type: ed.course_type,
+            editions: []
+          });
+        }
+        coursesMap.get(ed.course_id).editions.push(ed);
       }
-      coursesMap.get(ed.course_id).editions.push(ed);
     });
 
     // 3. Calcular "Stacking" (niveles) por cada curso para evitar superposición
     const result = Array.from(coursesMap.values()).map(course => {
       // Ordenar por fecha de inicio para acomodar secuencialmente
-      const sorted = [...course.editions].sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+      const sorted = [...(course?.editions ?? [])].sort((a, b) => {
+        const startA = a?.start_date ? new Date(a.start_date).getTime() : 0;
+        const startB = b?.start_date ? new Date(b.start_date).getTime() : 0;
+        return startA - startB;
+      });
       
       const levelEnds: number[] = [];
       
       sorted.forEach(ed => {
-        const startMs = new Date(ed.start_date).getTime();
-        const endMs = new Date(ed.end_date).getTime();
+        const startMs = ed?.start_date ? new Date(ed.start_date).getTime() : 0;
+        const endMs = ed?.end_date ? new Date(ed.end_date).getTime() : 0;
         let assignedLevel = -1;
         
         for (let i = 0; i < levelEnds.length; i++) {
@@ -221,7 +228,9 @@ export const AcademicCalendarView = () => {
           levelEnds.push(endMs);
         }
         
-        ed.level = assignedLevel;
+        if (ed) {
+          ed.level = assignedLevel;
+        }
       });
       
       course.maxLevel = levelEnds.length > 0 ? levelEnds.length - 1 : 0;
@@ -229,7 +238,7 @@ export const AcademicCalendarView = () => {
     });
 
     return result;
-  }, [viewRange, mockEditions]);
+  }, [viewRange, editions]);
 
   // Variables para Stacking UI
   const isMonthView = viewMode === 'Mes';
@@ -239,9 +248,44 @@ export const AcademicCalendarView = () => {
   const topPadding = 16;
 
   // KPI Calculations
-  const visibleEditionsCount = groupedCourses.reduce((acc, course) => acc + course.editions.length, 0);
-  const inProgressCount = mockEditions.filter(ed => ed.edition_status === 'IN_PROGRESS' && getBarPosition(ed.start_date, ed.end_date).display !== 'none').length;
-  const occupancyRate = 76; // Static for demo
+  const visibleEditionsCount = groupedCourses.reduce((acc, course) => acc + (course?.editions?.length ?? 0), 0);
+  
+  // 1. Variable 'Total Ediciones'
+  const totalEditions = editions?.length ?? 0;
+  const totalEditionsFormatted = totalEditions < 10 ? `0${totalEditions}` : `${totalEditions}`;
+
+  // 2. Variable 'En Progreso'
+  const inProgressCount = editions?.filter(ed => ed?.edition_status === 'IN_PROGRESS')?.length ?? 0;
+  const inProgressFormatted = inProgressCount < 10 ? `0${inProgressCount}` : `${inProgressCount}`;
+
+  // 3. Variable 'Tasa de Ocupación'
+  const occupancyRate = totalEditions > 0 
+    ? Math.round((editions?.filter(e => (e?.assigned_professors?.length ?? 0) > 0)?.length ?? 0) / totalEditions * 100) 
+    : 0;
+
+  // 4. Variable 'Próximo Inicio'
+  const sortedEditionsForNext = [...(editions ?? [])]
+    .filter(e => e?.start_date)
+    .sort((a, b) => {
+      const dateA = a?.start_date ? new Date(a.start_date).getTime() : 0;
+      const dateB = b?.start_date ? new Date(b.start_date).getTime() : 0;
+      return dateA - dateB;
+    });
+
+  const todayTime = new Date().setHours(0, 0, 0, 0);
+
+  let nextEdition = sortedEditionsForNext.find(e => {
+    const startMs = e?.start_date ? new Date(e.start_date).getTime() : 0;
+    return startMs >= todayTime;
+  });
+
+  // If no future start, take the closest past edition (last element in sorted ascending list)
+  if (!nextEdition && sortedEditionsForNext.length > 0) {
+    nextEdition = sortedEditionsForNext[sortedEditionsForNext.length - 1];
+  }
+
+  const nextEditionDateStr = nextEdition?.start_date ? formatFriendlySpanishDate(nextEdition.start_date) : "Sin fecha";
+  const nextEditionCourseName = nextEdition?.course_name || "Sin curso";
 
   if (isLoading) {
     return (
@@ -469,12 +513,12 @@ export const AcademicCalendarView = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-6 shrink-0 pt-2">
-        {/* Card 1: TOTAL EDICIONES (Sync with visible) */}
+        {/* Card 1: TOTAL EDICIONES */}
         <Card className="border-none shadow-sm transition-all duration-300">
           <CardContent className="p-6">
-            <h3 className="text-xs font-bold text-slate-500 mb-2 tracking-wider">TOTAL EDICIONES ({viewMode.toUpperCase()})</h3>
+            <h3 className="text-xs font-bold text-slate-500 mb-2 tracking-wider">TOTAL EDICIONES</h3>
             <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-extrabold text-slate-900">{visibleEditionsCount < 10 ? `0${visibleEditionsCount}` : visibleEditionsCount}</span>
+              <span className="text-4xl font-extrabold text-slate-900">{totalEditionsFormatted}</span>
               <span className="text-sm font-bold text-emerald-500 flex items-center">
                 <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M23 6L13.5 15.5L8.5 10.5L1 18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -491,7 +535,7 @@ export const AcademicCalendarView = () => {
           <CardContent className="p-6">
             <h3 className="text-xs font-bold text-slate-500 mb-2 tracking-wider">EN PROGRESO</h3>
             <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-extrabold text-blue-600">{inProgressCount < 10 ? `0${inProgressCount}` : inProgressCount}</span>
+              <span className="text-4xl font-extrabold text-blue-600">{inProgressFormatted}</span>
               <span className="text-sm text-slate-500">Activos ahora</span>
             </div>
           </CardContent>
@@ -517,8 +561,8 @@ export const AcademicCalendarView = () => {
                 <CalendarIcon className="w-6 h-6" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-base font-bold text-slate-900 truncate">12 Abr 2026</span>
-                <span className="text-sm text-slate-500 truncate">DS Fundamentals</span>
+                <span className="text-base font-bold text-slate-900 truncate">{nextEditionDateStr}</span>
+                <span className="text-sm text-slate-500 truncate">{nextEditionCourseName}</span>
               </div>
             </div>
           </CardContent>
