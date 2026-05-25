@@ -24,6 +24,13 @@ const EditionCombobox = ({
 }: EditionComboboxProps) => {
   const [openCombobox, setOpenCombobox] = useState(false);
 
+  const selectedEdition = editions.find((ed: any) => ed.id === editionId);
+  const displayLabel = selectedEdition
+    ? `${selectedEdition.edition_code} - ${selectedEdition.course?.name || ""}`
+    : isLoadingEditions
+      ? "Cargando..."
+      : "Buscar edición por código o curso...";
+
   return (
     <div>
       <label className="form-label text-xs font-bold text-slate-700 mb-2 block">Edición / Cohorte (Buscador)</label>
@@ -41,9 +48,7 @@ const EditionCombobox = ({
             disabled={isLoadingEditions || isEdit}
           >
             <span className="truncate">
-              {editionId
-                ? editions.find((ed: any) => ed.id === editionId)?.edition_code + " - " + editions.find((ed: any) => ed.id === editionId)?.course?.name
-                : isLoadingEditions ? "Cargando..." : "Buscar edición por código o curso..."}
+              {displayLabel}
             </span>
             <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>

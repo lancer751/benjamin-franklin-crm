@@ -98,6 +98,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
       const nextForm: ProductFormValues = {
         ...emptyData,
         ...product,
+        edition_id: initialData.edition_id || product.edition?.id || "", // 🌟 Forzamos el UUID real del backend
         slug: product.slug || generateSlug(product.name || ""),
         presale_price: product.presale_price || "",
         discount_price: product.discount_price || "",
@@ -155,6 +156,11 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   useEffect(() => {
     if (!selectedEdition) return;
 
+    // 🌟 GUARDIA PREMIUM: Si es edición y el nombre ya coincide, congelamos para proteger el Combobox
+    if (isEdit && form.edition_id === selectedEdition.id) {
+      return;
+    }
+
     const courseName = selectedEdition.course?.name || "";
     const generatedName = courseName.trim();
     const generatedSlug = generateSlug(generatedName);
@@ -209,7 +215,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
       return nextForm;
     });
-  }, [selectedEdition, isEdit, hasCustomImage]);
+  }, [selectedEdition, isEdit, hasCustomImage, form.edition_id]);
 
   // Dynamic Certification Autogeneration
   useEffect(() => {

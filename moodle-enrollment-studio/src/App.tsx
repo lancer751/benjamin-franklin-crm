@@ -124,14 +124,14 @@ const App = () => {
               <Route path="/productos/:id" element={<ProductDetailView />} />
               
               {/* Finanzas */}
-              <Route path="/finanzas" element={<FinanceDashboardView />} />
+              <Route path="/finanzas" element={<Navigate to="/pagos" replace />} />
               <Route path="/pagos" element={<PaymentsView />} />
               <Route path="/pagos/:id" element={<PaymentDetailView />} />
               <Route path="/planes-pago" element={<PaymentPlansView />} />
               <Route path="/morosos" element={<OverdueView />} />
               
               {/* Marketing */}
-              <Route path="/marketing" element={<MarketingDashboardView />} />
+              <Route path="/marketing" element={<Navigate to="/campanas" replace />} />
               <Route path="/campanas" element={<CampaignsView />} />
               <Route path="/campanas/:id" element={<CampaignDetailView />} />
               <Route path="/origen-leads" element={<LeadSourcesView />} />

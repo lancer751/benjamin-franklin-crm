@@ -42,13 +42,8 @@ export const canAccess = (userRole: string, permission: string): boolean => {
       "catalog:view", "certifications:view", "benefits:view", "faqs:view", "categories:view",
       "admin:view", "users:view", "finance:view", "marketing:view", "settings:view"
     ],
-    // Both SUPERVISOR and SALES_SUPERVISOR have full access to Academic, Commercial, and Support Catalog views
+    // SALES_SUPERVISOR have full access to Academic, Commercial, and Support Catalog views
     SALES_SUPERVISOR: [
-      "academic:view", "courses:view", "calendar:view", "professors:view",
-      "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view",
-      "catalog:view", "certifications:view", "benefits:view", "faqs:view", "categories:view"
-    ],
-    SUPERVISOR: [
       "academic:view", "courses:view", "calendar:view", "professors:view",
       "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view",
       "catalog:view", "certifications:view", "benefits:view", "faqs:view", "categories:view"
@@ -80,8 +75,8 @@ export const sidebarSections: SidebarSection[] = [
     permission: "admin:view",
     items: [
       { to: "/admin/usuarios", label: "Usuarios", icon: Users, permission: "users:view" },
-      { to: "/finanzas", label: "Finanzas", icon: Wallet, permission: "finance:view" },
-      { to: "/marketing", label: "Marketing", icon: Megaphone, permission: "marketing:view" },
+      { to: "/pagos", label: "Pagos", icon: Wallet, permission: "finance:view" },
+      { to: "/campanas", label: "Campañas", icon: Megaphone, permission: "marketing:view" },
     ],
   },
   {
