@@ -138,8 +138,8 @@ const ProductDetailView = () => {
           </DetailSection>
         </div>
 
-        {/* COLUMNA DERECHA (33% - STICKY) */}
-        <div className="space-y-6 lg:h-fit lg:sticky lg:top-4">
+        {/* COLUMNA DERECHA (33% - Portada Natural & Precios Sticky) */}
+        <div className="space-y-6">
           
           {/* PORTADA COMERCIAL (Condicional estricto) */}
           {product.image_url && (
@@ -159,13 +159,15 @@ const ProductDetailView = () => {
             </Card>
           )}
 
-          {/* CONFIGURACIÓN DE PRECIOS */}
-          <PricingCardList 
-            product={product} 
-            formatCurrency={formatCurrency} 
-            formatAttendanceMode={formatAttendanceMode}
-            formatDate={formatDate}
-          />
+          {/* CONFIGURACIÓN DE PRECIOS STICKY */}
+          <div className="lg:sticky lg:top-6 self-start">
+            <PricingCardList 
+              product={product} 
+              formatCurrency={formatCurrency} 
+              formatAttendanceMode={formatAttendanceMode}
+              formatDate={formatDate}
+            />
+          </div>
 
         </div>
 

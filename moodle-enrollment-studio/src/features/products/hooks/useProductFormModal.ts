@@ -155,52 +155,59 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   useEffect(() => {
     if (!selectedEdition) return;
 
-    // 1. Auto-generate Name, Slug & Certification details (Solo si no estamos en edición)
-    if (!isEdit) {
-      const courseName = selectedEdition.course?.name || "";
-      const generatedName = courseName.trim();
-      const generatedSlug = generateSlug(generatedName);
-      const courseImage = selectedEdition.course?.image_url || "";
-      const defaultDesc = getCertificationDefaultText(generatedName);
+    const courseName = selectedEdition.course?.name || "";
+    const generatedName = courseName.trim();
+    const generatedSlug = generateSlug(generatedName);
+    const courseImage = selectedEdition.course?.image_url || "";
+    const defaultDesc = getCertificationDefaultText(generatedName);
 
-      setForm(prev => ({
-        ...prev,
-        name: generatedName,
-        slug: generatedSlug,
-        image_url: hasCustomImage ? prev.image_url : (courseImage || prev.image_url),
-        certification_description: defaultDesc,
-        certification_title: `Certificado del Curso de ${generatedName}`,
-      }));
-    }
-
-    // 2. Manejo de modalidad y precios (Incluso en edición si cambiamos la edición vinculada)
     const modalityRaw = (selectedEdition as any).modality;
     const editionModality = typeof modalityRaw === 'object' ? modalityRaw.name : modalityRaw;
-    
+
     setForm(prev => {
+      const isCertificationEmpty = !prev.certification?.title && !prev.certification?.description;
+      const shouldInjectCertification = !isEdit || isCertificationEmpty;
+
+      let nextForm = { ...prev };
+
+      // 1. Auto-generate Name, Slug & Image (Solo si no estamos en edición)
+      if (!isEdit) {
+        nextForm.name = generatedName;
+        nextForm.slug = generatedSlug;
+        nextForm.image_url = hasCustomImage ? prev.image_url : (courseImage || prev.image_url);
+      }
+
+      // 2. Auto-generate Certification details (Solo si no estamos en edición o campos están vacíos/pristine)
+      if (shouldInjectCertification) {
+        nextForm.certification_title = `Certificado del Curso de ${generatedName}`;
+        nextForm.certification_description = defaultDesc;
+        nextForm.certification = {
+          ...prev.certification,
+          title: `Certificado del Curso de ${generatedName}`,
+          description: defaultDesc,
+          issuing_authority: prev.certification?.issuing_authority || "Corporación Educativa Benjamin Franklin",
+        };
+      }
+
+      // 3. Manejo de modalidad y precios (Incluso en edición si cambiamos la edición vinculada)
       // Guarda crítica: si es edición y ya hay precios cargados, no los sobreescribimos destructivamente
-      if (isEdit && prev.prices && prev.prices.length > 0) {
-        return prev;
-      }
-
-      let newPrices = [...prev.prices];
-      
-      if (editionModality === "HIBRIDO") {
-        // Necesitamos 2 objetos: PRESENCIAL y VIRTUAL
-        const presencial = newPrices.find(p => p.attendance_mode === "PRESENCIAL") || createEmptyPrice("PRESENCIAL");
-        const virtual = newPrices.find(p => p.attendance_mode === "VIRTUAL") || createEmptyPrice("VIRTUAL");
+      if (!(isEdit && prev.prices && prev.prices.length > 0)) {
+        let newPrices = [...prev.prices];
         
-        newPrices = [presencial, virtual];
-      } else if (editionModality === "VIRTUAL" || editionModality === "PRESENCIAL") {
-        // Solo 1 objeto del tipo correspondiente
-        const existing = newPrices.find(p => p.attendance_mode === editionModality) || createEmptyPrice(editionModality);
-        newPrices = [existing];
-      } else {
-        // Default o HEREDADO
-        if (newPrices.length === 0) newPrices = [createEmptyPrice("HEREDADO")];
+        if (editionModality === "HIBRIDO") {
+          const presencial = newPrices.find(p => p.attendance_mode === "PRESENCIAL") || createEmptyPrice("PRESENCIAL");
+          const virtual = newPrices.find(p => p.attendance_mode === "VIRTUAL") || createEmptyPrice("VIRTUAL");
+          newPrices = [presencial, virtual];
+        } else if (editionModality === "VIRTUAL" || editionModality === "PRESENCIAL") {
+          const existing = newPrices.find(p => p.attendance_mode === editionModality) || createEmptyPrice(editionModality);
+          newPrices = [existing];
+        } else {
+          if (newPrices.length === 0) newPrices = [createEmptyPrice("HEREDADO")];
+        }
+        nextForm.prices = newPrices;
       }
 
-      return { ...prev, prices: newPrices };
+      return nextForm;
     });
   }, [selectedEdition, isEdit, hasCustomImage]);
 
@@ -216,10 +223,29 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
           prev.certification_title.startsWith("Certificación en ") ||
           prev.certification_title.startsWith("Certificado del Curso de ");
 
+        const isNestedEmptyOrAutogen = !prev.certification?.description ||
+          prev.certification.description.startsWith("Al culminar satisfactoriamente y aprobar el programa, el alumno obtendrá: Certificado de ");
+
+        const isNestedEmptyOrAutogenTitle = !prev.certification?.title ||
+          prev.certification.title.startsWith("Certificación en ") ||
+          prev.certification.title.startsWith("Certificado del Curso de ");
+
+        const nextDesc = isEmptyOrAutogen ? defaultDesc : prev.certification_description;
+        const nextTitle = isEmptyOrAutogenTitle ? `Certificado del Curso de ${form.name}` : prev.certification_title;
+
+        const nextNestedDesc = isNestedEmptyOrAutogen ? defaultDesc : prev.certification?.description;
+        const nextNestedTitle = isNestedEmptyOrAutogenTitle ? `Certificado del Curso de ${form.name}` : prev.certification?.title;
+
         return {
           ...prev,
-          certification_description: isEmptyOrAutogen ? defaultDesc : prev.certification_description,
-          certification_title: isEmptyOrAutogenTitle ? `Certificado del Curso de ${form.name}` : prev.certification_title,
+          certification_description: nextDesc,
+          certification_title: nextTitle,
+          certification: {
+            ...prev.certification,
+            description: nextNestedDesc,
+            title: nextNestedTitle,
+            issuing_authority: prev.certification?.issuing_authority || "Corporación Educativa Benjamin Franklin",
+          }
         };
       });
     }
