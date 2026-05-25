@@ -28,24 +28,21 @@ export default function UserDetailView() {
   const isSales = user?.role?.name === "SALES_REP";
   const isSupervisor = user?.role?.name === "SALES_SUPERVISOR";
 
-  const sellerId = user?.seller?.id || user?.seller_profile?.id || user?.seller_profile_id;
-  const supervisorId = user?.salesSupervisor?.id;
-
-  // 2. Consulta del perfil de vendedor (Solo si es SALES_REP y hay sellerId)
+  // 2. Consulta del perfil de vendedor (Solo si es SALES_REP y hay id)
   const { data: sellerResponse, isLoading: isLoadingSeller } = useQuery({
-    queryKey: ["sellerProfile", sellerId],
-    queryFn: () => getSellerProfileById(sellerId as string),
-    enabled: !!sellerId && isSales,
+    queryKey: ["sellerProfile", id],
+    queryFn: () => getSellerProfileById(id as string),
+    enabled: !!id && isSales,
   });
 
-  // 3. Consulta del perfil de supervisor (Solo si es SALES_SUPERVISOR y hay supervisorId)
+  // 3. Consulta del perfil de supervisor (Solo si es SALES_SUPERVISOR y hay id)
   const { data: supervisorResponse, isLoading: isLoadingSupervisor } = useQuery({
-    queryKey: ["supervisorProfile", supervisorId],
-    queryFn: () => getSupervisorById(supervisorId as string),
-    enabled: !!supervisorId && isSupervisor,
+    queryKey: ["supervisorProfile", id],
+    queryFn: () => getSupervisorById(id as string),
+    enabled: !!id && isSupervisor,
   });
 
-  const seller = sellerResponse?.success ? sellerResponse.data : user?.seller;
+  const seller = sellerResponse?.success ? sellerResponse.data : null;
   const supervisor = supervisorResponse?.success ? supervisorResponse.data : null;
 
   if (!isLoadingUser && !user) {

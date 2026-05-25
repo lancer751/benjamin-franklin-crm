@@ -105,15 +105,4 @@ export const sidebarSections: SidebarSection[] = [
       { to: "/productos", label: "Productos", icon: Package, permission: "products:view" },
     ],
   },
-  {
-    title: "Catálogo de Apoyo",
-    icon: Layers,
-    permission: "catalog:view",
-    items: [
-      { to: "/admin/certificaciones", label: "Certificaciones", icon: Award, permission: "certifications:view" },
-      { to: "/admin/beneficios", label: "Beneficios", icon: Gift, permission: "benefits:view" },
-      { to: "/admin/faqs", label: "FAQs", icon: HelpCircle, permission: "faqs:view" },
-      { to: "/admin/categorias", label: "Categorías", icon: Layers, permission: "categories:view" },
-    ],
-  },
 ];

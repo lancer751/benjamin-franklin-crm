@@ -1,7 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { UseFormSetError } from "react-hook-form";
-import { createUser, updateUser, updateSupervisorProfile, updateSellerProfile } from "../services/userService";
+import {
+  createUser,
+  updateUser,
+  updateSupervisorProfile,
+  updateSellerProfile,
+} from "../services/userService";
 import { UserFormValues } from "../schemas/userFormSchema";
 import { userAdapter } from "../adapters/userAdapter";
 
@@ -10,6 +15,7 @@ export const useSaveUserMutation = (
   roles: any[],
   isSeller: boolean,
   isSupervisor: boolean,
+  extendedProfile: any | null, // 🆕 Perfil extendido (seller o supervisor)
   closeAndReset: () => void,
   setError: UseFormSetError<UserFormValues>
 ) => {
@@ -20,80 +26,97 @@ export const useSaveUserMutation = (
       const roleName = roles.find((r: any) => r.id === values.role_id)?.name || "";
       const userData = userAdapter.toPayload(values, roleName, isSeller, isSupervisor, !!user);
 
-      // 🧠 Intercepción y Coerción de Datos de Supervisor
+      // Coerción de datos de Supervisor
       if (userData.sales_supervisor_profile) {
-        userData.sales_supervisor_profile.discount_limit_percent = String(userData.sales_supervisor_profile.discount_limit_percent || "0");
+        userData.sales_supervisor_profile.discount_limit_percent = String(
+          userData.sales_supervisor_profile.discount_limit_percent || "0"
+        );
         if (userData.sales_supervisor_profile.max_manual_discount !== undefined) {
-          userData.sales_supervisor_profile.max_manual_discount = String(userData.sales_supervisor_profile.max_manual_discount || "0");
+          userData.sales_supervisor_profile.max_manual_discount = String(
+            userData.sales_supervisor_profile.max_manual_discount || "0"
+          );
         }
       }
 
-      // 1️⃣ MODO: CREACIÓN (Mantiene tu lógica original perfecta)
+      // =============================================
+      // MODO CREACIÓN
+      // =============================================
       if (!user) {
         await createUser(userData);
         return "create";
-      } 
-      
-      // 2️⃣ MODO: EDICIÓN (Solución al guardado mixto)
-      const updatePromises: Promise<any>[] = [];
+      }
 
-      // 🎯 A) Siempre agregamos la actualización de los datos comunes del usuario
-      // Mapeamos solo las propiedades base (omitimos los objetos de perfil que el backend general no espera)
+      // =============================================
+      // MODO EDICIÓN
+      // =============================================
+
+      // Separamos los campos base de los perfiles extendidos
       const { seller_profile, sales_supervisor_profile, marketing_profile, ...baseUserFields } = userData;
-      
-      updatePromises.push(updateUser(user.id, baseUserFields));
 
-      // 🎯 B) Si es Supervisor, disparamos en paralelo la actualización de su perfil
-      if (isSupervisor) {
-        const supervisorId = user.sales_supervisor_profile?.id || user.salesSupervisor?.id;
-        if (supervisorId && userData.sales_supervisor_profile) {
-          updatePromises.push(
-            updateSupervisorProfile(supervisorId, userData.sales_supervisor_profile)
-          );
-        }
-      } 
-      
-      // 🎯 C) Si es Vendedor (Seller), disparamos en paralelo la actualización de su perfil
-      else if (isSeller) {
-        const sellerId = user.seller_profile?.id || user.seller?.id;
-        if (sellerId && userData.seller_profile) {
-          userData.seller_profile.sales_target = Number(userData.seller_profile.sales_target);
-          updatePromises.push(
-            updateSellerProfile(sellerId, userData.seller_profile)
-          );
+      // 1️⃣ SIEMPRE: Actualizar datos base del usuario (ruta general)
+      await updateUser(user.id, baseUserFields);
+
+      // 2️⃣ SI ES VENDEDOR: Actualizar perfil de vendedor en paralelo
+      if (isSeller && seller_profile) {
+        // 🎯 El ID del perfil viene del extendedProfile (query separada del hook principal)
+        const sellerId = extendedProfile?.id;
+
+        if (!sellerId) {
+          console.warn("No se encontró el ID del perfil de vendedor para actualizar.");
+        } else {
+          seller_profile.sales_target = Number(seller_profile.sales_target);
+          await updateSellerProfile(sellerId, seller_profile);
         }
       }
 
-      // 🚀 EJECUCIÓN SIMULTÁNEA: Lanza ambos endpoints en paralelo (Ahorra tiempo de red)
-      await Promise.all(updatePromises);
+      // 3️⃣ SI ES SUPERVISOR: Actualizar perfil de supervisor en paralelo
+      if (isSupervisor && sales_supervisor_profile) {
+        // 🎯 El ID del perfil viene del extendedProfile (query separada del hook principal)
+        const supervisorProfileId = extendedProfile?.id;
+
+        if (!supervisorProfileId) {
+          console.warn("No se encontró el ID del perfil de supervisor para actualizar.");
+        } else {
+          await updateSupervisorProfile(supervisorProfileId, sales_supervisor_profile);
+        }
+      }
+
       return "update";
     },
+
     onSuccess: async (actionType) => {
-      // Invalida las queries para refrescar la tabla al instante
       await queryClient.invalidateQueries({ queryKey: ["users"] });
       await queryClient.invalidateQueries({ queryKey: ["supervisors"] });
       await queryClient.invalidateQueries({ queryKey: ["sellers"] });
       if (user?.id) {
         await queryClient.invalidateQueries({ queryKey: ["user", user.id] });
+        await queryClient.invalidateQueries({ queryKey: ["sellerProfile", user.id] });
+        await queryClient.invalidateQueries({ queryKey: ["supervisorProfile", user.id] });
       }
-      
+
       if (actionType === "create") {
-         toast.success(isSeller ? "Usuario y Perfil de Ventas creados" : "Usuario creado con éxito");
+        toast.success(
+          isSeller ? "Usuario y Perfil de Ventas creados" : "Usuario creado con éxito"
+        );
       } else {
-         toast.success("Usuario y perfil actualizados correctamente");
+        toast.success("Usuario y perfil actualizados correctamente");
       }
-      
+
       closeAndReset();
     },
+
     onError: (error: any) => {
       if (error.message === "VALIDATION_PASSWORD") {
-          setError("password", { type: "manual", message: "La contraseña es obligatoria" });
+        setError("password", { type: "manual", message: "La contraseña es obligatoria" });
       } else if (error.message === "VALIDATION_SUPERVISOR") {
-          setError("assigned_supervisor_id", { type: "manual", message: "Debe asignar un supervisor obligatoriamente" });
+        setError("assigned_supervisor_id", {
+          type: "manual",
+          message: "Debe asignar un supervisor obligatoriamente",
+        });
       } else {
-          toast.error("Error al guardar el usuario");
-          console.error(error);
+        toast.error("Error al guardar el usuario");
+        console.error(error);
       }
-    }
+    },
   });
 };

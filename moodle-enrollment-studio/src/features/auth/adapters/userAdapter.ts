@@ -4,7 +4,7 @@ export const userAdapter = {
   /**
    * Transforma los datos recibidos del backend al formato plano del formulario.
    */
-  toForm: (user: any, roles: any[]): UserFormValues => {
+  toForm: (user: any, roles: any[], extendedProfile?: any): UserFormValues => {
     if (!user) {
       return {
         first_name: "", middle_name: "", last_name: "", email: "", password: "",
@@ -21,6 +21,10 @@ export const userAdapter = {
     }
 
     const matchedRole = roles.find((r: any) => r.name === user.role?.name);
+    const roleName = user.role?.name || matchedRole?.name;
+
+    const seller = roleName === "SALES_REP" ? (extendedProfile || user.seller || user.seller_profile) : null;
+    const supervisor = roleName === "SALES_SUPERVISOR" ? (extendedProfile || user.salesSupervisor || user.sales_supervisor_profile) : null;
 
     return {
       first_name: user.first_name || "",
@@ -31,22 +35,20 @@ export const userAdapter = {
       cellphone: user.cellphone || "",
       role_id: user.role_id || matchedRole?.id || "",
       is_active: user.is_active ?? true,
-      // ✅ CORRECCIÓN 1: El Adapter se encarga de leer el nombre correcto del backend
       seller_profile: {
-        sales_target: user.seller?.sales_target || 0,
-        assigned_supervisor_id: user.seller?.assigned_supervisor_id || "",
+        sales_target: seller?.sales_target || 0,
+        assigned_supervisor_id: seller?.assigned_supervisor_id || "",
       },
       
-      // Usamos user.salesSupervisor (como viene de Prisma) y lo aplanamos
       sales_supervisor_profile: {
-        team_name: user.salesSupervisor?.team_name || "",
-        max_sellers: user.salesSupervisor?.max_sellers || 0,
-        discount_limit_percent: user.salesSupervisor?.discount_limit_percent || 0,
-        can_assign_leads: user.salesSupervisor?.can_assign_leads || false,
-        can_approve_discounts: user.salesSupervisor?.can_approve_discounts || false,
-        can_reassign_leads: user.salesSupervisor?.can_reassign_leads || false,
-        can_cancel_orders: user.salesSupervisor?.can_cancel_orders || false,
-        can_view_all_team_sales: user.salesSupervisor?.can_view_all_team_sales || false,
+        team_name: supervisor?.team_name || "",
+        max_sellers: supervisor?.max_sellers || 0,
+        discount_limit_percent: supervisor?.discount_limit_percent || 0,
+        can_assign_leads: supervisor?.can_assign_leads || false,
+        can_approve_discounts: supervisor?.can_approve_discounts || false,
+        can_reassign_leads: supervisor?.can_reassign_leads || false,
+        can_cancel_orders: supervisor?.can_cancel_orders || false,
+        can_view_all_team_sales: supervisor?.can_view_all_team_sales || false,
       }
     };
   },

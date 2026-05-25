@@ -50,6 +50,7 @@ export function UserFormModal({ isOpen, onClose, user }: UserFormModalProps) {
     loadingSupervisors,
     isSeller,
     isPending,
+    isLoadingDetails,
     closeAndReset,
     onSubmit,
   } = useUserFormModal(isOpen, onClose, user);
@@ -70,15 +71,24 @@ export function UserFormModal({ isOpen, onClose, user }: UserFormModalProps) {
             
             {/* Cuerpo del Modal (Área de Scroll) */}
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              <BaseUserFields roles={roles} loadingRoles={loadingRoles} isEditMode={!!user} />
+              {isLoadingDetails ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin mb-3 text-primary" />
+                  <p className="text-sm font-semibold text-slate-500 animate-pulse">Cargando datos del perfil...</p>
+                </div>
+              ) : (
+                <>
+                  <BaseUserFields roles={roles} loadingRoles={loadingRoles} isEditMode={!!user} />
 
-              <SellerFields 
-                supervisors={supervisors} 
-                loadingSupervisors={loadingSupervisors} 
-                isVisible={isSeller} 
-              />
+                  <SellerFields 
+                    supervisors={supervisors} 
+                    loadingSupervisors={loadingSupervisors} 
+                    isVisible={isSeller} 
+                  />
 
-              <SupervisorFields isVisible={isSupervisor} />
+                  <SupervisorFields isVisible={isSupervisor} />
+                </>
+              )}
             </div>
 
             {/* Footer Fijo */}
@@ -86,7 +96,7 @@ export function UserFormModal({ isOpen, onClose, user }: UserFormModalProps) {
               <Button type="button" variant="outline" onClick={closeAndReset}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending}>
+              <Button type="submit" disabled={isPending || isLoadingDetails}>
                 {isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

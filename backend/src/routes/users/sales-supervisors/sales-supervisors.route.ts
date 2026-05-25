@@ -32,15 +32,7 @@ export const salesSupervisorsRoutes = new Hono<ContextWithPrisma>()
     const supervisorDetails = await c
       .get("prisma")
       .salesSupervisorProfile.findUnique({
-        where: { id },
-        include: {
-        user: true, // 👈 Traer nombre y apellido
-        assignedSellers: { // Traer los datos de cada vendedor
-        include: {
-          user: true, 
-        },
-      },
-      },
+        where: { user_id: id },
       });
 
     return c.json<SuccessResponse<typeof supervisorDetails>>(
