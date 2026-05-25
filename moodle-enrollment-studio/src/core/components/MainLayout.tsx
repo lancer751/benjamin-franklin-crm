@@ -3,6 +3,7 @@ import { Search, Bell, HelpCircle, Users } from "lucide-react";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import Sidebar from "./Sidebar";
+import { translateEnum, RoleTranslationsMap } from "@/core/utils/dictionaries";
 
 const MainLayout = () => {
   const { searchQuery, setSearchQuery, placeholder } = useSearchStore();
@@ -36,7 +37,7 @@ const MainLayout = () => {
               <HelpCircle size={20} />
             </button>
             <div className="flex items-center gap-2 pl-2 border-l border-border">
-              <span className="text-xs text-muted-foreground">Rol: {user?.role?.name || "INVITADO"}</span>
+              <span className="text-xs text-muted-foreground">Rol: {translateEnum(user?.role?.name, RoleTranslationsMap)}</span>
               <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
                 <Users size={14} className="text-muted-foreground" />
               </div>

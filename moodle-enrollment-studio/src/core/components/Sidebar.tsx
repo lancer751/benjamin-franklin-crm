@@ -10,6 +10,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { logout } from "@/features/auth/services/authService";
 import { sidebarSections, SidebarSection, canAccess as canAccessGlobal } from "@/core/config/menu";
+import { translateEnum, RoleTranslationsMap } from "@/core/utils/dictionaries";
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
@@ -203,7 +204,9 @@ export default function Sidebar() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-sidebar-accent-foreground truncate">{userName}</p>
-          <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/60 truncate">{userRoleLabel}</p>
+          <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/60 truncate">
+            {translateEnum(user?.role?.name, RoleTranslationsMap)}
+          </p>
         </div>
       </div>
     </aside>

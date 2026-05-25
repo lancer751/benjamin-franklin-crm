@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCourseEditions } from "@/features/academic/services/courseService";
 import { getCategories } from "../services/categoryService";
 import { createProduct, updateProduct } from "../services/productService";
+import { getBenefits } from "../services/benefitService";
 import { createFAQ, updateFAQ } from "../services/faqService";
 import { createCertification, updateCertification } from "../services/certificationService";
 import { uploadImageToCloudinary } from "@/features/academic/services/uploadService";
@@ -139,6 +140,35 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     queryFn: getCategories,
     enabled: open,
   });
+
+  const { data: benefitsRes } = useQuery({
+    queryKey: ["benefits"],
+    queryFn: getBenefits,
+    enabled: open,
+  });
+  const availableBenefits = benefitsRes?.data || [];
+
+  // Pre-poblar los 4 beneficios institucionales en modo creación una vez cargados de la BD
+  useEffect(() => {
+    if (open && !isEdit && availableBenefits.length > 0 && form.benefit_ids.length === 0) {
+      const institutionalDescriptions = [
+        "CERTIFICACIÓN DE PRESTIGIO: Al completar con éxito nuestro programa, recibirás un certificado oficial de la UNI. ¡Acredita tu experiencia con nosotros!",
+        "ENFOQUE PRÁCTICO: Obtén habilidades aplicables directamente en el campo laboral, con prácticas en laboratorios y visitas técnicas.",
+        "EXCELENCIA ACADÉMICA: Nuestro programa ofrece una educación de calidad respaldada por una facultad experta y reconocida internacionalmente.",
+        "PREPARACIÓN INTEGRAL: Domina desde los fundamentos técnicos hasta la gestión estratégica, preparándote para destacar en un sector competitivo."
+      ];
+      const defaultIds = availableBenefits
+        .filter((b: any) => institutionalDescriptions.some(desc => b.description?.trim() === desc.trim()))
+        .map((b: any) => b.id);
+        
+      if (defaultIds.length > 0) {
+        setForm(prev => ({
+          ...prev,
+          benefit_ids: defaultIds,
+        }));
+      }
+    }
+  }, [availableBenefits, open, isEdit]);
 
   const editions = editionsRes?.success ? editionsRes.data : [];
   const selectedEdition = editions.find((e: any) => e.id === form.edition_id);

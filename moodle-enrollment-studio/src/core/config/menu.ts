@@ -44,9 +44,10 @@ export const canAccess = (userRole: string, permission: string): boolean => {
     ],
     // SALES_SUPERVISOR have full access to Academic, Commercial, and Support Catalog views
     SALES_SUPERVISOR: [
-      "academic:view", "courses:view", "calendar:view", "professors:view",
+      "academic:view", "courses:view", "calendar:view", //"professors:view",
       "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view",
-      "catalog:view", "certifications:view", "benefits:view", "faqs:view", "categories:view"
+      "catalog:view", "certifications:view", "benefits:view", "faqs:view", "categories:view",
+      "admin:view", "marketing:view", "finance:view"
     ],
     // SALES_REP (Asesor de Ventas) has access only to Core Academic and Commercial modules
     SALES_REP: [
@@ -56,7 +57,7 @@ export const canAccess = (userRole: string, permission: string): boolean => {
     // MARKETING has access to Prospects/Pipeline and the Marketing dashboard configuration
     MARKETING: [
       "commercial:view", "prospects:view", "pipeline:view",
-      "admin:view", "marketing:view"
+      "admin:view",
     ],
     // COLLECTIONS (Cobranzas) has access to Orders and Finance dashboards
     COLLECTIONS: [

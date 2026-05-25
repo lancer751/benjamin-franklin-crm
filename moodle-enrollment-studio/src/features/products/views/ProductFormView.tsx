@@ -142,6 +142,7 @@ const ProductFormView = () => {
             benefitIds={form.benefit_ids || []}
             errors={errors}
             onToggle={handleToggleBenefit}
+            setFieldValue={setFieldValue}
           />
 
           <CertificationCard

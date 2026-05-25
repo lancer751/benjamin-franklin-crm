@@ -1,7 +1,13 @@
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/core/components/ui/card";
 import { Checkbox } from "@/core/components/ui/checkbox";
-import { Gift, Info } from "lucide-react";
+import { Input } from "@/core/components/ui/input";
+import { Button } from "@/core/components/ui/button";
+import { Gift, Info, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/core/lib/utils";
+import { createBenefit } from "../../services/benefitService";
+import { toast } from "sonner";
 
 interface BenefitsCardProps {
   availableBenefits: any[];
@@ -9,6 +15,7 @@ interface BenefitsCardProps {
   benefitIds: string[];
   errors: Record<string, string>;
   onToggle: (id: string) => void;
+  setFieldValue: (key: string, value: any) => void;
 }
 
 const BenefitsCard = ({
@@ -17,7 +24,42 @@ const BenefitsCard = ({
   benefitIds,
   errors,
   onToggle,
+  setFieldValue,
 }: BenefitsCardProps) => {
+  const queryClient = useQueryClient();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newBenefitText, setNewBenefitText] = useState("");
+
+  const addMutation = useMutation({
+    mutationFn: (description: string) => createBenefit({ description }),
+    onSuccess: (res: any) => {
+      if (res?.success && res.data?.id) {
+        const newId = res.data.id;
+        // Agregar al array form.benefit_ids
+        setFieldValue("benefit_ids", [...benefitIds, newId]);
+        // Invalidar query "benefits" para refrescar el catálogo
+        queryClient.invalidateQueries({ queryKey: ["benefits"] });
+        toast.success("Beneficio creado y seleccionado automáticamente");
+        setNewBenefitText("");
+        setShowAddForm(false);
+      } else {
+        toast.error("Error al crear el beneficio");
+      }
+    },
+    onError: () => {
+      toast.error("Error al crear el beneficio");
+    }
+  });
+
+  const handleSaveBenefit = () => {
+    const trimmed = newBenefitText.trim();
+    if (!trimmed) {
+      toast.error("La descripción no puede estar vacía");
+      return;
+    }
+    addMutation.mutate(trimmed);
+  };
+
   return (
     <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
       <CardHeader className="bg-slate-50/50 border-b border-slate-100">
@@ -69,6 +111,7 @@ const BenefitsCard = ({
                       id={benefit.id} 
                       checked={isChecked}
                       onCheckedChange={() => onToggle(benefit.id)}
+                      onClick={(e) => e.stopPropagation()} // 👈 Detener propagación para evitar doble toggle
                       className="mt-0.5 border-slate-300 data-[state=checked]:bg-primary transition-all group-hover:scale-105"
                     />
                     <div className="grid gap-1">
@@ -86,6 +129,68 @@ const BenefitsCard = ({
               <Info size={12} /> {errors.benefit_ids}
             </p>
           )}
+
+          {/* Sección para añadir beneficio en caliente */}
+          <div className="border-t border-slate-100 pt-4 mt-6">
+            {!showAddForm ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl border-dashed border-2 hover:border-primary/50 text-slate-500 hover:text-primary gap-1.5 py-2.5 h-auto text-xs font-semibold"
+                onClick={() => setShowAddForm(true)}
+              >
+                <Plus size={14} /> Añadir Beneficio Personalizado
+              </Button>
+            ) : (
+              <div className="space-y-3 p-4 rounded-2xl border border-slate-200 bg-slate-50/30 max-w-md animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Nuevo Beneficio
+                  </label>
+                  <Input
+                    type="text"
+                    className="rounded-xl h-10 border-slate-200 text-xs font-medium placeholder:text-slate-400 bg-white"
+                    placeholder="Ej. Acceso de por vida a los laboratorios de cómputo..."
+                    value={newBenefitText}
+                    onChange={(e) => setNewBenefitText(e.target.value)}
+                    disabled={addMutation.isPending}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-xl text-xs bg-primary hover:bg-primary/95 text-white font-semibold gap-1 px-3"
+                    onClick={handleSaveBenefit}
+                    disabled={addMutation.isPending}
+                  >
+                    {addMutation.isPending ? (
+                      <>
+                        <Loader2 size={12} className="animate-spin" /> Guardando...
+                      </>
+                    ) : (
+                      "Guardar"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl text-xs border-slate-200 text-slate-600 hover:bg-slate-50"
+                    onClick={() => {
+                      setShowAddForm(false);
+                      setNewBenefitText("");
+                    }}
+                    disabled={addMutation.isPending}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
       </CardContent>
     </Card>
