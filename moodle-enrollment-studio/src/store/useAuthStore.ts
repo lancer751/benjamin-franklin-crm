@@ -4,7 +4,10 @@ import { persist } from 'zustand/middleware';
 interface User {
   id: string;
   first_name: string;
-  role: { name: 'ADMIN' | 'SALES_REP' | 'SUPERVISOR' | 'SALES_SUPERVISOR' };
+  last_name?: string;
+  email?: string;
+  is_active?: boolean;
+  role: { name: 'ADMIN' | 'SALES_REP' | 'SUPERVISOR' | 'SALES_SUPERVISOR' | string };
 }
 
 interface AuthState {
