@@ -43,11 +43,9 @@ export const api = hcWithType(SERVER_URL, {
           } else {
             // Si el refresh falla (ej. Refresh Token también expiró)
             useAuthStore.getState().setUser(null);
-            window.location.href = "/";
           }
         } catch (error) {
           useAuthStore.getState().setUser(null);
-          window.location.href = "/";
         }
       }
     }

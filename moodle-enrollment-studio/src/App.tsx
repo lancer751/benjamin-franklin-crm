@@ -31,6 +31,7 @@ import ProfessorsView from "@/features/academic/views/ProfessorsView";
 import ProspectsView from "@/features/leads/views/ProspectsView";
 import LeadDetailView from "@/features/leads/views/LeadDetailView";
 import PipelineView from "@/features/leads/views/PipelineView";
+import LeadFormView from "@/features/leads/views/LeadFormView";
 
 // Módulo de Ventas (Orders & Products)
 import OrdersView from "@/features/orders/views/OrdersView"; // Nueva Orden
@@ -114,7 +115,9 @@ const App = () => {
               
               {/* Ventas & Prospectos */}
               <Route path="/prospectos" element={<ProspectsView />} />
+              <Route path="/prospectos/nuevo" element={<LeadFormView />} />
               <Route path="/prospectos/:id" element={<LeadDetailView />} />
+              <Route path="/prospectos/:id/editar" element={<LeadFormView />} />
               <Route path="/pipeline" element={<PipelineView />} />
               <Route path="/ordenes" element={<OrdersView />} />
               <Route path="/ordenes/:id" element={<OrderDetailView />} />

@@ -19,6 +19,6 @@ export default defineConfig(({ mode }) => ({
       "@server": path.resolve(__dirname, "../backend/src"), 
       "@shared": path.resolve(__dirname, "../shared/src"),
     },
-    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
+    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core", "zod"],
   },
 }));

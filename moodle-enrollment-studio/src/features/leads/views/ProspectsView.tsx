@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, MoreVertical, ChevronLeft, ChevronRight, Eye, Edit, Trash2, Loader2, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import LeadFormModal from "../components/LeadFormModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllLeads, deleteLead } from "../services/leadService";
 import {
@@ -33,8 +32,6 @@ const stageColors: Record<string, string> = {
 };
 
 const ProspectsView = () => {
-  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
-  const [leadToEdit, setLeadToEdit] = useState<any>(null);
   const [leadToDelete, setLeadToDelete] = useState<any>(null);
 
   // Estados de Filtros
@@ -92,16 +89,6 @@ const ProspectsView = () => {
     }
   });
 
-  const handleEdit = (lead: any) => {
-    setLeadToEdit(lead);
-    setIsLeadModalOpen(true);
-  };
-
-  const handleCloseForm = () => {
-    setIsLeadModalOpen(false);
-    setTimeout(() => setLeadToEdit(null), 300);
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -110,7 +97,7 @@ const ProspectsView = () => {
           <h1 className="text-2xl font-bold text-foreground">Gestión de Prospectos</h1>
           <p className="text-sm text-muted-foreground mt-1">Administra y da seguimiento a los leads de inscripción.</p>
         </div>
-        <button onClick={() => setIsLeadModalOpen(true)} className="btn-primary">
+        <button onClick={() => navigate("/prospectos/nuevo")} className="btn-primary">
           <Plus size={18} /> Nuevo Prospecto
         </button>
       </div>
@@ -232,7 +219,7 @@ const ProspectsView = () => {
                             <Eye className="mr-2 h-4 w-4" />
                             Ver Detalle
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(p)} className="cursor-pointer">
+                          <DropdownMenuItem onClick={() => navigate(`/prospectos/${p.id}/editar`)} className="cursor-pointer">
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
@@ -277,12 +264,6 @@ const ProspectsView = () => {
           </>
         )}
       </div>
-
-      <LeadFormModal 
-        open={isLeadModalOpen} 
-        onClose={handleCloseForm} 
-        leadId={leadToEdit?.id || null} 
-      />
 
       {/* Diálogo de Confirmación para Eliminar */}
       <AlertDialog open={!!leadToDelete} onOpenChange={(open) => !open && setLeadToDelete(null)}>
