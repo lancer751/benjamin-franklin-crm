@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"; // 👈 useState agregado
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useQuery } from "@tanstack/react-query";
 import { getRoles, createUser, updateUser, getUserById, getSupervisors, updateSupervisorProfile, updateSellerProfile, getSellerProfileById, getSupervisorById } from "../services/userService";
 import { userFormSchema, type UserFormValues } from "../schemas/userFormSchema";
@@ -34,19 +34,6 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
     enabled: isOpen,
   });
   const supervisors = supervisorsRes?.success ? supervisorsRes.data : [];
-
-  // 2. Configuración del Formulario
-  const form = useForm<UserFormValues>({
-    // @ts-ignore
-    resolver: zodResolver(userFormSchema),
-    mode: "onTouched",
-    defaultValues: userAdapter.toForm(null, []),
-  });
-
-  const watchRoleId = form.watch("role_id");
-  const selectedRole = roles.find((r: any) => r.id === watchRoleId);
-  const isSeller = selectedRole?.name === "SALES_REP";
-  const isSupervisor = selectedRole?.name === "SALES_SUPERVISOR";
 
   // ==========================================
   // 4. Fetch Silencioso (On-Demand) para Edición & Consultas Dependientes
@@ -94,8 +81,44 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
   });
   const supervisorProfile = supervisorProfileRes?.success ? supervisorProfileRes.data : null;
 
-  // Consolidar perfil extendido
+  // Consolidar perfil extendido (Ubicado inmediatamente debajo de los perfiles para resolver TDZ)
   const extendedProfile = isEditingSeller ? sellerProfile : isEditingSupervisor ? supervisorProfile : null;
+
+  // Ahora sí inicializamos useForm ya con 'extendedProfile' y 'roles' plenamente declarados
+  const form = useForm<UserFormValues>({
+    resolver: standardSchemaResolver(userFormSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+    defaultValues: user
+      ? userAdapter.toForm(user, roles, extendedProfile)
+      : {
+        role: "SALES_REP", // 🌟 ¡VITAL! Zod ya sabe que debe validar el esquema de Vendedor
+        role_id: "",
+        first_name: "",
+        middle_name: "",
+        last_name: "",
+          email: "",
+          password: "",
+          cellphone: "",
+          is_active: true,
+          seller_profile: {
+            sales_target: 0,
+            assigned_supervisor_id: ""
+          }
+        } as any,
+  });
+
+  const watchRoleId = form.watch("role_id");
+  const selectedRole = roles.find((r: any) => r.id === watchRoleId);
+  const isSeller = selectedRole?.name === "SALES_REP";
+  const isSupervisor = selectedRole?.name === "SALES_SUPERVISOR";
+
+  // Sincronizar el campo discriminante 'role' cuando cambia el rol seleccionado
+  useEffect(() => {
+    if (selectedRole?.name) {
+      form.setValue("role", selectedRole.name as any);
+    }
+  }, [selectedRole, form]);
 
   // 3. Efecto de Sincronización Unificado
   useEffect(() => {
@@ -150,7 +173,7 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
     onClose();
   };
 
-  // 5. Mutación para Guardar
+  // 5. Mutación para Guardar (Posicionado en la parte inferior con todas sus dependencias declaradas)
   const activeUser = fullUserDetails || user;
 
   const mutation = useSaveUserMutation(

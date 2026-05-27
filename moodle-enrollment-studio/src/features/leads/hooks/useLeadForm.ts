@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema"; // ✅ cambia esto
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
@@ -14,13 +14,14 @@ export const useLeadForm = () => {
   const queryClient = useQueryClient();
   const mode = id ? "edit" : "create";
 
-  const form = useForm<LeadFormValues>({
-    resolver: zodResolver(leadFormSchema),
-    mode: "onBlur",
-    defaultValues: {
-      ...defaultLeadFormValues,
-    },
-  });
+const form = useForm<LeadFormValues>({
+  resolver: standardSchemaResolver(leadFormSchema), // ✅ cambia esto
+  mode: "onSubmit",
+  reValidateMode: "onChange",
+  defaultValues: {
+    ...defaultLeadFormValues,
+  },
+});
 
   const { data: leadRes, isLoading: isLoadingLead, isError: isErrorLead } = useQuery({
     queryKey: ["lead", id],
@@ -67,7 +68,7 @@ export const useLeadForm = () => {
         gender: data.gender || "NOT_SPECIFIED",
         email: data.email || "",
         secondary_email: data.secondary_email || "",
-        phone: data.phone || "",
+        cellphone: data.cellphone || "",
         address: data.address || "",
         second_address: data.second_address || "",
         profession: data.profession || "",

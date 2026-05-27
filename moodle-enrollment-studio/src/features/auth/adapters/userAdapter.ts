@@ -7,17 +7,19 @@ export const userAdapter = {
   toForm: (user: any, roles: any[], extendedProfile?: any): UserFormValues => {
     if (!user) {
       return {
+        id: "",
+        role: "SALES_REP",
         first_name: "", middle_name: "", last_name: "", email: "", password: "",
         cellphone: "", role_id: "", is_active: true,
         seller_profile: {
           sales_target: 0, assigned_supervisor_id: "",
         },
         sales_supervisor_profile: {
-          team_name: "", max_sellers: 0, discount_limit_percent: 0,
+          team_name: "", max_sellers: 0, discount_limit_percent: "0",
           can_assign_leads: false, can_approve_discounts: false,
           can_reassign_leads: false, can_cancel_orders: false, can_view_all_team_sales: false,
         }
-      };
+      } as any;
     }
 
     const matchedRole = roles.find((r: any) => r.name === user.role?.name);
@@ -27,6 +29,8 @@ export const userAdapter = {
     const supervisor = roleName === "SALES_SUPERVISOR" ? (extendedProfile || user.salesSupervisor || user.sales_supervisor_profile) : null;
 
     return {
+      id: user.id || "",
+      role: roleName,
       first_name: user.first_name || "",
       middle_name: user.middle_name || "",
       last_name: user.last_name || "",
@@ -43,14 +47,14 @@ export const userAdapter = {
       sales_supervisor_profile: {
         team_name: supervisor?.team_name || "",
         max_sellers: supervisor?.max_sellers || 0,
-        discount_limit_percent: supervisor?.discount_limit_percent || 0,
+        discount_limit_percent: String(supervisor?.discount_limit_percent || 0),
         can_assign_leads: supervisor?.can_assign_leads || false,
         can_approve_discounts: supervisor?.can_approve_discounts || false,
         can_reassign_leads: supervisor?.can_reassign_leads || false,
         can_cancel_orders: supervisor?.can_cancel_orders || false,
         can_view_all_team_sales: supervisor?.can_view_all_team_sales || false,
       }
-    };
+    } as any;
   },
 
   /**

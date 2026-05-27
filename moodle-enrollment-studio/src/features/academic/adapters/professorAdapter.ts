@@ -5,7 +5,7 @@ export const professorAdapter = {
     if (!apiData) {
       return {
         name: "",
-        last_name: "",
+        lastname: "",
         email: "",
         corporate_email: "",
         cellphone: "",
@@ -15,7 +15,7 @@ export const professorAdapter = {
 
     return {
       name: apiData.name || "",
-      last_name: apiData.lastname || apiData.last_name || "",
+      lastname: apiData.lastname || apiData.last_name || "",
       email: apiData.email || "",
       corporate_email: apiData.corporate_email || "",
       cellphone: apiData.cellphone || "",
@@ -26,7 +26,7 @@ export const professorAdapter = {
   toPayload: (formValues: ProfessorFormValues) => {
     return {
       name: formValues.name,
-      lastname: formValues.last_name,
+      lastname: formValues.lastname,
       email: formValues.email,
       corporate_email: formValues.corporate_email || null,
       cellphone: formValues.cellphone || null,

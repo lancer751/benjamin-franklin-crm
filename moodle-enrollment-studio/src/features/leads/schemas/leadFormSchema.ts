@@ -1,23 +1,18 @@
 import { z } from "zod";
 import { createLeadSchema } from "shared";
 
-// 🚀 TRUCO DE EXPERTO (MONKEY PATCH):
-// Como no podemos tocar el archivo de nuestro compañero y tiene un bug con 'z.uuid()',
-// le enseñamos a Zod en nuestro frontend qué hacer si alguien invoca esa función por error.
-if (typeof (z as any).uuid !== "function") {
-  (z as any).uuid = function () {
-    return this.string().uuid();
-  };
-}
+// 1. Mapeo nativo de errores en español compatible con React Hook Form (Zod v4)
+const spanishErrorMap: z.ZodErrorMap = (issue, ctx) => {
+  const defaultMsg = ctx?.defaultError || "Campo inválido";
 
-// 1. Zod Native ErrorMap adaptado estrictamente a las firmas de Zod v4
-const spanishErrorMap = (issue: z.ZodIssue, ctx: { defaultError: string; data: any }) => {
+  // Errores de tipo de dato o valores nulos/indefinidos
   if (issue.code === z.ZodIssueCode.invalid_type) {
     if (issue.received === "undefined" || issue.received === "null") {
       return { message: "Este campo es obligatorio" };
     }
   }
 
+  // Errores de longitud (mínimo de caracteres)
   if (issue.code === z.ZodIssueCode.too_small) {
     if (issue.type === "string") {
       if (issue.minimum === 1) {
@@ -27,11 +22,12 @@ const spanishErrorMap = (issue: z.ZodIssue, ctx: { defaultError: string; data: a
     }
   }
 
-  // En v4 validamos el formato del string de manera segura
-  if (issue.code === z.ZodIssueCode.invalid_string && (issue as any).validation === "email") {
+  // Validación de formato de correo electrónico
+  if (issue.code === z.ZodIssueCode.invalid_string && issue.validation === "email") {
     return { message: "Ingresa un correo electrónico válido" };
   }
 
+  // Errores específicos del DNI
   if (issue.path.includes("dni")) {
     if (
       issue.code === z.ZodIssueCode.too_small ||
@@ -43,27 +39,34 @@ const spanishErrorMap = (issue: z.ZodIssue, ctx: { defaultError: string; data: a
     }
   }
 
-  return { message: ctx.defaultError };
+  return { message: defaultMsg };
 };
 
-// Registrar el ErrorMap seguro
+// 🌟 Sobrescribimos el mapa de errores nativo de Zod para inyectar los mensajes a Hook Form
 z.setErrorMap(spanishErrorMap as any);
 
-// 2. Extensión del esquema de tu compañero
+// 2. Extensión limpia del esquema de tu compañero sin alterar shared ni backend
 export const leadFormSchema = createLeadSchema.extend({
-  dni: z.preprocess((val) => (val === "" ? null : val), z.string().length(8).nullable().optional() as any),
-  secondary_email: z.preprocess((val) => (val === "" ? null : val), z.string().email().nullable().optional() as any),
-  address: z.preprocess((val) => (val === "" ? null : val), z.string().min(10).nullable().optional() as any),
-  second_address: z.preprocess((val) => (val === "" ? null : val), z.string().min(10).nullable().optional() as any),
-  profession: z.preprocess((val) => (val === "" ? null : val), z.string().nullable().optional() as any),
-  primary_campaign_id: z.preprocess((val) => (val === "" || val === "none" ? undefined : val), z.string().uuid().optional() as any),
+  // ✅ Sobreescribe los campos del shared con mensajes en español
+  first_name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
+  middle_name: z.string().min(3, "El apellido paterno debe tener al menos 3 caracteres"),
+  last_name: z.string().min(3, "El apellido materno debe tener al menos 3 caracteres"),
+  email: z.string().email("Ingresa un correo electrónico válido"),
 
-  // Creamos el campo para el input de la UI
+  // campos opcionales
+  dni: z.preprocess((val) => (val === "" ? null : val), z.string().length(8, "El DNI debe tener exactamente 8 dígitos").nullable().optional()),
+  secondary_email: z.preprocess((val) => (val === "" ? null : val), z.string().email("Correo secundario inválido").nullable().optional()),
+  address: z.preprocess((val) => (val === "" ? null : val), z.string().min(10, "La dirección debe tener al menos 10 caracteres").nullable().optional()),
+  second_address: z.preprocess((val) => (val === "" ? null : val), z.string().min(10, "La dirección debe tener al menos 10 caracteres").nullable().optional()),
+  profession: z.preprocess((val) => (val === "" ? null : val), z.string().nullable().optional()),
+  primary_campaign_id: z.preprocess(
+    (val) => (val === "" || val === "none" ? undefined : val),
+    z.string().uuid().optional()
+  ),
   cellphone: z.string().min(9, "El teléfono debe tener al menos 9 dígitos"),
-
   source: z.string().default("MANUAL"),
   interaction_notes: z.string().optional().or(z.literal("")),
-}) as any; // Casteo de seguridad para evitar diferencias estrictas entre workspaces de node_modules
+});
 
 export type LeadFormValues = z.infer<typeof leadFormSchema>;
 
@@ -75,7 +78,7 @@ export const defaultLeadFormValues: Partial<LeadFormValues> = {
   gender: "NOT_SPECIFIED" as any,
   email: "",
   secondary_email: "",
-  cellphone: "", 
+  cellphone: "",
   address: "",
   second_address: "",
   profession: "",

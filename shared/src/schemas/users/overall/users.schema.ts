@@ -33,7 +33,7 @@ export const UserSchema = z.object({
   updated_at: z.coerce.date(),
 });
 
-const BaseCreateUserSchema = UserSchema.omit({
+export const BaseCreateUserSchema = UserSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,

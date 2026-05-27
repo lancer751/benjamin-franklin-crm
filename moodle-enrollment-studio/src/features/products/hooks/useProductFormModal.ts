@@ -119,7 +119,6 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
       };
 
       setForm(nextForm);
-      console.log("Formulario inicializado con estado:", nextForm);
       setHasCustomImage(!!product.image_url);
       setErrors({});
     } else if (open) {
@@ -418,7 +417,6 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         certification_ids,
       };
 
-      console.log("PAYLOAD FINAL TRANSFORMADO:", JSON.stringify(parsedPayload, null, 2));
 
       if (isEdit && initialData?.id) {
         return await updateProduct(initialData.id, parsedPayload as any);
@@ -501,7 +499,6 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
       const parsedValues = productFormSchema.parse(form);
       setErrors({});
-      console.log("Estado seleccionado antes de enviar:", parsedValues.sales_status);
       mutation.mutate(parsedValues);
     } catch (error) {
       if (error instanceof z.ZodError) {

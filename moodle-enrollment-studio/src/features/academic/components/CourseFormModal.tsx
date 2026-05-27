@@ -6,16 +6,52 @@ import { Label } from "@/core/components/ui/label";
 import { Textarea } from "@/core/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { UploadCloud, X, ImagePlus } from "lucide-react";
+import { UploadCloud, X } from "lucide-react";
 import { createCourse, updateCourse } from "../services/courseService";
 import { uploadImageToCloudinary } from "../services/uploadService";
-import { toast } from "sonner"; // O el toaster que uses de Shadcn
+import { toast } from "sonner";
 
-// 1. ARREGLAMOS EL ERROR DE TYPESCRIPT
+// Función helper para autogenerar códigos de curso master
+function generateCourseCode(name: string): string {
+  // 1. Eliminar acentos/tildes y pasar a mayúsculas
+  const cleanName = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .trim();
+
+  // 2. Extraer palabras (eliminando caracteres especiales)
+  const words = cleanName.replace(/[^A-Z0-9\s]/g, "").split(/\s+/).filter(Boolean);
+
+  let prefix = "";
+  if (words.length >= 4) {
+    // Extraemos la primera letra de cada una de las últimas 4 palabras
+    const lastFour = words.slice(-4);
+    prefix = lastFour.map(w => w[0]).join("");
+  } else if (words.length > 0) {
+    // Si hay menos de 4 palabras, extraemos del total de caracteres sin espacios
+    const joint = words.join("");
+    prefix = joint.slice(0, 4);
+    while (prefix.length < 4) {
+      prefix += "X";
+    }
+  } else {
+    prefix = "CURS";
+  }
+
+  // Asegurar que el prefijo tenga exactamente 4 letras
+  prefix = prefix.slice(0, 4);
+
+  // 3. Generar número aleatorio de 3 dígitos (para lograr los 7 caracteres requeridos)
+  const randomNum = Math.floor(100 + Math.random() * 900);
+
+  return `${prefix}${randomNum}`;
+}
+
 interface CourseFormModalProps {
   open: boolean;
   onClose: () => void;
-  initialData?: any; // El signo de interrogación significa que es opcional (para cuando es "Nuevo")
+  initialData?: any;
 }
 
 export default function CourseFormModal({ open, onClose, initialData }: CourseFormModalProps) {
@@ -33,7 +69,7 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // 2. EFECTO PARA RELLENAR DATOS (Cuando le das a "Editar")
+  // Sincronización de datos (Creación / Edición)
   useEffect(() => {
     if (initialData && open) {
       setCode(initialData.code || "");
@@ -41,15 +77,9 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
       setDescription(initialData.description || "");
       setType(initialData.type || "COURSE");
       setClassesNumber(initialData.classes_number || "");
-      
-      if (initialData.image_url) {
-        setPreviewUrl(initialData.image_url);
-      } else {
-        setPreviewUrl(null);
-      }
+      setPreviewUrl(initialData.image_url || null);
       setImageFile(null);
     } else if (open) {
-      // Si es "Nuevo Curso", limpiamos los campos
       setCode("");
       setName("");
       setDescription("");
@@ -60,7 +90,13 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
     }
   }, [initialData, open]);
 
-  // Manejador del Input de Imagen
+  // Autogenerar código sugerido en tiempo real al escribir el nombre (solo modo CREACIÓN)
+  useEffect(() => {
+    if (!initialData && open && name.trim().length >= 3) {
+      setCode(generateCourseCode(name));
+    }
+  }, [name, initialData, open]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -69,13 +105,12 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
     }
   };
 
-  // 3. CONFIGURAMOS LAS MUTACIONES
-  // Mutación para CREAR
+  // Mutaciones
   const createMutation = useMutation({
     mutationFn: createCourse,
     onSuccess: () => {
       toast.success("Curso creado exitosamente");
-      queryClient.invalidateQueries({ queryKey: ["courses"] }); // Refresca la tabla
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
       onClose();
     },
     onError: () => {
@@ -83,12 +118,11 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
     }
   });
 
-  // Mutación para ACTUALIZAR
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => updateCourse(id, data),
     onSuccess: () => {
       toast.success("Curso actualizado exitosamente");
-      queryClient.invalidateQueries({ queryKey: ["courses"] }); // Refresca la tabla
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
       onClose();
     },
     onError: () => {
@@ -96,10 +130,8 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
     }
   });
 
-  // 4. MANEJADOR DEL SUBMIT
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     let finalImageUrl = initialData?.image_url || '';
 
     try {
@@ -108,9 +140,8 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
         finalImageUrl = await uploadImageToCloudinary(imageFile);
       }
 
-      // Armamos el objeto tal como lo pide el Zod Schema del backend
       const payload = {
-        code: code.toUpperCase(), // Forzamos mayúsculas por convención
+        code: code.toUpperCase(),
         name,
         type,
         classes_number: Number(classesNumber) || 0,
@@ -119,10 +150,8 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
       };
 
       if (initialData?.id) {
-        // Si hay un ID, estamos EDITANDO
         updateMutation.mutate({ id: initialData.id, data: payload });
       } else {
-        // Si no hay ID, estamos CREANDO
         createMutation.mutate(payload);
       }
     } catch (error) {
@@ -136,154 +165,155 @@ export default function CourseFormModal({ open, onClose, initialData }: CourseFo
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          {/* Título dinámico dependiendo de si editamos o creamos */}
-          <DialogTitle>{initialData ? "Editar Curso Master" : "Nuevo Curso Master"}</DialogTitle>
+      <DialogContent className="sm:max-w-[720px] w-full p-6 gap-0">
+        <DialogHeader className="mb-4">
+          <DialogTitle>{initialData ? "Editar Curso/Programa" : "Nuevo Curso/Programa"}</DialogTitle>
           <DialogDescription>
             {initialData 
               ? "Modifica los detalles principales del curso." 
-              : "Crea la plantilla base de un nuevo curso. Luego podrás abrirle ediciones."}
+              : "Crea la plantilla base de un nuevo curso para el catálogo académico."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col max-h-[85vh] overflow-hidden py-4 relative">
-          {/* Cuerpo del Modal (Área de Scroll) */}
-          <div className="flex-1 overflow-y-auto px-1 pb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="code" className="text-sm font-medium">
-                  Código del Curso <span className="text-destructive">*</span>
-                </Label>
-                <Input 
-                  id="code" 
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="Ej: PYTHONC" 
-                  required 
-                  minLength={7}
-                  maxLength={7} 
-                />
-                <p className="text-[10px] text-muted-foreground">Exactamente 7 caracteres requeridos.</p>
-              </div>
+        {/* 🌟 REDISEÑO COMPACTO EN 2 COLUMNAS SIN SCROLL */}
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-5 items-start">
+          
+          {/* Columna Izquierda: Información del Curso (60%) */}
+          <div className="md:col-span-3 grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="code" className="text-xs font-semibold text-slate-700">
+                Código <span className="text-destructive">*</span>
+              </Label>
+              <Input 
+                id="code" 
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Ej: PYTHONC" 
+                required 
+                minLength={7}
+                maxLength={7} 
+                className="h-9 uppercase"
+              />
+            </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="name" className="text-sm font-medium">
-                  Nombre Oficial <span className="text-destructive">*</span>
-                </Label>
-                <Input 
-                  id="name" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ej: Python para Análisis de Datos" 
-                  required 
-                  minLength={8}
-                />
-                <p className="text-[10px] text-muted-foreground">Mínimo 8 caracteres.</p>
-              </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="classes_number" className="text-xs font-semibold text-slate-700">
+                N° de Clases <span className="text-destructive">*</span>
+              </Label>
+              <Input 
+                id="classes_number" 
+                type="number"
+                value={classesNumber}
+                onChange={(e) => setClassesNumber(e.target.value === "" ? "" : Number(e.target.value))}
+                placeholder="Ej: 12" 
+                required 
+                min={1}
+                className="h-9"
+              />
+            </div>
 
-              <div className="grid gap-2">
-                <Label className="text-sm font-medium">
-                  Tipo de Registro <span className="text-destructive">*</span>
-                </Label>
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="COURSE">Curso</SelectItem>
-                    <SelectItem value="PROGRAM">Programa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid gap-1.5 col-span-2">
+              <Label htmlFor="name" className="text-xs font-semibold text-slate-700">
+                Nombre Oficial <span className="text-destructive">*</span>
+              </Label>
+              <Input 
+                id="name" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Python para Análisis de Datos" 
+                required 
+                minLength={8}
+                className="h-9"
+              />
+            </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="classes_number" className="text-sm font-medium">
-                  Número de Clases <span className="text-destructive">*</span>
-                </Label>
-                <Input 
-                  id="classes_number" 
-                  type="number"
-                  value={classesNumber}
-                  onChange={(e) => setClassesNumber(e.target.value === "" ? "" : Number(e.target.value))}
-                  placeholder="Ej: 12" 
-                  required 
-                  min={1}
-                />
-              </div>
+            <div className="grid gap-1.5 col-span-2">
+              <Label className="text-xs font-semibold text-slate-700">
+                Tipo de Registro <span className="text-destructive">*</span>
+              </Label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Selecciona un tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="COURSE">Curso</SelectItem>
+                  <SelectItem value="PROGRAM">Programa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* ZONA DE CARGA DE IMAGEN */}
-              <div className="grid gap-2 md:col-span-2">
-                <Label className="text-sm font-medium">Portada del Curso</Label>
-                {previewUrl ? (
-                  <div className="relative w-full h-40 rounded-xl overflow-hidden border border-border shadow-sm group">
-                    <img 
-                      src={previewUrl} 
-                      alt="Vista previa de la portada" 
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2 h-8 w-8 z-10 transition-opacity"
-                      onClick={() => {
-                        setPreviewUrl(null);
-                        setImageFile(null);
-                      }}
-                    >
-                      <X size={16} />
-                    </Button>
-                  </div>
-                ) : (
-                  <Label 
-                    htmlFor="course-image" 
-                    className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-xl bg-muted/40 hover:bg-muted/80 hover:border-primary/50 transition-all cursor-pointer group"
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6 text-muted-foreground group-hover:text-primary transition-colors">
-                      <UploadCloud className="w-10 h-10 mb-3 opacity-50 group-hover:opacity-100 transition-opacity group-hover:-translate-y-1 duration-300" />
-                      <p className="mb-1 text-sm font-medium text-center px-4">
-                        Haz clic o arrastra una{" "}
-                        <span className="font-semibold text-primary">imagen</span> para la portada del curso
-                      </p>
-                      <p className="text-[11px] text-muted-foreground/70 mt-1">PNG, JPG o WEBP (Máx 2MB)</p>
-                    </div>
-                    <input 
-                      id="course-image" 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={handleImageChange}
-                    />
-                  </Label>
-                )}
-              </div>
-
-              <div className="grid gap-2 md:col-span-2">
-                <Label htmlFor="description" className="text-sm font-medium">
-                  Descripción Corta
-                </Label>
-                <Textarea 
-                  id="description" 
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Escribe un breve resumen de lo que trata el curso..." 
-                  rows={3} 
-                  className="resize-none"
-                />
-              </div>
+            <div className="grid gap-1.5 col-span-2">
+              <Label htmlFor="description" className="text-xs font-semibold text-slate-700">
+                Descripción Corta
+              </Label>
+              <Textarea 
+                id="description" 
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Breve resumen del curso..." 
+                rows={2} 
+                className="resize-none text-sm min-h-[68px]"
+              />
             </div>
           </div>
 
-          {/* Footer Fijo */}
-          <div className="shrink-0 bg-white pt-4 pb-2 border-t mt-2 flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+          {/* Columna Derecha: Dropzone de Imagen Simétrico (40%) */}
+          <div className="md:col-span-2 flex flex-col gap-1.5 h-full">
+            <Label className="text-xs font-semibold text-slate-700">Portada del Curso</Label>
+            
+            {previewUrl ? (
+              <div className="relative w-full h-[216px] rounded-xl overflow-hidden border border-border bg-slate-50 shadow-sm group">
+                <img 
+                  src={previewUrl} 
+                  alt="Portada" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-7 w-7 rounded-lg shadow-md z-10"
+                  onClick={() => {
+                    setPreviewUrl(null);
+                    setImageFile(null);
+                  }}
+                >
+                  <X size={14} />
+                </Button>
+              </div>
+            ) : (
+              <Label 
+                htmlFor="course-image" 
+                className="flex flex-col items-center justify-center w-full h-[216px] border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 hover:bg-slate-50 hover:border-primary/50 transition-all cursor-pointer group"
+              >
+                <div className="flex flex-col items-center justify-center text-center px-3">
+                  <UploadCloud className="w-8 h-8 mb-2 text-slate-400 group-hover:text-primary transition-colors group-hover:-translate-y-0.5 duration-300" />
+                  <p className="text-xs font-medium text-slate-600">
+                    Sube la <span className="text-primary font-semibold">portada</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1 max-w-[140px]">PNG, JPG o WEBP (Máx 2MB)</p>
+                </div>
+                <input 
+                  id="course-image" 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleImageChange}
+                />
+              </Label>
+            )}
+          </div>
+
+          {/* Pie del Formulario / Botones de Acción */}
+          <div className="col-span-1 md:col-span-5 border-t pt-4 mt-2 flex justify-end gap-2 w-full">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isPending} className="h-9 px-4">
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isUploading ? "Subiendo imagen..." : isPending ? "Guardando..." : "Guardar Curso"}
+            <Button type="submit" disabled={isPending} className="h-9 px-5 bg-blue-600 hover:bg-blue-700 text-white font-medium">
+              {isUploading ? "Subiendo..." : isPending ? "Guardando..." : "Guardar Curso"}
             </Button>
           </div>
+
         </form>
       </DialogContent>
     </Dialog>

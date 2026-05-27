@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createProfessor, updateProfessor, getProfessorById } from "../services/professorService";
@@ -11,7 +11,7 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
   const queryClient = useQueryClient();
 
   const form = useForm<ProfessorFormValues>({
-    resolver: zodResolver(professorFormSchema),
+    resolver: standardSchemaResolver(professorFormSchema),
     mode: "onTouched",
     defaultValues: professorAdapter.toForm(null),
   });
@@ -44,13 +44,12 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
 
   const mutation = useMutation({
     mutationFn: async (values: ProfessorFormValues) => {
-      const payload = professorAdapter.toPayload(values);
-
+      // Los valores viajan limpios en el formato nativo esperado por el backend
       if (!professor) {
-        await createProfessor(payload);
+        await createProfessor(values);
         return "create";
       } else {
-        await updateProfessor(professor.id, payload);
+        await updateProfessor(professor.id, values);
         return "update";
       }
     },

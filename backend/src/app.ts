@@ -13,6 +13,11 @@ export const app = new Hono();
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 const proofOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 app.use("*", logger());
+
+
+// app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
+app.use(secureHeaders());
+
 app.use(
   "*",
   cors({
@@ -24,8 +29,6 @@ app.use(
 );
 
 
-// app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
-app.use(secureHeaders());
 // Apply rate limiting middleware
 app.use(
   rateLimiter({

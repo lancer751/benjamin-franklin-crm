@@ -46,7 +46,7 @@ export const ProfessorFormModal = ({ isOpen, onClose, professor }: ProfessorForm
 
               <FormField
                 control={form.control}
-                name="last_name"
+                name="lastname"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Apellido</FormLabel>

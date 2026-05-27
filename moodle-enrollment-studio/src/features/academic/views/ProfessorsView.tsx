@@ -50,7 +50,7 @@ export default function ProfessorsView() {
               <TableHeader className="bg-muted/50">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="font-semibold text-muted-foreground">Nombre Completo</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">Correo Coorporativo</TableHead>
+                  <TableHead className="font-semibold text-muted-foreground">Correo Corporativo</TableHead>
                   <TableHead className="font-semibold text-muted-foreground">Celular</TableHead>
                   <TableHead className="font-semibold text-muted-foreground">ID Moodle</TableHead>
                   <TableHead className="w-[140px] text-right">Acciones</TableHead>
@@ -60,7 +60,7 @@ export default function ProfessorsView() {
                 {professors.map((professor: any) => (
                   <TableRow key={professor.id} className="group transition-colors">
                     <TableCell className="font-medium text-foreground">
-                      {professor.name} {professor.last_name}
+                      {`${professor.name?.trim() || ""} ${professor.lastname?.trim() || ""}`.trim()}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{professor.corporate_email}</TableCell>
                     <TableCell className="text-muted-foreground">{professor.cellphone || "-"}</TableCell>
