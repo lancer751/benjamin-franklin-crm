@@ -298,11 +298,11 @@ export const AcademicCalendarView = () => {
   return (
     <div className="flex flex-col h-full bg-slate-50 min-h-screen p-6 space-y-6 overflow-hidden">
       {/* Top Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between w-full">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Calendario Académico</h1>
         
-        <div className="flex items-center space-x-4">
-          <div className="relative w-64">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <div className="relative w-full sm:w-64 shrink-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -311,20 +311,22 @@ export const AcademicCalendarView = () => {
             />
           </div>
           
-          <Button variant="outline" className="bg-white border-none shadow-sm flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filtros
-          </Button>
-          
-          <div className="bg-white rounded-md shadow-sm p-1">
-            <ToggleGroup type="single" value={viewMode} onValueChange={(val: any) => val && setViewMode(val)}>
-              <ToggleGroupItem value="Mes" className="h-8 px-3 text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all">Mes</ToggleGroupItem>
-              <ToggleGroupItem value="Semestre" className="h-8 px-3 text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all">Semestre</ToggleGroupItem>
-              <ToggleGroupItem value="Año" className="h-8 px-3 text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all">Año</ToggleGroupItem>
-            </ToggleGroup>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between">
+            <Button variant="outline" className="bg-white border-none shadow-sm flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Filtros
+            </Button>
+            
+            <div className="bg-white rounded-md shadow-sm p-1 flex-1 sm:flex-initial">
+              <ToggleGroup type="single" value={viewMode} onValueChange={(val: any) => val && setViewMode(val)} className="flex-1 sm:flex-initial">
+                <ToggleGroupItem value="Mes" className="h-8 px-2 sm:px-3 text-xs sm:text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all flex-1 text-center">Mes</ToggleGroupItem>
+                <ToggleGroupItem value="Semestre" className="h-8 px-2 sm:px-3 text-xs sm:text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all flex-1 text-center">Semestre</ToggleGroupItem>
+                <ToggleGroupItem value="Año" className="h-8 px-2 sm:px-3 text-xs sm:text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all flex-1 text-center">Año</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </div>
 
-          <Avatar className="h-9 w-9 border border-border shadow-sm">
+          <Avatar className="h-9 w-9 border border-border shadow-sm hidden sm:inline-flex">
             <AvatarImage src="https://github.com/shadcn.png" />
             <AvatarFallback>U</AvatarFallback>
           </Avatar>
@@ -332,16 +334,16 @@ export const AcademicCalendarView = () => {
       </div>
 
       {/* Sub Header & Navigation */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+        <div className="w-full md:max-w-xl">
           <h2 className="text-lg font-semibold text-slate-800">Visualización de planificación</h2>
           <p className="text-sm text-slate-500">Superposición de ediciones consolidadas por curso para el periodo actual ({viewMode})</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full md:w-auto shrink-0">
           <Button variant="outline" size="sm" className="h-8 bg-white border-slate-200 text-slate-600 font-medium" onClick={handleToday}>
             Hoy
           </Button>
-          <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg shadow-sm border border-slate-100">
+          <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg shadow-sm border border-slate-100 shrink-0">
             <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100" onClick={handlePrev}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -356,7 +358,8 @@ export const AcademicCalendarView = () => {
       </div>
 
       {/* Gantt Chart Container */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col flex-1 min-h-[400px]">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col flex-1 min-h-[400px] overflow-x-auto">
+        <div className="min-w-[880px] lg:min-w-full flex flex-col flex-1">
         {/* Gantt Header */}
         <div className="grid grid-cols-[320px_1fr] border-b border-slate-100 bg-white sticky top-0 z-30 rounded-t-xl">
           <div className="p-4 font-semibold text-xs text-slate-500 tracking-wider flex items-center border-r border-slate-100">
@@ -509,10 +512,11 @@ export const AcademicCalendarView = () => {
             );
           })}
         </div>
+        </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-6 shrink-0 pt-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0 pt-2">
         {/* Card 1: TOTAL EDICIONES */}
         <Card className="border-none shadow-sm transition-all duration-300">
           <CardContent className="p-6">
