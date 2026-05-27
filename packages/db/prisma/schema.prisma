@@ -117,7 +117,6 @@ model Professor {
   moddle_account_id  Int                 @unique
   is_active          Boolean             @default(true)
   moodle_user_status MoodleAccountStatus @default(ACTIVE)
-  deleted_at         DateTime?     
   created_at         DateTime            @default(now())
   update_at          DateTime            @updatedAt
 
@@ -542,6 +541,7 @@ model Product {
   sales_status            SalesStatus @default(DRAFT)
   created_at              DateTime    @default(now())
   updated_at              DateTime    @updatedAt
+  brochure_url            String?
 
   orders_details        OrderDetail[]
   edition               Edition                   @relation(fields: [edition_id], references: [id])
@@ -555,11 +555,11 @@ model Product {
 
 // TODO: make FAQ 
 model FAQ {
-  id         String @id @default(uuid()) @db.Char(36)
-  question   String
-  answer     String @db.Text
-  order      Int    @default(0)
-  
+  id       String @id @default(uuid()) @db.Char(36)
+  question String
+  answer   String @db.Text
+  order    Int    @default(0)
+
   products FAQsOnProduct[]
 }
 

@@ -13,6 +13,7 @@ export const app = new Hono();
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 const proofOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 app.use("*", logger());
+app.use(secureHeaders());
 app.use(
   "*",
   cors({
@@ -25,13 +26,12 @@ app.use(
 
 
 // app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
-app.use(secureHeaders());
 // Apply rate limiting middleware
 app.use(
   rateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
     standardHeaders: true,
-    limit: 200, // Limit each client to 100 requests per window
+    limit: 100, // Limit each client to 100 requests per window
     keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "", // Use IP address as key
     message: {
       message: "Too many requests, please try again later",
