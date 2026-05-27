@@ -19,7 +19,12 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
       : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
   }`;
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -92,6 +97,13 @@ export default function Sidebar() {
   // Collapsible navigation sections state with exclusive accordion behavior
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
 
+  // Cerrar el menú lateral en móvil al navegar
+  useEffect(() => {
+    if (onClose) {
+      onClose();
+    }
+  }, [location.pathname]);
+
   // Dynamically calculate which section should be expanded based on current route
   useEffect(() => {
     const activeSection = filteredSections.find((section) =>
@@ -117,14 +129,18 @@ export default function Sidebar() {
   // Si isLoading es true o el usuario aún no existe, mostramos el Loader para evitar parpadeos
   if (isLoading || !user) {
     return (
-      <aside className="flex w-[230px] flex-col bg-sidebar text-sidebar-foreground shrink-0 border-r border-sidebar-border/40 items-center justify-center p-4">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-sidebar text-sidebar-foreground shrink-0 border-r border-sidebar-border/40 items-center justify-center p-4 transition-transform duration-300 ease-in-out md:relative md:w-[230px] flex flex-col ${
+        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      }`}>
         <Loader2 className="h-6 w-6 animate-spin text-sidebar-foreground/60" />
       </aside>
     );
   }
 
   return (
-    <aside className="flex w-[230px] flex-col bg-sidebar text-sidebar-foreground shrink-0 border-r border-sidebar-border/40">
+    <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-sidebar text-sidebar-foreground shrink-0 border-r border-sidebar-border/40 transition-transform duration-300 ease-in-out md:relative md:w-[230px] flex flex-col ${
+      isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+    }`}>
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">

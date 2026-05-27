@@ -58,7 +58,7 @@ export const useProfessorsView = () => {
   const filteredProfessors = useMemo(() => {
     return professors.filter((p: any) => {
       const searchLower = searchQuery.toLowerCase();
-      const fullName = `${p.name || ""} ${p.last_name || ""}`.toLowerCase();
+      const fullName = `${p.name || ""} ${p.lastname || ""}`.toLowerCase();
       const email = (p.email || "").toLowerCase();
       
       return fullName.includes(searchLower) || email.includes(searchLower);
@@ -88,7 +88,7 @@ export const useProfessorsView = () => {
   return {
     isLoading,
     isError,
-    professors: paginatedProfessors,
+    professors: filteredProfessors,
     totalFiltered: filteredProfessors.length,
     pagination: { currentPage, itemsPerPage },
     modal: { isOpen: isModalOpen, selectedProfessor },

@@ -100,7 +100,7 @@ export const useUsersView = () => {
   return {
     isLoading,
     isError,
-    users: paginatedUsers,
+    users: filteredUsers,
     totalFiltered: filteredUsers.length,
     kpis,
     filters: { roleFilter, statusFilter },

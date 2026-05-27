@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { 
   Plus, GraduationCap, MoreVertical, Loader2, User, Calendar, 
   AlertCircle, Clock 
 } from "lucide-react";
+import { ColumnDef } from "@tanstack/react-table";
 import { useProductsView } from "../hooks/useProductsView";
 import { formatToLocalTime } from "@/core/utils/date-utils";
 import { Badge } from "@/core/components/ui/badge";
@@ -25,6 +27,7 @@ import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/core/lib/utils";
 import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
+import { CustomTable } from "@/core/components/CustomTable";
 
 const ProductsView = () => {
   const { 
@@ -45,16 +48,144 @@ const ProductsView = () => {
     return <Badge variant="outline">{modality || "S/M"}</Badge>;
   };
 
-  const formatCurrency = (amount: number | string | null | undefined) => {
-    const num = Number(amount || 0);
-    return `S/ ${num.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-  };
-
   const isUrgent = (date: string | null | undefined) => {
     if (!date) return false;
     const days = differenceInDays(new Date(date), new Date());
     return days >= 0 && days <= 7;
   };
+
+  // 1. Columnas declaradas con useMemo para alto rendimiento y soporte CustomTable
+  const columns = useMemo<ColumnDef<any>[]>(
+    () => [
+      {
+        header: "Programa Académico",
+        accessorKey: "name",
+        cell: ({ row }) => {
+          const p = row.original;
+          return (
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                <GraduationCap size={20} className="text-primary" />
+              </div>
+              <div className="space-y-0.5 text-left">
+                <p className="font-bold text-slate-900 leading-tight">
+                  {p.name || "Sin nombre"}
+                </p>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <User size={12} className="shrink-0" />
+                  <span className="truncate max-w-[180px]">
+                    {p.edition?.teacher_fullname || "Profesor por asignar"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Calendario e Inicio",
+        accessorKey: "edition.start_date",
+        cell: ({ row }) => {
+          const p = row.original;
+          const startDate = p.edition?.start_date;
+          const urgent = isUrgent(startDate);
+          return (
+            <div className={cn(
+              "flex flex-col gap-1 text-left",
+              urgent ? "text-orange-600" : "text-slate-700"
+            )}>
+              <div className="flex items-center gap-2 font-semibold">
+                <Calendar size={14} className={urgent ? "animate-pulse" : ""} />
+                {startDate 
+                  ? format(formatToLocalTime(startDate), "d 'de' MMMM, yyyy", { locale: es }) 
+                  : "S/F"
+                }
+                {urgent && <AlertCircle size={14} />}
+              </div>
+              <p className="text-[10px] uppercase font-bold tracking-widest opacity-60">
+                {urgent ? "Inscripciones Urgentes" : "Fecha de Lanzamiento"}
+              </p>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Modalidad",
+        accessorKey: "edition.modality",
+        cell: ({ row }) => {
+          const p = row.original;
+          return (
+            <div className="flex flex-col gap-1 text-left">
+              <div>{getModalityBadge(p.edition?.modality)}</div>
+              <div>
+                <ProductStatusBadge status={p.sales_status} />
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Precios y Frescura",
+        accessorKey: "prices",
+        cell: ({ row }) => {
+          const p = row.original;
+          return (
+            <div className="flex flex-col gap-1 text-right w-full md:w-auto">
+              <span className="text-base font-black text-slate-900">
+                S/ {Number(p.prices?.[0]?.cash_price || 0).toFixed(2)}
+              </span>
+              <div className="flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground font-medium">
+                <Clock size={10} />
+                {p.updated_at 
+                  ? `Actualizado hace ${formatDistanceToNow(new Date(p.updated_at), { locale: es })}`
+                  : "Sin registro de cambios"
+                }
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "",
+        id: "actions",
+        cell: ({ row }) => {
+          const p = row.original;
+          return (
+            <div className="flex items-center justify-end w-full md:w-auto" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button 
+                    className="text-muted-foreground hover:text-slate-900 transition-colors p-2 hover:bg-slate-100 rounded-lg"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation();
+                    actions.navigate(`/productos/${p.id}/editar`);
+                  }} className="gap-2">
+                    <Plus size={14} /> Editar Producto
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="text-destructive focus:bg-destructive focus:text-destructive-foreground gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      actions.handleDeleteRequest(p);
+                    }}
+                  >
+                    <AlertCircle size={14} /> Eliminar Producto
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
+      },
+    ],
+    [actions.navigate, actions.handleDeleteRequest]
+  );
 
   return (
     <div className="space-y-6">
@@ -122,128 +253,12 @@ const ProductsView = () => {
             <p>{searchQuery ? "No se encontraron productos coincidentes." : "No hay productos registrados."}</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-slate-50/50">
-                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Programa Académico</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Calendario e Inicio</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Modalidad</th>
-                  <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Precios y Frescura</th>
-                  <th className="px-6 py-4"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((p: any) => {
-                  const basePrice = p.prices?.[0]?.cash_price || 0;
-                  const startDate = p.edition?.start_date;
-                  const urgent = isUrgent(startDate);
-
-                  return (
-                    <tr 
-                      key={p.id} 
-                      className="border-b border-border last:border-0 hover:bg-slate-50/80 transition-colors cursor-pointer group"
-                      onClick={() => actions.navigate(`/productos/${p.id}`)}
-                    >
-                    {/* 1. Programa Académico */}
-                    <td className="px-6 py-4 min-w-[300px]">
-                      <div className="flex items-center gap-3">
-                        <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <GraduationCap size={20} className="text-primary" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <p className="font-bold text-slate-900 leading-tight">
-                            {p.name || "Sin nombre"}
-                          </p>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <User size={12} className="shrink-0" />
-                            <span className="truncate max-w-[180px]">
-                              {p.edition?.teacher_fullname || "Profesor por asignar"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* 2. Calendario e Inicio */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className={cn(
-                        "flex flex-col gap-1",
-                        urgent ? "text-orange-600" : "text-slate-700"
-                      )}>
-                        <div className="flex items-center gap-2 font-semibold">
-                          <Calendar size={14} className={urgent ? "animate-pulse" : ""} />
-                          {startDate 
-                            ? format(formatToLocalTime(startDate), "d 'de' MMMM, yyyy", { locale: es }) 
-                            : "S/F"
-                          }
-                          {urgent && <AlertCircle size={14} />}
-                        </div>
-                        <p className="text-[10px] uppercase font-bold tracking-widest opacity-60">
-                          {urgent ? "Inscripciones Urgentes" : "Fecha de Lanzamiento"}
-                        </p>
-                      </div>
-                    </td>
-
-                    {/* 3. Modalidad */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getModalityBadge(p.edition?.modality)}
-                      <div className="mt-1">
-                        <ProductStatusBadge status={p.sales_status} />
-                      </div>
-                    </td>
-
-                    {/* 4. Precios y Frescura */}
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-base font-black text-slate-900">
-                          S/ {Number(p.prices?.[0]?.cash_price || 0).toFixed(2)}
-                        </span>
-                        <div className="flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground font-medium">
-                          <Clock size={10} />
-                          {p.updated_at 
-                            ? `Actualizado hace ${formatDistanceToNow(new Date(p.updated_at), { locale: es })}`
-                            : "Sin registro de cambios"
-                          }
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Acciones */}
-                    <td className="px-6 py-4 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button 
-                            className="text-muted-foreground hover:text-slate-900 transition-colors p-2 hover:bg-slate-100 rounded-lg"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical size={18} />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            actions.navigate(`/productos/${p.id}/editar`);
-                          }} className="gap-2">
-                            <Plus size={14} /> Editar Producto
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive focus:bg-destructive focus:text-destructive-foreground gap-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              actions.handleDeleteRequest(p);
-                            }}
-                          >
-                            <AlertCircle size={14} /> Eliminar Producto
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                );
-              })}
-              </tbody>
-            </table>
+          <div className="p-6 bg-white">
+            <CustomTable 
+              data={products} 
+              columns={columns} 
+              onRowClick={(p) => actions.navigate(`/productos/${p.id}`)}
+            />
           </div>
         )}
       </div>

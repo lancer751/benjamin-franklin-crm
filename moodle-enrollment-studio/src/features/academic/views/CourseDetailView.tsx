@@ -1,15 +1,9 @@
+import { useMemo } from "react";
 import { ArrowLeft, BookOpen, Calendar as CalendarIcon, MapPin, Plus, Edit, MoreVertical, Eye, Trash } from "lucide-react";
+import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/core/components/ui/button";
 import { Badge } from "@/core/components/ui/badge";
 import { Card, CardContent } from "@/core/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/core/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/core/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/core/components/ui/dropdown-menu";
 import {
@@ -25,6 +19,7 @@ import {
 import { useCourseDetail } from "../hooks/useCourseDetail";
 import { translateEnum, EditionStatusMap, ModalityMap } from "@/core/utils/dictionaries";
 import { useNavigate } from "react-router-dom";
+import { CustomTable } from "@/core/components/CustomTable";
 
 export default function CourseDetailView() {
   const navigate = useNavigate();
@@ -33,10 +28,123 @@ export default function CourseDetailView() {
     isLoading,
     isError,
     modals,
-    selection,
     actions,
     deleteIsPending,
   } = useCourseDetail();
+
+  // 1. Columnas declaradas con useMemo para alto rendimiento y soporte CustomTable responsiva
+  const columns = useMemo<ColumnDef<any>[]>(
+    () => [
+      {
+        header: "Nro. Edición",
+        accessorKey: "edition_number",
+        cell: ({ row }) => (
+          <span className="bg-muted/50 px-2 py-1 rounded-md border border-border/40 font-mono text-sm">
+            {row.original.edition_number || "-"}
+          </span>
+        ),
+      },
+      {
+        header: "Fecha de Inicio",
+        accessorKey: "start_date",
+        cell: ({ row }) => {
+          const startDate = row.original.start_date;
+          return (
+            <div className="flex items-center gap-2 whitespace-nowrap text-sm text-left">
+              <CalendarIcon size={14} className="text-muted-foreground/60" />
+              <span>
+                {startDate ? actions.adjustDateTz(startDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "TBD"}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Fecha de Finalización",
+        accessorKey: "end_date",
+        cell: ({ row }) => {
+          const endDate = row.original.end_date;
+          return (
+            <div className="flex items-center gap-2 whitespace-nowrap text-sm text-left">
+              <CalendarIcon size={14} className="text-muted-foreground/60" />
+              <span>
+                {endDate ? actions.adjustDateTz(endDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "TBD"}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Modalidad",
+        accessorKey: "modality",
+        cell: ({ row }) => {
+          const modality = row.original.modality?.name || row.original.modality;
+          return (
+            <Badge variant="outline" className="bg-muted/20 text-muted-foreground hover:bg-muted/40 font-medium whitespace-nowrap text-left">
+              <MapPin className="mr-1.5 h-3 w-3 opacity-70 shrink-0" />
+              {translateEnum(modality, ModalityMap)}
+            </Badge>
+          );
+        },
+      },
+      {
+        header: "Estado",
+        accessorKey: "edition_status",
+        cell: ({ row }) => {
+          const status = row.original.edition_status;
+          return (
+            <Badge
+              variant="secondary"
+              className={
+                status === "OPEN" || status === "IN_PROGRESS"
+                  ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-transparent shadow-none"
+                  : status === "SCHEDULED"
+                  ? "bg-blue-100 text-blue-800 hover:bg-blue-100 border-transparent shadow-none"
+                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-100 border-transparent shadow-none"
+              }
+            >
+              {translateEnum(status, EditionStatusMap)}
+            </Badge>
+          );
+        },
+      },
+      {
+        header: "Acciones",
+        cell: ({ row }) => {
+          const edition = row.original;
+          return (
+            <div className="flex items-center justify-end w-full md:w-auto">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors opacity-100 md:opacity-75 group-hover:opacity-100">
+                    <MoreVertical size={16} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate(`/admin/academic/editions/${edition.id}`)} className="gap-2 cursor-pointer">
+                    <Eye size={15} className="text-muted-foreground" />
+                    <span>Ver Detalle</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate(`/admin/academic/editions/${edition.id}/editar`)} className="gap-2 cursor-pointer">
+                    <Edit size={15} className="text-muted-foreground" />
+                    <span>Editar Edición</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => actions.openDelete(edition.id)} 
+                    className="gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                  >
+                    <Trash size={15} />
+                    <span>Eliminar</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
+      },
+    ],
+    [actions.adjustDateTz, actions.openDelete, navigate]
+  );
 
   if (isLoading) {
     return (
@@ -80,7 +188,7 @@ export default function CourseDetailView() {
       </div>
 
       {/* Hero Section del Perfil del Curso */}
-      <Card className="overflow-hidden border-border/60 shadow-sm relative rounded-xl">
+      <Card className="overflow-hidden border-border/60 shadow-sm relative rounded-xl bg-white">
         {/* Decorative Background Banner */}
         <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent h-32 w-full absolute top-0 left-0"></div>
         
@@ -135,7 +243,7 @@ export default function CourseDetailView() {
           </Button>
         </div>
 
-        <Card className="shadow-sm border-border/60 overflow-hidden">
+        <Card className="shadow-sm border-border/60 overflow-hidden p-6 bg-white rounded-xl">
           {(!course.editions || course.editions.length === 0) ? (
             <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-muted/10">
               <div className="bg-muted p-5 rounded-full mb-5 shadow-inner">
@@ -156,96 +264,10 @@ export default function CourseDetailView() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-semibold text-muted-foreground pl-6">Nro. Edición</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">Fecha de Inicio</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">Fecha de Finalización</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">Modalidad</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">Estado</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground text-right pr-6">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {course?.editions?.map((edition: any) => (
-                  <TableRow key={edition.id} className="group transition-colors hover:bg-muted/30">
-                    <TableCell className="font-medium text-foreground pl-6">
-                      <span className="bg-muted/50 px-2 py-1 rounded-md border border-border/40 font-mono text-sm">
-                        {edition.edition_number || "-"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <div className="flex items-center gap-2 whitespace-nowrap text-sm">
-                        <CalendarIcon size={14} className="text-muted-foreground/60" />
-                        <span>
-                          {edition.start_date ? actions.adjustDateTz(edition.start_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "TBD"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <div className="flex items-center gap-2 whitespace-nowrap text-sm">
-                        <CalendarIcon size={14} className="text-muted-foreground/60" />
-                        <span>
-                          {edition.end_date ? actions.adjustDateTz(edition.end_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "TBD"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-muted/20 text-muted-foreground hover:bg-muted/40 font-medium">
-                        <MapPin className="mr-1.5 h-3 w-3 opacity-70" />
-                        {translateEnum(edition.modality?.name || edition.modality, ModalityMap)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={
-                          edition.edition_status === "OPEN" || edition.edition_status === "IN_PROGRESS"
-                            ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-transparent shadow-none"
-                            : edition.edition_status === "SCHEDULED"
-                            ? "bg-blue-100 text-blue-800 hover:bg-blue-100 border-transparent shadow-none"
-                            : "bg-zinc-100 text-zinc-700 hover:bg-zinc-100 border-transparent shadow-none"
-                        }
-                      >
-                        {translateEnum(edition.edition_status, EditionStatusMap)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right pr-5">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors opacity-70 group-hover:opacity-100">
-                            <MoreVertical size={16} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/admin/academic/editions/${edition.id}`)} className="gap-2 cursor-pointer">
-                            <Eye size={15} className="text-muted-foreground" />
-                            <span>Ver Detalle</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/admin/academic/editions/${edition.id}/editar`)} className="gap-2 cursor-pointer">
-                            <Edit size={15} className="text-muted-foreground" />
-                            <span>Editar Edición</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => actions.openDelete(edition.id)} 
-                            className="gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
-                          >
-                            <Trash size={15} />
-                            <span>Eliminar</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <CustomTable data={course.editions} columns={columns} />
           )}
         </Card>
       </div>
-
-      
 
       <AlertDialog open={modals.showDeleteAlert} onOpenChange={modals.setShowDeleteAlert}>
         <AlertDialogContent>
