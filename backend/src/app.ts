@@ -21,7 +21,13 @@ app.use(secureHeaders());
 app.use(
   "*",
   cors({
-    origin: allowedOrigins,
+    origin: (origin) => {
+      // Si no hay origen (ej. peticiones de servidor a servidor) o coincide con tu lista
+      if (!origin || allowedOrigins.includes(origin)) {
+        return origin;
+      }
+      return null;
+    },
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowHeaders: ["Content-Type", "Authorization", "xxx-csrf-access-token"],
