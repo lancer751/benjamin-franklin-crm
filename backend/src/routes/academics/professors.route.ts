@@ -96,7 +96,7 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
       const { id } = c.req.valid("param");
       const professorData = c.req.valid("json");
 
-      // ── 1. Verify professor exists and isn't deleted ───────────────────────
+      //Verify professor exists 
       const existing = await prisma.professor.findUnique({
         where: { id },
         select: {
@@ -104,7 +104,6 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
           email: true,
           cellphone: true,
           moddle_account_id: true,
-          deleted_at: true,
         },
       });
 
@@ -112,13 +111,7 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
         throw new HTTPException(404, { message: "Professor not found" });
       }
 
-      if (existing.deleted_at !== null) {
-        throw new HTTPException(409, {
-          message: "Cannot update a deleted professor. Restore them first.",
-        });
-      }
-
-      // ── 2. Unique conflict checks (only when the value actually changes) ───
+      // Unique conflict checks (only when the value actually changes) 
       if (professorData.email && professorData.email !== existing.email) {
         const conflict = await prisma.professor.findUnique({
           where: { email: professorData.email },
@@ -161,10 +154,6 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
         }
       }
 
-      // ── 3. Warn if trying to reactivate via PUT instead of the restore endpoint
-      // moodle_user_status changes are allowed but suspension should go
-      // through DELETE and restoration through PATCH /:id/restore for clarity
-
       const updatedProfessor = await prisma.professor.update({
         where: { id },
         data: professorData,
@@ -191,7 +180,6 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
         id: true,
         name: true,
         lastname: true,
-        deleted_at: true,
         assigned_editions: {
           select: {
             edition_id: true,
@@ -210,72 +198,66 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
       throw new HTTPException(404, { message: "Professor not found" });
     }
 
-    if (existing.deleted_at !== null) {
+    if (existing.assigned_editions.length > 0) {
       throw new HTTPException(409, {
-        message: "Professor is already deleted",
+        message: `Cannot delete professor assigned to ${existing.assigned_editions.length} edition(s). Unassign them first.`,
       });
     }
 
-    // ── 2. Check for blocking active assignments ───────────────────────────
-    const BLOCKING_STATUSES = ["IN_PROGRESS", "OPEN"] as const;
-
-    const blockingEditions = existing.assigned_editions.filter(({ editions }) =>
-      BLOCKING_STATUSES.includes(
-        editions.edition_status as (typeof BLOCKING_STATUSES)[number],
-      ),
-    );
-
-    if (blockingEditions.length > 0) {
-      const codes = blockingEditions
-        .map((e) => e.editions.edition_code)
-        .join(", ");
-      throw new HTTPException(409, {
-        message: `Cannot deactivate professor "${existing.name} ${existing.lastname}" — they are assigned to active or open editions: ${codes}. Reassign those editions first.`,
-      });
-    }
-
-    // ── 3. Transaction: unassign from future editions + soft delete ────────
-    const REMOVABLE_STATUSES = ["DRAFT", "SCHEDULED"] as const;
-
-    const removableEditionIds = existing.assigned_editions
-      .filter(({ editions }) =>
-        REMOVABLE_STATUSES.includes(
-          editions.edition_status as (typeof REMOVABLE_STATUSES)[number],
-        ),
-      )
-      .map((e) => e.edition_id);
-
-    await prisma.$transaction(async (tx) => {
-      // Remove from editions that haven't started yet
-      if (removableEditionIds.length > 0) {
-        await tx.proffessorsOnEditions.deleteMany({
-          where: {
-            professor_id: id,
-            edition_id: { in: removableEditionIds },
-          },
-        });
-      }
-
-      // Soft delete
-      await tx.professor.update({
-        where: { id },
-        data: {
-          is_active: false,
-          moodle_user_status: "SUSPENDED",
-          deleted_at: new Date(),
-        },
-      });
+    await prisma.professor.delete({
+      where: { id },
     });
 
     return c.json<SuccessResponse>(
       {
         success: true,
-        message: `Professor "${existing.name} ${existing.lastname}" has been deactivated and removed from ${removableEditionIds.length} upcoming edition(s)`,
+        message: `Professor "${existing.name} ${existing.lastname}" has been deleted successfully.`,
       },
       200,
     );
   })
-  // Restores a soft-deleted professor back to active status
+  // Desactivate professor (soft delete) - sets is_active to false and moodle_user_status to SUSPENDED
+  .patch(
+    `${UUID_ROUTE}/desactivate`,
+    zValidator("param", validateIdParamSchema),
+    async (c) => {
+      const prisma = c.get("prisma");
+      const { id } = c.req.valid("param");
+
+      const existing = await prisma.professor.findUnique({
+        where: { id },
+        select: { id: true, name: true, lastname: true, is_active: true },
+      });
+
+      if (!existing) {
+        throw new HTTPException(404, { message: "Professor not found" });
+      }
+
+      if (!existing.is_active) {
+        throw new HTTPException(409, {
+          message: "Professor is already deactivated",
+        });
+      }
+
+      const desactivated = await prisma.professor.update({
+        where: { id },
+        data: {
+          is_active: false,
+          moodle_user_status: "SUSPENDED",
+        },
+      });
+
+      return c.json<SuccessResponse<typeof desactivated>>(
+        {
+          success: true,
+          message: `Professor "${existing.name} ${existing.lastname}" has been deactivated`,
+          data: desactivated,
+        },
+        200,
+      );
+    },
+  )
+  // Restore professor (undo soft delete) - sets is_active to true and moodle_user_status to ACTIVE
   .patch(
     `${UUID_ROUTE}/restore`,
     zValidator("param", validateIdParamSchema),
@@ -285,14 +267,14 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
 
       const existing = await prisma.professor.findUnique({
         where: { id },
-        select: { id: true, name: true, lastname: true, deleted_at: true },
+        select: { id: true, name: true, lastname: true, is_active: true },
       });
 
       if (!existing) {
         throw new HTTPException(404, { message: "Professor not found" });
       }
 
-      if (existing.deleted_at === null) {
+      if (existing.is_active) {
         throw new HTTPException(409, {
           message: "Professor is already active",
         });
@@ -303,7 +285,6 @@ export const professorRoutes = new Hono<ContextWithPrisma>()
         data: {
           is_active: true,
           moodle_user_status: "ACTIVE",
-          deleted_at: null,
         },
       });
 

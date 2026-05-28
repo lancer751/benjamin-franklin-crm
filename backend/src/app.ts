@@ -16,11 +16,7 @@ const rawOrigins = process.env.ALLOWED_ORIGINS || "https://benjamin-franklin-crm
 const allowedOrigins = rawOrigins.split(",").map(o => o.trim());
 const proofOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 app.use("*", logger());
-
-
-// app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
 app.use(secureHeaders());
-
 app.use(
   "*",
   cors({
@@ -44,12 +40,16 @@ app.use(
 );
 
 
+<<<<<<< HEAD
+=======
+// app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
+>>>>>>> origin/backend
 // Apply rate limiting middleware
 app.use(
   rateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
     standardHeaders: true,
-    limit: 200, // Limit each client to 100 requests per window
+    limit: 100, // Limit each client to 100 requests per window
     keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "", // Use IP address as key
     message: {
       message: "Too many requests, please try again later",

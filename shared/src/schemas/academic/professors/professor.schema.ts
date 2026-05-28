@@ -9,6 +9,7 @@ export const BaseProfessorSchema = z.object({
   email: z.email("Invalid email"),
   corporate_email: z.email("Invalid corporate email"),
   cellphone: z.string().length(9),
+  is_active: z.boolean().default(true),
   moddle_account_id: z.number().int().positive(),
   moodle_user_status: MoodleAccountStatusEnum.default("ACTIVE"),
   created_at: z.coerce.date,
@@ -19,9 +20,11 @@ export const BaseCreateProfessorSchema = BaseProfessorSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
-});
+})
 
-export const UpdateProfessorSchema = BaseCreateProfessorSchema.partial();
+export const UpdateProfessorSchema = BaseCreateProfessorSchema.omit({
+  is_active: true,
+}).partial();
 
 export type Professor = z.infer<typeof BaseProfessorSchema>;
 export type CreateProfessorDTO = z.infer<typeof BaseCreateProfessorSchema>;

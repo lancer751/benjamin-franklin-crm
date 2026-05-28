@@ -37,6 +37,7 @@ export const ProductSchema = z.object({
   presale_price: DecimalField.optional().nullable(),
   discount_price: DecimalField.optional().nullable().default(0),
   discount_expires_at: z.coerce.date().optional().nullable(),
+  brochure_url: OptionalUrl,
   installments_max_number: z.number().int().min(1).max(24),
   installments_min_number: z.number().int().min(1),
   sales_status: SalesStatusSchema.default("DRAFT"),

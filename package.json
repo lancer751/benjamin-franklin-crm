@@ -9,6 +9,8 @@
     "./shared",
     "./packages/**",
     "moodle-enrollment-studio"
+    "./commercial-website",
+    "./packages/**"
   ],
   "scripts": {
     "dev": "turbo dev",
@@ -24,7 +26,7 @@
   },
   "author": "lauwc",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "private": true,
   "devDependencies": {
     "@types/pg": "^8.20.0",

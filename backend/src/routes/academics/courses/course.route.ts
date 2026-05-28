@@ -9,25 +9,28 @@ import { z } from "zod";
 import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 
 export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
-  .use(verifyUserRoleAccess("ADMIN", "MARKETING"))
-  .get("/",  async (c) => {
-    const courses = await c.get("prisma").course.findMany({
-      orderBy: {
-        created_at: "desc",
-      },
-    });
+  .get(
+    "/",
+    verifyUserRoleAccess("SALES_SUPERVISOR", "SALES_REP", "ADMIN"),
+    async (c) => {
+      const courses = await c.get("prisma").course.findMany({
+        orderBy: {
+          created_at: "desc",
+        },
+      });
 
-    return c.json(
-      {
-        success: true,
-        data: courses,
-      },
-      200,
-    );
-  })
+      return c.json(
+        {
+          success: true,
+          data: courses,
+        },
+        200,
+      );
+    },
+  )
   .get(
     UUID_ROUTE,
-    
+    verifyUserRoleAccess("ADMIN"),
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
@@ -46,14 +49,14 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
               end_date: true,
               created_at: true,
               edition_status: true,
-              edition_number: true
-            }
+              edition_number: true,
+            },
           },
           studyPlans: {
-            include:  {
-              modules: true
-            }
-          }
+            include: {
+              modules: true,
+            },
+          },
         },
       });
 
@@ -71,22 +74,27 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
       );
     },
   )
-  .post("/", verifyUserRoleAccess("ADMIN"),  zValidator("json", CreateCourseSchema), async (c) => {
-    const courseData = c.req.valid("json");
+  .post(
+    "/",
+    verifyUserRoleAccess("ADMIN"),
+    zValidator("json", CreateCourseSchema),
+    async (c) => {
+      const courseData = c.req.valid("json");
 
-    const newCourse = await c.get("prisma").course.create({
-      data: courseData,
-    });
+      const newCourse = await c.get("prisma").course.create({
+        data: courseData,
+      });
 
-    return c.json<SuccessResponse<typeof newCourse>>(
-      {
-        success: true,
-        message: "Course created successfully",
-        data: newCourse,
-      },
-      201,
-    );
-  })
+      return c.json<SuccessResponse<typeof newCourse>>(
+        {
+          success: true,
+          message: "Course created successfully",
+          data: newCourse,
+        },
+        201,
+      );
+    },
+  )
   .put(
     UUID_ROUTE,
     verifyUserRoleAccess("ADMIN"),
