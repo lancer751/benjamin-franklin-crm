@@ -22,10 +22,16 @@ app.use(
   "*",
   cors({
     origin: (origin) => {
-      // Si no hay origen (ej. peticiones de servidor a servidor) o coincide con tu lista
+      console.log("=== CORS DEBUG ===");
+      console.log("1. Origen entrante del navegador:", origin);
+      console.log("2. Lista de orígenes permitidos:", allowedOrigins);
+      
       if (!origin || allowedOrigins.includes(origin)) {
+        console.log("3. RESULTADO: APROBADO ✅");
         return origin;
       }
+      
+      console.log("3. RESULTADO: DENEGADO ❌");
       return null;
     },
     credentials: true,

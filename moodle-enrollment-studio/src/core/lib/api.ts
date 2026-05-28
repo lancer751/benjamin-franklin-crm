@@ -20,7 +20,13 @@ export const api = hcWithType(SERVER_URL, {
     };
 
     // 2. Ejecutamos la petición original
-    const targetInput = input;
+const targetInput = input;
+
+    // 🕵️‍♂️ LOG DE DEBUGGING PARA CHROME:
+    console.log("=== FRONTEND API DEBUG ===");
+    console.log("URL del Backend configurada en Vercel:", SERVER_URL);
+    console.log("Intentando hacer fetch a:", targetInput);
+
     let res = await fetch(targetInput, prepareRequestInit(requestInit));
 
     // 🛑 INTERCEPTOR: Si el Access Token expiró (401 Unauthorized)
