@@ -1,7 +1,8 @@
+import { envParsed } from "@/env";
 import type { RoleAccess } from "@repo/database";
 import { sign } from "hono/jwt";
 import type { JWTPayload } from "hono/utils/jwt/types";
-import crypto from "node:crypto"
+import crypto from "node:crypto";
 
 export type AuthTokenPayload = {
   userId: string;
@@ -16,11 +17,13 @@ export function createAccessToken(
   const payload: AuthTokenPayload = {
     userId,
     role,
-    exp: Math.floor(Date.now() / 1000) + 60 * 15, // Token expires in 5 minutes
-    type: "access"
+    exp:
+      Math.floor(Date.now() / 1000) +
+      60 * envParsed.ACCESS_TOKEN_EXP_TIME, // Token expires in 5 minutes
+    type: "access",
   };
 
-  return sign(payload, process.env.ACCESS_TOKEN_SECRET!, "HS256");
+  return sign(payload, envParsed.ACCESS_TOKEN_SECRET, "HS256");
 }
 
 export function createRefreshToken(
@@ -30,14 +33,15 @@ export function createRefreshToken(
   const payload: AuthTokenPayload = {
     userId,
     role,
-    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // Token expires in 7 days
-    type: "refresh"
+    exp:
+      Math.floor(Date.now() / 1000) +
+      60 * 60 * 24 * envParsed.REFRESH_TOKEN_EXP_TIME, // Token expires in 7 days
+    type: "refresh",
   };
 
-  return sign(payload, process.env.REFRESH_TOKEN_SECRET!, "HS256");
+  return sign(payload, envParsed.REFRESH_TOKEN_SECRET, "HS256");
 }
 
-
 export function createCsrfToken() {
-  return crypto.randomBytes(32).toString("hex")
+  return crypto.randomBytes(32).toString("hex");
 }

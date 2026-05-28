@@ -8,10 +8,11 @@ import { prisma } from "@repo/database";
 import { secureHeaders } from "hono/secure-headers";
 import { rateLimiter } from "hono-rate-limiter";
 import { csrf } from "hono/csrf";
+import { envParsed } from "./env";
 
 export const app = new Hono();
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
-const proofOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
+const allowedOrigins = envParsed.ALLOWED_ORIGINS;
+const proofOrigins = envParsed.PROOF_ORIGINS;
 app.use("*", logger());
 app.use(secureHeaders());
 app.use(
@@ -98,7 +99,7 @@ app.get("/health", async (c) => {
 });
 
 export default {
-  port: Number(process.env.PORT) || 3000,
+  port: envParsed.PORT,
   hostname: "0.0.0.0",
   fetch: app.fetch,
 };

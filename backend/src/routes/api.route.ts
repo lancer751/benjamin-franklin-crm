@@ -8,6 +8,7 @@ import { academicRoutes } from "./academics/academics.index";
 import { orderRoutes } from "./products/orders/order.route";
 import { productRoutes } from "./products/product.index";
 import { storefrontRoute } from "./storefront/storefront.route";
+import { productComercialContent } from "./content/content.route";
 
 export const apiRoutes = new Hono()
   .route("/auth", authRoutes)
@@ -18,4 +19,5 @@ export const apiRoutes = new Hono()
   .route("/payments", paymentRoutes)
   .route("/orders", orderRoutes)
   .route("/academic", academicRoutes)
-  .route("/storefront", storefrontRoute);
+  .route("/storefront", storefrontRoute)
+  .route("/cms", productComercialContent)
