@@ -10,7 +10,10 @@ import { rateLimiter } from "hono-rate-limiter";
 import { csrf } from "hono/csrf";
 
 export const app = new Hono();
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
+// Si process.env falla por culpa de Turbo/Railway, usa este string de rescate por defecto:
+const rawOrigins = process.env.ALLOWED_ORIGINS || "https://benjamin-franklin-crm.vercel.app,https://positive-nature-production-0a27.up.railway.app,https://benjamin-frontend-production.up.railway.app";
+
+const allowedOrigins = rawOrigins.split(",").map(o => o.trim());
 const proofOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 app.use("*", logger());
 
