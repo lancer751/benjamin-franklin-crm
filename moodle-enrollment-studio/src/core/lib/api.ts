@@ -20,12 +20,7 @@ export const api = hcWithType(SERVER_URL, {
     };
 
     // 2. Ejecutamos la petición original
-const targetInput = input;
-
-    // 🕵️‍♂️ LOG DE DEBUGGING PARA CHROME:
-    console.log("=== FRONTEND API DEBUG ===");
-    console.log("URL del Backend configurada en Vercel:", SERVER_URL);
-    console.log("Intentando hacer fetch a:", targetInput);
+    const targetInput = input;
 
     let res = await fetch(targetInput, prepareRequestInit(requestInit));
 

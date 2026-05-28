@@ -10,29 +10,14 @@ import { rateLimiter } from "hono-rate-limiter";
 import { csrf } from "hono/csrf";
 
 export const app = new Hono();
-// Si process.env falla por culpa de Turbo/Railway, usa este string de rescate por defecto:
-const rawOrigins = process.env.ALLOWED_ORIGINS || "https://benjamin-franklin-crm.vercel.app,https://positive-nature-production-0a27.up.railway.app,https://benjamin-frontend-production.up.railway.app";
-
-const allowedOrigins = rawOrigins.split(",").map(o => o.trim());
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 const proofOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 app.use("*", logger());
 app.use(secureHeaders());
 app.use(
   "*",
   cors({
-    origin: (origin) => {
-      console.log("=== CORS DEBUG ===");
-      console.log("1. Origen entrante del navegador:", origin);
-      console.log("2. Lista de orígenes permitidos:", allowedOrigins);
-      
-      if (!origin || allowedOrigins.includes(origin)) {
-        console.log("3. RESULTADO: APROBADO ✅");
-        return origin;
-      }
-      
-      console.log("3. RESULTADO: DENEGADO ❌");
-      return null;
-    },
+    origin: allowedOrigins,
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowHeaders: ["Content-Type", "Authorization", "xxx-csrf-access-token"],
@@ -40,10 +25,7 @@ app.use(
 );
 
 
-<<<<<<< HEAD
-=======
 // app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
->>>>>>> origin/backend
 // Apply rate limiting middleware
 app.use(
   rateLimiter({
