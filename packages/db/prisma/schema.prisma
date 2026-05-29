@@ -524,6 +524,11 @@ model Category {
   products   Product[]
 }
 
+enum ProductPricingStatus {
+  VALID        // prices match the edition modality
+  INVALID      // prices don't match — product cannot be published
+}
+
 model Product {
   id                      String      @id @default(uuid()) @db.Char(36)
   name                    String // you can write a new name or define it from the course and edition.
@@ -542,6 +547,7 @@ model Product {
   created_at              DateTime    @default(now())
   updated_at              DateTime    @updatedAt
   brochure_url            String?
+  pricing_status ProductPricingStatus @default(VALID)
 
   orders_details        OrderDetail[]
   edition               Edition                   @relation(fields: [edition_id], references: [id])

@@ -15,6 +15,68 @@ export const productComercialContent = new Hono()
   .use(withPrisma)
   .use(verifyUserAccessAuth)
   .use(verifyUserRoleAccess("ADMIN"))
+  .get("/products/commercial-content", async (c) => {
+    const products = await c.get("prisma").product.findMany({
+      include: {
+        category: {
+          omit: {
+            created_at: true,
+            updated_at: true,
+          },
+        },
+        prices: {
+          omit: {
+            id: true,
+            product_id: true,
+          },
+        },
+        edition: {
+          select: {
+            id: true,
+            start_date: true,
+            end_date: true,
+            schedules: {
+              select: {
+                day_of_week: true,
+                type: true,
+                slots: {
+                  select: {
+                    start_time: true,
+                    end_time: true,
+                  },
+                },
+              },
+            },
+            modality: true,
+            hours_amount: true,
+            classes_number: true,
+            edition_number: true,
+            edition_code: true,
+            course: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      omit: {
+        category_id: true,
+        description: true,
+        installments_max_number: true,
+        installments_min_number: true,
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+    });
+
+    return c.json<SuccessResponse<typeof products>>({
+      success: true,
+      data: products,
+      message: "Products commercial content retrieved successfully",
+    });
+  })
   .get(
     `/product${UUID_ROUTE}/commercial-content`,
     zValidator("param", validateIdParamSchema),
@@ -22,40 +84,40 @@ export const productComercialContent = new Hono()
       const prisma = c.get("prisma");
       const { id } = c.req.valid("param");
 
-       const product = await c.get("prisma").product.findUnique({
-      where: { id },
-      include: {
-        prices: {
-          omit: { id: true, product_id: true },
-        },
-        edition: {
-          select: {
-            course: {
-              select: {
-                name: true,
+      const product = await c.get("prisma").product.findUnique({
+        where: { id },
+        include: {
+          prices: {
+            omit: { id: true, product_id: true },
+          },
+          edition: {
+            select: {
+              course: {
+                select: {
+                  name: true,
+                },
               },
+              classes_number: true,
+              duration_unit: true,
+              duration_value: true,
+              edition_code: true,
+              edition_number: true,
             },
-            classes_number: true,
-            duration_unit: true,
-            duration_value: true,
-            edition_code: true,
-            edition_number: true,
           },
-        },
-        category: { omit: { created_at: true, updated_at: true } },
-        orders_details: true,
-        relatedBenefits: {
-          select: {
-            benefits: true,
+          category: { omit: { created_at: true, updated_at: true } },
+          orders_details: true,
+          relatedBenefits: {
+            select: {
+              benefits: true,
+            },
           },
+          frequentQuestions: { select: { faq: true } },
+          relatedCertifications: { select: { certification: true } },
         },
-        frequentQuestions: { select: { faq: true } },
-        relatedCertifications: { select: { certification: true } },
-      },
-      omit: {
-        category_id: true,
-      },
-    });
+        omit: {
+          category_id: true,
+        },
+      });
 
       if (!product) {
         throw new HTTPException(404, { message: "Product not found" });
