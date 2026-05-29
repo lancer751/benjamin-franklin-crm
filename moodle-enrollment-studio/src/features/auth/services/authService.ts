@@ -19,11 +19,9 @@ export const login = async (data: LoginReq): Promise<LoginRes> => {
 
 export const getMe = async (): Promise<MeRes | null> => {
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/auth/me`, {
-      method: "GET",
-      credentials: "include", // Vital para leer las cookies HttpOnly
-    });
-    if (!res.ok) return null; // Si da 401 o 403, simplemente no hay sesión, retorna null de forma pacífica
+    const res = await api.auth.me.$get();
+
+    if (!res.ok) return null;
     return await res.json() as MeRes;
   } catch {
     return null;
