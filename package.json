@@ -15,6 +15,7 @@
     "dev:server": "turbo dev --filter=backend",
     "build": "turbo build",
     "build:client": "turbo build --filter=management-dashboard",
+    "build:studio": "turbo build --filter=moodle-enrollment-studio",
     "build:server": "turbo build --filter=backend",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
