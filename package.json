@@ -7,7 +7,8 @@
     "./backend",
     "./management-dashboard",
     "./shared",
-    "moodle-enrollment-studio"
+    "moodle-enrollment-studio",
+    "./packages/**"
   ],
   "scripts": {
     "dev": "turbo dev",
