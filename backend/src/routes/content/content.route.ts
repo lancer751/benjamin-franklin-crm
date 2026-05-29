@@ -1,21 +1,16 @@
 import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
 import { validateIdParamSchema } from "@/helpers/params-validator";
+import type { ContextWithPrisma } from "@/lib/contextVariables";
 import withPrisma from "@/lib/prisma";
-import {
-  verifyUserAccessAuth,
-  verifyUserRoleAccess,
-} from "@/middlewares/auth.middleware";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { UpdateProductComercialContentSchema } from "shared";
 
-export const productComercialContent = new Hono()
+export const productsComercialContent = new Hono<ContextWithPrisma>()
   .use(withPrisma)
-  .use(verifyUserAccessAuth)
-  .use(verifyUserRoleAccess("ADMIN"))
-  .get("/products/commercial-content", async (c) => {
+  .get("/commercial-content", async (c) => {
     const products = await c.get("prisma").product.findMany({
       include: {
         category: {
@@ -78,7 +73,7 @@ export const productComercialContent = new Hono()
     });
   })
   .get(
-    `/product${UUID_ROUTE}/commercial-content`,
+    `${UUID_ROUTE}/commercial-content`,
     zValidator("param", validateIdParamSchema),
     async (c) => {
       const prisma = c.get("prisma");
@@ -131,7 +126,7 @@ export const productComercialContent = new Hono()
     },
   )
   .put(
-    `/product${UUID_ROUTE}/commercial-content`,
+    `${UUID_ROUTE}/commercial-content`,
     zValidator("json", UpdateProductComercialContentSchema),
     zValidator("param", validateIdParamSchema),
     async (c) => {
