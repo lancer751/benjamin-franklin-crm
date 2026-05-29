@@ -234,6 +234,7 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
         assigned_professors: incomingProfessors,
         schedules: incomingSchedules,
         course_id,
+        assignOnlyActiveProfessors,
         ...plainFields
       } = c.req.valid("json");
 
@@ -242,15 +243,26 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
       // ── 1. Verify edition exists
       const existing = await prisma.edition.findUnique({
         where: { id },
+        include: {
+          ownedProduct: {
+            select: {
+              id: true,
+              prices: true,
+            },
+          },
+        },
       });
 
       if (!existing) {
         throw new HTTPException(404, { message: "Course edition not found" });
       }
 
+      const changingEditionModality =
+        plainFields.modality && existing.modality !== plainFields.modality;
+
       // ── 2. Unique conflict checks (only when the value actually changes) ───
       if (
-        plainFields.moodle_course_id !== null &&
+        plainFields.moodle_course_id &&
         plainFields.moodle_course_id !== existing.moodle_course_id
       ) {
         const conflict = await prisma.edition.findUnique({
@@ -270,14 +282,43 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
         professorIds = incomingProfessors.map((p) => p.professor_id);
         const found = await prisma.professor.findMany({
           where: { id: { in: professorIds } },
-          select: { id: true },
+          select: { id: true, is_active: true },
         });
+
         if (found.length !== professorIds.length) {
           const foundIds = new Set(found.map((p) => p.id));
           const missing = professorIds.filter((pid) => !foundIds.has(pid));
           throw new HTTPException(404, {
             message: `Professor IDs not found: ${missing.join(", ")}`,
           });
+        }
+
+        const inactiveProfessors = found.filter((p) => !p.is_active);
+
+        if (inactiveProfessors.length > 0 && !assignOnlyActiveProfessors) {
+          const inactiveIds = inactiveProfessors.map((p) => p.id);
+          throw new HTTPException(400, {
+            message: `The following professor IDs are inactive and cannot be assigned to the edition: ${inactiveIds.join(", ")}. Set "assignOnlyActiveProfessors" to true to ignore inactive professors and assign only the active ones.`,
+          });
+        }
+
+        if (
+          inactiveProfessors.length === 0 ||
+          (inactiveProfessors.length > 0 && assignOnlyActiveProfessors)
+        ) {
+          // If there are inactive professors but assignOnlyActiveProfessors is true, we filter them out from the list of professors to be assigned to the edition
+          const activeProfessorIds = found
+            .filter((p) => p.is_active)
+            .map((p) => p.id);
+
+          if (activeProfessorIds.length === 0) {
+            throw new HTTPException(400, {
+              message: `All provided professor IDs are inactive. So active professors before assiging to the edition`,
+            });
+          }
+
+          professorIds.length = 0; // Clear the original array
+          professorIds.push(...activeProfessorIds); // Add only active professor IDs
         }
       }
 
@@ -352,6 +393,22 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
           },
         });
       });
+
+      // removing the product prices if the edition modality has changed, to avoid having prices that don't match the edition modality. The product will need to be re-priced before it can be published again
+      if (changingEditionModality && existing.ownedProduct) {
+        await prisma.product.update({
+          where: { id: existing.ownedProduct.id },
+          data: {
+            pricing_status: "INVALID",
+            sales_status: "DRAFT",
+            prices: {
+              deleteMany: existing.ownedProduct.prices.map((p) => ({
+                id: p.id,
+              })),
+            },
+          },
+        });
+      }
 
       return c.json<SuccessResponse<typeof updatedEdition>>(
         {

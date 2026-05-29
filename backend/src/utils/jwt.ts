@@ -19,10 +19,9 @@ export function createAccessToken(
     role,
     exp:
       Math.floor(Date.now() / 1000) +
-      60 * envParsed.ACCESS_TOKEN_EXP_TIME, // Token expires in 5 minutes
+      60 * envParsed.ACCESS_TOKEN_EXP_TIME,
     type: "access",
   };
-
   return sign(payload, envParsed.ACCESS_TOKEN_SECRET, "HS256");
 }
 

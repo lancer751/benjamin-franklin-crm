@@ -10,6 +10,8 @@ export const SalesStatusSchema = z.enum([
   "CANCELLED",
 ]);
 
+export const ProductPricingStatusSchema = z.enum(["VALID", "INVALID"]);
+
 export const ProductSchema = z.object({
   id: UUIDField,
   edition_id: UUIDField,
@@ -50,6 +52,7 @@ export const ProductSchema = z.object({
   certification_ids: z.array(UUIDField).optional().default([]),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
+  pricing_status: ProductPricingStatusSchema.default("VALID"),
 });
 
 export const CreateProductComercialContentSchema = ProductSchema.pick({
