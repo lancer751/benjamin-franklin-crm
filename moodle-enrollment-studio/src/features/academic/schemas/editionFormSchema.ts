@@ -41,6 +41,14 @@ export const editionFormSchema = z.object({
       end_time: z.string()
     }))
   }))
+}).refine((data) => {
+  if (data.modality === "VIRTUAL" || data.modality === "HIBRIDO") {
+    return !!data.meet_link && data.meet_link.trim() !== "";
+  }
+  return true;
+}, {
+  message: "El enlace de Google Meet es obligatorio para las modalidades VIRTUAL e HÍBRIDO",
+  path: ["meet_link"]
 });
 
 export type EditionFormValues = z.infer<typeof editionFormSchema>;

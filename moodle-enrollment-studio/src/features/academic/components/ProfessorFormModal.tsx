@@ -1,6 +1,7 @@
 import { ModalWrapper } from "@/core/components/modals/ModalWrapper";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/core/components/ui/form";
 import { Input } from "@/core/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { useProfessorFormModal } from "../hooks/useProfessorFormModal";
 import { Button } from "@/core/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -109,6 +110,28 @@ export const ProfessorFormModal = ({ isOpen, onClose, professor }: ProfessorForm
                     <FormControl>
                       <Input placeholder="Ej. 123" type="number" {...field} value={field.value ?? ""} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="moodle_user_status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado de Cuenta Moodle <span className="text-destructive">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || "ACTIVE"}>
+                      <FormControl>
+                        <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                          <SelectValue placeholder="Selecciona el estado" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="ACTIVE">Activo</SelectItem>
+                        <SelectItem value="SUSPENDED">Suspendido</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -1,8 +1,9 @@
-import { useMemo } from "react";
-import { Plus, Loader2, Edit, Trash2, GraduationCap } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Loader2, Edit, Trash2, GraduationCap, Eye } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Card } from "@/core/components/ui/card";
 import { Button } from "@/core/components/ui/button";
+import { Badge } from "@/core/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -15,6 +16,7 @@ import {
 } from "@/core/components/ui/alert-dialog";
 import { CustomTable } from "@/core/components/CustomTable";
 import { ProfessorFormModal } from "../components/ProfessorFormModal";
+import { ProfessorDetailModal } from "../components/ProfessorDetailModal";
 import { useProfessorsView } from "../hooks/useProfessorsView";
 
 export default function ProfessorsView() {
@@ -30,7 +32,11 @@ export default function ProfessorsView() {
     handleDeleteConfirm,
   } = useProfessorsView();
 
-  // 1. Columnas tipadas y preparadas con soporte nativo para responsive CustomTable
+  // Estados para controlar el modal de expediente (detalle)
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [professorForDetail, setProfessorForDetail] = useState<string | null>(null);
+
+  // Columnas tipadas y preparadas con soporte nativo para responsive CustomTable
   const columns = useMemo<ColumnDef<any>[]>(
     () => [
       {
@@ -52,9 +58,23 @@ export default function ProfessorsView() {
         cell: ({ row }) => row.original.cellphone || "-",
       },
       {
-        header: "ID Moodle",
-        accessorKey: "moddle_account_id",
-        cell: ({ row }) => row.original.moddle_account_id || "-",
+        header: "Estado Moodle",
+        accessorKey: "moodle_user_status",
+        cell: ({ row }) => {
+          const status = row.original.moodle_user_status;
+          if (status === "ACTIVE") {
+            return (
+              <Badge className="bg-emerald-100 text-emerald-800 border-transparent hover:bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold rounded-lg shadow-sm">
+                Activo
+              </Badge>
+            );
+          }
+          return (
+            <Badge className="bg-rose-100 text-rose-800 border-transparent hover:bg-rose-100 px-2.5 py-0.5 text-xs font-semibold rounded-lg shadow-sm">
+              Suspendido
+            </Badge>
+          );
+        },
       },
       {
         header: "Acciones",
@@ -62,6 +82,19 @@ export default function ProfessorsView() {
           const p = row.original;
           return (
             <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProfessorForDetail(p.id);
+                  setDetailModalOpen(true);
+                }}
+                title="Ver Detalle"
+              >
+                <Eye size={16} />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -134,6 +167,15 @@ export default function ProfessorsView() {
         isOpen={modal.isOpen}
         onClose={handleCloseModal}
         professor={modal.selectedProfessor}
+      />
+
+      <ProfessorDetailModal
+        isOpen={detailModalOpen}
+        onClose={() => {
+          setDetailModalOpen(false);
+          setProfessorForDetail(null);
+        }}
+        professorId={professorForDetail}
       />
 
       <AlertDialog

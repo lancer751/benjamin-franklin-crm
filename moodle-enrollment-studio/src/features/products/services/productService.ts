@@ -12,10 +12,6 @@ type CreateProductReq = InferRequestType<typeof api.products.$post>["json"];
 type UpdateProductReq = InferRequestType<(typeof api.products)[typeof UUID_PATH]["$put"]>["json"];
 type DeleteProductRes = InferResponseType<(typeof api.products)[typeof UUID_PATH]["$delete"]>;
 
-// ==========================================
-// SERVICIOS: PRODUCTOS
-// ==========================================
-
 export const getProducts = async (): Promise<ProductsRes> => {
   const res = await api.products.$get();
   return await res.json();
@@ -41,5 +37,15 @@ export const updateProduct = async (id: string, data: UpdateProductReq) => {
 
 export const deleteProduct = async (id: string): Promise<DeleteProductRes> => {
   const res = await api.products[":id"].$delete({ param: { id } });
+  return await res.json();
+};
+
+type UpdateCommercialContentReq = InferRequestType<typeof api.cms.products[typeof UUID_PATH]["commercial-content"]["$put"]>["json"];
+
+export const updateProductCommercialContent = async (id: string, data: UpdateCommercialContentReq) => {
+  const res = await api.cms.products[UUID_PATH]["commercial-content"]["$put"]({
+    param: { id },
+    json: data
+  });
   return await res.json();
 };

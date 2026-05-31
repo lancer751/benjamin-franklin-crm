@@ -9,6 +9,7 @@ export interface BackendProductResponse {
   presale_price?: number | string | null;
   discount_price?: number | string | null;
   discount_expires_at?: string | null;
+  brochure_url?: string | null;
   installments_min_number?: number | null;
   installments_max_number?: number | null;
   category?: {
@@ -77,6 +78,7 @@ export interface UIProduct {
   presale_price: string;
   discount_price: string;
   discount_expires_at: string;
+  brochure_url: string;
   installments_min_number: number;
   installments_max_number: number;
   category: {

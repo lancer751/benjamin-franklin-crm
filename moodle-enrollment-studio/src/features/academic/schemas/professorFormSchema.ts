@@ -46,7 +46,8 @@ export const professorFormSchema = BaseCreateProfessorSchema.extend({
   moddle_account_id: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)), 
     z.number().int().positive().optional()
-  )
+  ),
+  moodle_user_status: z.enum(["ACTIVE", "SUSPENDED"], { required_error: "El estado de la cuenta es obligatorio" }).default("ACTIVE")
 }) as any;
 
 export type ProfessorFormValues = z.infer<typeof professorFormSchema>;

@@ -48,6 +48,7 @@ export const productFormSchema = z.object({
   ),
   discount_expires_at: z.string().optional().nullable(),
   image_url: z.string().optional().default(""),
+  brochure_url: z.string().optional().nullable().default(""),
   prices: z.array(priceSchema).min(1, "Se requiere al menos 1 precio configurado"),
   benefit_ids: z.array(z.string().uuid("UUID de beneficio no válido")).min(1, "Debes seleccionar al menos un beneficio"),
   faqs: z.array(z.any()).default([]),

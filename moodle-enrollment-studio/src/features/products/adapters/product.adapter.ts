@@ -71,6 +71,7 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
     presale_price: data.presale_price != null ? String(data.presale_price) : "",
     discount_price: data.discount_price != null ? String(data.discount_price) : "",
     discount_expires_at: data.discount_expires_at || "",
+    brochure_url: data.brochure_url || "",
     installments_min_number: data.installments_min_number != null ? Number(data.installments_min_number) : 1,
     installments_max_number: data.installments_max_number != null ? Number(data.installments_max_number) : 1,
     category,

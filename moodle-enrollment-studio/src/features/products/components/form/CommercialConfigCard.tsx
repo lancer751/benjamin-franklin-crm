@@ -1,16 +1,12 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/core/components/ui/card";
 import { Settings, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/core/lib/utils";
-import DiscountSection from "./DiscountSection";
 
 interface CommercialConfigCardProps {
   form: {
-    name: string;
     slug: string;
     short_description?: string | null;
     description?: string | null;
-    discount_price?: string | null;
-    discount_expires_at?: string | null;
   };
   errors: Record<string, string>;
   setFieldValue: (key: string, value: any) => void;
@@ -36,18 +32,6 @@ const CommercialConfigCard = ({
       </CardHeader>
       <CardContent className="p-6 space-y-6">
         <div>
-          <label className="form-label text-xs font-bold text-slate-700 mb-2 block">Nombre Comercial del Producto</label>
-          <input 
-            type="text" 
-            className={cn("form-input rounded-xl h-11 border-slate-200", errors.name && 'border-destructive')} 
-            placeholder="Ej. Curso de React - Cohorte 1" 
-            value={form.name} 
-            onChange={(e) => setFieldValue("name", e.target.value)} 
-          />
-          {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
-        </div>
-
-        <div>
           <label className="form-label text-xs font-bold text-slate-700 mb-2 block">Slug (Identificador URL único)</label>
           <div className="relative">
             <LinkIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -65,9 +49,10 @@ const CommercialConfigCard = ({
 
         <div className="grid grid-cols-1 gap-6">
           <div>
-            <label className="form-label text-xs font-bold text-slate-700 mb-2 block">Descripción Corta</label>
+            <label className="form-label text-xs font-bold text-slate-700 mb-2 block">Descripción Corta (Máximo 160 caracteres)</label>
             <input 
               type="text" 
+              maxLength={160}
               className={cn("form-input rounded-xl h-11 border-slate-200", errors.short_description && 'border-destructive')} 
               placeholder="Escribe una breve introducción comercial" 
               value={form.short_description || ""} 
@@ -87,12 +72,6 @@ const CommercialConfigCard = ({
             {errors.description && <p className="text-destructive text-xs mt-1">{errors.description}</p>}
           </div>
         </div>
-
-        <DiscountSection 
-          form={form} 
-          errors={errors} 
-          setFieldValue={setFieldValue} 
-        />
       </CardContent>
     </Card>
   );

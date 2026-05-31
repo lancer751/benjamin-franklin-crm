@@ -542,7 +542,15 @@ export default function EditionFormView() {
                             {/* Enlace Virtual */}
                             <FormField control={form.control} name="meet_link" render={({ field }) => (
                               <FormItem className="md:col-span-2">
-                                <FormLabel className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 block">Enlace Virtual (Meet) (Opcional)</FormLabel>
+                                <FormLabel className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 block">
+                                  {watchModality === "VIRTUAL" || watchModality === "HIBRIDO" ? (
+                                    <>
+                                      ENLACE VIRTUAL (MEET) <span className="text-destructive">*</span>
+                                    </>
+                                  ) : (
+                                    "Enlace Virtual (Meet) (Opcional)"
+                                  )}
+                                </FormLabel>
                                 <FormControl>
                                   <Input type="url" placeholder="https://meet.google.com/..." className="h-11 rounded-xl border-slate-200 dark:border-slate-800 shadow-sm focus:ring-primary" {...field} />
                                 </FormControl>

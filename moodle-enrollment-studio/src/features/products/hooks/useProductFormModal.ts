@@ -47,6 +47,7 @@ const emptyData: ProductFormValues = {
   discount_price: "",
   discount_expires_at: "",
   image_url: "",
+  brochure_url: "",
   prices: [], // Will be filled dynamically
   benefit_ids: [],
   faqs: [],
@@ -105,6 +106,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         discount_price: product.discount_price || "",
         discount_expires_at: product.discount_expires_at || "",
         image_url: product.image_url || "",
+        brochure_url: product.brochure_url || "",
         prices: product.prices || [],
         category_id,
         benefit_ids,
@@ -180,15 +182,9 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     }
     return [];
   }, [categoriesRes]);
-
-  // Dynamic Modality, Name & Image Auto-fill logic
+  // Dynamic Modality, Name, Image, Certification and FAQs Auto-fill logic
   useEffect(() => {
     if (!selectedEdition) return;
-
-    // 🌟 GUARDIA PREMIUM: Si es edición y el nombre ya coincide, congelamos para proteger el Combobox
-    if (isEdit && form.edition_id === selectedEdition.id) {
-      return;
-    }
 
     const courseName = selectedEdition.course?.name || "";
     const generatedName = courseName.trim();
@@ -200,32 +196,68 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     const editionModality = typeof modalityRaw === 'object' ? modalityRaw.name : modalityRaw;
 
     setForm(prev => {
-      const isCertificationEmpty = !prev.certification?.title && !prev.certification?.description;
-      const shouldInjectCertification = !isEdit || isCertificationEmpty;
-
       let nextForm = { ...prev };
 
-      // 1. Auto-generate Name, Slug & Image (Solo si no estamos en edición)
-      if (!isEdit) {
+      // 1. Pestaña 1 & 3: Nombre Comercial y Slug (Auto-fill)
+      if (!isEdit || !prev.name) {
         nextForm.name = generatedName;
+      }
+      if (!isEdit || !prev.slug) {
         nextForm.slug = generatedSlug;
-        nextForm.image_url = hasCustomImage ? prev.image_url : (courseImage || prev.image_url);
       }
 
-      // 2. Auto-generate Certification details (Solo si no estamos en edición o campos están vacíos/pristine)
-      if (shouldInjectCertification) {
-        nextForm.certification_title = `Certificado del Curso de ${generatedName}`;
+      // 2. Pestaña 2: Portada del producto y Certificación
+      if (!isEdit || !prev.image_url) {
+        nextForm.image_url = courseImage;
+      }
+
+      // EXCEPCIÓN ESTRICTA: El campo "IMAGEN DE LA CERTIFICACIÓN" debe permanecer vacío (Sin archivo / No se auto-rellena)
+      const hasNoCertTitle = !prev.certification?.title || prev.certification.title === "";
+      const hasNoCertDesc = !prev.certification?.description || prev.certification.description === "";
+
+      if (!isEdit || hasNoCertTitle) {
+        nextForm.certification_title = `Certificado de Especialización en ${generatedName}`;
+        nextForm.certification = {
+          ...nextForm.certification,
+          title: `Certificado de Especialización en ${generatedName}`,
+          issuing_authority: prev.certification?.issuing_authority || "Corporación Educativa Benjamin Franklin",
+        } as any;
+      }
+
+      if (!isEdit || hasNoCertDesc) {
         nextForm.certification_description = defaultDesc;
         nextForm.certification = {
-          ...prev.certification,
-          title: `Certificado del Curso de ${generatedName}`,
+          ...nextForm.certification,
           description: defaultDesc,
           issuing_authority: prev.certification?.issuing_authority || "Corporación Educativa Benjamin Franklin",
-        };
+        } as any;
       }
 
-      // 3. Manejo de modalidad y precios (Incluso en edición si cambiamos la edición vinculada)
-      // Guarda crítica: si es edición y ya hay precios cargados, no los sobreescribimos destructivamente
+      if (!isEdit) {
+        nextForm.certification = {
+          ...nextForm.certification,
+          image_url: "", // EXCEPCIÓN ESTRICTA
+          has_digital: true,
+          has_physical: true,
+          issuing_authority: "Corporación Educativa Benjamin Franklin",
+        } as any;
+      }
+
+      // 3. Pestaña 3: FAQs precargadas por defecto de forma masiva
+      const hasNoFAQs = !prev.faqs || prev.faqs.length === 0;
+      if (!isEdit || hasNoFAQs) {
+        nextForm.faqs = INSTITUTIONAL_FAQS.map(faq => ({
+          question: faq.question,
+          answer: faq.answer,
+        }));
+      }
+
+      // EXCEPCIÓN ESTRICTA: El brochure_url debe permanecer vacío
+      if (!isEdit) {
+        nextForm.brochure_url = "";
+      }
+
+      // 4. Manejo de modalidad y precios (Incluso en edición si cambiamos la edición vinculada)
       if (!(isEdit && prev.prices && prev.prices.length > 0)) {
         let newPrices = [...prev.prices];
         
@@ -244,47 +276,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
       return nextForm;
     });
-  }, [selectedEdition, isEdit, hasCustomImage, form.edition_id]);
-
-  // Dynamic Certification Autogeneration
-  useEffect(() => {
-    if (!isEdit && form.name) {
-      const defaultDesc = getCertificationDefaultText(form.name);
-      setForm(prev => {
-        const isEmptyOrAutogen = !prev.certification_description ||
-          prev.certification_description.startsWith("Al culminar satisfactoriamente y aprobar el programa, el alumno obtendrá: Certificado de ");
-
-        const isEmptyOrAutogenTitle = !prev.certification_title ||
-          prev.certification_title.startsWith("Certificación en ") ||
-          prev.certification_title.startsWith("Certificado del Curso de ");
-
-        const isNestedEmptyOrAutogen = !prev.certification?.description ||
-          prev.certification.description.startsWith("Al culminar satisfactoriamente y aprobar el programa, el alumno obtendrá: Certificado de ");
-
-        const isNestedEmptyOrAutogenTitle = !prev.certification?.title ||
-          prev.certification.title.startsWith("Certificación en ") ||
-          prev.certification.title.startsWith("Certificado del Curso de ");
-
-        const nextDesc = isEmptyOrAutogen ? defaultDesc : prev.certification_description;
-        const nextTitle = isEmptyOrAutogenTitle ? `Certificado del Curso de ${form.name}` : prev.certification_title;
-
-        const nextNestedDesc = isNestedEmptyOrAutogen ? defaultDesc : prev.certification?.description;
-        const nextNestedTitle = isNestedEmptyOrAutogenTitle ? `Certificado del Curso de ${form.name}` : prev.certification?.title;
-
-        return {
-          ...prev,
-          certification_description: nextDesc,
-          certification_title: nextTitle,
-          certification: {
-            ...prev.certification,
-            description: nextNestedDesc,
-            title: nextNestedTitle,
-            issuing_authority: prev.certification?.issuing_authority || "Corporación Educativa Benjamin Franklin",
-          }
-        };
-      });
-    }
-  }, [form.name, isEdit]);
+  }, [selectedEdition, isEdit]);
 
   const handleImageUpload = async (file: File) => {
     try {
@@ -424,13 +416,13 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         return await createProduct(parsedPayload as any);
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       if (isEdit && initialData?.id) {
         queryClient.invalidateQueries({ queryKey: ["product", initialData.id] });
       }
       toast.success(isEdit ? "Producto actualizado exitosamente" : "Producto creado exitosamente");
-      onClose();
+      onClose(data);
       if (!isEdit) setForm(emptyData);
     },
     onError: (error) => {
