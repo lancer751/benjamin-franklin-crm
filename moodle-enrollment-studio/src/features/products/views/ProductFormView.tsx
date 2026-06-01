@@ -171,8 +171,8 @@ const ProductFormView = () => {
 
       // 2. Ejecutar la función del servicio con el payload de marketing
       const res = await updateProductCommercialContent(id, {
-        image_url: form.image_url,
-        brochure_url: form.brochure_url,
+        image_url: form.image_url && form.image_url.trim() !== "" ? form.image_url : null,
+        brochure_url: form.brochure_url && form.brochure_url.trim() !== "" ? form.brochure_url : null,
         certification_ids: certificationIds.length > 0 ? certificationIds : undefined
       });
 

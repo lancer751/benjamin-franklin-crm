@@ -8,7 +8,7 @@ import { createFAQ, updateFAQ } from "../services/faqService";
 import { createCertification, updateCertification } from "../services/certificationService";
 import { uploadImageToCloudinary } from "@/features/academic/services/uploadService";
 import { toast } from "sonner";
-import { ProductFormValues, productFormSchema } from "../schemas/productFormSchema";
+import { ProductFormValues, productFormSchema, baseProductFormSchema } from "../schemas/productFormSchema";
 import { z } from "zod";
 import { getCertificationDefaultText, INSTITUTIONAL_FAQS } from "../utils/productTemplates";
 import { adaptProductToUI } from "../adapters/product.adapter";
@@ -393,7 +393,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
         slug: payload?.slug || "",
         description: payload?.description || "",
         short_description: payload?.short_description || "",
-        image_url: payload?.image_url || "",
+        image_url: payload?.image_url && payload.image_url.trim() !== "" ? payload.image_url : null,
         presale_price: parseOptionalPrice(payload?.presale_price),
         discount_price: parseOptionalPrice(payload?.discount_price),
         discount_expires_at: payload?.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
@@ -491,7 +491,28 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   };
 
   const onSubmit = () => {
-    console.log("EVADIENDO VALIDACIÓN LOCAL DE ZOD Y ENVIANDO DIRECTAMENTE AL BACKEND...");
+    // Si estamos en creación, omitimos benefit_ids del esquema de validación
+    let schemaToValidate = productFormSchema;
+    if (!isEdit) {
+      schemaToValidate = baseProductFormSchema.omit({
+        benefit_ids: true,
+      }) as any;
+    }
+
+    const result = schemaToValidate.safeParse(form);
+    if (!result.success) {
+      const formattedErrors: Record<string, string> = {};
+      result.error.issues.forEach(issue => {
+        const path = issue.path.join(".");
+        formattedErrors[path] = issue.message;
+      });
+      setErrors(formattedErrors);
+      
+      const firstError = result.error.issues[0];
+      toast.error(`Error de validación: ${firstError.message}`);
+      return;
+    }
+
     setErrors({});
     mutation.mutate(form);
   };

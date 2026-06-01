@@ -28,9 +28,9 @@ export const priceSchema = z.object({
   ),
 });
 
-export const productFormSchema = z.object({
+export const baseProductFormSchema = z.object({
   edition_id: z.string().min(1, "La edición es requerida"),
-  category_id: z.string().min(1, "La categoría es requerida"),
+  category_id: z.string().uuid("Debes seleccionar una categoría válida de la lista de catálogos"),
   sales_status: z.enum(["DRAFT", "PUBLISHED", "ON_SALE", "COMPLETED", "CANCELLED"]),
   name: z.string().min(1, "El nombre del producto es requerido"),
   slug: z.string().min(1, "El slug es requerido"),
@@ -47,8 +47,14 @@ export const productFormSchema = z.object({
     z.number().nullable().optional()
   ),
   discount_expires_at: z.string().optional().nullable(),
-  image_url: z.string().optional().default(""),
-  brochure_url: z.string().optional().nullable().default(""),
+  image_url: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? null : val),
+    z.string().url("Ingresa una URL de imagen válida (ej: https://...)").nullable().optional()
+  ),
+  brochure_url: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? null : val),
+    z.string().url("Ingresa una URL válida para el brochure promocional (ej: https://...)").nullable().optional()
+  ),
   prices: z.array(priceSchema).min(1, "Se requiere al menos 1 precio configurado"),
   benefit_ids: z.array(z.string().uuid("UUID de beneficio no válido")).min(1, "Debes seleccionar al menos un beneficio"),
   faqs: z.array(z.any()).default([]),
@@ -67,7 +73,9 @@ export const productFormSchema = z.object({
     has_digital: z.boolean().optional().default(true),
     has_physical: z.boolean().optional().default(true),
   }).optional().nullable(),
-}).refine(data => data.installments_max_number >= data.installments_min_number, {
+});
+
+export const productFormSchema = baseProductFormSchema.refine(data => data.installments_max_number >= data.installments_min_number, {
   message: "El máximo de cuotas no puede ser menor al mínimo",
   path: ["installments_max_number"]
 }).refine(data => {
@@ -78,6 +86,14 @@ export const productFormSchema = z.object({
 }, {
   message: "La fecha de expiración es obligatoria si hay un precio de descuento",
   path: ["discount_expires_at"]
+}).refine(data => {
+  if (data.sales_status === "PUBLISHED" || data.sales_status === "ON_SALE") {
+    return !!data.description && !!data.short_description && data.description.trim() !== "" && data.short_description.trim() !== "";
+  }
+  return true;
+}, {
+  message: "La descripción corta y detallada son obligatorias para publicar el producto en la web",
+  path: ["description"]
 });
 
 export type ProductFormValues = z.input<typeof productFormSchema>;
