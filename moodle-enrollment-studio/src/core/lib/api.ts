@@ -25,7 +25,7 @@ export const api = hcWithType(SERVER_URL, {
     let res = await fetch(targetInput, prepareRequestInit(requestInit));
 
     // 🛑 INTERCEPTOR: Si el Access Token expiró (401 Unauthorized)
-    if (res.status === 401) {
+    if (res.status === 401 || res.status === 500) {
       const urlString = typeof targetInput === "string" ? targetInput : targetInput.toString();
       
       // Guardia para evitar bucles infinitos si la ruta que falla es el mismo login o refresh
