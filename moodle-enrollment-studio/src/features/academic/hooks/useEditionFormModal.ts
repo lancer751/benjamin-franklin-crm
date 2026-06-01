@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, addMinutes } from "date-fns";
@@ -36,7 +36,7 @@ export const useEditionFormModal = (
   const [endMonth, setEndMonth] = useState<Date>(new Date());
 
   const form = useForm<EditionFormValues>({
-    resolver: zodResolver(editionFormSchema),
+    resolver: standardSchemaResolver(editionFormSchema),
     mode: "onTouched",
     defaultValues: {
       ...defaultEditionFormValues,

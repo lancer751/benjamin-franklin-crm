@@ -76,8 +76,8 @@ export const sidebarSections: SidebarSection[] = [
     permission: "admin:view",
     items: [
       { to: "/admin/usuarios", label: "Usuarios", icon: Users, permission: "users:view" },
-      { to: "/pagos", label: "Pagos", icon: Wallet, permission: "finance:view" },
-      { to: "/campanas", label: "Campañas", icon: Megaphone, permission: "marketing:view" },
+      // { to: "/pagos", label: "Pagos", icon: Wallet, permission: "finance:view" },
+      // { to: "/campanas", label: "Campañas", icon: Megaphone, permission: "marketing:view" },
     ],
   },
   {
@@ -95,10 +95,10 @@ export const sidebarSections: SidebarSection[] = [
     icon: TrendingUp,
     permission: "commercial:view",
     items: [
+      { to: "/productos", label: "Productos", icon: Package, permission: "products:view" },
       { to: "/prospectos", label: "Prospectos", icon: Users, permission: "prospects:view" },
       // { to: "/pipeline", label: "Pipeline", icon: Kanban, permission: "pipeline:view" },
       { to: "/ordenes", label: "Órdenes", icon: FileText, permission: "orders:view" },
-      { to: "/productos", label: "Productos", icon: Package, permission: "products:view" },
     ],
   },
 ];

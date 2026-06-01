@@ -15,7 +15,7 @@ function createCookieOptions(maxAge: number): CookieOptions {
     secure: Boolean(envParsed.COOKIE_SECURE),
     httpOnly: true,
     maxAge,
-    expires: new Date(Date.UTC(2000, 11, 24, 10, 30, 59, 900)),
+    //expires: new Date(Date.UTC(2000, 11, 24, 10, 30, 59, 900)),
     sameSite: envParsed.COOKE_SAME_SITE as CookieOptions["sameSite"],
   };
 }
@@ -26,7 +26,7 @@ function createCsrfCookieOptions(maxAge: number): CookieOptions {
     secure: Boolean(envParsed.COOKIE_SECURE),
     httpOnly: false,
     maxAge,
-    expires: new Date(Date.UTC(2000, 11, 24, 10, 30, 59, 900)),
+    //expires: new Date(Date.UTC(2000, 11, 24, 10, 30, 59, 900)),
     sameSite: envParsed.COOKE_SAME_SITE as CookieOptions["sameSite"],
   };
 }
