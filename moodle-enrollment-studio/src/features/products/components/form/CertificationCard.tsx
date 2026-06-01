@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/cor
 import { Award, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { cn } from "@/core/lib/utils";
-import { uploadImageToCloudinary } from "@/features/academic/services/uploadService";
+import { uploadImageToCloudinary } from "@/core/lib/uploadService";
 import { toast } from "sonner";
 
 interface CertificationCardProps {

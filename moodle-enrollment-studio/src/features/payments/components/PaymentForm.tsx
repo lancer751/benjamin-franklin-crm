@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { getOrders } from "@/features/orders/services/orderService";
 import { getAllLeads } from "@/features/leads/services/leadService";
 import { createPayment } from "@/features/payments/services/paymentService";
-import { uploadImageToCloudinary } from "@/features/academic/services/uploadService";
+import { uploadImageToCloudinary } from "@/core/lib/uploadService";
 
 const paymentSchema = z.object({
   clienteOrden: z.string().min(1, "Seleccione una orden o cliente"),

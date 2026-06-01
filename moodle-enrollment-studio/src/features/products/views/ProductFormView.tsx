@@ -20,7 +20,7 @@ import { getProductById, updateProductCommercialContent } from "../services/prod
 import { getBenefits } from "../services/benefitService";
 import { createFAQ, updateFAQ } from "../services/faqService";
 import { createCertification, updateCertification } from "../services/certificationService";
-import { uploadImageToCloudinary } from "@/features/academic/services/uploadService";
+import { uploadImageToCloudinary, uploadPdfToCloudinary } from "@/core/lib/uploadService";
 import { useProductFormModal } from "../hooks/useProductFormModal";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "sonner";
@@ -118,7 +118,7 @@ const ProductFormView = () => {
 
     try {
       setIsUploadingBrochure(true);
-      const url = await uploadImageToCloudinary(file);
+      const url = await uploadPdfToCloudinary(file);
       setFieldValue("brochure_url", url);
       toast.success("Folleto PDF subido correctamente");
     } catch (error) {
@@ -544,7 +544,7 @@ const ProductFormView = () => {
                   <input 
                     id="brochure-upload" 
                     type="file" 
-                    accept="application/pdf" 
+                    accept=".pdf" 
                     className="hidden" 
                     onChange={handleBrochureFileChange}
                   />

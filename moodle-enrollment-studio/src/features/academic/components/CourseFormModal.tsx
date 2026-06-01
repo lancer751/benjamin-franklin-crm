@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UploadCloud, X } from "lucide-react";
 import { createCourse, updateCourse } from "../services/courseService";
-import { uploadImageToCloudinary } from "../services/uploadService";
+import { uploadImageToCloudinary } from "@/core/lib/uploadService";
 import { toast } from "sonner";
 
 // Función helper para autogenerar códigos de curso master

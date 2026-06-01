@@ -6,7 +6,7 @@ import { createProduct, updateProduct } from "../services/productService";
 import { getBenefits } from "../services/benefitService";
 import { createFAQ, updateFAQ } from "../services/faqService";
 import { createCertification, updateCertification } from "../services/certificationService";
-import { uploadImageToCloudinary } from "@/features/academic/services/uploadService";
+import { uploadImageToCloudinary } from "@/core/lib/uploadService";
 import { toast } from "sonner";
 import { ProductFormValues, productFormSchema, baseProductFormSchema } from "../schemas/productFormSchema";
 import { z } from "zod";

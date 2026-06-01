@@ -30,33 +30,33 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
     enrollment_fee: String(p.enrollment_fee || "0.00"),
   }));
 
-  // ✅ CORREGIDO: Mapeo directo desde el objeto del beneficio (viene aplanado)
-  const benefits = (data.relatedBenefits || []).map((rb) => ({
-    id: rb.id || rb.benefit_id || "",
-    description: rb.description || "",
-    name: rb.name || "",
-    icon_name: rb.icon_name || "",
+  // ✅ CORREGIDO: Mapeo directo y defensivo compatible con Prisma anidado
+  const benefits = (data.relatedBenefits || []).map((rb: any) => ({
+    id: rb.benefits?.id || rb.benefit?.id || rb.id || rb.benefit_id || "",
+    description: rb.benefits?.description || rb.benefit?.description || rb.description || "",
+    name: rb.benefits?.name || rb.benefit?.name || rb.name || "",
+    icon_name: rb.benefits?.icon_name || rb.benefit?.icon_name || rb.icon_name || "",
   }));
 
-  // ✅ CORREGIDO: Mapeo directo desde el objeto raíz de la FAQ
-  const faqs = (data.frequentQuestions || []).map((fq) => ({
-    id: fq.id || "",
-    question: fq.question || "",
-    answer: fq.answer || "",
+  // ✅ CORREGIDO: Mapeo de FAQs compatible con Prisma anidado
+  const faqs = (data.frequentQuestions || []).map((fq: any) => ({
+    id: fq.faq?.id || fq.id || fq.faq_id || "",
+    question: fq.faq?.question || fq.question || "",
+    answer: fq.faq?.answer || fq.answer || "",
   }));
 
-  // ✅ CORREGIDO: Lee los datos directamente desde el primer elemento del array
-  const cert = data.relatedCertifications?.[0];
-  const certification = cert
+  // ✅ CORREGIDO: Mapeo de Certificación compatible con Prisma anidado
+  const certObj = data.relatedCertifications?.[0]?.certification || data.relatedCertifications?.[0];
+  const certification = certObj
     ? {
-        id: cert.id || "",
-        title: cert.title || "",
-        description: cert.description || "",
-        imageUrl: cert.image_url || "",
-        issuingAuthority: cert.issuing_authority || "Corporación Educativa Benjamin Franklin",
-        registryValidity: cert.registry_validity || "",
-        hasDigital: !!cert.has_digital,
-        hasPhysical: !!cert.has_physical,
+        id: certObj.id || "",
+        title: certObj.title || "",
+        description: certObj.description || "",
+        imageUrl: certObj.image_url || certObj.imageUrl || "",
+        issuingAuthority: certObj.issuing_authority || certObj.issuingAuthority || "Corporación Educativa Benjamin Franklin",
+        registryValidity: certObj.registry_validity || certObj.registryValidity || "",
+        hasDigital: !!(certObj.has_digital ?? certObj.hasDigital ?? true),
+        hasPhysical: !!(certObj.has_physical ?? certObj.hasPhysical ?? true),
       }
     : null;
 
