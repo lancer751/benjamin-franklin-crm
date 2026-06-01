@@ -555,85 +555,53 @@ const ProductFormView = () => {
         </TabsContent>
 
         {/* ================= PESTAÑA 3: CONTENIDO COMERCIAL WEB (PLATAFORMA) ================= */}
-        <TabsContent value="commercial" className="outline-none space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Lado Izquierdo: Configuración de Texto Web (CMS), Estado y FAQs */}
-            <div className="lg:col-span-2 space-y-6">
-              
-              <CommercialConfigCard
-                form={form}
-                errors={errors}
-                setFieldValue={setFieldValue}
-              />
+        <TabsContent value="commercial" className="outline-none">
+          <div className="flex flex-col space-y-8 w-full max-w-full">
+            
+            {/* 1. BLOQUE PRINCIPAL - CONFIGURACIÓN DE TEXTOS */}
+            <CommercialConfigCard
+              form={form}
+              errors={errors}
+              setFieldValue={setFieldValue}
+            />
 
-              {/* Card para Estado de Publicación y Slug */}
-              <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
-                      <Globe size={16} className="text-emerald-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-semibold text-slate-900">Estado de la Publicación Comercial</CardTitle>
-                      <CardDescription className="text-xs">Establece el estado de visibilidad del producto en la web.</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="max-w-md">
-                    <label className="form-label text-xs font-bold text-slate-700 mb-2 block">Estado de Publicación en Catálogo</label>
-                    <select 
-                      value={form.sales_status} 
-                      onChange={(e) => setFieldValue("sales_status", e.target.value)}
-                      className="form-input rounded-xl h-11 border-slate-200 text-sm shadow-sm bg-white focus:ring-emerald-500 w-full"
-                    >
-                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* 2. BLOQUE DE BENEFICIOS DESTACADOS (Rediseño horizontal) */}
+            <BenefitsCard
+              availableBenefits={availableBenefits}
+              isLoadingBenefits={isLoadingBenefits}
+              benefitIds={form.benefit_ids || []}
+              errors={errors}
+              onToggle={handleToggleBenefit}
+              setFieldValue={setFieldValue}
+            />
 
-              <FAQsSectionCard
-                form={form}
-                setFieldValue={setFieldValue}
-                handleLoadDefaultFAQs={handleLoadDefaultFAQs}
-              />
+            {/* 3. BLOQUE DE PREGUNTAS FRECUENTES (FAQs) */}
+            <FAQsSectionCard
+              form={form}
+              setFieldValue={setFieldValue}
+              handleLoadDefaultFAQs={handleLoadDefaultFAQs}
+            />
 
-              <div className="flex justify-end pt-4">
-                <Button
-                  type="button"
-                  onClick={handleSaveCommercial}
-                  disabled={isSavingTab3}
-                  className="rounded-xl btn-primary bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-medium shadow-md shadow-emerald-600/10"
-                >
-                  {isSavingTab3 ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" /> Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <Save size={16} /> Actualizar Contenido Comercial
-                    </>
-                  )}
-                </Button>
-              </div>
+            {/* BOTÓN DE ACCIÓN EXPLICITA DE GUARDADO */}
+            <div className="flex justify-end pt-2">
+              <Button
+                type="button"
+                onClick={handleSaveCommercial}
+                disabled={isSavingTab3}
+                className="rounded-xl btn-primary bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-medium shadow-md shadow-emerald-600/10 px-8 py-3 h-auto"
+              >
+                {isSavingTab3 ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} /> Actualizar Contenido Comercial
+                  </>
+                )}
+              </Button>
             </div>
 
-            {/* Lado Derecho: Beneficios de Catálogo */}
-            <div className="space-y-6">
-              <BenefitsCard
-                availableBenefits={availableBenefits}
-                isLoadingBenefits={isLoadingBenefits}
-                benefitIds={form.benefit_ids || []}
-                errors={errors}
-                onToggle={handleToggleBenefit}
-                setFieldValue={setFieldValue}
-              />
-            </div>
           </div>
         </TabsContent>
       </Tabs>

@@ -2,7 +2,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/cor
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { cn } from "@/core/lib/utils";
-import { STATUS_LABELS } from "@/features/products/components/shared/ProductStatusBadge";
 import EditionCombobox from "./EditionCombobox";
 import EditionInfoPanel from "./EditionInfoPanel";
 
@@ -10,7 +9,6 @@ interface AcademicDetailsCardProps {
   form: {
     edition_id: string | undefined;
     category_id: string;
-    sales_status: string;
   };
   errors: Record<string, string>;
   setFieldValue: (key: string, value: any) => void;
@@ -41,7 +39,7 @@ const AcademicDetailsCard = ({
             <GraduationCap size={16} className="text-primary" />
           </div>
           <div>
-            <CardTitle className="text-sm font-semibold text-slate-900">Detalles Académicos y Venta</CardTitle>
+            <CardTitle className="text-sm font-semibold text-slate-900">Detalles Académicos</CardTitle>
             <CardDescription className="text-xs">Asocia este producto a una cohorte y categoría específica.</CardDescription>
           </div>
         </div>
@@ -56,49 +54,28 @@ const AcademicDetailsCard = ({
           isEdit={isEdit}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="form-label text-xs font-bold text-slate-700 mb-2 block flex items-center gap-2">
-              Categoría
-              {isLoadingCategories && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
-            </label>
-            <Select 
-              value={form.category_id} 
-              onValueChange={(value) => setFieldValue("category_id", value)}
-              disabled={isLoadingCategories}
-            >
-              <SelectTrigger className={cn("h-11 shadow-sm rounded-xl", errors.category_id ? 'border-destructive ring-1 ring-destructive' : 'border-slate-200')}>
-                <SelectValue placeholder={isLoadingCategories ? "Cargando..." : "Seleccionar categoría"} />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat: any) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.category_id && <p className="text-destructive text-[11px] font-medium mt-1.5 ml-1">{errors.category_id}</p>}
-          </div>
-
-          <div>
-            <label className="form-label text-xs font-bold text-slate-700 mb-2 block">Estado de Venta</label>
-            <Select 
-              value={form.sales_status} 
-              onValueChange={(value) => setFieldValue("sales_status", value as any)}
-            >
-              <SelectTrigger className="h-11 border-slate-200 shadow-sm rounded-xl">
-                <SelectValue placeholder="Selecciona el estado" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div>
+          <label className="form-label text-xs font-bold text-slate-700 mb-2 block flex items-center gap-2">
+            Categoría
+            {isLoadingCategories && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+          </label>
+          <Select 
+            value={form.category_id} 
+            onValueChange={(value) => setFieldValue("category_id", value)}
+            disabled={isLoadingCategories}
+          >
+            <SelectTrigger className={cn("h-11 shadow-sm rounded-xl", errors.category_id ? 'border-destructive ring-1 ring-destructive' : 'border-slate-200')}>
+              <SelectValue placeholder={isLoadingCategories ? "Cargando..." : "Seleccionar categoría"} />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat: any) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.category_id && <p className="text-destructive text-[11px] font-medium mt-1.5 ml-1">{errors.category_id}</p>}
         </div>
 
         <EditionInfoPanel selectedEdition={selectedEdition} />

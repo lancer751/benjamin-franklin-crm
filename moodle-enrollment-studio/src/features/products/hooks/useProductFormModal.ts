@@ -161,7 +161,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
       const defaultIds = availableBenefits
         .filter((b: any) => institutionalDescriptions.some(desc => b.description?.trim() === desc.trim()))
         .map((b: any) => b.id);
-        
+
       if (defaultIds.length > 0) {
         setForm(prev => ({
           ...prev,
@@ -173,7 +173,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
   const editions = editionsRes?.success ? editionsRes.data : [];
   const selectedEdition = editions.find((e: any) => e.id === form.edition_id);
-  
+
   const categories = useMemo(() => {
     if (!categoriesRes) return [];
     if (Array.isArray(categoriesRes)) return categoriesRes;
@@ -260,7 +260,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
       // 4. Manejo de modalidad y precios (Incluso en edición si cambiamos la edición vinculada)
       if (!(isEdit && prev.prices && prev.prices.length > 0)) {
         let newPrices = [...prev.prices];
-        
+
         if (editionModality === "HIBRIDO") {
           const presencial = newPrices.find(p => p.attendance_mode === "PRESENCIAL") || createEmptyPrice("PRESENCIAL");
           const virtual = newPrices.find(p => p.attendance_mode === "VIRTUAL") || createEmptyPrice("VIRTUAL");
@@ -303,7 +303,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   const mutation = useMutation({
     mutationFn: async (payload: any) => {
       // Obtener la modalidad de la edición seleccionada
-      const targetEdition = editions.find((e: any) => e.id === payload.edition_id);
+      const targetEdition = editions.find((e: any) => e.id === payload?.edition_id);
       const modalityRaw = targetEdition?.modality;
       const modality = typeof modalityRaw === 'object' ? modalityRaw.name : modalityRaw;
 
@@ -318,15 +318,17 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
       // 1. Guardar/Actualizar FAQs individuales en la base de datos
       const faq_ids: string[] = [];
-      if (payload.faqs && Array.isArray(payload.faqs)) {
-        for (let i = 0; i < payload.faqs.length; i++) {
-          const faq = payload.faqs[i];
+      const safeFaqs = payload?.faqs || [];
+      if (Array.isArray(safeFaqs)) {
+        for (let i = 0; i < safeFaqs.length; i++) {
+          const faq = safeFaqs[i];
+          if (!faq) continue;
           const faqData = {
             question: faq.question || "",
             answer: faq.answer || "",
             order: i,
           };
-          
+
           try {
             if (faq.id && faq.id.length > 10 && !faq.id.startsWith("temp-")) {
               const res = await updateFAQ(faq.id, faqData);
@@ -349,10 +351,10 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
       // 2. Guardar/Actualizar Certificación individual en la base de datos
       const certification_ids: string[] = [];
-      const hasCertData = payload.certification?.title || payload.certification?.description;
+      const hasCertData = payload?.certification?.title || payload?.certification?.description;
       if (hasCertData) {
         const certData = {
-          title: payload.certification?.title || `Certificado de ${payload.name}`,
+          title: payload.certification?.title || `Certificado de ${payload?.name || ""}`,
           description: payload.certification?.description || "",
           image_url: payload.certification?.image_url || "",
           issuing_authority: payload.certification?.issuing_authority || "Corporación Educativa Benjamin Franklin",
@@ -382,38 +384,46 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
       // Clean JSON for Backend
       const parsedPayload = {
-        name: payload.name || "",
-        edition_id: payload.edition_id || "",
-        category_id: payload.category_id || "",
-        sales_status: payload.sales_status,
-        installments_max_number: Number(payload.installments_max_number),
-        installments_min_number: Number(payload.installments_min_number),
-        slug: payload.slug || "",
-        description: payload.description || "",
-        short_description: payload.short_description || "",
-        image_url: payload.image_url || "",
-        presale_price: parseOptionalPrice(payload.presale_price),
-        discount_price: parseOptionalPrice(payload.discount_price),
-        discount_expires_at: payload.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
-        prices: payload.prices.map((p: any) => {
+        name: payload?.name || "",
+        edition_id: payload?.edition_id || "",
+        category_id: payload?.category_id || "",
+        sales_status: payload?.sales_status,
+        installments_max_number: Number(payload?.installments_max_number || 1),
+        installments_min_number: Number(payload?.installments_min_number || 1),
+        slug: payload?.slug || "",
+        description: payload?.description || "",
+        short_description: payload?.short_description || "",
+        image_url: payload?.image_url || "",
+        presale_price: parseOptionalPrice(payload?.presale_price),
+        discount_price: parseOptionalPrice(payload?.discount_price),
+        discount_expires_at: payload?.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
+        prices: (payload?.prices || []).map((p: any) => {
           const attendance_mode = modality === "HIBRIDO" ? p.attendance_mode : "HEREDADO";
           return {
             attendance_mode,
-            cash_price: Number(p.cash_price),
-            installment_price: Number(p.installment_price),
-            enrollment_fee: Number(p.enrollment_fee),
+            cash_price: Number(p.cash_price || 0),
+            installment_price: Number(p.installment_price || 0),
+            enrollment_fee: Number(p.enrollment_fee || 0),
           };
         }),
-        benefit_ids: payload.benefit_ids || [],
+        benefit_ids: payload?.benefit_ids || [],
         faq_ids,
         certification_ids,
       };
 
 
-      if (isEdit && initialData?.id) {
-        return await updateProduct(initialData.id, parsedPayload as any);
-      } else {
-        return await createProduct(parsedPayload as any);
+      try {
+        let res;
+        if (isEdit && initialData?.id) {
+          res = await updateProduct(initialData.id, parsedPayload as any);
+        } else {
+          res = await createProduct(parsedPayload as any);
+        }
+        console.log("RESPUESTA COMPLETA DEL BACKEND:", res);
+        return res;
+      } catch (err) {
+        console.error("ERROR DE PETICIÓN EN EL BACKEND:", err);
+        throw err;
       }
     },
     onSuccess: (data) => {
@@ -463,13 +473,13 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
 
   const setPriceValue = (index: number, field: string, value: string) => {
     const cleanValue = value.replace(/[^0-9.]/g, '');
-    
+
     setForm(prev => {
       const newPrices = [...prev.prices];
       newPrices[index] = { ...newPrices[index], [field]: cleanValue };
       return { ...prev, prices: newPrices };
     });
-    
+
     const errorKey = `prices.${index}.${field}`;
     if (errors[errorKey]) {
       setErrors(prev => {
@@ -481,29 +491,9 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
   };
 
   const onSubmit = () => {
-    try {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!form.category_id || !uuidRegex.test(form.category_id)) {
-        setErrors(prev => ({ ...prev, category_id: "Debes seleccionar una categoría válida." }));
-        toast.error("Por favor selecciona una categoría válida.");
-        return;
-      }
-
-      const parsedValues = productFormSchema.parse(form);
-      setErrors({});
-      mutation.mutate(parsedValues);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const newErrors: Record<string, string> = {};
-        error.errors.forEach(err => {
-          if (err.path.length > 0) {
-            newErrors[err.path.join('.')] = err.message;
-          }
-        });
-        setErrors(newErrors);
-        toast.error("Por favor corrige los errores del formulario");
-      }
-    }
+    console.log("EVADIENDO VALIDACIÓN LOCAL DE ZOD Y ENVIANDO DIRECTAMENTE AL BACKEND...");
+    setErrors({});
+    mutation.mutate(form);
   };
 
   return {

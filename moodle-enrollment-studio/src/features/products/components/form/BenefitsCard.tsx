@@ -79,7 +79,7 @@ const BenefitsCard = ({
             * El backend requiere la asignación de al menos un beneficio activo para habilitar la orden de compra.
           </p>
           {isLoadingBenefits ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((n) => (
                 <div key={n} className="flex items-center gap-3 p-4 rounded-xl border border-slate-100 bg-slate-50/40 animate-pulse">
                   <div className="w-4.5 h-4.5 rounded bg-slate-200" />
@@ -93,7 +93,7 @@ const BenefitsCard = ({
               <p className="text-xs font-medium text-slate-400">No se encontraron beneficios disponibles.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {availableBenefits.map((benefit: any) => {
                 const isChecked = benefitIds.includes(benefit.id);
                 return (
