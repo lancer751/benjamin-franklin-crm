@@ -91,21 +91,7 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
     reValidateMode: "onChange",
     defaultValues: user
       ? userAdapter.toForm(user, roles, extendedProfile)
-      : {
-        role: "SALES_REP", // 🌟 ¡VITAL! Zod ya sabe que debe validar el esquema de Vendedor
-        role_id: "",
-        first_name: "",
-        middle_name: "",
-        last_name: "",
-          email: "",
-          password: "",
-          cellphone: "",
-          is_active: true,
-          seller_profile: {
-            sales_target: 0,
-            assigned_supervisor_id: ""
-          }
-        } as any,
+      : userAdapter.toForm(null, roles),
   });
 
   const watchRoleId = form.watch("role_id");

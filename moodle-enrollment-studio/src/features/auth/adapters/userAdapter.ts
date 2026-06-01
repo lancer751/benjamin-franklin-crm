@@ -11,6 +11,7 @@ export const userAdapter = {
         role: "SALES_REP",
         first_name: "", middle_name: "", last_name: "", email: "", password: "",
         cellphone: "", role_id: "", is_active: true,
+        corporate_email: "", corporate_cellphone: "", birth_date: null,
         seller_profile: {
           sales_target: 0, assigned_supervisor_id: "",
         },
@@ -33,6 +34,9 @@ export const userAdapter = {
       role: roleName,
       first_name: user.first_name || "",
       middle_name: user.middle_name || "",
+      corporate_email: user.corporate_email || "",
+      corporate_cellphone: user.corporate_cellphone || "",
+      birth_date: user.birth_date ? new Date(user.birth_date) : null,
       last_name: user.last_name || "",
       email: user.email || "",
       password: "", 
@@ -65,6 +69,9 @@ export const userAdapter = {
     const payload: any = {
       first_name: values.first_name,
       middle_name: values.middle_name || "",
+      corporate_email: values.corporate_email?.trim() ? values.corporate_email : null,
+      corporate_cellphone: values.corporate_cellphone?.trim() ? values.corporate_cellphone : null,
+      birth_date: values.birth_date ? new Date(values.birth_date).toISOString() : null,
       last_name: values.last_name,
       email: values.email,
       password: values.password?.trim() ? values.password : undefined,
