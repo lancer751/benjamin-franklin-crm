@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/cor
 import { Checkbox } from "@/core/components/ui/checkbox";
 import { Input } from "@/core/components/ui/input";
 import { Button } from "@/core/components/ui/button";
-import { Gift, Info, Plus, Loader2 } from "lucide-react";
+import { Gift, Info, Plus, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/core/lib/utils";
 import { createBenefit } from "../../services/benefitService";
 import { toast } from "sonner";
@@ -29,6 +29,11 @@ const BenefitsCard = ({
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newBenefitText, setNewBenefitText] = useState("");
+  const [hiddenBenefitIds, setHiddenBenefitIds] = useState<string[]>([]);
+
+  const visibleBenefits = availableBenefits.filter(
+    (benefit: any) => !hiddenBenefitIds.includes(benefit.id)
+  );
 
   const addMutation = useMutation({
     mutationFn: (description: string) => createBenefit({ description }),
@@ -87,21 +92,21 @@ const BenefitsCard = ({
                 </div>
               ))}
             </div>
-          ) : availableBenefits.length === 0 ? (
+          ) : visibleBenefits.length === 0 ? (
             <div className="py-8 flex flex-col items-center justify-center gap-2 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
               <Info className="h-5 w-5 text-slate-400" />
-              <p className="text-xs font-medium text-slate-400">No se encontraron beneficios disponibles.</p>
+              <p className="text-xs font-medium text-slate-400">No hay beneficios visibles en la lista.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {availableBenefits.map((benefit: any) => {
+              {visibleBenefits.map((benefit: any) => {
                 const isChecked = benefitIds.includes(benefit.id);
                 return (
                   <div 
                     key={benefit.id} 
                     onClick={() => onToggle(benefit.id)}
                     className={cn(
-                      "flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer select-none group",
+                      "relative flex items-start gap-3 p-4 pr-9 rounded-xl border transition-all cursor-pointer select-none group",
                       isChecked 
                         ? "bg-primary/5 border-primary shadow-sm hover:bg-primary/[0.07]" 
                         : "bg-white border-slate-200 hover:bg-slate-50/80 hover:border-slate-300"
@@ -119,6 +124,22 @@ const BenefitsCard = ({
                         {benefit.description || benefit.name}
                       </label>
                     </div>
+                    {/* Botón de Eliminación Puramente Visual (Sin HTTP req) */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        // 1. Remover del array de benefit_ids
+                        setFieldValue("benefit_ids", benefitIds.filter(id => id !== benefit.id));
+                        // 2. Ocultar visualmente
+                        setHiddenBenefitIds(prev => [...prev, benefit.id]);
+                      }}
+                      className="absolute top-2 right-2 p-1 rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-200"
+                      title="Eliminar visualmente de este producto"
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </div>
                 );
               })}

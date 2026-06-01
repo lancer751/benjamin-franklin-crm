@@ -105,6 +105,7 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
         },
         category: { omit: { created_at: true, updated_at: true } },
         orders_details: true,
+        relatedBenefits: true
       },
     });
 

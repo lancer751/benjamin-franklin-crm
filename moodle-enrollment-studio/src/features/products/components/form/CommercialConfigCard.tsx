@@ -1,6 +1,6 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/core/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
-import { Settings, Link as LinkIcon, Edit3, Globe } from "lucide-react";
+import { Settings, Link as LinkIcon, Globe } from "lucide-react";
 import { cn } from "@/core/lib/utils";
 import { STATUS_LABELS } from "@/features/products/components/shared/ProductStatusBadge";
 
@@ -36,21 +36,6 @@ const CommercialConfigCard = ({
       </CardHeader>
       <CardContent className="p-6 space-y-6">
         
-        {/* Nombre Comercial del Producto (100% Ancho) */}
-        <div className="w-full">
-          <label className="form-label text-xs font-bold text-slate-700 mb-2 block flex items-center gap-1.5">
-            <Edit3 size={14} className="text-primary" /> Nombre Comercial del Producto
-          </label>
-          <input 
-            type="text" 
-            className={cn("form-input w-full rounded-xl h-11 border-slate-200 text-sm shadow-sm bg-white focus:ring-primary", errors.name && 'border-destructive')} 
-            placeholder="Ej. Curso de React - Cohorte 1" 
-            value={form.name} 
-            onChange={(e) => setFieldValue("name", e.target.value)} 
-          />
-          {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
-        </div>
-
         {/* Grid para Slug y Estado */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 w-full">
           {/* Slug (Col Span 8) */}

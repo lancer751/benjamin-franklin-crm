@@ -43,7 +43,7 @@ export const deleteProduct = async (id: string): Promise<DeleteProductRes> => {
 type UpdateCommercialContentReq = InferRequestType<typeof api.cms.products[typeof UUID_PATH]["commercial-content"]["$put"]>["json"];
 
 export const updateProductCommercialContent = async (id: string, data: UpdateCommercialContentReq) => {
-  const res = await api.cms.products[UUID_PATH]["commercial-content"]["$put"]({
+  const res = await api.cms.products[":id"]["commercial-content"].$put({
     param: { id },
     json: data
   });
