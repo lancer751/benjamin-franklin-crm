@@ -50,8 +50,6 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
               created_at: true,
               edition_status: true,
               edition_number: true,
-              start_date: true,
-              end_date: true,
             },
           },
           studyPlans: {
