@@ -1,5 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { 
   ArrowLeft, Loader2, User, Phone, Mail, Calendar, 
   Target, Briefcase, TrendingUp, ShoppingCart, CheckCircle,
@@ -139,6 +141,15 @@ export default function UserDetailView() {
                     {user?.email}
                   </div>
                 </div>
+                {user?.middle_name && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground uppercase font-semibold">Segundo Nombre</span>
+                    <div className="flex items-center gap-2 text-sm text-foreground font-medium bg-muted/30 p-2.5 rounded-lg border border-border/50">
+                      <User size={14} className="text-muted-foreground shrink-0" />
+                      {user.middle_name}
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground uppercase font-semibold">Celular</span>
                   <div className="flex items-center gap-2 text-sm text-foreground font-medium bg-muted/30 p-2.5 rounded-lg border border-border/50">
@@ -147,10 +158,51 @@ export default function UserDetailView() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground uppercase font-semibold">Fecha de Nacimiento</span>
+                  <div className="flex items-center gap-2 text-sm text-foreground font-medium bg-muted/30 p-2.5 rounded-lg border border-border/50">
+                    <Calendar size={14} className="text-muted-foreground shrink-0" />
+                    {user?.birth_date ? (
+                      format(new Date(user.birth_date), "dd 'de' MMMM 'de' yyyy", { locale: es })
+                    ) : (
+                      <span className="text-muted-foreground font-normal">No registrada</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground uppercase font-semibold">Fecha de Registro</span>
                   <div className="flex items-center gap-2 text-sm text-foreground font-medium bg-muted/30 p-2.5 rounded-lg border border-border/50">
                     <Calendar size={14} className="text-muted-foreground shrink-0" />
                     {user?.created_at ? new Date(user.created_at).toLocaleDateString("es-PE", { year: 'numeric', month: 'long', day: 'numeric' }) : "No disponible"}
+                  </div>
+                </div>
+
+                {/* SECCIÓN DE DATOS CORPORATIVOS */}
+                <div className="border-t border-slate-100 my-4 pt-4" />
+                <div className="space-y-4">
+                  <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider block">Datos Corporativos</span>
+                  
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground uppercase font-semibold">Correo Corporativo</span>
+                    <div className="flex items-center gap-2 text-sm text-foreground font-medium bg-muted/30 p-2.5 rounded-lg border border-border/50 break-all">
+                      <Mail size={14} className="text-muted-foreground shrink-0" />
+                      {user?.corporate_email ? (
+                        user.corporate_email
+                      ) : (
+                        <span className="text-muted-foreground font-normal">No asignado</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground uppercase font-semibold">Celular Corporativo</span>
+                    <div className="flex items-center gap-2 text-sm text-foreground font-medium bg-muted/30 p-2.5 rounded-lg border border-border/50">
+                      <Phone size={14} className="text-muted-foreground shrink-0" />
+                      {user?.corporate_cellphone ? (
+                        user.corporate_cellphone
+                      ) : (
+                        <span className="text-muted-foreground font-normal">No asignado</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </>
