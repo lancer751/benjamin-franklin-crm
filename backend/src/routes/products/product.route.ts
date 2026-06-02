@@ -17,6 +17,7 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
         id: true,
         image_url: true,
         name: true,
+        sales_status: true,
         category: {
           omit: {
             created_at: true,
