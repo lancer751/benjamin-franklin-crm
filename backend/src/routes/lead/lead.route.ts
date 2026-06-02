@@ -18,7 +18,11 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
     const leads = await c.get("prisma").lead.findMany({
       include: {
         leadPrimaryCampaing: true,
+        phones: true
       },
+      orderBy: {
+         created_at: "desc"
+      }
     });
     return c.json(leads, 200);
   })

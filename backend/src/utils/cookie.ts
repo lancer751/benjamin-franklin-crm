@@ -40,8 +40,8 @@ export async function setAuthCookies(
   const refreshToken = await createRefreshToken(userId, role);
   const csrfToken = createCsrfToken();
 
-  const accessMaxAge = 60 * 15; // 15 minutes in seconds
-  const refreshMaxAge = 60 * 60 * 24 * 7; // 7 days in seconds
+  const accessMaxAge = 60 * envParsed.ACCESS_TOKEN_EXP_TIME; // in seconds
+  const refreshMaxAge = 60 * 60 * 24 * envParsed.REFRESH_TOKEN_EXP_TIME; // in seconds
 
   setCookie(
     c,
