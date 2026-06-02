@@ -61,7 +61,7 @@ export function UserFormModal({ isOpen, onClose, user }: UserFormModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeAndReset()}>
-      <DialogContent className="sm:max-w-[600px] flex flex-col max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="sm:max-w-[700px] md:max-w-[850px] w-[95vw] flex flex-col max-h-[95vh] overflow-hidden p-0">
         <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b">
           <DialogTitle>{user ? "Editar Usuario" : "Crear Nuevo Usuario"}</DialogTitle>
         </DialogHeader>
