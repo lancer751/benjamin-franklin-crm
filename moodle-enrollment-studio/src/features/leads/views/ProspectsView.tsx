@@ -7,6 +7,9 @@ import { getAllLeads, deleteLead } from "../services/leadService";
 import { CustomTable } from "@/core/components/CustomTable";
 import { Card } from "@/core/components/ui/card";
 import { Button } from "@/core/components/ui/button";
+import { format } from "date-fns";
+import { Badge } from "@/core/components/ui/badge";
+import { useSearchStore } from "@/store/useSearchStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +50,16 @@ const ProspectsView = () => {
 
   const popoverRef = useRef<HTMLDivElement>(null);
 
+  // 🔍 Configuración del buscador global
+  const { searchQuery, setSearchQuery, setPlaceholder } = useSearchStore();
+
+  useEffect(() => {
+    setPlaceholder("Buscar por nombre, apellido o email...");
+    return () => {
+      setSearchQuery(""); // Limpia el buscador al desmontar la vista
+    };
+  }, [setPlaceholder, setSearchQuery]);
+
   // Cerrar el Popover automáticamente si el usuario hace clic fuera de él
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -73,6 +86,7 @@ const ProspectsView = () => {
 
   // 2. 🔮 Lógica de Filtrado Avanzada y Optimizada con useMemo (Comparación milisegundal de Timestamps)
   const filteredLeads = useMemo(() => {
+    if (!leads) return [];
     let startLimit: number | null = null;
     let endLimit: number | null = null;
     const now = new Date();
@@ -110,6 +124,8 @@ const ProspectsView = () => {
       }
     }
 
+    const query = searchQuery.trim().toLowerCase();
+
     return leads.filter((lead: any) => {
       // Filtro de Tipificación mapeado al campo correcto del JSON: lead_status
       const matchTipification = tipificationFilter === "ALL" || lead.lead_status === tipificationFilter;
@@ -129,9 +145,29 @@ const ProspectsView = () => {
         }
       }
 
-      return matchTipification && matchGender && matchDate;
+      // 🔍 Búsqueda global client-side
+      let matchSearch = true;
+      if (query) {
+        const firstName = lead.first_name?.toLowerCase() || "";
+        const middleName = lead.middle_name?.toLowerCase() || "";
+        const lastName = lead.last_name?.toLowerCase() || "";
+        const email = lead.email?.toLowerCase() || "";
+        
+        // Construye combinaciones de nombre completo para búsquedas naturales
+        const fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ');
+
+        matchSearch = (
+          firstName.includes(query) ||
+          middleName.includes(query) ||
+          lastName.includes(query) ||
+          fullName.includes(query) ||
+          email.includes(query)
+        );
+      }
+
+      return matchTipification && matchGender && matchDate && matchSearch;
     });
-  }, [leads, tipificationFilter, genderFilter, dateRangeType, customStartDate, customEndDate]);
+  }, [leads, tipificationFilter, genderFilter, dateRangeType, customStartDate, customEndDate, searchQuery]);
 
   // 3. Mutación para eliminar registros
   const deleteMutation = useMutation({
@@ -150,6 +186,23 @@ const ProspectsView = () => {
   // 4. Definición de columnas preparadas para CustomTable
   const columns = useMemo<ColumnDef<any>[]>(
     () => [
+      {
+        header: "Fecha de Registro",
+        accessorKey: "created_at",
+        cell: ({ row }) => {
+          const dateVal = row.original.created_at;
+          if (!dateVal) return <span className="text-muted-foreground/60 text-xs">-</span>;
+          try {
+            return (
+              <span className="text-foreground">
+                {format(new Date(dateVal), "dd/MM/yyyy HH:mm")}
+              </span>
+            );
+          } catch (error) {
+            return <span className="text-muted-foreground/60 text-xs">-</span>;
+          }
+        },
+      },
       {
         header: "Nombre Completo",
         accessorKey: "first_name",
@@ -173,18 +226,18 @@ const ProspectsView = () => {
         cell: ({ row }) => <span className="text-foreground">{row.original.email}</span>,
       },
       {
-        header: "DNI",
-        accessorKey: "dni",
-        cell: ({ row }) => <span className="text-foreground">{row.original.dni || "-"}</span>,
-      },
-      {
-        header: "Género",
-        accessorKey: "gender",
-        cell: ({ row }) => (
-          <span className="inline-flex items-center rounded-full bg-slate-50 border border-slate-100/50 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
-            {row.original.gender === "MALE" ? "Masculino" : row.original.gender === "FEMALE" ? "Femenino" : "N/E"}
-          </span>
-        ),
+        header: "Celular",
+        accessorKey: "cellphone",
+        cell: ({ row }) => {
+          const phone = row.original.phones?.[0]?.number;
+          return phone ? (
+            <span className="text-foreground">{phone}</span>
+          ) : (
+            <Badge variant="secondary" className="bg-slate-50 text-slate-400 border-slate-150 hover:bg-slate-100/50 font-medium text-[11px]">
+              Sin número
+            </Badge>
+          );
+        },
       },
       {
         header: "Etapa / Tipificación",

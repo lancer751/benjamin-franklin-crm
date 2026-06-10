@@ -24,6 +24,10 @@ const EditionCombobox = ({
 }: EditionComboboxProps) => {
   const [openCombobox, setOpenCombobox] = useState(false);
 
+  const availableEditions = editions?.filter(
+    (edition) => edition.edition_status === "SCHEDULED"
+  ) || [];
+
   const selectedEdition = editions.find((ed: any) => ed.id === editionId);
   const displayLabel = selectedEdition
     ? `${selectedEdition.edition_code} - ${selectedEdition.course?.name || ""}`
@@ -59,7 +63,7 @@ const EditionCombobox = ({
             <CommandList className="max-h-[300px]">
               <CommandEmpty>No se encontraron ediciones.</CommandEmpty>
               <CommandGroup>
-                {editions.map((ed: any) => (
+                {availableEditions.map((ed: any) => (
                   <CommandItem
                     key={ed.id}
                     value={`${ed.edition_code} ${ed.course?.name}`}
