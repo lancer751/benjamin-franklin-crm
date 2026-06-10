@@ -9,6 +9,8 @@ import { secureHeaders } from "hono/secure-headers";
 import { rateLimiter } from "hono-rate-limiter";
 import { csrf } from "hono/csrf";
 import { envParsed } from "./env";
+import cloudinary from "cloudinary";
+import { bulkRouter } from "./routes/bulk.route";
 
 export const app = new Hono();
 const allowedOrigins = envParsed.ALLOWED_ORIGINS;
@@ -24,7 +26,6 @@ app.use(
     allowHeaders: ["Content-Type", "Authorization", "xxx-csrf-access-token"],
   }),
 );
-
 
 // app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
 // Apply rate limiting middleware
@@ -96,6 +97,34 @@ app.get("/health", async (c) => {
       503,
     );
   }
+});
+
+app.route("/upload", bulkRouter);
+
+app.post("/cloudinary", async (c) => {
+  const body = await c.req.parseBody();
+  const file = body["file"];
+
+  if (!(file instanceof File)) {
+    return c.text("File is required", 400);
+  }
+
+  if(!file.name.endsWith(".pdf")) {
+    return c.text("Only PDF files are allowed", 400);
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  const dataUri = `data:application/pdf;base64,${base64}`;
+
+  const result = await cloudinary.v2.uploader.upload(dataUri, {
+    resource_type: "raw",       // required for PDFs
+    use_filename: true,
+    filename_override: file.name,
+  });
+
+  return c.json(result);
+
 });
 
 export default {

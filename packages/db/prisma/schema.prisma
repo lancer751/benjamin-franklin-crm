@@ -127,7 +127,6 @@ model SellerProfile {
   id                     String  @id @default(uuid()) @db.Char(36)
   user_id                String  @unique
   sales_target           Int     @default(0)
-  // these fields are filled by the system based on the orders registered and the campaigns assigned to the seller, they are useful for reporting and performance tracking
   total_sales            Int     @default(0)
   total_orders           Int     @default(0)
   completed_orders       Int     @default(0)
@@ -141,8 +140,8 @@ model SellerProfile {
   orders           Order[]                @relation("SELLER_ORDERS")
   LeadInteraction  LeadInteraction[]
   assignedCampaing CampaignSeller[]
-  // TODO evaluate this and then change the deletion mode of the supervisor relation to SET_NULL
   supervisor       SalesSupervisorProfile @relation(fields: [assigned_supervisor_id], references: [id], onDelete: Cascade)
+  createdTasks     Tasks[]
 }
 
 model SalesSupervisorProfile {
@@ -165,8 +164,8 @@ model SalesSupervisorProfile {
   max_manual_discount    Decimal? @default(0) @db.Decimal(10, 2) // max discount zamount that the supervisor can apply manually without needing approval from a higher role
 
   // performance metrics (system-calculated)
-  supervised_sellers     Int     @default(0) // how many sellers belong to this supervisor
-  active_sellers         Int     @default(0) // how many of those sellers are currently working
+  supervised_sellers     Int     @default(0) 
+  active_sellers         Int     @default(0) 
   total_team_sales       Int     @default(0)
   total_team_orders      Int     @default(0)
   completed_team_orders  Int     @default(0)
@@ -174,9 +173,9 @@ model SalesSupervisorProfile {
   team_conversion_rate   Decimal @default(0) @db.Decimal(5, 2)
   avg_team_response_time Decimal @default(0) @db.Decimal(10, 2) // in seconds
 
-  // team management
   user            User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
   assignedSellers SellerProfile[]
+  campaigns       Campaing[]      // back-relation to the campaigns they supervise
 }
 
 model CampaignSeller {
@@ -251,6 +250,7 @@ model CampaignMember {
   campaing         Campaing          @relation(fields: [campaing_id], references: [id])
   seller           SellerProfile?    @relation(fields: [assigned_to], references: [id])
   leadInteractions LeadInteraction[]
+  tasks  Tasks[]
 
   @@unique([lead_id, campaing_id])
   @@index([status])
@@ -280,14 +280,14 @@ model CustomerProfile {
 
 model Lead {
   id                  String     @id @default(uuid()) @db.Char(36)
-  first_name          String
-  middle_name         String
-  last_name           String
+  first_name          String?
+  middle_name         String?
+  last_name           String?
   profession          String?
   gender              Gender?
   address             String?
   second_address      String?
-  email               String     @unique
+  email               String?     @unique
   secondary_email     String?
   dni                 String?    @unique @db.Char(8)
   lead_status         LeadStatus @default(ACTIVE)
@@ -302,6 +302,7 @@ model Lead {
   campaignsEngaging   CampaignMember[]
   customerProfile     CustomerProfile?
   leadPrimaryCampaing Campaing?         @relation("PrimaryCampaign", fields: [primary_campaign_id], references: [id])
+  createdTasks         Tasks[]
 }
 
 enum InteractionType {
@@ -327,9 +328,18 @@ model LeadInteraction {
 }
 
 model Tasks {
-  id      String @id @default(uuid()) @db.Char(36)
-  title   String
-  content String @db.Text()
+  id                 String    @id @default(uuid()) @db.Char(36)
+  title              String
+  content            String    @db.Text
+  is_done            Boolean   @default(false)   // NEW
+  due_date           DateTime?                   // NEW
+  lead_id            String                      // NEW
+  campaign_member_id String                      // NEW
+  created_by         String                      // NEW — seller who owns the task
+
+  lead           Lead           @relation(fields: [lead_id], references: [id])
+  campaignMember CampaignMember @relation(fields: [campaign_member_id], references: [id])
+  seller         SellerProfile  @relation(fields: [created_by], references: [id])
 }
 
 enum CourseType {
@@ -412,14 +422,18 @@ model Campaing {
   end_date       DateTime?
   platform       CampaingPlatform
   is_organic     Boolean
+  meta_form_id   String?          // NEW — links to a Meta Lead Ad form
   created_at     DateTime         @default(now())
   updated_at     DateTime         @updatedAt
   product_id     String           @unique
+  supervisor_id  String           // NEW — who manages this campaign
+
 
   members        CampaignMember[]
   leads          Lead[]           @relation("PrimaryCampaign")
   relatedProduct Product          @relation(fields: [product_id], references: [id])
   sellers        CampaignSeller[]
+  supervisor     SalesSupervisorProfile @relation(fields: [supervisor_id], references: [id])  // NEW
 }
 
 enum WeekDays {

@@ -1,279 +1,270 @@
+// routes/lead.route.ts
 import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import {
-  createLeadFromExternalSchema,
-  createLeadInteractionSchema,
-  createLeadSchema,
-  updateLeadSchema,
-} from "shared";
-import { UUID_ROUTE } from "@/helpers/constants";
 import { HTTPException } from "hono/http-exception";
+import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import type { SuccessResponse } from "@/app";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
 import withPrisma from "@/lib/prisma";
+import type { SuccessResponse } from "@/app";
+import {
+  CreateLeadSchema,
+  UpdateLeadSchema,
+  CreateCampaignMemberSchema,
+  UpdateCampaignMemberStatusSchema,
+  ReassignCampaignMemberSchema,
+  CreateLeadInteractionSchema,
+  CreateTaskSchema,
+  UpdateTaskSchema,
+  LeadQuerySchema,
+  CampaignMemberQuerySchema,
+} from "shared";
+import { leadRepository } from "@/repositories/lead.repository";
+import { validateIdParamSchema } from "@/helpers/params-validator";
 
+const UUIDParam = z.object({ id: z.string().uuid().length(36) });
+const MemberParam = z.object({ memberId: z.string().uuid().length(36) });
+const TaskParam = z.object({
+  memberId: z.string().uuid().length(36),
+  taskId: z.string().uuid().length(36),
+});
+
+function handleRepoError(err: unknown): never {
+  if (err && typeof err === "object" && "code" in err) {
+    const e = err as { code: string; message: string };
+    const statusMap: Record<string, 400 | 404 | 409 | 422> = {
+      NOT_FOUND: 404,
+      CONFLICT: 409,
+      INVALID: 422,
+    };
+    throw new HTTPException(statusMap[e.code] ?? 400, { message: e.message });
+  }
+  throw err;
+}
+
+// ── /leads ───────────────────────────────────────────────────────────────────
 export const leadRoutes = new Hono<ContextWithPrisma>()
-  .get("/", withPrisma, async (c) => {
-    const leads = await c.get("prisma").lead.findMany({
-      include: {
-        leadPrimaryCampaing: true,
-        phones: true
-      },
-      orderBy: {
-         created_at: "desc"
-      }
-    });
-    return c.json(leads, 200);
-  })
-  // lead details
-  .get(
-    UUID_ROUTE,
-    withPrisma,
-    zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
-    async (c) => {
-      const id = c.req.param("id");
-      // return the campaings that the lead is associated with, and the interactions that the lead has had
-      const lead = await c.get("prisma").lead.findUnique({
-        where: { id },
-        include: {
-          interactions: true,
-          campaignsEngaging: { include: { campaing: true } },
-        },
-      });
+  .use(withPrisma)
 
-      if (!lead) {
-        throw new HTTPException(404, { message: "Lead not found" });
-      }
-
-      return c.json<SuccessResponse<typeof lead>>(
-        {
-          success: true,
-          message: "Lead retrieved successfully",
-          data: lead,
-        },
-        200,
-      );
-    },
-  )
-  // get lead interactions without specifying a campaing
-  // TODO: add filtering and sortering and pagination
-  .get(
-    `/:id/interactions`,
-    withPrisma,
-    zValidator("param", z.object({ id: z.uuid().length(36) })),
-    async (c) => {
-      const id = c.req.param("id");
-      const interactions = await c.get("prisma").leadInteraction.findMany({
-        where: { lead_id: id },
-        include: {
-          seller: {
-            include: {
-              user: {
-                select: {
-                  first_name: true,
-                  last_name: true,
-                  middle_name: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      const formattedInteractions = interactions.map((interaction) => ({
-        ...interaction,
-        created_by: interaction.seller
-          ? interaction.seller.user.first_name
-          : "External System",
-      }));
-
-      return c.json(formattedInteractions, 200);
-    },
-  )
-  .post("/", withPrisma, zValidator("json", createLeadSchema), async (c) => {
-    const lead = c.req.valid("json");
-    // lead phone is missing, adjust the schema to handle it
-    const newLead = await c.get("prisma").lead.create({
-      data: lead,
-    });
-    return c.json<SuccessResponse<typeof newLead>>(
-      {
-        success: true,
-        message: "Lead created successfully",
-        data: newLead,
-      },
-      201,
-    );
-  })
-  // create a lead and its interactions from external source
-  .post(
-    "/external",
-    withPrisma,
-    zValidator("json", createLeadFromExternalSchema),
-    async (c) => {
-      const lead = c.req.valid("json");
-      const { lead_interaction, source, campaing_id, ...formattedLead } =
-        structuredClone(lead);
-      const { notes, type } = lead_interaction;
-      // creating the lead and the lead interaction at the same time, since we know that if the lead is being created from an external source, it means that there was an interaction with the lead, and we want to keep track of that interaction in our system
-      const existingLead = await c.get("prisma").lead.findUnique({
-        where: { email: lead.email },
-      });
-
-      const existingCampaignSeller = await c
-        .get("prisma")
-        .campaignSeller.findFirst({
-          where: { campaign_id: campaing_id },
-        });
-
-      if (!existingCampaignSeller) {
-        throw new HTTPException(404, {
-          message: `Campaign with id ${campaing_id} doesn't exist`,
-        });
-      }
-
-      // if the lead already exists, we only create a new interaction, otherwise we create the lead, a campaingmember and the interaction
-      await c.get("prisma").$transaction(async (tx) => {
-        const createdLead =
-          existingLead ??
-          (await tx.lead.create({
-            data: { ...formattedLead, primary_campaign_id: campaing_id },
-          }));
-
-        // creating a new campaign member if the lead doesn't exist
-        const existingCampaingMember = await tx.campaignMember.findFirst({
-          where: {
-            campaing_id,
-            lead_id: createdLead.id,
-          },
-        });
-
-        if (!existingCampaingMember) {
-          await tx.campaignMember.create({
-            data: {
-              source: source,
-              campaing_id: campaing_id,
-              lead_id: createdLead.id,
-              is_primary: existingLead ? true : false,
-              assigned_to: existingCampaignSeller.seller_id,
-            },
-          });
-        }
-
-        // creating a new interaction
-        await tx.leadInteraction.create({
-          data: {
-            campaing_id: campaing_id,
-            notes,
-            lead_id: createdLead.id,
-            type,
-          },
-        });
-      });
-      return c.json<SuccessResponse>(
-        {
-          success: true,
-          message: "Lead created successfully from external source",
-        },
-        201,
-      );
-    },
-  )
-  // register lead interaction manually from the CRM
-  .post(
-    "/interactions",
-    withPrisma,
-    zValidator("json", createLeadInteractionSchema),
-    async (c) => {
-      const interactionData = c.req.valid("json");
-
-      const existingCampaingMember = await c
-        .get("prisma")
-        .campaignMember.findUnique({
-          where: {
-            lead_id_campaing_id: {
-              campaing_id: interactionData.campaing_id,
-              lead_id: interactionData.lead_id,
-            },
-          },
-        });
-
-      if (!existingCampaingMember) {
-        throw new HTTPException(500, {
-          message:
-            "You can't add an interaction if the user hasn't been added to a Campaing",
-        });
-      }
-
-      const newInteraction = await c.get("prisma").leadInteraction.create({
-        data: interactionData,
-      });
-
-      return c.json<SuccessResponse<typeof newInteraction>>(
-        {
-          success: true,
-          message: "Lead interaction created successfully",
-          data: newInteraction,
-        },
-        201,
-      );
-    },
-  )
-  // TODO: when updating the primary_id_campaign from lead, the field is_primary from campaingmember must be updated
-  .put(
-    UUID_ROUTE,
-    withPrisma,
-    zValidator("param", z.object({ id: z.uuid().min(36).max(36) })),
-    zValidator("json", updateLeadSchema),
-    async (c) => {
-      const id = c.req.param("id");
-      const lead = c.req.valid("json");
-
-      const existingLead = await c.get("prisma").lead.findUnique({
-        where: { id },
-      });
-
-      if (!existingLead) {
-        throw new HTTPException(404, { message: "Lead not found" });
-      }
-
-      const updatedLead = await c.get("prisma").lead.update({
-        data: lead,
-        where: {
-          id,
-        },
-      });
-
-      return c.json<SuccessResponse<typeof updatedLead>>(
-        {
-          success: true,
-          message: "Lead updated successfully",
-          data: updatedLead,
-        },
-        200,
-      );
-    },
-  )
-  .delete(UUID_ROUTE, withPrisma, async (c) => {
-    const id = c.req.param("id");
-    const existingLead = await c
-      .get("prisma")
-      .lead.findUnique({ where: { id } });
-    if (!existingLead) {
-      throw new HTTPException(404, { message: "Lead not found" });
-    }
-
-    //TODO: config error cascade deletion when a lead is related to another table.
-    await c.get("prisma").lead.delete({
-      where: { id },
-    });
-
-    return c.json<SuccessResponse>(
-      {
-        success: true,
-        message: "Lead deleted successfully",
-      },
+  .get("/", zValidator("query", LeadQuerySchema), async (c) => {
+    const repo = leadRepository(c.get("prisma"));
+    const result = await repo.findMany(c.req.valid("query"));
+    return c.json<SuccessResponse<typeof result>>(
+      { success: true, message: "Leads retrieved", data: result },
       200,
     );
-  });
+  })
+
+  .get("/:id", zValidator("param", UUIDParam), async (c) => {
+    const { id } = c.req.valid("param");
+    const repo = leadRepository(c.get("prisma"));
+    const lead = await repo.findById(id);
+    if (!lead) throw new HTTPException(404, { message: "Lead not found" });
+    return c.json<SuccessResponse<typeof lead>>(
+      { success: true, message: "Lead retrieved", data: lead },
+      200,
+    );
+  })
+
+  .post("/", zValidator("json", CreateLeadSchema), async (c) => {
+    const repo = leadRepository(c.get("prisma"));
+    try {
+      const lead = await repo.create(c.req.valid("json"));
+      return c.json<SuccessResponse<typeof lead>>(
+        { success: true, message: "Lead created", data: lead },
+        201,
+      );
+    } catch (err) {
+      handleRepoError(err);
+    }
+  })
+
+  .put(
+    "/:id",
+    zValidator("param", UUIDParam),
+    zValidator("json", UpdateLeadSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      try {
+        const lead = await repo.update(id, c.req.valid("json"));
+        return c.json<SuccessResponse<typeof lead>>(
+          { success: true, message: "Lead updated", data: lead },
+          200,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  );
+
+// ── /campaigns/:id/members ────────────────────────────────────────────────────
+export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
+  .use(withPrisma)
+
+  // GET all members of a campaign
+  .get(
+    "/",
+    zValidator("param", z.object({ campaignId: z.uuid().length(36) })),
+    zValidator("query", CampaignMemberQuerySchema),
+    async (c) => {
+      const {campaignId} = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      const result = await repo.findMembersByMember(campaignId, c.req.valid("query"));
+      return c.json<SuccessResponse<typeof result>>(
+        { success: true, message: "Members retrieved", data: result },
+        200,
+      );
+    },
+  )
+
+  // POST — add a lead to a campaign (creates CampaignMember)
+  .post("/", zValidator("json", CreateCampaignMemberSchema), async (c) => {
+    const repo = leadRepository(c.get("prisma"));
+    try {
+      const member = await repo.createMember(c.req.valid("json"));
+      return c.json<SuccessResponse<typeof member>>(
+        { success: true, message: "Lead added to campaign", data: member },
+        201,
+      );
+    } catch (err) {
+      handleRepoError(err);
+    }
+  })
+
+  // PATCH /:memberId/status — update CampaignMemberStatus
+  .patch(
+    "/:memberId/status",
+    zValidator("param", MemberParam),
+    zValidator("json", UpdateCampaignMemberStatusSchema),
+    async (c) => {
+      const { memberId } = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      const updated = await repo.updateMemberStatus(memberId, c.req.valid("json"));
+      return c.json<SuccessResponse<typeof updated>>(
+        { success: true, message: "Status updated", data: updated },
+        200,
+      );
+    },
+  )
+
+  // PATCH /:memberId/reassign — reassign lead to another seller
+  .patch(
+    "/:memberId/reassign",
+    zValidator("param", MemberParam),
+    zValidator("json", ReassignCampaignMemberSchema),
+    async (c) => {
+      const { memberId } = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      try {
+        const updated = await repo.reassignMember(memberId, c.req.valid("json"));
+        return c.json<SuccessResponse<typeof updated>>(
+          { success: true, message: "Lead reassigned", data: updated },
+          200,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  )
+
+  // ── Interactions under a member ────────────────────────────────────────────
+  // GET /:memberId/interactions
+  .get("/:memberId/interactions", zValidator("param", MemberParam), async (c) => {
+    const { memberId } = c.req.valid("param");
+    const repo = leadRepository(c.get("prisma"));
+    const interactions = await repo.findInteractions(memberId);
+    return c.json<SuccessResponse<typeof interactions>>(
+      { success: true, message: "Interactions retrieved", data: interactions },
+      200,
+    );
+  })
+
+  // POST /:memberId/interactions
+  .post(
+    "/:memberId/interactions",
+    zValidator("param", MemberParam),
+    zValidator("json", CreateLeadInteractionSchema),
+    async (c) => {
+      const { memberId } = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      // For MVP sellerId comes from the request — swap for JWT claim in v2
+      const sellerId = c.req.header("x-seller-id") ?? "";
+      try {
+        const interaction = await repo.createInteraction(
+          memberId,
+          sellerId,
+          c.req.valid("json"),
+        );
+        return c.json<SuccessResponse<typeof interaction>>(
+          { success: true, message: "Interaction logged", data: interaction },
+          201,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  )
+
+  // ── Tasks under a member ───────────────────────────────────────────────────
+  // GET /:memberId/tasks
+  .get("/:memberId/tasks", zValidator("param", MemberParam), async (c) => {
+    const { memberId } = c.req.valid("param");
+    const repo = leadRepository(c.get("prisma"));
+    const tasks = await repo.findTasks(memberId);
+    return c.json<SuccessResponse<typeof tasks>>(
+      { success: true, message: "Tasks retrieved", data: tasks },
+      200,
+    );
+  })
+
+  // POST /:memberId/tasks
+  .post(
+    "/:memberId/tasks",
+    zValidator("param", MemberParam),
+    zValidator("json", CreateTaskSchema),
+    async (c) => {
+      const { memberId } = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      const sellerId = c.req.header("x-seller-id") ?? "";
+      try {
+        const task = await repo.createTask(memberId, sellerId, c.req.valid("json"));
+        return c.json<SuccessResponse<typeof task>>(
+          { success: true, message: "Task created", data: task },
+          201,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  )
+
+  // PATCH /:memberId/tasks/:taskId
+  .patch(
+    "/:memberId/tasks/:taskId",
+    zValidator("param", TaskParam),
+    zValidator("json", UpdateTaskSchema),
+    async (c) => {
+      const { taskId } = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      const task = await repo.updateTask(taskId, c.req.valid("json"));
+      return c.json<SuccessResponse<typeof task>>(
+        { success: true, message: "Task updated", data: task },
+        200,
+      );
+    },
+  )
+
+  // DELETE /:memberId/tasks/:taskId
+  .delete(
+    "/:memberId/tasks/:taskId",
+    zValidator("param", TaskParam),
+    async (c) => {
+      const { taskId } = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      await repo.deleteTask(taskId);
+      return c.json<SuccessResponse>(
+        { success: true, message: "Task deleted" },
+        200,
+      );
+    },
+  );

@@ -12,27 +12,25 @@ const commaSeparatedUrls = z.string().transform((val) =>
 const envSchema = z.object({
   //  Server
   PORT: z.coerce.number().int().positive().default(3000),
-  DATABASE_URL: z
-    .string()
-    .refine(
-      (url) => {
-        try {
-          const parsed = new URL(url);
-          return (
-            (parsed.protocol === "postgresql:" ||
-              parsed.protocol === "postgres:") &&
-            parsed.hostname.length > 0 && // host exists
-            parsed.pathname.length > 1 // /dbname exists (not just "/")
-          );
-        } catch {
-          return false;
-        }
-      },
-      {
-        message:
-          "DATABASE_URL must be a valid PostgreSQL URL: postgresql://user:pass@host:5432/dbname",
-      },
-    ),
+  DATABASE_URL: z.string().refine(
+    (url) => {
+      try {
+        const parsed = new URL(url);
+        return (
+          (parsed.protocol === "postgresql:" ||
+            parsed.protocol === "postgres:") &&
+          parsed.hostname.length > 0 && // host exists
+          parsed.pathname.length > 1 // /dbname exists (not just "/")
+        );
+      } catch {
+        return false;
+      }
+    },
+    {
+      message:
+        "DATABASE_URL must be a valid PostgreSQL URL: postgresql://user:pass@host:5432/dbname",
+    },
+  ),
   //  Origins
   ALLOWED_ORIGINS: commaSeparatedUrls,
   PROOF_ORIGINS: commaSeparatedUrls,
@@ -45,6 +43,9 @@ const envSchema = z.object({
   //  Cookie settings
   COOKIE_SECURE: z.coerce.boolean().default(false),
   COOKE_SAME_SITE: z.enum(["Lax", "Strict", "None"]).default("Lax"),
+  CLOUDINARY_URL: z.url().refine((url) => url.startsWith("cloudinary://"), {
+    message: "CLOUDINARY_URL must start with cloudinary://",
+  }),
 });
 // Validate at startup — fail fast if anything is missing or wrong
 const parsed = envSchema.safeParse(process.env);
