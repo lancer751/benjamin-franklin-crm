@@ -19,7 +19,7 @@ import DashboardView from "@/features/dashboard/views/DashboardView";
 
 // Módulo de Administración (Auth & Académico)
 import LoginView from "@/features/auth/views/LoginView";
-import UsersView from "@/features/auth/views/UsersView";
+import UsersView from "@/features/users/views/UsersView";
 import CoursesAdminView from "@/features/academic/views/CoursesAdminView";
 import CourseDetailView from "@/features/academic/views/CourseDetailView";
 import AcademicCalendarView from "@/features/academic/views/AcademicCalendarView";
@@ -52,7 +52,8 @@ import MarketingDashboardView from "@/features/marketing/views/MarketingDashboar
 import CampaignsView from "@/features/marketing/views/CampaignsView";
 import CampaignDetailView from "@/features/marketing/views/CampaignDetailView";
 import LeadSourcesView from "@/features/marketing/views/LeadSourcesView";
-import UserDetailView from "@/features/auth/views/UserDetailView";
+import UserDetailView from "@/features/users/views/UserDetailView";
+import SupervisorFollowUpView from "@/features/users/views/SupervisorFollowUpView";
 
 
 const App = () => {
@@ -119,6 +120,7 @@ const App = () => {
               <Route path="/prospectos/:id" element={<LeadDetailView />} />
               <Route path="/prospectos/:id/editar" element={<LeadFormView />} />
               <Route path="/pipeline" element={<PipelineView />} />
+              <Route path="/comercial/seguimiento-equipo" element={<SupervisorFollowUpView />} />
               <Route path="/ordenes" element={<OrdersView />} />
               <Route path="/ordenes/:id" element={<OrderDetailView />} />
               <Route path="/productos" element={<ProductsView />} />

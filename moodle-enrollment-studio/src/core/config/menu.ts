@@ -40,14 +40,15 @@ export const canAccess = (userRole: string, permission: string): boolean => {
       "academic:view", "courses:view", "calendar:view", "professors:view",
       "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view",
       "catalog:view", "certifications:view", "benefits:view", "faqs:view", "categories:view",
-      "admin:view", "users:view", "finance:view", "marketing:view", "settings:view"
+      "admin:view", "users:view", "finance:view", "marketing:view", "settings:view",
+      "supervisor:team-view"
     ],
     // SALES_SUPERVISOR have full access to Academic, Commercial, and Support Catalog views
     SALES_SUPERVISOR: [
       "academic:view", "courses:view", "calendar:view", //"professors:view",
       "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view",
       "catalog:view", "certifications:view", "benefits:view", "faqs:view", "categories:view",
-      "admin:view", "marketing:view", "finance:view"
+      "admin:view", "marketing:view", "finance:view", "supervisor:team-view"
     ],
     // SALES_REP (Asesor de Ventas) has access only to Core Academic and Commercial modules
     SALES_REP: [
@@ -99,6 +100,7 @@ export const sidebarSections: SidebarSection[] = [
       { to: "/prospectos", label: "Prospectos", icon: Users, permission: "prospects:view" },
       // { to: "/pipeline", label: "Pipeline", icon: Kanban, permission: "pipeline:view" },
       { to: "/ordenes", label: "Órdenes", icon: FileText, permission: "orders:view" },
+      { to: "/comercial/seguimiento-equipo", label: "Seguimiento Equipo", icon: Layers, permission: "supervisor:team-view" },
     ],
   },
 ];
