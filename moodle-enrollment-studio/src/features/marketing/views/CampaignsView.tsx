@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, SlidersHorizontal, Download, TrendingUp, BarChart3, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
-import CampaignForm from "@/features/marketing/components/CampaignForm";
+import { SlidersHorizontal, Download, TrendingUp, BarChart3, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getCampaigns } from "../services/campaignService";
+import { mockCampaigns } from "../mockCampaigns";
 
 const platformColors: Record<string, string> = {
   FACEBOOK: "bg-blue-500",
@@ -12,12 +12,17 @@ const platformColors: Record<string, string> = {
   WEBSITE: "bg-emerald-500",
 };
 
+const statusStyles: Record<string, string> = {
+  ACTIVE: "border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900",
+  PAUSED: "border-amber-200 text-amber-700 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900",
+  INACTIVE: "border-slate-200 text-slate-500 bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800",
+};
+
 const formatCurrency = (value: number) => {
   return value.toLocaleString("en-US", { style: "currency", currency: "USD" });
 };
 
 const CampaignsView = () => {
-  const [showForm, setShowForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const navigate = useNavigate();
@@ -28,7 +33,10 @@ const CampaignsView = () => {
     queryFn: getCampaigns,
   });
 
-  const campaigns = Array.isArray(campaignsRes) ? campaignsRes : (campaignsRes as any)?.data || [];
+  const apiCampaigns = Array.isArray(campaignsRes) ? campaignsRes : (campaignsRes as any)?.data || [];
+  
+  // Fusionar campañas de la API con las de prueba (mock) para garantizar que existan ACTIVE, PAUSED e INACTIVE
+  const campaigns = [...apiCampaigns, ...mockCampaigns.filter(mc => !apiCampaigns.some((ac: any) => ac.id === mc.id))];
 
   // 2. KPIs Dinámicos
   const totalBudget = campaigns.reduce((acc: number, c: any) => acc + (Number(c.initial_budget) || 0), 0);
@@ -51,9 +59,6 @@ const CampaignsView = () => {
           <h1 className="text-2xl font-bold text-foreground">Campañas</h1>
           <p className="text-sm text-muted-foreground mt-1">Gestiona y analiza el rendimiento de tus campañas de captación.</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-primary">
-          <Plus size={18} /> Nueva Campaña
-        </button>
       </div>
 
       {/* Stats */}
@@ -137,7 +142,13 @@ const CampaignsView = () => {
                       <p className="font-semibold text-foreground">{c.campaing_name}</p>
                       <p className="text-xs text-muted-foreground">ID: {c.id}</p>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground/70 italic">Ver detalle</td>
+                    <td className="px-6 py-4">
+                      {c.relatedProduct?.name ? (
+                        <span className="font-medium text-foreground">{c.relatedProduct.name}</span>
+                      ) : (
+                        <span className="text-muted-foreground/50 italic">Sin asignar</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <span className="flex items-center gap-2 text-foreground">
                         <span className={`h-2 w-2 rounded-full ${platformColors[c.platform] || "bg-gray-400"}`} />
@@ -148,7 +159,7 @@ const CampaignsView = () => {
                     <td className="px-6 py-4 text-foreground font-medium">{formatCurrency(Number(c.total_spent) || 0)}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide border ${
-                        c.status === "ACTIVE" ? "border-emerald-200 text-emerald-700 bg-emerald-50" : "border-border text-muted-foreground bg-muted"
+                        statusStyles[c.status] || "border-border text-muted-foreground bg-muted"
                       }`}>{c.status || "UNKNOWN"}</span>
                     </td>
                   </tr>
@@ -183,9 +194,6 @@ const CampaignsView = () => {
           </>
         )}
       </div>
-
-      {/* Eliminamos temporalmente el onSubmit de CampaignForm si no se usa directamente aquí, o lo mantenemos para no romper props */}
-      <CampaignForm open={showForm} onClose={() => setShowForm(false)} />
     </div>
   );
 };

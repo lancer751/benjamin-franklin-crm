@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Edit, Trash2, UserPlus, Calendar, Monitor, Users, DollarSign, TrendingUp, BarChart3, Loader2 } from "lucide-react";
 import { Badge } from "@/core/components/ui/badge";
@@ -5,14 +6,25 @@ import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { getCampaignById } from "../services/campaignService";
+import { mockCampaigns } from "../mockCampaigns";
+import CampaignForm from "../components/CampaignForm";
 
 const CampaignDetailView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [showConfig, setShowConfig] = useState(false);
+
+  const isMockId = id?.startsWith("camp-mock-");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["campaign", id],
-    queryFn: () => getCampaignById(id!),
+    queryFn: async () => {
+      if (isMockId) {
+        const mock = mockCampaigns.find(c => c.id === id);
+        return { data: mock };
+      }
+      return getCampaignById(id!);
+    },
     enabled: !!id,
   });
 
@@ -65,7 +77,7 @@ const CampaignDetailView = () => {
         <div className="flex items-center gap-2">
           {/* Este botón usará la ruta /campaignsellers en el futuro */}
           <Button variant="outline" size="sm"><UserPlus size={16} className="mr-1" /> Asignar Vendedor</Button>
-          <Button variant="outline" size="sm"><Edit size={16} className="mr-1" /> Editar Campaña</Button>
+          <Button variant="outline" size="sm" onClick={() => setShowConfig(true)}><Edit size={16} className="mr-1" /> Configurar Campaña</Button>
           <Button variant="destructive" size="sm"><Trash2 size={16} className="mr-1" /> Eliminar</Button>
         </div>
       </div>
@@ -159,6 +171,12 @@ const CampaignDetailView = () => {
           )}
         </CardContent>
       </Card>
+      {/* Formulario de Configuración de Campaña */}
+      <CampaignForm 
+        open={showConfig} 
+        onClose={() => setShowConfig(false)} 
+        initialData={campaign} 
+      />
     </div>
   );
 };

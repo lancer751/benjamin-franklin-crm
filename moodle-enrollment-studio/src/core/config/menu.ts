@@ -52,7 +52,7 @@ export const canAccess = (userRole: string, permission: string): boolean => {
     ],
     // SALES_REP (Asesor de Ventas) has access only to Core Academic and Commercial modules
     SALES_REP: [
-      "academic:view", "courses:view", "calendar:view", "professors:view",
+      "academic:view", "calendar:view", //"courses:view",  //"professors:view",
       "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view"
     ],
     // MARKETING has access to Prospects/Pipeline and the Marketing dashboard configuration
