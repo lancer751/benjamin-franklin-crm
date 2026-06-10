@@ -1,74 +1,57 @@
+// src/seed.ts  — updated to include CRM workflow
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
 import { CoursesWorkflow } from "./workflows/product-launch/orchestator";
 import { hash } from "bcrypt";
-import { fakerES } from "@faker-js/faker";
+import { CrmWorkflow } from "./workflows/leads-management/orchestator";
 
 const databaseUrl = `${process.env.DATABASE_URL}`;
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is not set");
-}
+if (!databaseUrl) throw new Error("DATABASE_URL is not set");
+
 const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log("🌱 Seeding...");
+  console.log("🌱 Seeding...\n");
+
+  // ── Roles ──────────────────────────────────────────────────────────────────
   const roles = await Promise.all([
-    prisma.role.upsert({
-      where: {
-        name: "ADMIN",
-      },
-      update: {},
-      create: {
-        name: "ADMIN",
-      },
-    }),
-    prisma.role.upsert({
-      where: {
-        name: "SALES_REP",
-      },
-      update: {},
-      create: {
-        name: "SALES_REP",
-      },
-    }),
-    prisma.role.upsert({
-      where: {
-        name: "MARKETING",
-      },
-      update: {},
-      create: {
-        name: "MARKETING",
-      },
-    }),
-    prisma.role.upsert({
-      where: {
-        name: "SALES_SUPERVISOR",
-      },
-      update: {},
-      create: {
-        name: "SALES_SUPERVISOR",
-      },
-    }),
+    prisma.role.upsert({ where: { name: "ADMIN" },            update: {}, create: { name: "ADMIN" } }),
+    prisma.role.upsert({ where: { name: "SALES_REP" },        update: {}, create: { name: "SALES_REP" } }),
+    prisma.role.upsert({ where: { name: "MARKETING" },        update: {}, create: { name: "MARKETING" } }),
+    prisma.role.upsert({ where: { name: "SALES_SUPERVISOR" }, update: {}, create: { name: "SALES_SUPERVISOR" } }),
   ]);
 
-  const adminRoleId = await prisma.role.findUnique({where: {name: "ADMIN"}, select: {id: true}})
+  // ── Admin user ─────────────────────────────────────────────────────────────
+  const adminRole = await prisma.role.findUniqueOrThrow({
+    where: { name: "ADMIN" },
+    select: { id: true },
+  });
 
-  const users = await prisma.user.create({
-    data: {
-      first_name: fakerES.person.firstName(),
-      middle_name: fakerES.person.middleName(),
-      last_name: fakerES.person.lastName(),
-      email: fakerES.internet.email(),
-      corporate_email: fakerES.internet.exampleEmail(),
-      role_id: adminRoleId ? adminRoleId.id : roles[0].id,
+  await prisma.user.upsert({
+    where: { email: "admin@bf.edu.pe" },
+    update: {},
+    create: {
+      first_name: "Admin",
+      middle_name: "",
+      last_name: "BF",
+      email: "admin@bf.edu.pe",
+      corporate_email: "admin@bf.edu.pe",
+      role_id: adminRole.id,
       is_active: true,
       password: await hash("password123#", 10),
     },
   });
 
-  await CoursesWorkflow();
-  console.log("🎉 Seeding complete.");
+  // ── Academic workflow (courses → editions → products) ──────────────────────
+  console.log("📚 Running CoursesWorkflow...");
+  const { products } = await CoursesWorkflow();
+
+  // ── CRM workflow (supervisors → sellers → campaigns → leads) ───────────────
+  console.log("\n📋 Running CrmWorkflow...");
+  await CrmWorkflow(products);
+
+  console.log("\n🎉 Seeding complete.");
 }
 
 main()
