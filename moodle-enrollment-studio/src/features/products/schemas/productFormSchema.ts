@@ -75,6 +75,25 @@ export const baseProductFormSchema = z.object({
   }).optional().nullable(),
 });
 
+export const UpdateProductSalesContentSchema = baseProductFormSchema.omit({
+  benefit_ids: true,
+  description: true,
+  short_description: true,
+  image_url: true,
+  brochure_url: true,
+}).refine(data => data.installments_max_number >= data.installments_min_number, {
+  message: "El máximo de cuotas no puede ser menor al mínimo",
+  path: ["installments_max_number"]
+}).refine(data => {
+  if (data.discount_price && data.discount_price !== 0) {
+    return !!data.discount_expires_at;
+  }
+  return true;
+}, {
+  message: "La fecha de expiración es obligatoria si hay un precio de descuento",
+  path: ["discount_expires_at"]
+});
+
 export const productFormSchema = baseProductFormSchema.refine(data => data.installments_max_number >= data.installments_min_number, {
   message: "El máximo de cuotas no puede ser menor al mínimo",
   path: ["installments_max_number"]

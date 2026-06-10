@@ -8,7 +8,7 @@ import { createFAQ, updateFAQ } from "../services/faqService";
 import { createCertification, updateCertification } from "../services/certificationService";
 import { uploadImageToCloudinary } from "@/core/lib/uploadService";
 import { toast } from "sonner";
-import { ProductFormValues, productFormSchema, baseProductFormSchema } from "../schemas/productFormSchema";
+import { ProductFormValues, productFormSchema, baseProductFormSchema, UpdateProductSalesContentSchema } from "../schemas/productFormSchema";
 import { z } from "zod";
 import { getCertificationDefaultText, INSTITUTIONAL_FAQS } from "../utils/productTemplates";
 import { adaptProductToUI } from "../adapters/product.adapter";
@@ -490,13 +490,13 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     }
   };
 
-  const onSubmit = () => {
-    // Si estamos en creación, omitimos benefit_ids del esquema de validación
-    let schemaToValidate = productFormSchema;
-    if (!isEdit) {
-      schemaToValidate = baseProductFormSchema.omit({
-        benefit_ids: true,
-      }) as any;
+  const onSubmit = (activeTab: string = "general") => {
+    // Si estamos en la pestaña 1 ('general') o estamos creando el producto por primera vez (no tiene ID aún)
+    let schemaToValidate;
+    if (activeTab === "general") {
+      schemaToValidate = UpdateProductSalesContentSchema;
+    } else {
+      schemaToValidate = productFormSchema;
     }
 
     const result = schemaToValidate.safeParse(form);

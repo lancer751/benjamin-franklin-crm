@@ -38,7 +38,6 @@ import { Button } from "@/core/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/core/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/core/components/ui/card";
 import { cn } from "@/core/lib/utils";
-import { STATUS_LABELS } from "@/features/products/components/shared/ProductStatusBadge";
 
 const ProductFormView = () => {
   const { id } = useParams<{ id: string }>();
@@ -253,6 +252,16 @@ const ProductFormView = () => {
     }
   };
 
+  const handleHeaderSubmit = () => {
+    if (activeTab === "general") {
+      onSubmit("general");
+    } else if (activeTab === "marketing") {
+      handleSaveMarketing();
+    } else if (activeTab === "commercial") {
+      handleSaveCommercial();
+    }
+  };
+
   if (isEdit && isLoadingProduct) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center flex-col gap-4">
@@ -282,7 +291,7 @@ const ProductFormView = () => {
             </Button>
             <Button 
               className="rounded-xl btn-primary gap-2 shadow-md shadow-primary/20"
-              onClick={onSubmit}
+              onClick={handleHeaderSubmit}
               disabled={isPending || isSavingTab2 || isSavingTab3}
             >
               {isPending ? (
@@ -391,7 +400,7 @@ const ProductFormView = () => {
                 <div className="flex justify-end pt-4">
                   <Button
                     type="button"
-                    onClick={onSubmit}
+                    onClick={() => onSubmit("general")}
                     disabled={isPending}
                     className="rounded-xl btn-primary bg-sky-600 hover:bg-sky-700 text-white gap-2 font-medium shadow-md shadow-sky-600/10"
                   >

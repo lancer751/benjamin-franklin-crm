@@ -77,7 +77,7 @@ export const sidebarSections: SidebarSection[] = [
     items: [
       { to: "/admin/usuarios", label: "Usuarios", icon: Users, permission: "users:view" },
       // { to: "/pagos", label: "Pagos", icon: Wallet, permission: "finance:view" },
-      // { to: "/campanas", label: "Campañas", icon: Megaphone, permission: "marketing:view" },
+      { to: "/campanas", label: "Campañas", icon: Megaphone, permission: "marketing:view" },
     ],
   },
   {
