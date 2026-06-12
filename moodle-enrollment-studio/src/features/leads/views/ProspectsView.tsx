@@ -3,7 +3,9 @@ import { Plus, Loader2, Users, Eye, Edit, Calendar, ChevronDown, X } from "lucid
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { getAllLeads } from "../services/leadService";
+import { getAllLeads, getCampaignMembers } from "../services/leadService";
+import { getCampaigns } from "@/features/marketing/services/campaignService";
+import { useAuthStore } from "@/store/useAuthStore";
 import { CustomTable } from "@/core/components/CustomTable";
 import { Card } from "@/core/components/ui/card";
 import { Button } from "@/core/components/ui/button";
@@ -64,13 +66,48 @@ const ProspectsView = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // 1. Fetching de datos con React Query
-  const { data: leadsRes, isLoading, isError } = useQuery({
-    queryKey: ["leads"],
-    queryFn: () => getAllLeads(),
+  const { user } = useAuthStore();
+  const isSalesRep = user?.role?.name === "SALES_REP";
+  const sellerId = user?.id;
+
+  // 1. Consultar y recopilar las campañas disponibles
+  const { data: campaignsRes, isLoading: isLoadingCampaigns } = useQuery({
+    queryKey: ["campaigns-list"],
+    queryFn: () => getCampaigns(),
+  });
+  const campaigns = campaignsRes?.data?.data || [];
+
+  // 2. Controlar la campaña seleccionada (Estado Local)
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
+
+  // Efecto para pre-seleccionar automáticamente la primera campaña
+  useEffect(() => {
+    if (isSalesRep && campaigns.length > 0 && !selectedCampaignId) {
+      setSelectedCampaignId(campaigns[0].id);
+    }
+  }, [campaigns, selectedCampaignId, isSalesRep]);
+
+  // 3. Query principal condicionada
+  const { data: serverRes, isLoading, isError } = useQuery({
+    queryKey: ["leads", isSalesRep ? "sales" : "all", selectedCampaignId, sellerId],
+    queryFn: () => isSalesRep 
+      ? getCampaignMembers(selectedCampaignId, { assigned_to: sellerId })
+      : getAllLeads(),
+    enabled: isSalesRep ? !!selectedCampaignId : true,
   });
 
-  const leads = leadsRes?.data?.data || [];
+  const leads = useMemo(() => {
+    if (!serverRes?.data?.data) return [];
+    if (isSalesRep) {
+      return serverRes.data.data.map((member: any) => ({
+        ...member.lead,
+        id: member.lead_id,
+        lead_status: member.status,
+        created_at: member.created_at
+      }));
+    }
+    return serverRes.data.data;
+  }, [serverRes, isSalesRep]);
 
   // 2. 🔮 Lógica de Filtrado Avanzada y Optimizada con useMemo (Comparación milisegundal de Timestamps)
   const filteredLeads = useMemo(() => {
@@ -458,6 +495,30 @@ const ProspectsView = () => {
             </div>
           )}
         </div>
+        {isSalesRep && (
+          <div className="w-full md:flex-1">
+            <label className="form-label mb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              Campaña Activa
+            </label>
+            <select
+              className="w-full h-9 px-3 rounded-lg border border-slate-200/80 bg-white text-xs md:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer shadow-sm"
+              value={selectedCampaignId}
+              onChange={(e) => setSelectedCampaignId(e.target.value)}
+            >
+              {isLoadingCampaigns ? (
+                <option value="">Cargando campañas...</option>
+              ) : campaigns.length === 0 ? (
+                <option value="">Sin campañas asignadas</option>
+              ) : (
+                campaigns.map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.campaing_name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        )}
 
         {/* 🏷️ MODIFICADO: Estado enlazado al campo lead_status del JSON */}
         <div className="w-full md:flex-1">

@@ -58,9 +58,11 @@ export const updateLead = async (id: string, data: UpdateLeadReq): Promise<Infer
 // ==========================================
 
 /** GET: Obtiene todos los miembros asignados a una campaña específica */
-export const getCampaignMembers = async (campaignId: string, query?: any): Promise<any> => {
-  const res = await (api.campaigns as any)[UUID_PATH].members.$get({
-    param: { campaignId },
+export const getCampaignMembers = async (campaignId?: string, query?: any): Promise<any> => {
+  // Si no hay campaignId, nos aseguramos de no enviarle la expresión regular cruda a Hono
+  const paramField = campaignId ? campaignId : "all"; 
+  
+  const res = await (api.campaigns as any)[paramField].members.$get({
     query
   });
   return await res.json();

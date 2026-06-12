@@ -60,6 +60,9 @@ const AssignSellersModal = ({ open, onClose, campaignId, assignedSellerIds }: As
       if (res.success) {
         toast.success("Asesores asignados con éxito");
         queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+        queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+        queryClient.invalidateQueries({ queryKey: ["all-leads"] });
         setSelectedSellerIds([]);
         onClose();
       } else {
@@ -198,6 +201,9 @@ const CampaignDetailView = () => {
       if (res.success) {
         toast.success("Asesor removido de la campaña correctamente.");
         queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+        queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+        queryClient.invalidateQueries({ queryKey: ["all-leads"] });
       } else {
         toast.error(res.message || "Error al remover al asesor.");
       }

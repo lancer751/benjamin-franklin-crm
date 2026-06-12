@@ -201,6 +201,8 @@ const SupervisorFollowUpView = () => {
         toast.success("Prospecto reasignado al nuevo asesor comercial");
         setSelectedLead(null);
         queryClient.invalidateQueries({ queryKey: ["all-leads"] });
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+        queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       } else {
         toast.error(res.message || "Error al reasignar prospecto");
       }
