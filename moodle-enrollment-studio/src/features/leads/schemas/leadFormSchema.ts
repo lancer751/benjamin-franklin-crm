@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createLeadSchema } from "shared";
+import { CreateLeadSchema } from "shared";
 
 // 1. Mapeo nativo de errores en español compatible con React Hook Form (Zod v4)
 const spanishErrorMap: z.ZodErrorMap = (issue, ctx) => {
@@ -46,7 +46,7 @@ const spanishErrorMap: z.ZodErrorMap = (issue, ctx) => {
 z.setErrorMap(spanishErrorMap as any);
 
 // 2. Extensión limpia del esquema de tu compañero sin alterar shared ni backend
-export const leadFormSchema = createLeadSchema.extend({
+export const leadFormSchema = CreateLeadSchema.extend({
   // ✅ Sobreescribe los campos del shared con mensajes en español
   first_name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
   middle_name: z.string().min(3, "El apellido paterno debe tener al menos 3 caracteres"),

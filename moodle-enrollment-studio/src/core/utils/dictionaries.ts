@@ -43,6 +43,19 @@ export const RoleTranslationsMap: Record<string, string> = {
     COLLECTIONS: "Cobranzas",
 };
 
+export const CampaignStatusMap: Record<string, string> = {
+    ACTIVE: "Activa",
+    INACTIVE: "Inactiva",
+    PAUSED: "Pausada",
+};
+
+export const CampaignPlatformMap: Record<string, string> = {
+    FACEBOOK: "Facebook Ads",
+    INSTAGRAM: "Instagram",
+    TIKTOK: "TikTok Ads",
+    WEBSITE: "Sitio Web",
+};
+
 /**
  * Función helper para traducir un Enum de forma segura.
  * Si el valor no existe en el diccionario, retorna el valor original (fallback).
@@ -57,3 +70,4 @@ export const translateEnum = (
     if (!value) return "No especificado";
     return dictionary[value] || value;
 };
+

@@ -31,12 +31,10 @@ const form = useForm<LeadFormValues>({
 
   const { data: campaignsRes, isLoading: isLoadingCampaigns } = useQuery({
     queryKey: ["campaigns"],
-    queryFn: getCampaigns,
+    queryFn: () => getCampaigns(),
   });
 
-  const rawCampaigns = Array.isArray(campaignsRes) 
-    ? campaignsRes 
-    : (campaignsRes as any)?.data || [];
+  const rawCampaigns = campaignsRes?.data?.data || [];
 
   const activeCampaigns = rawCampaigns.filter((c: any) => c.status === "ACTIVE");
 
