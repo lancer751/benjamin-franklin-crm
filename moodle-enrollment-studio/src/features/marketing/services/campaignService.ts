@@ -88,3 +88,25 @@ export const removeSellerFromCampaign = async (id: string, sellerId: string): Pr
   });
   return await res.json() as SuccessResponse;
 };
+
+/**
+ * Obtener todos los miembros (leads) de una campaña con filtros opcionales
+ */
+export const getCampaignMembers = async (campaignId: string, query?: any) => {
+  const res = await api.campaigns[":campaignId"]["members"].$get({
+    param: { campaignId },
+    query: query || {}
+  });
+  return await res.json();
+};
+
+/**
+ * Reasignar un miembro (lead) de la campaña a otro asesor
+ */
+export const reassignCampaignMember = async (campaignId: string, memberId: string, data: { assigned_to: string }) => {
+  const res = await api.campaigns[":campaignId"]["members"][":memberId"]["reassign"].$patch({
+    param: { campaignId, memberId },
+    json: data
+  });
+  return await res.json();
+};

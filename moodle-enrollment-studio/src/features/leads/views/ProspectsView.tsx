@@ -1,25 +1,15 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Plus, Loader2, Users, Eye, Edit, Trash2, Calendar, ChevronDown, X } from "lucide-react";
+import { Plus, Loader2, Users, Eye, Edit, Calendar, ChevronDown, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { getAllLeads, deleteLead } from "../services/leadService";
+import { getAllLeads } from "../services/leadService";
 import { CustomTable } from "@/core/components/CustomTable";
 import { Card } from "@/core/components/ui/card";
 import { Button } from "@/core/components/ui/button";
 import { format } from "date-fns";
 import { Badge } from "@/core/components/ui/badge";
 import { useSearchStore } from "@/store/useSearchStore";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/core/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 // 🌟 Mapeo de colores adaptado a las tipificaciones reales del Excel de los vendedores
@@ -27,15 +17,13 @@ const stageColors: Record<string, string> = {
   // Valores del Backend actuales y fallbacks comerciales con colores pasteles premium y bordes tenues
   ACTIVE: "bg-blue-50 text-blue-600 border-blue-100/50",
   INACTIVE: "bg-slate-50 text-slate-500 border-slate-100/50",
-  "Muy interesado": "bg-purple-50 text-purple-600 border-purple-100/50",
-  "Volver a llamar": "bg-yellow-50 text-yellow-600 border-yellow-100/50",
-  "No contesta": "bg-orange-50 text-orange-600 border-orange-100/50",
-  "No interesado": "bg-red-50 text-red-600 border-red-100/50",
+  stage_Muy_interesado: "bg-purple-50 text-purple-600 border-purple-100/50",
+  stage_Volver_a_llamar: "bg-yellow-50 text-yellow-600 border-yellow-100/50",
+  stage_No_contesta: "bg-orange-50 text-orange-600 border-orange-100/50",
+  stage_No_interesado: "bg-red-50 text-red-600 border-red-100/50",
 };
 
 const ProspectsView = () => {
-  const [leadToDelete, setLeadToDelete] = useState<any>(null);
-
   // 🌟 Nuevos Estados de Filtros alineados a las necesidades de ventas
   const [tipificationFilter, setTipificationFilter] = useState("ALL");
   const [genderFilter, setGenderFilter] = useState("ALL");
@@ -79,14 +67,14 @@ const ProspectsView = () => {
   // 1. Fetching de datos con React Query
   const { data: leadsRes, isLoading, isError } = useQuery({
     queryKey: ["leads"],
-    queryFn: getAllLeads,
+    queryFn: () => getAllLeads(),
   });
 
-  const leads = Array.isArray(leadsRes) ? leadsRes : (leadsRes as any)?.data || [];
+  const leads = leadsRes?.data?.data || [];
 
   // 2. 🔮 Lógica de Filtrado Avanzada y Optimizada con useMemo (Comparación milisegundal de Timestamps)
   const filteredLeads = useMemo(() => {
-    if (!leads) return [];
+    if (!Array.isArray(leads)) return [];
     let startLimit: number | null = null;
     let endLimit: number | null = null;
     const now = new Date();
@@ -169,19 +157,7 @@ const ProspectsView = () => {
     });
   }, [leads, tipificationFilter, genderFilter, dateRangeType, customStartDate, customEndDate, searchQuery]);
 
-  // 3. Mutación para eliminar registros
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteLead(id),
-    onSuccess: () => {
-      toast.success("Prospecto eliminado correctamente");
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      setLeadToDelete(null);
-    },
-    onError: () => {
-      toast.error("Error al eliminar el prospecto");
-      setLeadToDelete(null);
-    }
-  });
+
 
   // 4. Definición de columnas preparadas para CustomTable
   const columns = useMemo<ColumnDef<any>[]>(
@@ -282,18 +258,6 @@ const ProspectsView = () => {
                 title="Editar"
               >
                 <Edit size={16} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLeadToDelete(p);
-                }}
-                title="Eliminar"
-              >
-                <Trash2 size={16} />
               </Button>
             </div>
           );
@@ -557,7 +521,7 @@ const ProspectsView = () => {
            <div className="flex flex-col items-center justify-center py-20 text-destructive">
              <p className="font-bold">Error al conectar con el servidor.</p>
            </div>
-        ) : leads.length === 0 ? (
+        ) : !Array.isArray(leads) || leads.length === 0 ? (
            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
              <Users className="h-12 w-12 mb-4 opacity-20" />
              <p>No hay prospectos registrados aún.</p>
@@ -571,33 +535,6 @@ const ProspectsView = () => {
           <CustomTable data={filteredLeads} columns={columns} />
         )}
       </Card>
-
-      {/* Diálogo de Confirmación para Eliminar */}
-      <AlertDialog open={!!leadToDelete} onOpenChange={(open) => !open && setLeadToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar prospecto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Estás a punto de eliminar permanentemente a <strong>{leadToDelete?.first_name} {leadToDelete?.last_name}</strong>. 
-              Esta acción no se puede deshacer de la base de datos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={(e) => {
-                e.preventDefault();
-                if (leadToDelete) deleteMutation.mutate(leadToDelete.id);
-              }}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sí, eliminar prospecto
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

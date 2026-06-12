@@ -4,7 +4,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema"; //
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
-import { createLead, updateLead, getLeadById, createLeadExternal } from "../services/leadService";
+import { createLead, updateLead, getLeadById, type UpdateLeadReq } from "../services/leadService";
 import { getCampaigns } from "@/features/marketing/services/campaignService";
 import { leadFormSchema, type LeadFormValues, defaultLeadFormValues } from "../schemas/leadFormSchema";
 
@@ -48,6 +48,7 @@ const form = useForm<LeadFormValues>({
     }
   }, [activeCampaigns, mode, form]);
 
+
   useEffect(() => {
     if (mode === "create") {
       form.reset({
@@ -72,49 +73,34 @@ const form = useForm<LeadFormValues>({
         profession: data.profession || "",
         primary_campaign_id: data.primary_campaign_id || "",
         lead_status: data.lead_status || "ACTIVE",
-        source: "MANUAL",
+        source: (data as any).source || "MANUAL",
         interaction_notes: "",
       });
     }
   }, [leadRes, mode, form]);
 
   const createMutation = useMutation({ mutationFn: createLead });
-  const createExternalMutation = useMutation({ mutationFn: createLeadExternal });
-  const updateMutation = useMutation({ mutationFn: (data: any) => updateLead(id as string, data) });
+  const updateMutation = useMutation({ 
+    mutationFn: (data: UpdateLeadReq) => updateLead(id as string, data) 
+  });
 
   const onSubmit = async (values: LeadFormValues) => {
-    // Limpieza de DNI: Remover cualquier caracter que no sea número
-    const cleanDni = values.dni?.replace(/\D/g, '') || null;
-
     const basePayload = {
       ...values,
-      dni: cleanDni,
-      gender: values.gender || null,
-      secondary_email: values.secondary_email?.trim() ? values.secondary_email : null,
-      address: values.address?.trim() ? values.address : null,
-      second_address: values.second_address?.trim() ? values.second_address : null,
-      profession: values.profession?.trim() ? values.profession : null,
+      dni: values.dni?.replace(/\D/g, '') || null,
       primary_campaign_id: (values.primary_campaign_id && values.primary_campaign_id !== "none") ? values.primary_campaign_id : undefined,
+      phones: [
+        {
+          number: values.cellphone ? values.cellphone.replace(/\D/g, "") : "",
+          type: "WHATSAPP" as const
+        }
+      ]
     };
 
     let mutationPromise;
 
     if (mode === "create") {
-      if (values.source && values.source !== "MANUAL") {
-        const externalPayload = {
-          ...basePayload,
-          source: values.source,
-          lead_interaction: {
-            interaction_type: "REGISTRATION",
-            notes: values.interaction_notes || `Registro manual vía ${values.source}`,
-            direction: "INBOUND",
-            campaing_id: basePayload.primary_campaign_id,
-          }
-        };
-        mutationPromise = createExternalMutation.mutateAsync(externalPayload as any);
-      } else {
-        mutationPromise = createMutation.mutateAsync(basePayload as any);
-      }
+      mutationPromise = createMutation.mutateAsync(basePayload as any);
     } else {
       mutationPromise = updateMutation.mutateAsync(basePayload as any);
     }
@@ -138,7 +124,7 @@ const form = useForm<LeadFormValues>({
     isErrorLead,
     isLoadingCampaigns,
     activeCampaigns,
-    isPending: createMutation.isPending || createExternalMutation.isPending || updateMutation.isPending,
+    isPending: createMutation.isPending || updateMutation.isPending,
     onSubmit,
   };
 };

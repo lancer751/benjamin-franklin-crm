@@ -413,6 +413,20 @@ export default function LeadFormView() {
               </CardContent>
             </Card>
 
+            {/* Mensaje de error visual para depuración de campos no válidos */}
+            {Object.keys(form.formState.errors).length > 0 && (
+              <div className="text-xs text-red-500 font-medium bg-red-50 border border-red-100 p-3 rounded-xl space-y-1">
+                <p className="font-bold">No se pudo enviar el formulario. Revisa los siguientes campos:</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  {Object.entries(form.formState.errors).map(([field, error]: [string, any]) => (
+                    <li key={field} className="capitalize">
+                      <strong>{field.replace('_', ' ')}:</strong> {error?.message || "Formato o valor inválido"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* BOTONES DE ACCIÓN (PIE DE FORMULARIO - Dashboard Style) */}
             <div className="flex justify-end gap-3 mt-6">
               <Button 

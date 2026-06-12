@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Phone, Mail, MessageCircle, Calendar, User, MapPin, Briefcase, Plus, X, Globe, ShoppingCart, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getLeadById, getLeadInteractions, createInteraction } from "../services/leadService";
+import { getLeadById, getMemberInteractions, createMemberInteraction } from "../services/leadService";
 import { toast } from "sonner";
 
 const typeIcons: Record<string, { icon: typeof Phone; color: string; bg: string }> = {
@@ -38,19 +38,24 @@ const LeadDetailView = () => {
     enabled: !!id,
   });
 
+  const lead = (leadDataRes as any)?.data || leadDataRes || null;
+  const activeCampaignMember = lead?.campaignsEngaging?.[0] || null;
+  const campaignId = lead?.primary_campaign_id || activeCampaignMember?.campaing_id;
+  const memberId = activeCampaignMember?.id;
+
   // 2. Fetch Interactions
   const { data: interactionsRes, isLoading: isLoadingInteractions } = useQuery({
     queryKey: ["leadInteractions", id],
-    queryFn: () => getLeadInteractions(id!),
-    enabled: !!id,
+    queryFn: () => getMemberInteractions(campaignId!, memberId!),
+    enabled: !!campaignId && !!memberId,
   });
 
-  const lead = (leadDataRes as any)?.data || leadDataRes || null;
-  const interactions = Array.isArray(interactionsRes) ? interactionsRes : (interactionsRes as any)?.data || [];
+  const interactions = interactionsRes?.data || [];
 
   // 3. Mutación para nueva interacción
   const interactionMutation = useMutation({
-    mutationFn: (payload: any) => createInteraction(payload),
+    mutationFn: (payload: { notes: string; type: string }) => 
+      createMemberInteraction(campaignId!, memberId!, payload.notes, payload.type, "SELLER_ID_TEMPORAL"),
     onSuccess: () => {
       toast.success("Interacción registrada correctamente");
       queryClient.invalidateQueries({ queryKey: ["leadInteractions", id] });
@@ -68,14 +73,15 @@ const LeadDetailView = () => {
       return;
     }
     
-    const payload = {
-      lead_id: id,
+    if (!campaignId || !memberId) {
+      toast.error("No se encontró una campaña activa asociada para registrar la interacción.");
+      return;
+    }
+    
+    interactionMutation.mutate({
       type: newInteraction.type,
       notes: newInteraction.notes,
-      campaing_id: lead?.primary_campaign_id || undefined,
-    };
-    
-    interactionMutation.mutate(payload);
+    });
   };
 
   if (isLoadingLead || isLoadingInteractions) {
