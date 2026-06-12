@@ -56,6 +56,14 @@ export const CampaignPlatformMap: Record<string, string> = {
     WEBSITE: "Sitio Web",
 };
 
+export const ProductSalesStatusMap: Record<string, string> = {
+    DRAFT: "Borrador",
+    PUBLISHED: "Publicado",
+    ON_SALE: "En Venta",
+    COMPLETED: "Completado",
+    CANCELLED: "Cancelado"
+};
+
 /**
  * Función helper para traducir un Enum de forma segura.
  * Si el valor no existe en el diccionario, retorna el valor original (fallback).

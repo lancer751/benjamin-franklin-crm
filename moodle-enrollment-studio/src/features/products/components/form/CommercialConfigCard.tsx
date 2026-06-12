@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/cor
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Settings, Link as LinkIcon, Globe } from "lucide-react";
 import { cn } from "@/core/lib/utils";
-import { STATUS_LABELS } from "@/features/products/components/shared/ProductStatusBadge";
+import { ProductSalesStatusMap } from "@/core/utils/dictionaries";
 
 interface CommercialConfigCardProps {
   form: {
@@ -70,7 +70,7 @@ const CommercialConfigCard = ({
                 <SelectValue placeholder="Selecciona el estado" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                {Object.entries(ProductSalesStatusMap).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>

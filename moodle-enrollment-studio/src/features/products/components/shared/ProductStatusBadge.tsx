@@ -1,19 +1,12 @@
 import { Badge } from "@/core/components/ui/badge";
+import { ProductSalesStatusMap } from "@/core/utils/dictionaries";
 
 interface ProductStatusBadgeProps {
   status: string;
 }
 
-export const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Borrador",
-  PUBLISHED: "Publicado",
-  ON_SALE: "En Venta",
-  COMPLETED: "Completado",
-  CANCELLED: "Cancelado"
-};
-
 const ProductStatusBadge = ({ status }: ProductStatusBadgeProps) => {
-  const label = STATUS_LABELS[status] || status || "Desconocido";
+  const label = ProductSalesStatusMap[status] || status || "Desconocido";
 
   switch (status) {
     case "ON_SALE":
