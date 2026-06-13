@@ -20,7 +20,7 @@ export function campaignRepository(prisma: PrismaClient) {
         }),
       };
 
-      const [data, total] = await Promise.all([
+      const [campaings, total] = await Promise.all([
         prisma.campaing.findMany({
           where,
           skip,
@@ -53,7 +53,7 @@ export function campaignRepository(prisma: PrismaClient) {
         prisma.campaing.count({ where }),
       ]);
 
-      return { data, total, page, limit };
+      return { campaings, total, page, limit };
     },
 
     async findById(id: string) {
@@ -62,7 +62,6 @@ export function campaignRepository(prisma: PrismaClient) {
         include: {
           relatedProduct: {
             select: {
-              id: true,
               name: true,
               sales_status: true,
               prices: { select: { attendance_mode: true, cash_price: true } },
@@ -70,7 +69,6 @@ export function campaignRepository(prisma: PrismaClient) {
           },
           supervisor: {
             select: {
-              id: true,
               user: {
                 select: { first_name: true, last_name: true, email: true },
               },
@@ -87,13 +85,12 @@ export function campaignRepository(prisma: PrismaClient) {
               },
             },
           },
-          _count: { select: { members: true, leads: true } },
+          _count: { select: { members: true, sellers: true} },
         },
       });
     },
 
-    // ── Write ───────────────────────────────────────────────────────────────
-
+    // ── Write
     async create(data: CreateCampaignInput) {
       // Verify product exists and is publishable
       const product = await prisma.product.findUnique({

@@ -30,7 +30,7 @@ export function leadRepository(prisma: PrismaClient) {
           }
         : {};
 
-      const [data, total] = await Promise.all([
+      const [leads, total] = await Promise.all([
         prisma.lead.findMany({
           where,
           skip,
@@ -56,7 +56,7 @@ export function leadRepository(prisma: PrismaClient) {
         prisma.lead.count({ where }),
       ]);
 
-      return { data, total, page, limit };
+      return { leads, total, page, limit };
     },
 
     async findById(id: string) {

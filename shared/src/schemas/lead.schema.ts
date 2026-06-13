@@ -36,21 +36,27 @@ export const InteractionTypeSchema = z.enum([
 // ── Lead ─────────────────────────────────────────────────────────────────────
 
 const LeadPhoneSchema = z.object({
-  number: z.string().min(7, "Phone number too short"),
+  // adaptiing to peruvian phone numbers because they have 9 digits and start with 9
+  number: z
+    .string()
+    .length(9, "Phone number must be 9 digits")
+    .refine((num) => /^9\d{8}$/.test(num)),
   type: PhoneTypeSchema,
 });
 
 const LeadBaseSchema = z.object({
-  first_name: z.string().min(1, "First name is required"),
-  middle_name: z.string().default(""),
-  last_name: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email"),
+  first_name: z.string().min(1, "First name is required").optional().nullable(),
+  middle_name: z.string().default("").optional().nullable(),
+  last_name: z.string().min(1, "Last name is required").optional().nullable(),
+  email: z.email("Invalid email").optional().nullable(),
   profession: z.string().optional().nullable(),
   gender: GenderSchema.optional().nullable(),
   address: z.string().optional().nullable(),
-  secondary_email: z.string().email().optional().nullable(),
+  secondary_email: z.email().optional().nullable(),
   dni: z.string().length(8, "DNI must be 8 digits").optional().nullable(),
-  phones: z.array(LeadPhoneSchema).min(1, "At least one phone number is required"),
+  phones: z
+    .array(LeadPhoneSchema)
+    .min(1, "At least one phone number is required"),
 });
 
 export const CreateLeadSchema = LeadBaseSchema;
@@ -91,10 +97,11 @@ const LeadInteractionBaseSchema = z.object({
 
 export const CreateLeadInteractionSchema = LeadInteractionBaseSchema;
 
-export const UpdateLeadInteractionSchema = LeadInteractionBaseSchema.partial().refine(
-  (data) => Object.keys(data).length > 0,
-  { message: "At least one field must be provided" },
-);
+export const UpdateLeadInteractionSchema =
+  LeadInteractionBaseSchema.partial().refine(
+    (data) => Object.keys(data).length > 0,
+    { message: "At least one field must be provided" },
+  );
 
 // ── Task ──────────────────────────────────────────────────────────────────────
 
@@ -131,10 +138,18 @@ export const CampaignMemberQuerySchema = z.object({
 
 export type CreateLeadInput = z.infer<typeof CreateLeadSchema>;
 export type UpdateLeadInput = z.infer<typeof UpdateLeadSchema>;
-export type CreateCampaignMemberInput = z.infer<typeof CreateCampaignMemberSchema>;
-export type UpdateCampaignMemberStatusInput = z.infer<typeof UpdateCampaignMemberStatusSchema>;
-export type ReassignCampaignMemberInput = z.infer<typeof ReassignCampaignMemberSchema>;
-export type CreateLeadInteractionInput = z.infer<typeof CreateLeadInteractionSchema>;
+export type CreateCampaignMemberInput = z.infer<
+  typeof CreateCampaignMemberSchema
+>;
+export type UpdateCampaignMemberStatusInput = z.infer<
+  typeof UpdateCampaignMemberStatusSchema
+>;
+export type ReassignCampaignMemberInput = z.infer<
+  typeof ReassignCampaignMemberSchema
+>;
+export type CreateLeadInteractionInput = z.infer<
+  typeof CreateLeadInteractionSchema
+>;
 export type CreateTaskInput = z.infer<typeof CreateTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof UpdateTaskSchema>;
 export type LeadQuery = z.infer<typeof LeadQuerySchema>;
