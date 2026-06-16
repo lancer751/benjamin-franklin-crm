@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@repo/database";
+import { PhoneType, type PrismaClient } from "@repo/database";
 import type {
   CreateLeadInput,
   UpdateLeadInput,
@@ -43,7 +43,7 @@ export function leadRepository(prisma: PrismaClient) {
                 id: true,
                 status: true,
                 is_primary: true,
-                campaing: { select: { id: true, campaing_name: true } },
+                campaing: { select: { id: true, name: true } },
                 seller: {
                   select: {
                     user: { select: { first_name: true, last_name: true } },
@@ -67,7 +67,7 @@ export function leadRepository(prisma: PrismaClient) {
           campaignsEngaging: {
             include: {
               campaing: {
-                select: { id: true, campaing_name: true, platform: true },
+                select: { id: true, name: true, platform: true },
               },
               seller: {
                 select: {
@@ -92,11 +92,26 @@ export function leadRepository(prisma: PrismaClient) {
     },
 
     async create(data: CreateLeadInput) {
-      // Check email uniqueness
-      const existing = await prisma.lead.findUnique({
-        where: { email: data.email },
+      // Check phone type telephone uniqueness
+      const existing = await prisma.lead.findFirst({
+        where: {
+          OR: [
+            { email: data.email },
+            ...data.phones
+              .filter((p) => p.type === "TELEPHONE")
+              .map((p) => ({
+                phones: {
+                  some: {
+                    number: p.number,
+                    type:  PhoneType.TELEPHONE,
+                  },
+                },
+              })),
+          ],
+        },
         select: { id: true },
       });
+
       if (existing)
         throw {
           code: "CONFLICT",

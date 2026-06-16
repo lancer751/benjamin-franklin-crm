@@ -108,7 +108,6 @@ export const editionRoutes = new Hono<ContextWithPrisma>()
         assignOnlyActiveProfessors,
         ...editionFields
       } = c.req.valid("json");
-      console.log(assignOnlyActiveProfessors);
       const prisma = c.get("prisma");
 
       //  Verify the course exists before opening a transaction

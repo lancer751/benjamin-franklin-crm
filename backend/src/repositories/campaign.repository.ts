@@ -4,7 +4,7 @@ import type {
   UpdateCampaignInput,
   AssignSellersInput,
   CampaignQuery,
-} from "shared"
+} from "shared";
 
 export function campaignRepository(prisma: PrismaClient) {
   return {
@@ -30,13 +30,13 @@ export function campaignRepository(prisma: PrismaClient) {
             relatedProduct: {
               select: { id: true, name: true, sales_status: true },
             },
-            supervisor: {
+            assignedSupervisor: {
               select: {
                 id: true,
                 user: { select: { first_name: true, last_name: true } },
               },
             },
-            sellers: {
+            sellersOnCampaign: {
               select: {
                 seller_id: true,
                 assigned_at: true,
@@ -47,7 +47,7 @@ export function campaignRepository(prisma: PrismaClient) {
                 },
               },
             },
-            _count: { select: { members: true } },
+            _count: { select: { leadsOnCampaign: true, sellersOnCampaign: true } },
           },
         }),
         prisma.campaing.count({ where }),
@@ -67,14 +67,14 @@ export function campaignRepository(prisma: PrismaClient) {
               prices: { select: { attendance_mode: true, cash_price: true } },
             },
           },
-          supervisor: {
+          assignedSupervisor: {
             select: {
               user: {
                 select: { first_name: true, last_name: true, email: true },
               },
             },
           },
-          sellers: {
+          sellersOnCampaign: {
             include: {
               seller: {
                 select: {
@@ -85,7 +85,7 @@ export function campaignRepository(prisma: PrismaClient) {
               },
             },
           },
-          _count: { select: { members: true, sellers: true} },
+          _count: { select: { leadsOnCampaign: true, sellersOnCampaign: true } },
         },
       });
     },
@@ -114,6 +114,7 @@ export function campaignRepository(prisma: PrismaClient) {
         };
 
       // Verify supervisor exists
+      // Be careful it take the salessupervisorprofile id and not the user id
       const supervisor = await prisma.salesSupervisorProfile.findUnique({
         where: { id: data.supervisor_id },
         select: { id: true },
@@ -123,7 +124,7 @@ export function campaignRepository(prisma: PrismaClient) {
 
       return prisma.campaing.create({
         data: {
-          campaing_name: data.campaing_name,
+          name: data.campaing_name,
           initial_budget: data.initial_budget,
           start_date: data.start_date,
           end_date: data.end_date,
@@ -132,11 +133,11 @@ export function campaignRepository(prisma: PrismaClient) {
           status: data.status,
           meta_form_id: data.meta_form_id,
           relatedProduct: { connect: { id: data.product_id } },
-          supervisor: { connect: { id: data.supervisor_id } },
+          assignedSupervisor: { connect: { id: data.supervisor_id } },
         },
         include: {
           relatedProduct: { select: { id: true, name: true } },
-          supervisor: {
+          assignedSupervisor: {
             select: {
               id: true,
               user: { select: { first_name: true, last_name: true } },
@@ -148,6 +149,60 @@ export function campaignRepository(prisma: PrismaClient) {
 
     async update(id: string, data: UpdateCampaignInput) {
       const { product_id, supervisor_id, ...rest } = data;
+
+      if (rest.status === "ACTIVE") {
+        // Check if campaign has at least one seller assigned before activating
+        const sellersCount = await prisma.campaignSeller.count({
+          where: { campaign_id: id },
+        });
+        if (sellersCount === 0) {
+          throw {
+            code: "INVALID",
+            message: "Cannot activate a campaign without sellers assigned",
+          };
+        }
+      }
+
+      // verify if the product and the supervisor exist if they are being updated
+      if (product_id) {
+        const product = await prisma.product.findUnique({
+          where: { id: product_id },
+          select: { id: true, sales_status: true },
+        });
+        if (!product) throw { code: "NOT_FOUND", message: "Product not found" };
+        if (!["PUBLISHED", "ON_SALE"].includes(product.sales_status))
+          throw {
+            code: "INVALID",
+            message: "Only PUBLISHED or ON_SALE products can have a campaign",
+          };
+      }
+
+      if (supervisor_id) {
+        const supervisor = await prisma.salesSupervisorProfile.findUnique({
+          where: { id: supervisor_id },
+          select: { id: true },
+        });
+        if (!supervisor)
+          throw { code: "NOT_FOUND", message: "Supervisor not found" };
+      }
+
+      // verify if the incoming product id is not already linked to another campaign
+      if (product_id) {
+        const existing = await prisma.campaing.findFirst({
+          where: {
+            relatedProduct: { id: product_id },
+            id: { not: id },
+          },
+        });
+        if (existing)
+          throw {
+            code: "CONFLICT",
+            message: "Product already has a campaign linked",
+          };
+      }
+
+      // verify if meta_form_id is an existing form from meta
+
       return prisma.campaing.update({
         where: { id },
         data: {
@@ -166,20 +221,20 @@ export function campaignRepository(prisma: PrismaClient) {
       // Block deletion if campaign has members (leads have been assigned)
       const campaign = await prisma.campaing.findUnique({
         where: { id },
-        select: { _count: { select: { members: true } } },
+        select: { _count: { select: { leadsOnCampaign: true, sellersOnCampaign: true } } },
       });
       if (!campaign) throw { code: "NOT_FOUND", message: "Campaign not found" };
-      if (campaign._count.members > 0)
+      if (campaign._count.leadsOnCampaign > 0 || campaign._count.sellersOnCampaign > 0)
         throw {
           code: "CONFLICT",
           message:
-            "Cannot delete a campaign that already has leads. Set status to INACTIVE instead.",
+            "Cannot delete a campaign that already has leads or sellers. Set status to INACTIVE instead.",
         };
 
       return prisma.campaing.delete({ where: { id } });
     },
 
-    // ── Seller assignment ───────────────────────────────────────────────────
+    // ── Seller assignment
 
     async assignSellers(
       campaignId: string,
@@ -199,6 +254,21 @@ export function campaignRepository(prisma: PrismaClient) {
         };
       }
 
+      // checking if there are inactive sellers being assigned to a campaign
+      const inactiveSellers = await prisma.sellerProfile.findMany({
+        where: { id: { in: seller_ids }, user: { is_active: false } },
+        select: { id: true },
+      });
+      if (inactiveSellers.length > 0) {
+        const inactiveIds = inactiveSellers.map((s) => s.id);
+        throw {
+          code: "INVALID",
+          message: `Cannot assign inactive sellers to campaign. Inactive seller IDs: ${inactiveIds.join(
+            ", ",
+          )}`,
+        };
+      }
+
       // Upsert — safe to call multiple times (idempotent)
       await prisma.campaignSeller.createMany({
         data: seller_ids.map((seller_id) => ({
@@ -211,7 +281,7 @@ export function campaignRepository(prisma: PrismaClient) {
       return prisma.campaing.findUniqueOrThrow({
         where: { id: campaignId },
         include: {
-          sellers: {
+          sellersOnCampaign: {
             include: {
               seller: {
                 select: {
