@@ -1,7 +1,7 @@
 import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
-import withPrisma from "@/lib/prisma";
+import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -9,7 +9,7 @@ import { CreateBenefitSchema, UpdateBenefitSchema } from "shared";
 import { z } from "zod";
 
 export const benefitRoutes = new Hono<ContextWithPrisma>()
-  .use(withPrisma)
+  .use(verifyUserRoleAccess("ADMIN"))
   .get("/", async (c) => {
     const benefits = await c.get("prisma").benefit.findMany({
       orderBy: { description: "asc" },
@@ -48,20 +48,24 @@ export const benefitRoutes = new Hono<ContextWithPrisma>()
       );
     },
   )
-  .post("/", zValidator("json", CreateBenefitSchema), async (c) => {
-    const data = c.req.valid("json");
+  .post(
+    "/",
+    zValidator("json", CreateBenefitSchema),
+    async (c) => {
+      const data = c.req.valid("json");
 
-    const newBenefit = await c.get("prisma").benefit.create({ data });
+      const newBenefit = await c.get("prisma").benefit.create({ data });
 
-    return c.json<SuccessResponse<typeof newBenefit>>(
-      {
-        success: true,
-        data: newBenefit,
-        message: "Benefit created successfully",
-      },
-      201,
-    );
-  })
+      return c.json<SuccessResponse<typeof newBenefit>>(
+        {
+          success: true,
+          data: newBenefit,
+          message: "Benefit created successfully",
+        },
+        201,
+      );
+    },
+  )
   .put(
     UUID_ROUTE,
     zValidator("param", z.object({ id: z.uuid().length(36) })),

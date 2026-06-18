@@ -35,7 +35,7 @@ export const sellersRoutes = new Hono<ContextWithPrisma>()
       const { id } = c.req.valid("param");
 
       const sellerDetails = await c.get("prisma").sellerProfile.findUnique({
-        where: { id },
+        where: { user_id: id },
         include: {
           user: true,
           campaignMembers: true,

@@ -8,11 +8,15 @@ import { prisma } from "@repo/database";
 import { secureHeaders } from "hono/secure-headers";
 import { rateLimiter } from "hono-rate-limiter";
 import { csrf } from "hono/csrf";
+import { envParsed } from "./env";
+import cloudinary from "cloudinary";
+import { bulkRouter } from "./routes/bulk.route";
 
 export const app = new Hono();
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
-const proofOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
+const allowedOrigins = envParsed.ALLOWED_ORIGINS;
+const proofOrigins = envParsed.PROOF_ORIGINS;
 app.use("*", logger());
+app.use(secureHeaders());
 app.use(
   "*",
   cors({
@@ -23,15 +27,13 @@ app.use(
   }),
 );
 
-
 // app.use(csrf({ origin: allowedOrigins.concat(proofOrigins) }));
-app.use(secureHeaders());
 // Apply rate limiting middleware
 app.use(
   rateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
     standardHeaders: true,
-    limit: 200, // Limit each client to 100 requests per window
+    limit: 100, // Limit each client to 100 requests per window
     keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "", // Use IP address as key
     message: {
       message: "Too many requests, please try again later",
@@ -97,8 +99,36 @@ app.get("/health", async (c) => {
   }
 });
 
+app.route("/upload", bulkRouter);
+
+app.post("/cloudinary", async (c) => {
+  const body = await c.req.parseBody();
+  const file = body["file"];
+
+  if (!(file instanceof File)) {
+    return c.text("File is required", 400);
+  }
+
+  if(!file.name.endsWith(".pdf")) {
+    return c.text("Only PDF files are allowed", 400);
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  const dataUri = `data:application/pdf;base64,${base64}`;
+
+  const result = await cloudinary.v2.uploader.upload(dataUri, {
+    resource_type: "raw",       // required for PDFs
+    use_filename: true,
+    filename_override: file.name,
+  });
+
+  return c.json(result);
+
+});
+
 export default {
-  port: Number(process.env.PORT) || 3000,
+  port: envParsed.PORT,
   hostname: "0.0.0.0",
   fetch: app.fetch,
 };

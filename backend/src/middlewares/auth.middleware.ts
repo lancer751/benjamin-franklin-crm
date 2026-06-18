@@ -1,3 +1,4 @@
+import { envParsed } from "@/env";
 import type { AuthContext, ContextWithPrisma } from "@/lib/contextVariables";
 import { ACCESS_COOKIE_NAME, CSRF_COOKIE_NAME } from "@/utils/cookie";
 import type { AuthTokenPayload } from "@/utils/jwt";
@@ -18,7 +19,7 @@ export const verifyUserAccessAuth = createMiddleware<AuthContext>(
 
     const decoded: AuthTokenPayload = (await verify(
       accessToken,
-      process.env.ACCESS_TOKEN_SECRET!,
+      envParsed.ACCESS_TOKEN_SECRET,
       "HS256",
     )) as AuthTokenPayload;
 
@@ -55,8 +56,7 @@ export const verifyUserRoleAccess = (...allowedRoles: RoleAccess[]) =>
   createMiddleware<ContextWithPrisma>(async (c, next) => {
     if (
       !c.var.authUser ||
-      !allowedRoles.includes(c.var.authUser.role) ||
-      c.var.authUser.role !== "ADMIN"
+      !allowedRoles.includes(c.var.authUser.role)
     ) {
       throw new HTTPException(403, {
         message: "Forbidden or you don't have access to this route",

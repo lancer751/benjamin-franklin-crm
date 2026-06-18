@@ -14,7 +14,7 @@ export const marketersRoute = new Hono<ContextWithPrisma>()
   .get(UUID_ROUTE, zValidator("json", validateIdParamSchema), async (c) => {
     const { id } = c.req.param();
     const marketer = await c.get("prisma").marketingProfile.findUnique({
-      where: { id },
+      where: { user_id: id },
     });
     return c.json(marketer, 200);
   });

@@ -1,7 +1,7 @@
-import app from "./app";
+import { app } from "./app";
 
 const server = Bun.serve({
-  fetch: app.fetch
+  fetch: app.fetch,
 });
 
 console.log(`Server running at ${server.url}`);

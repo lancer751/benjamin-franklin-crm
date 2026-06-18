@@ -1,105 +1,59 @@
 import { z } from "zod";
-import { LeadOriginSourceSchema } from "./lead.schema";
+import { UUIDField } from "./helpers";
 
-export const campaingSchema = z.object({
-  id: z.uuid().length(36),
-  campaing_name: z.string().max(255),
-  initial_budget: z
-    .number()
-    .positive()
-    .max(99999999.99)
-    .refine((val) => Number.isInteger(val * 100), {
-      message: "Must have at most 2 decimal places",
-    })
-    .nonnegative(),
-  total_spent: z
-    .number()
-    .nonnegative()
-    .max(99999999.99)
-    .optional()
-    .refine(
-      (val) => {
-        if (val !== undefined) return Number.isInteger(val * 100);
-      },
-      {
-        message: "Must have at most 2 decimal places",
-      },
-    ),
-  status: z.enum(["ACTIVE", "INACTIVE", "PAUSED"]),
-  product_id: z.uuid().length(36),
-  start_date: z.coerce.date(),
-  end_date: z.coerce.date().optional(),
-  platform: z.enum(["FACEBOOK", "INSTAGRAM", "TIKTOK", "WEBSITE"]),
-  is_organic: z.boolean(),
-  created_at: z.date(),
-  updated_at: z.date(),
-});
-
-export const createCampaingSchema = campaingSchema.omit({
-  id: true,
-  created_at: true,
-  updated_at: true,
-});
-
-export const updateCampaingSchema = createCampaingSchema
-  .partial()
-  .refine((data) => Object.keys(data).length > 0, {
-    message: "At least one field must be provided for update",
-  });
-
-export type CampaignDTO = z.infer<typeof campaingSchema>;
-export type CreateCampaignDTO = z.infer<typeof createCampaingSchema>;
-export type UpdateCampaignDTO = z.infer<typeof updateCampaingSchema>;
-
-// campaign member schemas
-const campaignMemberStatus = z.enum([
-  "NEW",
-  "CONTACTED",
-  "QUALIFIED",
-  "ATTEMPTED_CONTACT",
+export const CampaignStatusSchema = z.enum(["ACTIVE", "INACTIVE", "PAUSED"]);
+export const CampaignPlatformSchema = z.enum([
+  "FACEBOOK",
+  "INSTAGRAM",
+  "TIKTOK",
+  "WEBSITE",
 ]);
 
-export const campaignMemberSchema = z.object({
-  id: z.uuid().length(36),
-  lead_id: z.string(),
-  campaing_id: z.string(),
-  status: campaignMemberStatus.default("NEW"),
-  assigned_to: z.uuid().length(36),
-  source: LeadOriginSourceSchema,
-  created_at: z.date().default(() => new Date()),
-  updated_at: z.date(),
-  is_primary: z.boolean().default(false),
+const CampaignBaseSchema = z.object({
+  campaing_name: z
+    .string()
+    .min(3, "Campaign name must be at least 3 characters"),
+  initial_budget: z.number().nonnegative().multipleOf(0.01),
+  start_date: z.coerce.date(),
+  end_date: z.coerce.date().optional().nullable(),
+  platform: CampaignPlatformSchema,
+  is_organic: z.boolean().default(false),
+  status: CampaignStatusSchema.default("INACTIVE"),
+  product_id: UUIDField,
+  supervisor_id: UUIDField,
+  meta_form_id: z.string().optional().nullable(),
 });
 
-export const createCampaignMemberSchema = campaignMemberSchema.omit({
-  id: true,
-  created_at: true,
-  updated_at: true,
+export const CreateCampaignSchema = CampaignBaseSchema.refine(
+  ({ end_date, start_date }) => !end_date || end_date > start_date,
+  { message: "end_date must be after start_date", path: ["end_date"] },
+);
+
+export const UpdateCampaignSchema = CampaignBaseSchema.partial().refine(
+  (data) => Object.keys(data).length > 0,
+  { message: "At least one field must be provided" },
+);
+
+export const AssignSellerSchema = z.object({
+  seller_id: UUIDField,
 });
 
-export const updateCampaignMemberSchema = createCampaignMemberSchema.partial();
-
-export type CampaignMemberDTO = z.infer<typeof campaignMemberSchema>;
-export type CreateCampaignMemberDTO = z.infer<
-  typeof createCampaignMemberSchema
->;
-export type UpdateCampaignMemberDTO = z.infer<
-  typeof updateCampaignMemberSchema
->;
-
-export const campaignSellerSchema = z.object({
-  id: z.uuid().length(36),
-  campaign_id: z.uuid().length(36),
-  seller_id: z.uuid().length(36),
-  assigned_at: z.date().default(() => new Date()),
+export const AssignSellersSchema = z.object({
+  seller_ids: z.array(UUIDField).min(1, "At least one seller must be assigned"),
 });
 
-export const createCampaignSellerSchema = campaignSellerSchema.omit({
-  id: true,
-  assigned_at: true,
+export const CampaignQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: CampaignStatusSchema.optional(),
+  platform: CampaignPlatformSchema.optional(),
+  search: z
+    .string()
+    .optional()
+    .refine((val) => val && val.trim().length > 0, "Search query cannot be empty"),
 });
 
-export type CampaignSellerDTO = z.infer<typeof campaignSellerSchema>;
-export type CreateCampaignSellerDTO = z.infer<
-  typeof createCampaignSellerSchema
->;
+export type CreateCampaignInput = z.infer<typeof CreateCampaignSchema>;
+export type UpdateCampaignInput = z.infer<typeof UpdateCampaignSchema>;
+export type AssignSellersInput = z.infer<typeof AssignSellersSchema>;
+export type CampaignQuery = z.infer<typeof CampaignQuerySchema>;

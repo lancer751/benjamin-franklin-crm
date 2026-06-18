@@ -2,6 +2,7 @@ import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
 import withPrisma from "@/lib/prisma";
+import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -41,7 +42,7 @@ export const categoryRoutes = new Hono<ContextWithPrisma>()
       );
     },
   )
-  .post("/", zValidator("json", CreateCategorySchema), async (c) => {
+  .post("/",  verifyUserRoleAccess("ADMIN"),  zValidator("json", CreateCategorySchema), async (c) => {
     const data = c.req.valid("json");
 
     const existing = await c.get("prisma").category.findUnique({
@@ -60,7 +61,7 @@ export const categoryRoutes = new Hono<ContextWithPrisma>()
     );
   })
   .put(
-    UUID_ROUTE,
+    UUID_ROUTE, verifyUserRoleAccess("ADMIN"),  
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     zValidator("json", UpdateCategorySchema),
     async (c) => {
@@ -91,6 +92,7 @@ export const categoryRoutes = new Hono<ContextWithPrisma>()
   )
   .delete(
     UUID_ROUTE,
+    verifyUserRoleAccess("ADMIN"),  
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");

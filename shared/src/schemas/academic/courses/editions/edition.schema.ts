@@ -58,11 +58,17 @@ export const EditionSchema = z.object({
   updated_at: z.coerce.date(),
 });
 
-
 const CreateEditionSchema = EditionSchema.omit({
   id: true,
   created_at: true,
   updated_at: true,
+}).extend({
+  assignOnlyActiveProfessors: z
+    .boolean()
+    .default(true)
+    .describe(
+      "If true, only active professors can be assigned to editions. If false, none of the professors will be assigned to the edition",
+    ),
 });
 
 export const CreateRefinedEditionSchema = CreateEditionSchema.refine(

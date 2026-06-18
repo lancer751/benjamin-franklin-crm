@@ -115,6 +115,7 @@ model Professor {
   cellphone          String              @unique
   // be careful with this part because if you change the id without requesting the moodle api, an error will appears due to moodle incosistency data.
   moddle_account_id  Int                 @unique
+  is_active          Boolean             @default(true)
   moodle_user_status MoodleAccountStatus @default(ACTIVE)
   created_at         DateTime            @default(now())
   update_at          DateTime            @updatedAt
@@ -126,7 +127,6 @@ model SellerProfile {
   id                     String  @id @default(uuid()) @db.Char(36)
   user_id                String  @unique
   sales_target           Int     @default(0)
-  // these fields are filled by the system based on the orders registered and the campaigns assigned to the seller, they are useful for reporting and performance tracking
   total_sales            Int     @default(0)
   total_orders           Int     @default(0)
   completed_orders       Int     @default(0)
@@ -140,8 +140,8 @@ model SellerProfile {
   orders           Order[]                @relation("SELLER_ORDERS")
   LeadInteraction  LeadInteraction[]
   assignedCampaing CampaignSeller[]
-  // TODO evaluate this and then change the deletion mode of the supervisor relation to SET_NULL
   supervisor       SalesSupervisorProfile @relation(fields: [assigned_supervisor_id], references: [id], onDelete: Cascade)
+  createdTasks     Tasks[]
 }
 
 model SalesSupervisorProfile {
@@ -164,8 +164,8 @@ model SalesSupervisorProfile {
   max_manual_discount    Decimal? @default(0) @db.Decimal(10, 2) // max discount zamount that the supervisor can apply manually without needing approval from a higher role
 
   // performance metrics (system-calculated)
-  supervised_sellers     Int     @default(0) // how many sellers belong to this supervisor
-  active_sellers         Int     @default(0) // how many of those sellers are currently working
+  supervised_sellers     Int     @default(0)
+  active_sellers         Int     @default(0)
   total_team_sales       Int     @default(0)
   total_team_orders      Int     @default(0)
   completed_team_orders  Int     @default(0)
@@ -173,9 +173,9 @@ model SalesSupervisorProfile {
   team_conversion_rate   Decimal @default(0) @db.Decimal(5, 2)
   avg_team_response_time Decimal @default(0) @db.Decimal(10, 2) // in seconds
 
-  // team management
   user            User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
   assignedSellers SellerProfile[]
+  campaigns       Campaing[] // back-relation to the campaigns they supervise
 }
 
 model CampaignSeller {
@@ -250,6 +250,7 @@ model CampaignMember {
   campaing         Campaing          @relation(fields: [campaing_id], references: [id])
   seller           SellerProfile?    @relation(fields: [assigned_to], references: [id])
   leadInteractions LeadInteraction[]
+  tasks            Tasks[]
 
   @@unique([lead_id, campaing_id])
   @@index([status])
@@ -279,14 +280,14 @@ model CustomerProfile {
 
 model Lead {
   id                  String     @id @default(uuid()) @db.Char(36)
-  first_name          String
-  middle_name         String
-  last_name           String
+  first_name          String?
+  middle_name         String?
+  last_name           String?
   profession          String?
   gender              Gender?
   address             String?
   second_address      String?
-  email               String     @unique
+  email               String?    @unique
   secondary_email     String?
   dni                 String?    @unique @db.Char(8)
   lead_status         LeadStatus @default(ACTIVE)
@@ -301,6 +302,7 @@ model Lead {
   campaignsEngaging   CampaignMember[]
   customerProfile     CustomerProfile?
   leadPrimaryCampaing Campaing?         @relation("PrimaryCampaign", fields: [primary_campaign_id], references: [id])
+  createdTasks        Tasks[]
 }
 
 enum InteractionType {
@@ -326,9 +328,18 @@ model LeadInteraction {
 }
 
 model Tasks {
-  id      String @id @default(uuid()) @db.Char(36)
-  title   String
-  content String @db.Text()
+  id                 String    @id @default(uuid()) @db.Char(36)
+  title              String
+  content            String    @db.Text
+  is_done            Boolean   @default(false) // NEW
+  due_date           DateTime? // NEW
+  lead_id            String // NEW
+  campaign_member_id String // NEW
+  created_by         String // NEW — seller who owns the task
+
+  lead           Lead           @relation(fields: [lead_id], references: [id])
+  campaignMember CampaignMember @relation(fields: [campaign_member_id], references: [id])
+  seller         SellerProfile  @relation(fields: [created_by], references: [id])
 }
 
 enum CourseType {
@@ -349,7 +360,7 @@ model BenefitsOnProduct {
   benefit_id String
 
   benefits Benefit @relation(fields: [benefit_id], references: [id])
-  products Product @relation(fields: [product_id], references: [id])
+  products Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
 
   @@id([product_id, benefit_id])
 }
@@ -403,7 +414,7 @@ model Course {
 
 model Campaing {
   id             String           @id @default(uuid()) @db.Char(36)
-  campaing_name  String
+  name           String
   initial_budget Decimal          @db.Decimal(10, 2)
   total_spent    Decimal?         @db.Decimal(10, 2)
   status         CampaingStatus
@@ -411,14 +422,17 @@ model Campaing {
   end_date       DateTime?
   platform       CampaingPlatform
   is_organic     Boolean
+  meta_form_id   String? // NEW — links to a Meta Lead Ad form
   created_at     DateTime         @default(now())
   updated_at     DateTime         @updatedAt
   product_id     String           @unique
+  supervisor_id  String // NEW — who manages this campaign
 
-  members        CampaignMember[]
-  leads          Lead[]           @relation("PrimaryCampaign")
-  relatedProduct Product          @relation(fields: [product_id], references: [id])
-  sellers        CampaignSeller[]
+  leadsOnCampaign CampaignMember[]
+  leads           Lead[]                 @relation("PrimaryCampaign")
+  relatedProduct  Product                @relation(fields: [product_id], references: [id])
+  sellersOnCampaign         CampaignSeller[]
+  assignedSupervisor      SalesSupervisorProfile @relation(fields: [supervisor_id], references: [id]) // NEW
 }
 
 enum WeekDays {
@@ -523,48 +537,64 @@ model Category {
   products   Product[]
 }
 
+enum ProductPricingStatus {
+  VALID // prices match the edition modality
+  INVALID // prices don't match — product cannot be published
+}
+
 model Product {
-  id                      String      @id @default(uuid()) @db.Char(36)
+  id                      String               @id @default(uuid()) @db.Char(36)
   name                    String // you can write a new name or define it from the course and edition.
   slug                    String?
   description             String?
   image_url               String? // optional, you can take it from the course or edition or write a new one
   short_description       String?
-  presale_price           Decimal?    @db.Decimal(10, 2)
-  edition_id              String      @unique
+  presale_price           Decimal?             @db.Decimal(10, 2)
+  edition_id              String               @unique
   category_id             String
   installments_max_number Int
   installments_min_number Int
-  discount_price          Decimal?    @default(0) @db.Decimal(10, 2)
+  discount_price          Decimal?             @default(0) @db.Decimal(10, 2)
   discount_expires_at     DateTime?
-  sales_status            SalesStatus @default(DRAFT)
-  created_at              DateTime    @default(now())
-  updated_at              DateTime    @updatedAt
+  sales_status            SalesStatus          @default(DRAFT)
+  created_at              DateTime             @default(now())
+  updated_at              DateTime             @updatedAt
+  brochure_url            String?
+  pricing_status          ProductPricingStatus @default(VALID)
 
   orders_details        OrderDetail[]
-  edition               Edition             @relation(fields: [edition_id], references: [id])
+  edition               Edition                   @relation(fields: [edition_id], references: [id])
   prices                ProductPrice[]
   relatedBenefits       BenefitsOnProduct[]
-  category              Category            @relation(fields: [category_id], references: [id])
+  category              Category                  @relation(fields: [category_id], references: [id])
   campaing              Campaing?
-  frequentQuestions     FAQ[]
-  relatedCertifications Certification[]
+  frequentQuestions     FAQsOnProduct[]
+  relatedCertifications CertificationsOnProduct[]
 }
 
 // TODO: make FAQ 
 model FAQ {
-  id         String @id @default(uuid()) @db.Char(36)
+  id       String @id @default(uuid()) @db.Char(36)
+  question String
+  answer   String @db.Text
+  order    Int    @default(0)
+
+  products FAQsOnProduct[]
+}
+
+model FAQsOnProduct {
   product_id String
-  question   String
-  answer     String @db.Text
-  order      Int    @default(0)
+  faq_id     String
+  order      Int    @default(0) // per-product display order
 
   product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  faq     FAQ     @relation(fields: [faq_id], references: [id], onDelete: Cascade)
+
+  @@id([product_id, faq_id])
 }
 
 model Certification {
   id                String  @id @default(uuid()) @db.Char(36)
-  product_id        String  @unique
   title             String // e.g. "Certificado del Curso de Lectura de Planos"
   description       String? @db.Text
   image_url         String?
@@ -573,7 +603,17 @@ model Certification {
   issuing_authority String? // e.g. "Corporación Educativa Benjamin Franklin"
   registry_validity String? // e.g. "Válido para el RETCC"
 
-  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  products CertificationsOnProduct[]
+}
+
+model CertificationsOnProduct {
+  product_id       String
+  certification_id String
+
+  product       Product       @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  certification Certification @relation(fields: [certification_id], references: [id], onDelete: Cascade)
+
+  @@id([product_id, certification_id])
 }
 
 enum AttendanceMode {
@@ -590,7 +630,7 @@ model ProductPrice {
   installment_price Decimal        @db.Decimal(10, 2)
   enrollment_fee    Decimal        @db.Decimal(10, 2) // amount to pay if the lead wants to enroll to an edition and pay later the full price
 
-  product Product @relation(fields: [product_id], references: [id])
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
 
   @@unique([product_id, attendance_mode])
 }
