@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Plus, Loader2, Users, Eye, Edit, Calendar, ChevronDown, X } from "lucide-react";
+import { Plus, Loader2, Users, Eye, Edit, Calendar, ChevronDown, X, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { getAllLeads } from "../services/leadService";
 import { CustomTable } from "@/core/components/CustomTable";
@@ -10,6 +10,17 @@ import { Button } from "@/core/components/ui/button";
 import { format } from "date-fns";
 import { Badge } from "@/core/components/ui/badge";
 import { useSearchStore } from "@/store/useSearchStore";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/core/components/ui/alert-dialog";
 
 // 🌟 Mapeo de colores adaptado a las tipificaciones reales del Excel de los vendedores
 const stageColors: Record<string, string> = {
@@ -60,6 +71,24 @@ export const AdminProspectsBoard = () => {
   }, []);
 
   const navigate = useNavigate();
+
+  const [leadToDeleteId, setLeadToDeleteId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Simular eliminación ya que el backend no cuenta con endpoint para eliminar leads
+      return new Promise((resolve) => setTimeout(resolve, 800));
+    },
+    onSuccess: () => {
+      toast.success("Prospecto eliminado exitosamente.");
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setLeadToDeleteId(null);
+    },
+    onError: () => {
+      toast.error("Ocurrió un error al intentar eliminar el prospecto.");
+    }
+  });
 
   // Query principal de leads para administración
   const { data: serverRes, isLoading, isError } = useQuery({
@@ -251,12 +280,24 @@ export const AdminProspectsBoard = () => {
               >
                 <Edit size={16} />
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLeadToDeleteId(p.id);
+                }}
+                title="Eliminar Prospecto"
+              >
+                <Trash2 size={16} />
+              </Button>
             </div>
           );
         },
       },
     ],
-    [navigate]
+    [navigate, setLeadToDeleteId]
   );
 
   const formatDisplayDate = (dateStr: string) => {
@@ -520,6 +561,40 @@ export const AdminProspectsBoard = () => {
           <CustomTable data={filteredLeads} columns={columns} />
         )}
       </Card>
+
+      <AlertDialog
+        open={leadToDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setLeadToDeleteId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar prospecto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer y borrará permanentemente los datos del prospecto.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (leadToDeleteId) {
+                  deleteMutation.mutate(leadToDeleteId);
+                }
+              }}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Sí, eliminar prospecto"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

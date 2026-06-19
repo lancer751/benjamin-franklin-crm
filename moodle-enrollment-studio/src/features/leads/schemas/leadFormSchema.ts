@@ -72,22 +72,13 @@ export const leadFormSchema = CreateLeadSchema.extend({
     z.enum(["MALE", "FEMALE", "NOT_SPECIFIED"]).default("NOT_SPECIFIED")
   ),
 
-  // 🌟 Mapeo automático de tu input 'cellphone' hacia el contrato 'phones' exigido por el backend
-  phones: z.preprocess((_val, ctx) => {
-    const inputData = ctx.parent as any;
-    if (!inputData?.cellphone || inputData.cellphone.trim() === "") {
-      return [];
-    }
-    return [
-      {
-        number: inputData.cellphone.replace(/\D/g, ""), // Limpia letras/espacios
-        type: "WHATSAPP"
-      }
-    ];
-  }, z.array(z.object({
-    number: z.string().min(7, "Número de teléfono demasiado corto"),
-    type: z.enum(["WHATSAPP", "TELEPHONE"])
-  })).min(1, "Al menos un número de teléfono es obligatorio"))
+  // Permite que el cliente deje pasar la validación y delega la responsabilidad al submit/backend
+  phones: z.array(
+    z.object({
+      number: z.string(),
+      type: z.string()
+    })
+  ).optional().nullable()
 });
 
 export type LeadFormValues = z.infer<typeof leadFormSchema>;

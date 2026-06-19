@@ -46,9 +46,9 @@ export const createLead = async (data: CreateLeadReq): Promise<InferResponseType
 
 /** Actualiza los datos planos del perfil de un lead */
 export const updateLead = async (id: string, data: UpdateLeadReq): Promise<InferResponseType<(typeof api.leads)[typeof UUID_PATH]["$put"]>> => {
-  const res = await (api.leads as any)[UUID_PATH].$put({ 
+  const res = await (api.leads as any)[UUID_PATH].$put({
     param: { id },
-    json: data 
+    json: data
   });
   return await res.json();
 };
@@ -60,8 +60,8 @@ export const updateLead = async (id: string, data: UpdateLeadReq): Promise<Infer
 /** GET: Obtiene todos los miembros asignados a una campaña específica */
 export const getCampaignMembers = async (campaignId?: string, query?: any): Promise<any> => {
   // Si no hay campaignId, nos aseguramos de no enviarle la expresión regular cruda a Hono
-  const paramField = campaignId ? campaignId : "all"; 
-  
+  const paramField = campaignId ? campaignId : "all";
+
   const res = await (api.campaigns as any)[paramField].members.$get({
     query
   });
@@ -70,10 +70,28 @@ export const getCampaignMembers = async (campaignId?: string, query?: any): Prom
 
 /** POST: Asigna o añade un Lead existente a una campaña (Crea el CampaignMember) */
 export const addLeadToCampaign = async (campaignId: string, data: any): Promise<any> => {
-  const res = await (api.campaigns as any)[UUID_PATH].members.$post({
-    param: { campaignId },
-    json: data
+  const serverUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
+  const url = `${serverUrl}/api/campaigns/${campaignId}/members`;
+  
+  const csrfToken = document.cookie
+    .split("; ")
+    .find((item) => item.trim().startsWith("xxx-csrf-access-token="))
+    ?.split("=")[1];
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (csrfToken) {
+    headers["xxx-csrf-access-token"] = decodeURIComponent(csrfToken);
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    credentials: "include",
+    body: JSON.stringify(data),
   });
+  
   return await res.json();
 };
 
