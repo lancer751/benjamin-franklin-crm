@@ -8,6 +8,9 @@ interface User {
   email?: string;
   is_active?: boolean;
   role: { name: 'ADMIN' | 'SALES_REP' | 'SUPERVISOR' | 'SALES_SUPERVISOR' | string };
+  seller?: {
+    id: string;
+  } | null;
 }
 
 interface AuthState {

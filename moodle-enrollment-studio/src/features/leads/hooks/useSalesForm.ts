@@ -158,7 +158,7 @@ export const useSalesForm = () => {
         const memberRes = await addLeadToCampaign(campaignId, {
           lead_id: leadId,
           campaing_id: campaignId, // Mantener typo del backend con 'g'
-          assigned_to: user.id,    // ID directo de Zustand para el supervisor
+          assigned_to: user?.seller?.id || user.id, // ID comercial de ventas o ID de usuario alterno
           source: values.source || "WHATSAPP",
           is_primary: true
         });

@@ -134,28 +134,26 @@ const SupervisorFollowUpView = () => {
   // 1. Obtener todos los prospectos de la academia
   const { data: leadsRes, isLoading: isLoadingLeads } = useQuery({
     queryKey: ["all-leads"],
-    queryFn: getAllLeads,
+    queryFn: () => getAllLeads(),
   });
 
-  const leads = leadsRes?.data?.data || [];
+  const leads = (leadsRes && typeof leadsRes === "object" && "data" in leadsRes) ? (leadsRes as any).data?.data || [] : [];
 
   // 2. Extraer de forma dinámica un listado único de asesores analizando la propiedad 'campaignsEngaging' de todos los leads
   const sellers = useMemo(() => {
     const uniqueSellersMap = new Map<string, { id: string; name: string; email?: string }>();
     leads.forEach((lead: any) => {
       (lead.campaignsEngaging || []).forEach((member: any) => {
-        if (member.seller) {
-          const sId = member.assigned_to || member.seller.id;
-          if (sId && !uniqueSellersMap.has(sId)) {
-            const name = member.seller.user 
-              ? `${member.seller.user.first_name} ${member.seller.user.last_name}`.trim()
-              : `Asesor ${sId.slice(0, 4)}`;
-            uniqueSellersMap.set(sId, { 
-              id: sId, 
-              name,
-              email: member.seller.user?.email || "Sin email registrado"
-            });
-          }
+        const sId = member.assigned_to;
+        if (sId && !uniqueSellersMap.has(sId)) {
+          const name = member.seller?.user 
+            ? `${member.seller.user.first_name} ${member.seller.user.last_name}`.trim()
+            : `Asesor ${sId.slice(0, 4)}`;
+          uniqueSellersMap.set(sId, { 
+            id: sId, 
+            name,
+            email: member.seller?.user?.email || "Sin email registrado"
+          });
         }
       });
     });
@@ -457,7 +455,7 @@ const SupervisorFollowUpView = () => {
                           ? `${member.lead.first_name || ""} ${member.lead.last_name || ""}`.trim()
                           : "S/N";
                         const phone = member.lead?.phones?.[0]?.number || "S/N";
-                        const courseName = member.campaing?.relatedProduct?.name || "N/D";
+                        const courseName = member.campaing?.relatedProduct?.name || member.campaing?.campaing_name || "Sin campaña";
 
                         return (
                           <TableRow 
@@ -603,7 +601,7 @@ const SupervisorFollowUpView = () => {
                     <div className="flex items-center gap-2.5 text-slate-700">
                       <BookOpen size={14} className="text-muted-foreground shrink-0" />
                       <span className="font-semibold w-20">Programa:</span>
-                      <span className="font-bold text-slate-900 truncate">{selectedLead.campaing?.relatedProduct?.name || "N/D"}</span>
+                      <span className="font-bold text-slate-900 truncate">{selectedLead.campaing?.relatedProduct?.name || selectedLead.campaing?.campaing_name || "Sin campaña"}</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-slate-700">
                       <Hash size={14} className="text-muted-foreground shrink-0" />

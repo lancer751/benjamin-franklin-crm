@@ -19,7 +19,7 @@ export type LeadQuerySchemaInput = InferRequestType<typeof api.leads.$get>["quer
 // 2. Rutas de Miembros de Campaña (/api/campaigns/:campaignId/members)
 // Para acceder a los métodos anidados del sub-router usamos casting limpio o invocación directa por convención RPC
 export type GetCampaignMembersRes = InferResponseType<typeof api.campaigns[typeof UUID_PATH]["members"]["$get"]>;
-export type CreateCampaignMemberReq = InferRequestType<typeof api.campaigns[typeof UUID_PATH]["members"]["$post"]>["json"];
+export type CreateCampaignMemberReq = InferRequestType<typeof api.campaigns[":campaignId"]["members"]["$post"]>["json"];
 export type UpdateMemberStatusReq = InferRequestType<typeof api.campaigns[typeof UUID_PATH]["members支撑" /* Fallback seguro para strings string */]["$patch"]>["json"];
 
 // ==========================================
@@ -28,7 +28,8 @@ export type UpdateMemberStatusReq = InferRequestType<typeof api.campaigns[typeof
 
 /** Obtiene la lista unificada y paginada de todos los leads */
 export const getAllLeads = async (query?: LeadQuerySchemaInput): Promise<GetAllLeadsRes> => {
-  const res = await api.leads.$get({ query: query as any });
+  const cleanQuery = (query && !("queryKey" in query)) ? query : undefined;
+  const res = await api.leads.$get(cleanQuery ? { query: cleanQuery as any } : undefined);
   return await res.json();
 };
 
@@ -69,29 +70,12 @@ export const getCampaignMembers = async (campaignId?: string, query?: any): Prom
 };
 
 /** POST: Asigna o añade un Lead existente a una campaña (Crea el CampaignMember) */
-export const addLeadToCampaign = async (campaignId: string, data: any): Promise<any> => {
-  const serverUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
-  const url = `${serverUrl}/api/campaigns/${campaignId}/members`;
-  
-  const csrfToken = document.cookie
-    .split("; ")
-    .find((item) => item.trim().startsWith("xxx-csrf-access-token="))
-    ?.split("=")[1];
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (csrfToken) {
-    headers["xxx-csrf-access-token"] = decodeURIComponent(csrfToken);
-  }
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    credentials: "include",
-    body: JSON.stringify(data),
+export const addLeadToCampaign = async (campaignId: string, data: CreateCampaignMemberReq): Promise<any> => {
+  // Si usas el cliente indexado por RPC de Hono, el objeto 'param' debe mapear 'campaignId'
+  const res = await api.campaigns[":campaignId"].members.$post({
+    param: { campaignId }, 
+    json: data
   });
-  
   return await res.json();
 };
 

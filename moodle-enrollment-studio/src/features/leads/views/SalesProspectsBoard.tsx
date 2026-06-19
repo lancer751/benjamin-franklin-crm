@@ -65,7 +65,7 @@ export const SalesProspectsBoard = () => {
   const navigate = useNavigate();
 
   const { user } = useAuthStore();
-  const sellerId = user?.id;
+  const sellerId = user?.seller?.id || user?.id;
 
   // 1. Consultar y recopilar las campañas disponibles
   const { data: campaignsRes, isLoading: isLoadingCampaigns } = useQuery({

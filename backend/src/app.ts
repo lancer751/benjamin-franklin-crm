@@ -11,6 +11,7 @@ import { csrf } from "hono/csrf";
 import { envParsed } from "./env";
 import cloudinary from "cloudinary";
 import { bulkRouter } from "./routes/bulk.route";
+import { showRoutes } from "hono/dev";
 
 export const app = new Hono();
 const allowedOrigins = envParsed.ALLOWED_ORIGINS;
@@ -126,6 +127,8 @@ app.post("/cloudinary", async (c) => {
   return c.json(result);
 
 });
+
+showRoutes(app);
 
 export default {
   port: envParsed.PORT,

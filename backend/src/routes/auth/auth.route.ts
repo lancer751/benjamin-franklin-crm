@@ -26,7 +26,7 @@ export const authRoutes = new Hono<ContextWithPrisma>()
     console.log(authenticatedUser);
     const user = await c.get("prisma").user.findUnique({
       where: { id: authenticatedUser.userId },
-      include: { role: true },
+      include: { role: true, seller: {select: {id: true}} },
       omit: { role_id: true, password: true },
     });
 
