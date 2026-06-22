@@ -7,7 +7,7 @@ import { zValidator } from "@hono/zod-validator";
 import type { RoleAccess } from "@repo/database";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { CreateUserSchema } from "shared";
+import { CreateUserSchema, UpdateUserSchema } from "shared";
 import { hash } from "bcrypt";
 
 export const userGeneralRoutes = new Hono<ContextWithPrisma>()

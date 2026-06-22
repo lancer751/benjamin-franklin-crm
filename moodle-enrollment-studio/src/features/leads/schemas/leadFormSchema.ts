@@ -1,4 +1,4 @@
-import * as z from "zod";
+import z from "zod";
 
 export const leadFormSchema = z.object({
   first_name: z.string().trim().min(3, "Este campo es obligatorio"),

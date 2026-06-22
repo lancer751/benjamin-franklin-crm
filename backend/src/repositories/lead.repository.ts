@@ -11,14 +11,14 @@ import type {
   LeadQuery,
   CampaignMemberQuery,
 } from "shared";
+import type { LeadWhereInput } from "../../../packages/db/dist/generated/prisma/models";
 
 export function leadRepository(prisma: PrismaClient) {
   return {
-    // ── Leads ───────────────────────────────────────────────────────────────
-
-    async findMany({ page, limit, search }: LeadQuery) {
+    //  Leads
+    async findMany({ page, limit, search, status }: LeadQuery) {
       const skip = (page - 1) * limit;
-      const where = search
+      const where: LeadWhereInput = search
         ? {
             OR: [
               { email: { contains: search, mode: "insensitive" as const } },
@@ -26,7 +26,11 @@ export function leadRepository(prisma: PrismaClient) {
                 first_name: { contains: search, mode: "insensitive" as const },
               },
               { last_name: { contains: search, mode: "insensitive" as const } },
+              
             ],
+            AND: [
+              {lead_status: status ?? "ACTIVE"}
+            ]
           }
         : {};
 
