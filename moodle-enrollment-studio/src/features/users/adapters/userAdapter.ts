@@ -19,7 +19,8 @@ export const userAdapter = {
           team_name: "", max_sellers: 0, discount_limit_percent: "0",
           can_assign_leads: false, can_approve_discounts: false,
           can_reassign_leads: false, can_cancel_orders: false, can_view_all_team_sales: false,
-        }
+        },
+        marketing_profile: {}
       } as any;
     }
 
@@ -57,7 +58,8 @@ export const userAdapter = {
         can_reassign_leads: supervisor?.can_reassign_leads || false,
         can_cancel_orders: supervisor?.can_cancel_orders || false,
         can_view_all_team_sales: supervisor?.can_view_all_team_sales || false,
-      }
+      },
+      marketing_profile: user.marketing_profile || {}
     } as any;
   },
 
@@ -82,26 +84,32 @@ export const userAdapter = {
     };
 
     if (isSeller) {
-      if (!values.seller_profile?.assigned_supervisor_id || values.seller_profile.assigned_supervisor_id === "unassigned") {
+      const sellerProfile = (values as any).seller_profile;
+      if (!sellerProfile?.assigned_supervisor_id || sellerProfile.assigned_supervisor_id === "unassigned") {
         throw new Error("VALIDATION_SUPERVISOR");
       }
       payload.seller_profile = {
-        sales_target: Number(values.seller_profile?.sales_target) || 0,
-        assigned_supervisor_id: values.seller_profile.assigned_supervisor_id,
+        sales_target: Number(sellerProfile?.sales_target) || 0,
+        assigned_supervisor_id: sellerProfile.assigned_supervisor_id,
       };
     }
 
     if (isSupervisor) {
+      const supervisorProfile = (values as any).sales_supervisor_profile;
       payload.sales_supervisor_profile = {
-        team_name: values.sales_supervisor_profile?.team_name || "Equipo Sin Nombre",
-        max_sellers: Number(values.sales_supervisor_profile?.max_sellers) || 0,
-        discount_limit_percent: Number(values.sales_supervisor_profile?.discount_limit_percent) || 0,
-        can_assign_leads: values.sales_supervisor_profile?.can_assign_leads ?? false,
-        can_approve_discounts: values.sales_supervisor_profile?.can_approve_discounts ?? false,
-        can_reassign_leads: values.sales_supervisor_profile?.can_reassign_leads ?? false,
-        can_cancel_orders: values.sales_supervisor_profile?.can_cancel_orders ?? false,
-        can_view_all_team_sales: values.sales_supervisor_profile?.can_view_all_team_sales ?? false,
+        team_name: supervisorProfile?.team_name || "Equipo Sin Nombre",
+        max_sellers: Number(supervisorProfile?.max_sellers) || 0,
+        discount_limit_percent: Number(supervisorProfile?.discount_limit_percent) || 0,
+        can_assign_leads: supervisorProfile?.can_assign_leads ?? false,
+        can_approve_discounts: supervisorProfile?.can_approve_discounts ?? false,
+        can_reassign_leads: supervisorProfile?.can_reassign_leads ?? false,
+        can_cancel_orders: supervisorProfile?.can_cancel_orders ?? false,
+        can_view_all_team_sales: supervisorProfile?.can_view_all_team_sales ?? false,
       };
+    }
+
+    if (roleName === "MARKETING") {
+      payload.marketing_profile = (values as any).marketing_profile || {};
     }
 
     if (!isUpdate && !payload.password) {

@@ -67,7 +67,7 @@ export function UserFormModal({ isOpen, onClose, user }: UserFormModalProps) {
         </DialogHeader>
 
         <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+          <form onSubmit={form.handleSubmit(onSubmit, (errors) => console.log("❌ Errores de Validación ocultos:", errors))} className="flex flex-col flex-1 overflow-hidden">
             
             {/* Cuerpo del Modal (Área de Scroll) */}
             <div className="flex-1 overflow-y-auto px-6 py-4">

@@ -109,7 +109,7 @@ export const useSaveUserMutation = (
       if (error.message === "VALIDATION_PASSWORD") {
         setError("password", { type: "manual", message: "La contraseña es obligatoria" });
       } else if (error.message === "VALIDATION_SUPERVISOR") {
-        setError("assigned_supervisor_id", {
+        setError("seller_profile.assigned_supervisor_id" as any, {
           type: "manual",
           message: "Debe asignar un supervisor obligatoriamente",
         });

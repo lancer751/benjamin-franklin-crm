@@ -76,6 +76,45 @@ export const userFormSchema = z.discriminatedUnion("role", [
     cellphone: z.preprocess((val) => (val === "" ? null : val), z.string().regex(/^\d{9}$/, "El celular debe tener 9 dígitos").nullable().optional()),
     is_active: z.boolean().default(true),
   }),
+
+  z.object({
+    id: z.string().optional(),
+    role: z.literal("MARKETING"),
+    role_id: z.string().uuid("Selecciona un rol válido"),
+    first_name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
+    middle_name: z.string().default(""),
+    corporate_email: z.preprocess((val) => (val === "" ? null : val), z.string().email("Correo corporativo inválido").nullable().optional()),
+    corporate_cellphone: z.preprocess((val) => (val === "" ? null : val), z.string().regex(/^\d{9}$/, "El celular corporativo debe tener 9 dígitos").nullable().optional()),
+    birth_date: z.date().nullable().optional(),
+    last_name: z.string().min(2, "El apellido debe tener al menos 2 caracteres"),
+    email: z.string().email("Por favor, ingresa un correo electrónico válido"),
+    password: z.preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional()
+    ),
+    cellphone: z.preprocess((val) => (val === "" ? null : val), z.string().regex(/^\d{9}$/, "El celular debe tener 9 dígitos").nullable().optional()),
+    is_active: z.boolean().default(true),
+    marketing_profile: z.object({}).optional().default({}),
+  }),
+
+  z.object({
+    id: z.string().optional(),
+    role: z.literal("COLLECTIONS"),
+    role_id: z.string().uuid("Selecciona un rol válido"),
+    first_name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
+    middle_name: z.string().default(""),
+    corporate_email: z.preprocess((val) => (val === "" ? null : val), z.string().email("Correo corporativo inválido").nullable().optional()),
+    corporate_cellphone: z.preprocess((val) => (val === "" ? null : val), z.string().regex(/^\d{9}$/, "El celular corporativo debe tener 9 dígitos").nullable().optional()),
+    birth_date: z.date().nullable().optional(),
+    last_name: z.string().min(2, "El apellido debe tener al menos 2 caracteres"),
+    email: z.string().email("Por favor, ingresa un correo electrónico válido"),
+    password: z.preprocess(
+      (val) => (val === "" ? undefined : val),
+      z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional()
+    ),
+    cellphone: z.preprocess((val) => (val === "" ? null : val), z.string().regex(/^\d{9}$/, "El celular debe tener 9 dígitos").nullable().optional()),
+    is_active: z.boolean().default(true),
+  }),
 ]).refine(
   (data) => {
     // Si no hay ID (creación), la contraseña es estrictamente obligatoria (>= 6 caracteres)
@@ -111,4 +150,5 @@ export const defaultUserFormValues: UserFormValues = {
     sales_target: 0,
     assigned_supervisor_id: "",
   },
+  marketing_profile: {},
 } as any;

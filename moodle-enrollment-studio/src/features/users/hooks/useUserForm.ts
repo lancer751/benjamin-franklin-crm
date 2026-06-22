@@ -86,7 +86,7 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
 
   // Ahora sí inicializamos useForm ya con 'extendedProfile' y 'roles' plenamente declarados
   const form = useForm<UserFormValues>({
-    resolver: standardSchemaResolver(userFormSchema),
+    resolver: standardSchemaResolver(userFormSchema) as any,
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: user
@@ -173,7 +173,12 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
   );
 
   const onSubmit = (values: UserFormValues) => {
-    mutation.mutate(values);
+    const roleName = roles.find((r: any) => r.id === values.role_id)?.name || "";
+    const finalPayload = roleName === "MARKETING" ? {
+      ...values,
+      marketing_profile: (values as any).marketing_profile || {}
+    } : values;
+    mutation.mutate(finalPayload as any);
   };
 
   return {
