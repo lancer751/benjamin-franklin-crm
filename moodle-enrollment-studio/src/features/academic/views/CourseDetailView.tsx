@@ -173,6 +173,11 @@ export default function CourseDetailView() {
     );
   }
 
+  const sortedEditions = useMemo(() => {
+    if (!course?.editions) return [];
+    return [...course.editions].sort((a, b) => (a.edition_number || 0) - (b.edition_number || 0));
+  }, [course?.editions]);
+
   return (
     <div className="flex flex-col gap-8 w-full fade-in pb-10">
       {/* Botón de regreso */}
@@ -264,7 +269,7 @@ export default function CourseDetailView() {
               </Button>
             </div>
           ) : (
-            <CustomTable data={course.editions} columns={columns} />
+            <CustomTable data={sortedEditions} columns={columns} />
           )}
         </Card>
       </div>
