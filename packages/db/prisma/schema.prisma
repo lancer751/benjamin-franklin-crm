@@ -164,8 +164,8 @@ model SalesSupervisorProfile {
   max_manual_discount    Decimal? @default(0) @db.Decimal(10, 2) // max discount zamount that the supervisor can apply manually without needing approval from a higher role
 
   // performance metrics (system-calculated)
-  supervised_sellers     Int     @default(0) 
-  active_sellers         Int     @default(0) 
+  supervised_sellers     Int     @default(0)
+  active_sellers         Int     @default(0)
   total_team_sales       Int     @default(0)
   total_team_orders      Int     @default(0)
   completed_team_orders  Int     @default(0)
@@ -175,7 +175,7 @@ model SalesSupervisorProfile {
 
   user            User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
   assignedSellers SellerProfile[]
-  campaigns       Campaing[]      // back-relation to the campaigns they supervise
+  campaigns       Campaing[] // back-relation to the campaigns they supervise
 }
 
 model CampaignSeller {
@@ -250,7 +250,7 @@ model CampaignMember {
   campaing         Campaing          @relation(fields: [campaing_id], references: [id])
   seller           SellerProfile?    @relation(fields: [assigned_to], references: [id])
   leadInteractions LeadInteraction[]
-  tasks  Tasks[]
+  tasks            Tasks[]
 
   @@unique([lead_id, campaing_id])
   @@index([status])
@@ -287,7 +287,7 @@ model Lead {
   gender              Gender?
   address             String?
   second_address      String?
-  email               String?     @unique
+  email               String?    @unique
   secondary_email     String?
   dni                 String?    @unique @db.Char(8)
   lead_status         LeadStatus @default(ACTIVE)
@@ -302,7 +302,7 @@ model Lead {
   campaignsEngaging   CampaignMember[]
   customerProfile     CustomerProfile?
   leadPrimaryCampaing Campaing?         @relation("PrimaryCampaign", fields: [primary_campaign_id], references: [id])
-  createdTasks         Tasks[]
+  createdTasks        Tasks[]
 }
 
 enum InteractionType {
@@ -331,11 +331,11 @@ model Tasks {
   id                 String    @id @default(uuid()) @db.Char(36)
   title              String
   content            String    @db.Text
-  is_done            Boolean   @default(false)   // NEW
-  due_date           DateTime?                   // NEW
-  lead_id            String                      // NEW
-  campaign_member_id String                      // NEW
-  created_by         String                      // NEW — seller who owns the task
+  is_done            Boolean   @default(false) // NEW
+  due_date           DateTime? // NEW
+  lead_id            String // NEW
+  campaign_member_id String // NEW
+  created_by         String // NEW — seller who owns the task
 
   lead           Lead           @relation(fields: [lead_id], references: [id])
   campaignMember CampaignMember @relation(fields: [campaign_member_id], references: [id])
@@ -414,7 +414,7 @@ model Course {
 
 model Campaing {
   id             String           @id @default(uuid()) @db.Char(36)
-  campaing_name  String
+  name           String
   initial_budget Decimal          @db.Decimal(10, 2)
   total_spent    Decimal?         @db.Decimal(10, 2)
   status         CampaingStatus
@@ -422,18 +422,17 @@ model Campaing {
   end_date       DateTime?
   platform       CampaingPlatform
   is_organic     Boolean
-  meta_form_id   String?          // NEW — links to a Meta Lead Ad form
+  meta_form_id   String? // NEW — links to a Meta Lead Ad form
   created_at     DateTime         @default(now())
   updated_at     DateTime         @updatedAt
   product_id     String           @unique
-  supervisor_id  String           // NEW — who manages this campaign
+  supervisor_id  String // NEW — who manages this campaign
 
-
-  members        CampaignMember[]
-  leads          Lead[]           @relation("PrimaryCampaign")
-  relatedProduct Product          @relation(fields: [product_id], references: [id])
-  sellers        CampaignSeller[]
-  supervisor     SalesSupervisorProfile @relation(fields: [supervisor_id], references: [id])  // NEW
+  leadsOnCampaign CampaignMember[]
+  leads           Lead[]                 @relation("PrimaryCampaign")
+  relatedProduct  Product                @relation(fields: [product_id], references: [id])
+  sellersOnCampaign         CampaignSeller[]
+  assignedSupervisor      SalesSupervisorProfile @relation(fields: [supervisor_id], references: [id]) // NEW
 }
 
 enum WeekDays {
@@ -539,29 +538,29 @@ model Category {
 }
 
 enum ProductPricingStatus {
-  VALID        // prices match the edition modality
-  INVALID      // prices don't match — product cannot be published
+  VALID // prices match the edition modality
+  INVALID // prices don't match — product cannot be published
 }
 
 model Product {
-  id                      String      @id @default(uuid()) @db.Char(36)
+  id                      String               @id @default(uuid()) @db.Char(36)
   name                    String // you can write a new name or define it from the course and edition.
   slug                    String?
   description             String?
   image_url               String? // optional, you can take it from the course or edition or write a new one
   short_description       String?
-  presale_price           Decimal?    @db.Decimal(10, 2)
-  edition_id              String      @unique
+  presale_price           Decimal?             @db.Decimal(10, 2)
+  edition_id              String               @unique
   category_id             String
   installments_max_number Int
   installments_min_number Int
-  discount_price          Decimal?    @default(0) @db.Decimal(10, 2)
+  discount_price          Decimal?             @default(0) @db.Decimal(10, 2)
   discount_expires_at     DateTime?
-  sales_status            SalesStatus @default(DRAFT)
-  created_at              DateTime    @default(now())
-  updated_at              DateTime    @updatedAt
+  sales_status            SalesStatus          @default(DRAFT)
+  created_at              DateTime             @default(now())
+  updated_at              DateTime             @updatedAt
   brochure_url            String?
-  pricing_status ProductPricingStatus @default(VALID)
+  pricing_status          ProductPricingStatus @default(VALID)
 
   orders_details        OrderDetail[]
   edition               Edition                   @relation(fields: [edition_id], references: [id])

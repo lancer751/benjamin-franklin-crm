@@ -20,7 +20,7 @@ export async function fakeCampaigns(
     // Campaign 1 — Facebook campaign for Lectura de Planos, supervisor 0
     prisma.campaing.create({
       data: {
-        campaing_name: "Lectura de Planos — Facebook Jun 2025",
+        name: "Lectura de Planos — Facebook Jun 2025",
         status: "ACTIVE",
         platform: "FACEBOOK",
         is_organic: false,
@@ -36,7 +36,7 @@ export async function fakeCampaigns(
     // Campaign 2 — Instagram organic campaign for Power BI, supervisor 1
     prisma.campaing.create({
       data: {
-        campaing_name: "Power BI — Instagram Orgánico Jun 2025",
+        name: "Power BI — Instagram Orgánico Jun 2025",
         status: "ACTIVE",
         platform: "INSTAGRAM",
         is_organic: true,

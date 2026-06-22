@@ -157,6 +157,28 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
         });
       }
 
+      if (
+        edition.modality === "HIBRIDO" &&
+        prices.some((pr) => pr.attendance_mode === "HEREDADO")
+      ) {
+        throw new HTTPException(400, {
+          message:
+            "HEREDADO attendance mode cannot be used with HIBRIDO edition modality",
+        });
+      }
+
+      if (edition.modality === "HIBRIDO" && prices.length !== 2) {
+        throw new HTTPException(400, {
+          message:
+            "HIBRIDO edition modality requires exactly 2 prices: one VIRTUAL and one PRESENCIAL",
+        });
+      }
+      if (edition.modality !== "HIBRIDO" && prices.length !== 1) {
+        throw new HTTPException(400, {
+          message: `Non-HIBRIDO edition modality requires exactly 1 price with attendance_mode HEREDADO`,
+        });
+      }
+
       //  3. Check edition doesn't already have a product
       const editionProductConflict = await prisma.product.findUnique({
         where: { edition_id: productData.edition_id },

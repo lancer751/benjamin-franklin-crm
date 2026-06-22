@@ -10,7 +10,9 @@ export const CampaignPlatformSchema = z.enum([
 ]);
 
 const CampaignBaseSchema = z.object({
-  campaing_name: z.string().min(3, "Campaign name must be at least 3 characters"),
+  campaing_name: z
+    .string()
+    .min(3, "Campaign name must be at least 3 characters"),
   initial_budget: z.number().nonnegative().multipleOf(0.01),
   start_date: z.coerce.date(),
   end_date: z.coerce.date().optional().nullable(),
@@ -45,7 +47,10 @@ export const CampaignQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   status: CampaignStatusSchema.optional(),
   platform: CampaignPlatformSchema.optional(),
-  search: z.string().optional(),
+  search: z
+    .string()
+    .optional()
+    .refine((val) => val && val.trim().length > 0, "Search query cannot be empty"),
 });
 
 export type CreateCampaignInput = z.infer<typeof CreateCampaignSchema>;
