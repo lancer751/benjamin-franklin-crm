@@ -142,18 +142,31 @@ const SupervisorFollowUpView = () => {
   // 2. Extraer de forma dinámica un listado único de asesores analizando la propiedad 'campaignsEngaging' de todos los leads
   const sellers = useMemo(() => {
     const uniqueSellersMap = new Map<string, { id: string; name: string; email?: string }>();
+    
+    // Pestaña obligatoria de control
+    uniqueSellersMap.set("UNASSIGNED", {
+      id: "UNASSIGNED",
+      name: "SIN ASIGNAR ⚠️",
+      email: "Prospectos entrantes sin asesor"
+    });
+
     leads.forEach((lead: any) => {
       (lead.campaignsEngaging || []).forEach((member: any) => {
-        const sId = member.assigned_to;
-        if (sId && !uniqueSellersMap.has(sId)) {
-          const name = member.seller?.user 
-            ? `${member.seller.user.first_name} ${member.seller.user.last_name}`.trim()
-            : `Asesor ${sId.slice(0, 4)}`;
-          uniqueSellersMap.set(sId, { 
-            id: sId, 
-            name,
-            email: member.seller?.user?.email || "Sin email registrado"
-          });
+        const uFirstName = member.seller?.user?.first_name;
+        const uLastName = member.seller?.user?.last_name;
+        
+        if (uFirstName) {
+          const sellerName = `${uFirstName} ${uLastName || ""}`.trim();
+          // Usamos el nombre unificado o un ID simulado estable si assigned_to no viene plano
+          const sId = member.assigned_to || sellerName.toLowerCase().replace(/\s+/g, "-");
+          
+          if (!uniqueSellersMap.has(sId)) {
+            uniqueSellersMap.set(sId, {
+              id: sId,
+              name: sellerName.toUpperCase(),
+              email: member.seller?.user?.email || "Asesor Comercial asignado"
+            });
+          }
         }
       });
     });
@@ -170,9 +183,30 @@ const SupervisorFollowUpView = () => {
   // 3. Filtrar los prospectos asignados al asesor seleccionado en el cliente aplanando las relaciones
   const activeMembers = useMemo(() => {
     if (!activeSellerTab) return [];
+    
+    if (activeSellerTab === "UNASSIGNED") {
+      return leads
+        .filter((lead: any) => !lead.campaignsEngaging || lead.campaignsEngaging.length === 0)
+        .map((lead: any) => ({
+          id: `unassigned-${lead.id}`,
+          created_at: lead.created_at,
+          status: "NEW",
+          assigned_to: "UNASSIGNED",
+          source: lead.phones?.[0]?.type || "WHATSAPP",
+          campaing_id: lead.primary_campaign_id || "",
+          lead,
+          campaing: { campaing_name: "Bandeja de Entrada General" }
+        }));
+    }
+
     return leads.flatMap((lead: any) => 
       (lead.campaignsEngaging || [])
-        .filter((member: any) => member.assigned_to === activeSellerTab)
+        .filter((member: any) => {
+          const uFirstName = member.seller?.user?.first_name;
+          const uLastName = member.seller?.user?.last_name;
+          const sellerNameId = uFirstName ? `${uFirstName} ${uLastName || ""}`.trim().toLowerCase().replace(/\s+/g, "-") : "";
+          return member.assigned_to === activeSellerTab || sellerNameId === activeSellerTab;
+        })
         .map((member: any) => ({ ...member, lead }))
     );
   }, [leads, activeSellerTab]);
@@ -186,15 +220,32 @@ const SupervisorFollowUpView = () => {
       });
       return res.json();
     },
-    enabled: !!selectedLead?.id,
+    enabled: !!selectedLead?.id && !selectedLead.id.startsWith("unassigned-"),
   });
 
   // Reasignar asesor comercial mutation
   const reassignMutation = useMutation({
     mutationFn: async (newSellerId: string) => {
+      if (selectedLead.id.startsWith("unassigned-")) {
+        const campaignId = selectedLead.campaing_id || selectedLead.lead.primary_campaign_id;
+        if (!campaignId) {
+          throw new Error("El prospecto no tiene una campaña asociada.");
+        }
+        const res = await api.campaigns[":campaignId"].members.$post({
+          param: { campaignId },
+          json: {
+            lead_id: selectedLead.lead.id,
+            campaing_id: campaignId,
+            assigned_to: newSellerId,
+            source: selectedLead.lead.source || "WHATSAPP",
+            is_primary: true
+          }
+        });
+        return await res.json();
+      }
       return reassignCampaignMember(selectedLead.campaing_id, selectedLead.id, { assigned_to: newSellerId });
     },
-    onSuccess: (res) => {
+    onSuccess: (res: any) => {
       if (res.success) {
         toast.success("Prospecto reasignado al nuevo asesor comercial");
         setSelectedLead(null);
@@ -247,7 +298,7 @@ const SupervisorFollowUpView = () => {
     const cancelledOrders = allMembers.filter((m: any) => m.status === "LOST").length;
 
     return {
-      activeSellers: sellers.length,
+      activeSellers: Math.max(0, sellers.length - 1),
       conversionRate,
       totalSales,
       completedOrders,
@@ -466,7 +517,7 @@ const SupervisorFollowUpView = () => {
                             }`}
                           >
                             <TableCell className="text-xs font-semibold text-slate-600">
-                              {formatDate(member.created_at)}
+                              {formatDate(member.lead?.created_at || member.created_at)}
                             </TableCell>
                             <TableCell className="text-xs font-bold text-slate-800">
                               {courseName}
