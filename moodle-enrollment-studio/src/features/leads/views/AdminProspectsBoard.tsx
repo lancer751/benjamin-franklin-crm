@@ -98,9 +98,20 @@ export const AdminProspectsBoard = () => {
 
   // Mapeo simple de datos para admin
   const leads = useMemo(() => {
-    const rawData = serverRes?.data?.data || serverRes?.data || [];
+    const rawData = (serverRes as any)?.data?.leads
+      || (serverRes as any)?.data?.data?.leads
+      || (serverRes as any)?.data?.data
+      || (serverRes as any)?.data
+      || [];
     if (!Array.isArray(rawData)) return [];
-    return rawData;
+    return rawData.map((lead: any) => {
+      const member = lead.campaignsEngaging?.[0] || {};
+      const courseName = member.campaing?.name || lead.primary_campaign_id || "Sin especificar";
+      return {
+        ...lead,
+        courseName,
+      };
+    });
   }, [serverRes]);
 
   // Lógica de Filtrado Avanzada
@@ -219,6 +230,11 @@ export const AdminProspectsBoard = () => {
         },
       },
       {
+        header: "Campaña / Curso",
+        accessorKey: "courseName",
+        cell: ({ row }) => <span className="text-foreground font-semibold">{row.original.courseName}</span>,
+      },
+      {
         header: "Contacto",
         accessorKey: "email",
         cell: ({ row }) => <span className="text-foreground">{row.original.email}</span>,
@@ -227,13 +243,10 @@ export const AdminProspectsBoard = () => {
         header: "Celular",
         accessorKey: "cellphone",
         cell: ({ row }) => {
-          const phone = row.original.phones?.[0]?.number;
-          return phone ? (
+          const lead = row.original;
+          const phone = lead.phones?.[0]?.number || "S/N";
+          return (
             <span className="text-foreground">{phone}</span>
-          ) : (
-            <Badge variant="secondary" className="bg-slate-50 text-slate-400 border-slate-150 hover:bg-slate-100/50 font-medium text-[11px]">
-              Sin número
-            </Badge>
           );
         },
       },

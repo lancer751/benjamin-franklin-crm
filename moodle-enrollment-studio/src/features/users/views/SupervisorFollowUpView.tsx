@@ -137,7 +137,11 @@ const SupervisorFollowUpView = () => {
     queryFn: () => getAllLeads(),
   });
 
-  const leads = (leadsRes && typeof leadsRes === "object" && "data" in leadsRes) ? (leadsRes as any).data?.data || [] : [];
+  const leads = (leadsRes as any)?.data?.leads
+    || (leadsRes as any)?.data?.data?.leads
+    || (leadsRes as any)?.data?.data
+    || (leadsRes as any)?.data
+    || [];
 
   // 2. Extraer de forma dinámica un listado único de asesores analizando la propiedad 'campaignsEngaging' de todos los leads
   const sellers = useMemo(() => {
@@ -195,7 +199,7 @@ const SupervisorFollowUpView = () => {
           source: lead.phones?.[0]?.type || "WHATSAPP",
           campaing_id: lead.primary_campaign_id || "",
           lead,
-          campaing: { campaing_name: "Bandeja de Entrada General" }
+          campaing: { name: "Bandeja de Entrada General", campaing_name: "Bandeja de Entrada General" }
         }));
     }
 
@@ -506,7 +510,7 @@ const SupervisorFollowUpView = () => {
                           ? `${member.lead.first_name || ""} ${member.lead.last_name || ""}`.trim()
                           : "S/N";
                         const phone = member.lead?.phones?.[0]?.number || "S/N";
-                        const courseName = member.campaing?.relatedProduct?.name || member.campaing?.campaing_name || "Sin campaña";
+                        const courseName = member.campaing?.name || member.campaing?.relatedProduct?.name || member.campaing?.campaing_name || "Sin campaña";
 
                         return (
                           <TableRow 
@@ -652,7 +656,7 @@ const SupervisorFollowUpView = () => {
                     <div className="flex items-center gap-2.5 text-slate-700">
                       <BookOpen size={14} className="text-muted-foreground shrink-0" />
                       <span className="font-semibold w-20">Programa:</span>
-                      <span className="font-bold text-slate-900 truncate">{selectedLead.campaing?.relatedProduct?.name || selectedLead.campaing?.campaing_name || "Sin campaña"}</span>
+                      <span className="font-bold text-slate-900 truncate">{selectedLead.campaing?.name || selectedLead.campaing?.relatedProduct?.name || selectedLead.campaing?.campaing_name || "Sin campaña"}</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-slate-700">
                       <Hash size={14} className="text-muted-foreground shrink-0" />
@@ -667,7 +671,7 @@ const SupervisorFollowUpView = () => {
                     <div className="flex items-center gap-2.5 text-slate-700">
                       <Award size={14} className="text-muted-foreground shrink-0" />
                       <span className="font-semibold w-20">Campaña:</span>
-                      <span className="font-medium text-slate-800">{selectedLead.campaing?.campaing_name || "N/D"}</span>
+                      <span className="font-medium text-slate-800">{selectedLead.campaing?.name || selectedLead.campaing?.campaing_name || "N/D"}</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-slate-700">
                       <AlertCircle size={14} className="text-muted-foreground shrink-0" />

@@ -95,14 +95,23 @@ export const SalesProspectsBoard = () => {
 
   // Aplanamiento de datos
   const leads = useMemo(() => {
-    const rawData = serverRes?.data?.data || serverRes?.data || [];
+    const rawData = (serverRes as any)?.data?.leads
+      || (serverRes as any)?.data?.data?.leads
+      || (serverRes as any)?.data?.data
+      || (serverRes as any)?.data
+      || [];
     if (!Array.isArray(rawData)) return [];
-    return rawData.map((member: any) => ({
-      ...member.lead,
-      id: member.lead_id,
-      lead_status: member.status,
-      created_at: member.created_at
-    }));
+    return rawData.map((member: any) => {
+      const lead = member.lead || member;
+      const courseName = member.campaing?.name || lead.primary_campaign_id || "Sin especificar";
+      return {
+        ...lead,
+        id: member.lead_id || lead.id,
+        lead_status: member.status || lead.lead_status,
+        created_at: member.created_at || lead.created_at,
+        courseName,
+      };
+    });
   }, [serverRes]);
 
   // Lógica de Filtrado Avanzada
@@ -221,6 +230,11 @@ export const SalesProspectsBoard = () => {
         },
       },
       {
+        header: "Campaña / Curso",
+        accessorKey: "courseName",
+        cell: ({ row }) => <span className="text-foreground font-semibold">{row.original.courseName}</span>,
+      },
+      {
         header: "Contacto",
         accessorKey: "email",
         cell: ({ row }) => <span className="text-foreground">{row.original.email}</span>,
@@ -229,13 +243,10 @@ export const SalesProspectsBoard = () => {
         header: "Celular",
         accessorKey: "cellphone",
         cell: ({ row }) => {
-          const phone = row.original.phones?.[0]?.number;
-          return phone ? (
+          const lead = row.original;
+          const phone = lead.phones?.[0]?.number || "S/N";
+          return (
             <span className="text-foreground">{phone}</span>
-          ) : (
-            <Badge variant="secondary" className="bg-slate-50 text-slate-400 border-slate-150 hover:bg-slate-100/50 font-medium text-[11px]">
-              Sin número
-            </Badge>
           );
         },
       },
@@ -499,7 +510,7 @@ export const SalesProspectsBoard = () => {
               ) : (
                 activeCampaigns.map((c: any) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.campaing_name}
+                    {c.name || c.campaing_name}
                   </SelectItem>
                 ))
               )}
