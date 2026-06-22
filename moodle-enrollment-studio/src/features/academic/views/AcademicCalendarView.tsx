@@ -11,6 +11,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/core/components
 import { Progress } from '@/core/components/ui/progress';
 import { useAcademicCalendarView } from '../hooks/useAcademicCalendarView';
 import { formatToLocalTime, displayFriendlyDate, formatFriendlySpanishDate } from '@/core/utils/date-utils';
+import { translateEnum, EditionStatusMap } from '@/core/utils/dictionaries';
 
 const getStatusStyles = (status: string) => {
   switch (status) {
@@ -28,16 +29,7 @@ const getStatusStyles = (status: string) => {
   }
 };
 
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'COMPLETED': return 'Completado';
-    case 'IN_PROGRESS': return 'En Progreso';
-    case 'OPEN': return 'Programado';
-    case 'SCHEDULED': return 'Programado';
-    case 'SCHEDULED_GRAY': return 'Programado';
-    default: return status;
-  }
-};
+const getStatusText = (status: string) => translateEnum(status, EditionStatusMap);
 
 export const AcademicCalendarView = () => {
   const navigate = useNavigate();
@@ -464,7 +456,7 @@ export const AcademicCalendarView = () => {
                                <div className="flex items-center justify-between w-full truncate gap-2">
                                  {/* Label Dinámico según la vista */}
                                  <span className="text-xs font-semibold truncate">
-                                   {isMonthView ? getStatusText(ed.edition_status) : `Ed. ${ed.edition_number}`}
+                                   {isMonthView ? translateEnum(ed.edition_status, EditionStatusMap) : `Ed. ${ed.edition_number} (${translateEnum(ed.edition_status, EditionStatusMap)})`}
                                  </span>
                                  
                                  {/* Extra Info (solo en Mes por el espacio) */}
@@ -485,7 +477,7 @@ export const AcademicCalendarView = () => {
                                    <p className="text-xs font-mono text-slate-400 mt-0.5 truncate">{ed.edition_code}</p>
                                  </div>
                                  <Badge variant="outline" className="text-[10px] shrink-0">
-                                   {getStatusText(ed.edition_status)}
+                                   {translateEnum(ed.edition_status, EditionStatusMap)}
                                  </Badge>
                                </div>
                                <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-slate-100">
