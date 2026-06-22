@@ -1,4 +1,3 @@
-import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Users, 
@@ -53,10 +52,7 @@ import {
   SelectValue 
 } from "@/core/components/ui/select";
 import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAllLeads } from "@/features/leads/services/leadService";
-import { reassignCampaignMember } from "@/features/marketing/services/campaignService";
-import { api } from "@/core/lib/api";
+import { useSupervisorFollowUp } from "../hooks/useSupervisorFollowUp";
 
 // Helper para badges de Tipificación (CampaignMemberStatus)
 const getTipificacionBadge = (status: string) => {
@@ -126,144 +122,21 @@ const getTipificacionBadge = (status: string) => {
 
 const SupervisorFollowUpView = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
-  const [activeSellerTab, setActiveSellerTab] = useState<string>("");
-  const [selectedLead, setSelectedLead] = useState<any>(null);
-
-  // 1. Obtener todos los prospectos de la academia
-  const { data: leadsRes, isLoading: isLoadingLeads } = useQuery({
-    queryKey: ["all-leads"],
-    queryFn: () => getAllLeads(),
-  });
-
-  const leads = (leadsRes as any)?.data?.leads
-    || (leadsRes as any)?.data?.data?.leads
-    || (leadsRes as any)?.data?.data
-    || (leadsRes as any)?.data
-    || [];
-
-  // 2. Extraer de forma dinámica un listado único de asesores analizando la propiedad 'campaignsEngaging' de todos los leads
-  const sellers = useMemo(() => {
-    const uniqueSellersMap = new Map<string, { id: string; name: string; email?: string }>();
-    
-    // Pestaña obligatoria de control
-    uniqueSellersMap.set("UNASSIGNED", {
-      id: "UNASSIGNED",
-      name: "SIN ASIGNAR ⚠️",
-      email: "Prospectos entrantes sin asesor"
-    });
-
-    leads.forEach((lead: any) => {
-      (lead.campaignsEngaging || []).forEach((member: any) => {
-        const uFirstName = member.seller?.user?.first_name;
-        const uLastName = member.seller?.user?.last_name;
-        
-        if (uFirstName) {
-          const sellerName = `${uFirstName} ${uLastName || ""}`.trim();
-          // Usamos el nombre unificado o un ID simulado estable si assigned_to no viene plano
-          const sId = member.assigned_to || sellerName.toLowerCase().replace(/\s+/g, "-");
-          
-          if (!uniqueSellersMap.has(sId)) {
-            uniqueSellersMap.set(sId, {
-              id: sId,
-              name: sellerName.toUpperCase(),
-              email: member.seller?.user?.email || "Asesor Comercial asignado"
-            });
-          }
-        }
-      });
-    });
-    return Array.from(uniqueSellersMap.values());
-  }, [leads]);
-
-  // Inicializar pestaña con el primer asesor encontrado en la data real
-  useEffect(() => {
-    if (sellers.length && !activeSellerTab) {
-      setActiveSellerTab(sellers[0].id);
-    }
-  }, [sellers, activeSellerTab]);
-
-  // 3. Filtrar los prospectos asignados al asesor seleccionado en el cliente aplanando las relaciones
-  const activeMembers = useMemo(() => {
-    if (!activeSellerTab) return [];
-    
-    if (activeSellerTab === "UNASSIGNED") {
-      return leads
-        .filter((lead: any) => !lead.campaignsEngaging || lead.campaignsEngaging.length === 0)
-        .map((lead: any) => ({
-          id: `unassigned-${lead.id}`,
-          created_at: lead.created_at,
-          status: "NEW",
-          assigned_to: "UNASSIGNED",
-          source: lead.phones?.[0]?.type || "WHATSAPP",
-          campaing_id: lead.primary_campaign_id || "",
-          lead,
-          campaing: { name: "Bandeja de Entrada General", campaing_name: "Bandeja de Entrada General" }
-        }));
-    }
-
-    return leads.flatMap((lead: any) => 
-      (lead.campaignsEngaging || [])
-        .filter((member: any) => {
-          const uFirstName = member.seller?.user?.first_name;
-          const uLastName = member.seller?.user?.last_name;
-          const sellerNameId = uFirstName ? `${uFirstName} ${uLastName || ""}`.trim().toLowerCase().replace(/\s+/g, "-") : "";
-          return member.assigned_to === activeSellerTab || sellerNameId === activeSellerTab;
-        })
-        .map((member: any) => ({ ...member, lead }))
-    );
-  }, [leads, activeSellerTab]);
-
-  // Obtener interacciones del prospecto seleccionado para el Sheet lateral
-  const { data: interactionsRes, isLoading: isLoadingInteractions } = useQuery({
-    queryKey: ["member-interactions", selectedLead?.id],
-    queryFn: async () => {
-      const res = await api.campaigns[":campaignId"]["members"][":memberId"]["interactions"].$get({
-        param: { campaignId: selectedLead.campaing_id, memberId: selectedLead.id }
-      });
-      return res.json();
-    },
-    enabled: !!selectedLead?.id && !selectedLead.id.startsWith("unassigned-"),
-  });
-
-  // Reasignar asesor comercial mutation
-  const reassignMutation = useMutation({
-    mutationFn: async (newSellerId: string) => {
-      if (selectedLead.id.startsWith("unassigned-")) {
-        const campaignId = selectedLead.campaing_id || selectedLead.lead.primary_campaign_id;
-        if (!campaignId) {
-          throw new Error("El prospecto no tiene una campaña asociada.");
-        }
-        const res = await api.campaigns[":campaignId"].members.$post({
-          param: { campaignId },
-          json: {
-            lead_id: selectedLead.lead.id,
-            campaing_id: campaignId,
-            assigned_to: newSellerId,
-            source: selectedLead.lead.source || "WHATSAPP",
-            is_primary: true
-          }
-        });
-        return await res.json();
-      }
-      return reassignCampaignMember(selectedLead.campaing_id, selectedLead.id, { assigned_to: newSellerId });
-    },
-    onSuccess: (res: any) => {
-      if (res.success) {
-        toast.success("Prospecto reasignado al nuevo asesor comercial");
-        setSelectedLead(null);
-        queryClient.invalidateQueries({ queryKey: ["all-leads"] });
-        queryClient.invalidateQueries({ queryKey: ["leads"] });
-        queryClient.invalidateQueries({ queryKey: ["campaigns"] });
-      } else {
-        toast.error(res.message || "Error al reasignar prospecto");
-      }
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Error al reasignar prospecto");
-    }
-  });
+  const {
+    sellers,
+    activeSellerTab,
+    setActiveSellerTab,
+    activeSeller,
+    activeMembers,
+    isLoadingLeads,
+    selectedLead,
+    setSelectedLead,
+    interactionsRes,
+    isLoadingInteractions,
+    reassignMutation,
+    kpis,
+  } = useSupervisorFollowUp();
 
   const handleCopyPhone = (phone: string) => {
     navigator.clipboard.writeText(phone);
@@ -281,34 +154,8 @@ const SupervisorFollowUpView = () => {
     });
   };
 
-  // Información del asesor activo
-  const activeSeller = useMemo(() => {
-    return sellers.find(s => s.id === activeSellerTab);
-  }, [sellers, activeSellerTab]);
-
   const activeSellerName = activeSeller?.name || "Cargando asesor...";
   const activeSellerEmail = activeSeller?.email || "Sin email registrado";
-
-  // KPIs dinámicos calculados desde la base de datos de leads
-  const kpis = useMemo(() => {
-    const allMembers = leads.flatMap((lead: any) => lead.campaignsEngaging || []);
-    const wonCount = allMembers.filter((m: any) => m.status === "WON").length;
-    const totalCount = allMembers.length;
-    const conversionRate = totalCount > 0 ? Math.round((wonCount / totalCount) * 100) : 0;
-    
-    // Simular total de ventas en base a los ganados * un valor promedio
-    const totalSales = wonCount * 1250;
-    const completedOrders = wonCount;
-    const cancelledOrders = allMembers.filter((m: any) => m.status === "LOST").length;
-
-    return {
-      activeSellers: Math.max(0, sellers.length - 1),
-      conversionRate,
-      totalSales,
-      completedOrders,
-      cancelledOrders
-    };
-  }, [leads, sellers]);
 
   return (
     <div className="space-y-6 fade-in max-w-7xl mx-auto">
@@ -510,7 +357,7 @@ const SupervisorFollowUpView = () => {
                           ? `${member.lead.first_name || ""} ${member.lead.last_name || ""}`.trim()
                           : "S/N";
                         const phone = member.lead?.phones?.[0]?.number || "S/N";
-                        const courseName = member.campaing?.name || member.campaing?.relatedProduct?.name || member.campaing?.campaing_name || "Sin campaña";
+                        const courseName = member.campaign?.name || member.campaing?.name || "Sin campaña";
 
                         return (
                           <TableRow 
@@ -656,7 +503,7 @@ const SupervisorFollowUpView = () => {
                     <div className="flex items-center gap-2.5 text-slate-700">
                       <BookOpen size={14} className="text-muted-foreground shrink-0" />
                       <span className="font-semibold w-20">Programa:</span>
-                      <span className="font-bold text-slate-900 truncate">{selectedLead.campaing?.name || selectedLead.campaing?.relatedProduct?.name || selectedLead.campaing?.campaing_name || "Sin campaña"}</span>
+                      <span className="font-bold text-slate-900 truncate">{selectedLead.campaign?.name || selectedLead.campaing?.name || "Sin campaña"}</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-slate-700">
                       <Hash size={14} className="text-muted-foreground shrink-0" />
@@ -671,7 +518,7 @@ const SupervisorFollowUpView = () => {
                     <div className="flex items-center gap-2.5 text-slate-700">
                       <Award size={14} className="text-muted-foreground shrink-0" />
                       <span className="font-semibold w-20">Campaña:</span>
-                      <span className="font-medium text-slate-800">{selectedLead.campaing?.name || selectedLead.campaing?.campaing_name || "N/D"}</span>
+                      <span className="font-medium text-slate-800">{selectedLead.campaign?.name || selectedLead.campaing?.name || "N/D"}</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-slate-700">
                       <AlertCircle size={14} className="text-muted-foreground shrink-0" />

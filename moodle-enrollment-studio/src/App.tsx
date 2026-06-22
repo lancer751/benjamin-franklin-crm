@@ -53,7 +53,7 @@ import CampaignsView from "@/features/marketing/views/CampaignsView";
 import CampaignDetailView from "@/features/marketing/views/CampaignDetailView";
 import LeadSourcesView from "@/features/marketing/views/LeadSourcesView";
 import UserDetailView from "@/features/users/views/UserDetailView";
-import SupervisorFollowUpView from "@/features/users/views/SupervisorFollowUpView";
+import SupervisorFollowUpView from "@/features/leads/views/SupervisorFollowUpView";
 
 
 const App = () => {

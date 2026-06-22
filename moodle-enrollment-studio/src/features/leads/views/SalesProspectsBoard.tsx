@@ -1,18 +1,13 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useMemo } from "react";
 import { Plus, Loader2, Users, Eye, Edit, Calendar, ChevronDown, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { getCampaignMembers } from "../services/leadService";
-import { getCampaigns } from "@/features/marketing/services/campaignService";
-import { useAuthStore } from "@/store/useAuthStore";
 import { CustomTable } from "@/core/components/CustomTable";
 import { Card } from "@/core/components/ui/card";
 import { Button } from "@/core/components/ui/button";
 import { format } from "date-fns";
-import { Badge } from "@/core/components/ui/badge";
-import { useSearchStore } from "@/store/useSearchStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
+import { useSalesProspects } from "../hooks/useSalesProspects";
 
 // 🌟 Mapeo de colores adaptado a las tipificaciones reales del Excel de los vendedores
 const stageColors: Record<string, string> = {
@@ -25,172 +20,35 @@ const stageColors: Record<string, string> = {
 };
 
 export const SalesProspectsBoard = () => {
-  // 🌟 Estados de Filtros
-  const [tipificationFilter, setTipificationFilter] = useState("ALL");
-  const [genderFilter, setGenderFilter] = useState("ALL");
-
-  // Rango de fechas avanzado
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [dateRangeType, setDateRangeType] = useState<"ALL" | "TODAY" | "YESTERDAY" | "LAST_7_DAYS" | "THIS_MONTH" | "CUSTOM">("ALL");
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
-  const [tempStartDate, setTempStartDate] = useState("");
-  const [tempEndDate, setTempEndDate] = useState("");
-
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  // 🔍 Configuración del buscador global
-  const { searchQuery, setSearchQuery, setPlaceholder } = useSearchStore();
-
-  useEffect(() => {
-    setPlaceholder("Buscar por nombre, apellido o email...");
-    return () => {
-      setSearchQuery(""); // Limpia el buscador al desmontar la vista
-    };
-  }, [setPlaceholder, setSearchQuery]);
-
-  // Cerrar el Popover automáticamente si el usuario hace clic fuera de él
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setIsPopoverOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
   const navigate = useNavigate();
 
-  const { user } = useAuthStore();
-  const sellerId = user?.seller?.id || user?.id;
-
-  // 1. Consultar y recopilar las campañas disponibles
-  const { data: campaignsRes, isLoading: isLoadingCampaigns } = useQuery({
-    queryKey: ["campaigns-list"],
-    queryFn: () => getCampaigns(),
-  });
-  const campaigns = campaignsRes?.data?.data || [];
-  const activeCampaigns = campaigns.filter((c: any) => c.status === "ACTIVE");
-
-  // 2. Controlar la campaña seleccionada (Estado Local)
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
-
-  // Efecto para pre-seleccionar automáticamente la primera campaña
-  useEffect(() => {
-    if (activeCampaigns.length > 0 && !selectedCampaignId) {
-      setSelectedCampaignId(activeCampaigns[0].id);
-    }
-  }, [activeCampaigns, selectedCampaignId]);
-
-  // 3. Query principal de miembros de campaña para el vendedor
-  const { data: serverRes, isLoading: isLoadingLeads, isError } = useQuery({
-    queryKey: ["leads", "sales", selectedCampaignId, sellerId],
-    queryFn: () => getCampaignMembers(selectedCampaignId, { assigned_to: sellerId }),
-    enabled: !!selectedCampaignId,
-  });
-  const isLoading = isLoadingLeads;
-
-  // Aplanamiento de datos
-  const leads = useMemo(() => {
-    const rawData = (serverRes as any)?.data?.leads
-      || (serverRes as any)?.data?.data?.leads
-      || (serverRes as any)?.data?.data
-      || (serverRes as any)?.data
-      || [];
-    if (!Array.isArray(rawData)) return [];
-    return rawData.map((member: any) => {
-      const lead = member.lead || member;
-      const courseName = member.campaing?.name || lead.primary_campaign_id || "Sin especificar";
-      return {
-        ...lead,
-        id: member.lead_id || lead.id,
-        lead_status: member.status || lead.lead_status,
-        created_at: member.created_at || lead.created_at,
-        courseName,
-      };
-    });
-  }, [serverRes]);
-
-  // Lógica de Filtrado Avanzada
-  const filteredLeads = useMemo(() => {
-    if (!Array.isArray(leads)) return [];
-    let startLimit: number | null = null;
-    let endLimit: number | null = null;
-    const now = new Date();
-
-    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
-    const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
-
-    if (dateRangeType === "TODAY") {
-      startLimit = startOfDay(now);
-      endLimit = endOfDay(now);
-    } else if (dateRangeType === "YESTERDAY") {
-      const yesterday = new Date(now);
-      yesterday.setDate(now.getDate() - 1);
-      startLimit = startOfDay(yesterday);
-      endLimit = endOfDay(yesterday);
-    } else if (dateRangeType === "LAST_7_DAYS") {
-      const sevenDaysAgo = new Date(now);
-      sevenDaysAgo.setDate(now.getDate() - 6);
-      startLimit = startOfDay(sevenDaysAgo);
-      endLimit = endOfDay(now);
-    } else if (dateRangeType === "THIS_MONTH") {
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      startLimit = startOfDay(firstDay);
-      endLimit = endOfDay(now);
-    } else if (dateRangeType === "CUSTOM") {
-      if (customStartDate) {
-        const parts = customStartDate.split("-");
-        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-        startLimit = startOfDay(d);
-      }
-      if (customEndDate) {
-        const parts = customEndDate.split("-");
-        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-        endLimit = endOfDay(d);
-      }
-    }
-
-    const query = searchQuery.trim().toLowerCase();
-
-    return leads.filter((lead: any) => {
-      const matchTipification = tipificationFilter === "ALL" || lead.lead_status === tipificationFilter;
-      const matchGender = genderFilter === "ALL" || lead.gender === genderFilter;
-      
-      let matchDate = true;
-      if (dateRangeType !== "ALL" && lead.created_at) {
-        const leadTime = new Date(lead.created_at).getTime();
-        if (!isNaN(leadTime)) {
-          if (startLimit !== null && leadTime < startLimit) matchDate = false;
-          if (endLimit !== null && leadTime > endLimit) matchDate = false;
-        } else {
-          matchDate = false;
-        }
-      }
-
-      let matchSearch = true;
-      if (query) {
-        const firstName = lead.first_name?.toLowerCase() || "";
-        const middleName = lead.middle_name?.toLowerCase() || "";
-        const lastName = lead.last_name?.toLowerCase() || "";
-        const email = lead.email?.toLowerCase() || "";
-        const fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ');
-
-        matchSearch = (
-          firstName.includes(query) ||
-          middleName.includes(query) ||
-          lastName.includes(query) ||
-          fullName.includes(query) ||
-          email.includes(query)
-        );
-      }
-
-      return matchTipification && matchGender && matchDate && matchSearch;
-    });
-  }, [leads, tipificationFilter, genderFilter, dateRangeType, customStartDate, customEndDate, searchQuery]);
+  const {
+    tipificationFilter,
+    setTipificationFilter,
+    genderFilter,
+    setGenderFilter,
+    isPopoverOpen,
+    setIsPopoverOpen,
+    dateRangeType,
+    tempStartDate,
+    setTempStartDate,
+    tempEndDate,
+    setTempEndDate,
+    popoverRef,
+    selectedCampaignId,
+    setSelectedCampaignId,
+    activeCampaigns,
+    isLoadingCampaigns,
+    leads,
+    filteredLeads,
+    isLoading,
+    isError,
+    getDateRangeLabel,
+    handleQuickSelect,
+    handleApplyCustomRange,
+    hasActiveFilters,
+    handleResetFilters,
+  } = useSalesProspects();
 
   // Definición de columnas
   const columns = useMemo<ColumnDef<any>[]>(
@@ -300,58 +158,6 @@ export const SalesProspectsBoard = () => {
     ],
     [navigate]
   );
-
-  const formatDisplayDate = (dateStr: string) => {
-    if (!dateStr) return "";
-    const parts = dateStr.split("-");
-    if (parts.length !== 3) return dateStr;
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  };
-
-  const getDateRangeLabel = () => {
-    if (dateRangeType === "ALL") return "Cualquier fecha";
-    if (dateRangeType === "TODAY") return "Hoy";
-    if (dateRangeType === "YESTERDAY") return "Ayer";
-    if (dateRangeType === "LAST_7_DAYS") return "Últimos 7 días";
-    if (dateRangeType === "THIS_MONTH") return "Este mes";
-    if (dateRangeType === "CUSTOM") {
-      if (customStartDate && customEndDate) {
-        return `${formatDisplayDate(customStartDate)} - ${formatDisplayDate(customEndDate)}`;
-      }
-      if (customStartDate) return `Desde ${formatDisplayDate(customStartDate)}`;
-      if (customEndDate) return `Hasta ${formatDisplayDate(customEndDate)}`;
-      return "Personalizado";
-    }
-    return "Cualquier fecha";
-  };
-
-  const handleQuickSelect = (type: typeof dateRangeType) => {
-    setDateRangeType(type);
-    setCustomStartDate("");
-    setCustomEndDate("");
-    setTempStartDate("");
-    setTempEndDate("");
-    setIsPopoverOpen(false);
-  };
-
-  const handleApplyCustomRange = () => {
-    setDateRangeType("CUSTOM");
-    setCustomStartDate(tempStartDate);
-    setCustomEndDate(tempEndDate);
-    setIsPopoverOpen(false);
-  };
-
-  const hasActiveFilters = dateRangeType !== "ALL" || tipificationFilter !== "ALL" || genderFilter !== "ALL";
-
-  const handleResetFilters = () => {
-    setDateRangeType("ALL");
-    setCustomStartDate("");
-    setCustomEndDate("");
-    setTempStartDate("");
-    setTempEndDate("");
-    setTipificationFilter("ALL");
-    setGenderFilter("ALL");
-  };
 
   return (
     <div className="space-y-6 fade-in">
