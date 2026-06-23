@@ -22,6 +22,14 @@ export const useCourseDetail = () => {
     queryKey: ["course", id],
     queryFn: () => getCourseById(id as string),
     enabled: !!id,
+    select: (res: any) => {
+      if (res && res.success && res.data && Array.isArray(res.data.editions)) {
+        res.data.editions = [...res.data.editions].sort(
+          (a, b) => (a.edition_number || 0) - (b.edition_number || 0)
+        );
+      }
+      return res;
+    }
   });
 
   const deleteMutation = useMutation({
