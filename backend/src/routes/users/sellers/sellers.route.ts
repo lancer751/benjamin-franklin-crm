@@ -3,6 +3,7 @@ import { validateIdParamSchema } from "@/helpers/params-validator";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
 import withPrisma from "@/lib/prisma";
 import { zValidator } from "@hono/zod-validator";
+import { prisma } from "@repo/database";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { UpdateSellerProfileSchema } from "shared";
@@ -26,6 +27,18 @@ export const sellersRoutes = new Hono<ContextWithPrisma>()
       },
       200,
     );
+  })
+  .get("/sellers/:id/campaigns", zValidator("param" ,validateIdParamSchema),async(c) => {
+    const sellerProfileId = c.req.valid("param").id
+
+    const result = await c.get("prisma").sellerProfile.findUnique({
+      where: {id: sellerProfileId},
+      select: {
+        assignedCampaing: true
+      }
+    })
+
+    return c.json(result,200)
   })
   // Get seller details by ID
   .get(

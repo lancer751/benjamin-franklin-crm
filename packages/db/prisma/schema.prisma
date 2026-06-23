@@ -107,18 +107,21 @@ model Role {
 }
 
 model Professor {
-  id                 String              @id @default(uuid()) @db.Char(36)
-  name               String
-  lastname           String
-  corporate_email    String
-  email              String              @unique
-  cellphone          String              @unique
+  id                   String              @id @default(uuid()) @db.Char(36)
+  name                 String
+  lastname             String
+  linkedin_account_url String? //
+  profession           String? //
+  curriculum_vitae     String?
+  corporate_email      String
+  email                String              @unique
+  cellphone            String              @unique
   // be careful with this part because if you change the id without requesting the moodle api, an error will appears due to moodle incosistency data.
-  moddle_account_id  Int                 @unique
-  is_active          Boolean             @default(true)
-  moodle_user_status MoodleAccountStatus @default(ACTIVE)
-  created_at         DateTime            @default(now())
-  update_at          DateTime            @updatedAt
+  moddle_account_id    Int?                @unique
+  is_active            Boolean             @default(true)
+  moodle_user_status   MoodleAccountStatus @default(ACTIVE)
+  created_at           DateTime            @default(now())
+  update_at            DateTime            @updatedAt
 
   assigned_editions ProffessorsOnEditions[]
 }
@@ -428,11 +431,11 @@ model Campaing {
   product_id     String           @unique
   supervisor_id  String // NEW — who manages this campaign
 
-  leadsOnCampaign CampaignMember[]
-  leads           Lead[]                 @relation("PrimaryCampaign")
-  relatedProduct  Product                @relation(fields: [product_id], references: [id])
-  sellersOnCampaign         CampaignSeller[]
-  assignedSupervisor      SalesSupervisorProfile @relation(fields: [supervisor_id], references: [id]) // NEW
+  leadsOnCampaign    CampaignMember[]
+  leads              Lead[]                 @relation("PrimaryCampaign")
+  relatedProduct     Product                @relation(fields: [product_id], references: [id])
+  sellersOnCampaign  CampaignSeller[]
+  assignedSupervisor SalesSupervisorProfile @relation(fields: [supervisor_id], references: [id]) // NEW
 }
 
 enum WeekDays {
@@ -517,6 +520,7 @@ model Edition {
   whatsapp_group_link String? // optional: PACKED modalities do not have one
   edition_status      EditionStatus @default(DRAFT)
   edition_code        String        @unique @db.Char(13) //generated based on the course-code + year + ednumber
+  syllabus_url        String?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
