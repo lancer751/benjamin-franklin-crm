@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCourseById, deleteCourseEdition } from "../services/courseService";
@@ -37,45 +37,65 @@ export const useCourseDetail = () => {
     },
   });
 
-  const course = response?.success ? response.data : null;
+  const course = (response && typeof response === "object" && "success" in response && response.success) ? response.data : null;
 
-  const goBack = () => navigate("/admin/cursos");
+  const goBack = useCallback(() => navigate("/admin/cursos"), [navigate]);
 
-  const openDetail = (editionId: string) => {
+  const openDetail = useCallback((editionId: string) => {
     setSelectedEditionId(editionId);
     setShowDetailModal(true);
-  };
+  }, []);
 
-  const openDelete = (editionId: string) => {
+  const openDelete = useCallback((editionId: string) => {
     setSelectedEditionId(editionId);
     setShowDeleteAlert(true);
-  };
+  }, []);
 
-  const openEditEdition = (editionId: string) => {
+  const openEditEdition = useCallback((editionId: string) => {
     setEditionIdToEdit(editionId);
     setShowEditionModal(true);
-  };
+  }, []);
 
-  const closeEditionModal = () => {
+  const closeEditionModal = useCallback(() => {
     setShowEditionModal(false);
     setTimeout(() => setEditionIdToEdit(null), 300);
-  };
+  }, []);
 
-  const closeDetailModal = () => {
+  const closeDetailModal = useCallback(() => {
     setShowDetailModal(false);
     setSelectedEditionId(null);
-  };
+  }, []);
 
-  const confirmDelete = () => {
+  const confirmDelete = useCallback(() => {
     if (selectedEditionId) {
       deleteMutation.mutate(selectedEditionId);
     }
-  };
+  }, [selectedEditionId, deleteMutation]);
 
-  const adjustDateTz = (dateStr: string) => {
+  const adjustDateTz = useCallback((dateStr: string) => {
     const rawDate = new Date(dateStr);
     return addMinutes(rawDate, rawDate.getTimezoneOffset());
-  };
+  }, []);
+
+  const actions = useMemo(() => ({
+    goBack,
+    openDetail,
+    openDelete,
+    openEditEdition,
+    closeEditionModal,
+    closeDetailModal,
+    confirmDelete,
+    adjustDateTz,
+  }), [
+    goBack,
+    openDetail,
+    openDelete,
+    openEditEdition,
+    closeEditionModal,
+    closeDetailModal,
+    confirmDelete,
+    adjustDateTz,
+  ]);
 
   return {
     id,
@@ -95,16 +115,7 @@ export const useCourseDetail = () => {
       editionIdToEdit,
       setEditionIdToEdit,
     },
-    actions: {
-      goBack,
-      openDetail,
-      openDelete,
-      openEditEdition,
-      closeEditionModal,
-      closeDetailModal,
-      confirmDelete,
-      adjustDateTz,
-    },
+    actions,
     deleteIsPending: deleteMutation.isPending,
   };
 };

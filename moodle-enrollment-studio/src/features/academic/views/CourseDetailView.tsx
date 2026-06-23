@@ -174,8 +174,12 @@ export default function CourseDetailView() {
   }
 
   const sortedEditions = useMemo(() => {
-    if (!course?.editions) return [];
-    return [...course.editions].sort((a, b) => (a.edition_number || 0) - (b.edition_number || 0));
+    if (!course?.editions || !Array.isArray(course.editions)) return [];
+    
+    // Creamos una copia profunda y segura mapeando los objetos para estabilizar referencias en producción
+    return course.editions
+      .map((ed: any) => ({ ...ed }))
+      .sort((a, b) => (a.edition_number || 0) - (b.edition_number || 0));
   }, [course?.editions]);
 
   return (
