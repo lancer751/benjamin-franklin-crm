@@ -32,6 +32,10 @@
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.6.0",
     "bcrypt": "^6.0.0",
+<<<<<<< HEAD
+=======
+    "@types/bcrypt": "^6.0.0",
+>>>>>>> origin/main
     "dotenv": "^17.2.3",
     "pg": "^8.20.0"
   },

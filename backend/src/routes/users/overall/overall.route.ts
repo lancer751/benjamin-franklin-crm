@@ -205,7 +205,7 @@ export const userGeneralRoutes = new Hono<ContextWithPrisma>()
   )
   .delete(
     UUID_ROUTE,
-    withPrisma,
+
     zValidator("param", validateIdParamSchema),
     async (c) => {
       const { id } = c.req.valid("param");

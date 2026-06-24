@@ -12,6 +12,8 @@ export const LeadOriginSourceSchema = z.enum([
 export const GenderSchema = z.enum(["MALE", "FEMALE", "NOT_SPECIFIED"]);
 export const PhoneTypeSchema = z.enum(["WHATSAPP", "TELEPHONE"]);
 
+export const LeadStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
+
 export const CampaignMemberStatusSchema = z.enum([
   "NEW",
   "CONTACTED",
@@ -51,6 +53,7 @@ const LeadBaseSchema = z.object({
   email: z.email("Invalid email").optional().nullable(),
   profession: z.string().optional().nullable(),
   gender: GenderSchema.optional().nullable(),
+  status: LeadStatusSchema.default("ACTIVE"),
   address: z.string().optional().nullable(),
   secondary_email: z.email().optional().nullable(),
   dni: z.string().length(8, "DNI must be 8 digits").optional().nullable(),
@@ -125,7 +128,7 @@ export const LeadQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
-  status: CampaignMemberStatusSchema.optional(),
+  status: LeadStatusSchema.optional(),
   campaign_id: UUIDField.optional(),
 });
 
@@ -136,6 +139,7 @@ export const CampaignMemberQuerySchema = z.object({
   assigned_to: UUIDField.optional(),
 });
 
+export type LeadStatus = z.infer<typeof LeadStatusSchema>;
 export type CreateLeadInput = z.infer<typeof CreateLeadSchema>;
 export type UpdateLeadInput = z.infer<typeof UpdateLeadSchema>;
 export type CreateCampaignMemberInput = z.infer<
