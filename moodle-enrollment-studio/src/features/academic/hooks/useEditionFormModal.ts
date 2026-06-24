@@ -3,10 +3,11 @@ import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { format, addMinutes } from "date-fns";
+import { format } from "date-fns";
 import { getCourses, createCourseEdition, getCourseEditionById, updateCourseEdition } from "../services/courseService";
 import { getProfessors } from "../services/professorService";
 import { editionFormSchema, type EditionFormValues, defaultEditionFormValues } from "../schemas/editionFormSchema";
+import { editionAdapter } from "../adapters/editionAdapter";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 
 export const useEditionFormModal = (
@@ -44,10 +45,7 @@ export const useEditionFormModal = (
     },
   });
 
-  const adjustDateTz = (dateStr: string) => {
-    const rawDate = new Date(dateStr);
-    return addMinutes(rawDate, rawDate.getTimezoneOffset());
-  };
+
 
   const { data: editionRes, isLoading: isLoadingEdition, isError: isErrorEdition } = useQuery({
     queryKey: ["edition", actualEditionId],
@@ -79,57 +77,18 @@ export const useEditionFormModal = (
     }
 
     if (mode === "create") {
-      form.reset({
-        ...defaultEditionFormValues,
-        course_id: actualCourseId || "",
-        edition_status: "SCHEDULED",
-        classes_number: actualCourseClassesNumber || ("" as unknown as number),
-      });
+      form.reset(editionAdapter.toForm(null, actualCourseId, actualCourseClassesNumber));
     } else if (editionRes && editionRes.success && editionRes.data) {
-      const data = editionRes.data;
+      const formData = editionAdapter.toForm(editionRes.data);
 
-      const adjustedStartDate = data.start_date ? adjustDateTz(data.start_date) : undefined;
-      const adjustedEndDate = data.end_date ? adjustDateTz(data.end_date) : undefined;
-
-      if (adjustedStartDate) {
-        setStartMonth(prev => prev.getTime() !== adjustedStartDate.getTime() ? adjustedStartDate : prev);
+      if (formData.start_date) {
+        setStartMonth(prev => prev.getTime() !== formData.start_date!.getTime() ? formData.start_date! : prev);
       }
-      if (adjustedEndDate) {
-        setEndMonth(prev => prev.getTime() !== adjustedEndDate.getTime() ? adjustedEndDate : prev);
+      if (formData.end_date) {
+        setEndMonth(prev => prev.getTime() !== formData.end_date!.getTime() ? formData.end_date! : prev);
       }
 
-      // Map backend's assigned_professors correctly
-      const mappedProfessors = data.assigned_professors?.map((ap: any) => ({
-        professor_id: ap.professor_id || ap.id || ""
-      })) || [{ professor_id: "" }];
-
-      // Map backend's schedules correctly
-      const mappedSchedules = data.schedules?.map((s: any) => ({
-        day: s.day_of_week || s.day || "LUNES",
-        slots: s.slots?.map((sl: any) => ({
-          start_time: sl.start_time || "08:00",
-          end_time: sl.end_time || "10:00"
-        })) || []
-      })) || [];
-
-      form.reset({
-        course_id: actualCourseId || data.course?.id || data.course_id || "",
-        edition_number: data.edition_number || ("" as unknown as number),
-        edition_code: data.edition_code || "",
-        start_date: adjustedStartDate,
-        end_date: adjustedEndDate,
-        modality: data.modality || "",
-        meet_link: data.meet_link || "",
-        edition_status: data.edition_status || "SCHEDULED",
-        hours_amount: data.hours_amount || ("" as unknown as number),
-        classes_number: data.classes_number || ("" as unknown as number),
-        duration_value: data.duration_value || ("" as unknown as number),
-        duration_unit: data.duration_unit || "WEEKS",
-        whatsapp_group_link: data.whatsapp_group_link || "",
-        moodle_course_id: data.moodle_course_id || ("" as unknown as number),
-        assigned_professors: mappedProfessors,
-        schedules: mappedSchedules,
-      });
+      form.reset(formData);
     }
   }, [open, editionRes, actualCourseId, mode, form, actualCourseClassesNumber]);
 
@@ -219,35 +178,11 @@ export const useEditionFormModal = (
       return;
     }
 
-    const payload = {
-      course_id: values.course_id,
-      edition_code: values.edition_code,
-      modality: values.modality,
-      edition_number: Number(values.edition_number),
-      start_date: values.start_date ? values.start_date.toISOString() : null,
-      end_date: values.end_date ? values.end_date.toISOString() : null,
-      meet_link: values.meet_link?.trim() ? values.meet_link : null,
-      edition_status: values.edition_status,
-      hours_amount: Number(values.hours_amount),
-      classes_number: Number(values.classes_number),
-      duration_value: Number(values.duration_value),
-      duration_unit: values.duration_unit,
-      whatsapp_group_link: values.whatsapp_group_link?.trim() ? values.whatsapp_group_link : null,
-      moodle_course_id: values.moodle_course_id ? Number(values.moodle_course_id) : null,
-      assigned_professors: values.assigned_professors,
-      schedules: values.schedules?.map((s) => ({
-        day_of_week: s.day.toUpperCase(),
-        type: "REGULAR" as const,
-        slots: s.slots.map((sl) => ({
-          start_time: sl.start_time,
-          end_time: sl.end_time,
-        })),
-      })) || [],
-    };
+    const payload = editionAdapter.toPayload(values);
 
     const mutationPromise = mode === "create"
-      ? createEditionMutation.mutateAsync(payload as any)
-      : updateEditionMutation.mutateAsync(payload as any);
+      ? createEditionMutation.mutateAsync(payload)
+      : updateEditionMutation.mutateAsync(payload);
 
     toast.promise(mutationPromise, {
       loading: mode === "create" ? "Programando edición..." : "Actualizando edición...",

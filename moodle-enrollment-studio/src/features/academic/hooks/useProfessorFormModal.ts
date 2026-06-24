@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { createProfessor, updateProfessor, getProfessorById } from "../services/professorService";
+import { createProfessor, updateProfessor, getProfessorById, deactivateProfessor, restoreProfessor } from "../services/professorService";
 import { professorFormSchema, type ProfessorFormValues } from "../schemas/professorFormSchema";
 import { professorAdapter } from "../adapters/professorAdapter";
 
@@ -11,7 +11,7 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
   const queryClient = useQueryClient();
 
   const form = useForm<ProfessorFormValues>({
-    resolver: standardSchemaResolver(professorFormSchema),
+    resolver: standardSchemaResolver(professorFormSchema) as any,
     mode: "onTouched",
     defaultValues: professorAdapter.toForm(null),
   });
@@ -23,7 +23,7 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
     staleTime: 5 * 60 * 1000,
   });
 
-  const fullProfessorDetails = fullProfessorRes?.success ? fullProfessorRes.data : null;
+  const fullProfessorDetails = (fullProfessorRes as any)?.success ? (fullProfessorRes as any).data : null;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -44,12 +44,19 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
 
   const mutation = useMutation({
     mutationFn: async (values: ProfessorFormValues) => {
-      // Los valores viajan limpios en el formato nativo esperado por el backend
+      const payload = professorAdapter.toPayload(values);
       if (!professor) {
-        await createProfessor(values);
+        await createProfessor(payload);
         return "create";
       } else {
-        await updateProfessor(professor.id, values);
+        await updateProfessor(professor.id, payload);
+        if (values.is_active !== professor.is_active) {
+          if (values.is_active === true) {
+            await restoreProfessor(professor.id);
+          } else {
+            await deactivateProfessor(professor.id);
+          }
+        }
         return "update";
       }
     },
