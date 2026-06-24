@@ -26,6 +26,7 @@ import AcademicCalendarView from "@/features/academic/views/AcademicCalendarView
 import EditionDetailView from "@/features/academic/views/EditionDetailView";
 import EditionFormView from "@/features/academic/views/EditionFormView";
 import ProfessorsView from "@/features/academic/views/ProfessorsView";
+import ProfessorDetailView from "@/features/academic/views/ProfessorDetailView";
 
 // Módulo de Leads
 import ProspectsView from "@/features/leads/views/ProspectsView";
@@ -113,6 +114,7 @@ const App = () => {
               <Route path="/admin/academic/editions/:id" element={<EditionDetailView />} />
               <Route path="/admin/academic/editions/:id/editar" element={<EditionFormView />} />
               <Route path="/admin/profesores" element={<ProfessorsView />} />
+              <Route path="/admin/profesores/:id" element={<ProfessorDetailView />} />
               
               {/* Ventas & Prospectos */}
               <Route path="/prospectos" element={<ProspectsView />} />

@@ -39,10 +39,8 @@ function generateCourseCode(name: string): string {
     prefix = "CURS";
   }
 
-  // Asegurar que el prefijo tenga exactamente 4 letras
   prefix = prefix.slice(0, 4);
 
-  // 3. Generar número aleatorio de 3 dígitos (para lograr los 7 caracteres requeridos)
   const randomNum = Math.floor(100 + Math.random() * 900);
 
   return `${prefix}${randomNum}`;

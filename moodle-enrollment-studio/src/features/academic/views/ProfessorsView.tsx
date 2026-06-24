@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Loader2, Edit, Trash2, GraduationCap, Eye } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Card } from "@/core/components/ui/card";
@@ -16,10 +17,10 @@ import {
 } from "@/core/components/ui/alert-dialog";
 import { CustomTable } from "@/core/components/CustomTable";
 import { ProfessorFormModal } from "../components/ProfessorFormModal";
-import { ProfessorDetailModal } from "../components/ProfessorDetailModal";
 import { useProfessorsView } from "../hooks/useProfessorsView";
 
 export default function ProfessorsView() {
+  const navigate = useNavigate();
   const {
     isLoading,
     isError,
@@ -31,10 +32,6 @@ export default function ProfessorsView() {
     handleCloseModal,
     handleDeleteConfirm,
   } = useProfessorsView();
-
-  // Estados para controlar el modal de expediente (detalle)
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [professorForDetail, setProfessorForDetail] = useState<string | null>(null);
 
   // Columnas tipadas y preparadas con soporte nativo para responsive CustomTable
   const columns = useMemo<ColumnDef<any>[]>(
@@ -88,8 +85,7 @@ export default function ProfessorsView() {
                 className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setProfessorForDetail(p.id);
-                  setDetailModalOpen(true);
+                  navigate(`/admin/profesores/${p.id}`);
                 }}
                 title="Ver Detalle"
               >
@@ -169,14 +165,7 @@ export default function ProfessorsView() {
         professor={modal.selectedProfessor}
       />
 
-      <ProfessorDetailModal
-        isOpen={detailModalOpen}
-        onClose={() => {
-          setDetailModalOpen(false);
-          setProfessorForDetail(null);
-        }}
-        professorId={professorForDetail}
-      />
+
 
       <AlertDialog
         open={deleteAlert.isOpen}
