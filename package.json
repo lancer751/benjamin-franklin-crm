@@ -7,26 +7,16 @@
     "./backend",
     "./management-dashboard",
     "./shared",
-<<<<<<< HEAD
-    "moodle-enrollment-studio",
-    "./packages/**"
-=======
     "./commercial-website",
     "./packages/**",
     "moodle-enrollment-studio"
->>>>>>> origin/main
   ],
   "scripts": {
     "dev": "turbo dev",
     "dev:client": "turbo dev --filter=moodle-enrollment-studio",
     "dev:server": "turbo dev --filter=backend",
     "build": "turbo build",
-<<<<<<< HEAD
-    "build:client": "turbo build --filter=management-dashboard",
-    "build:studio": "turbo build --filter=moodle-enrollment-studio",
-=======
     "build:client": "turbo build --filter=moodle-enrollment-studio",
->>>>>>> origin/main
     "build:server": "turbo build --filter=backend",
     "lint": "turbo lint",
     "type-check": "turbo type-check",

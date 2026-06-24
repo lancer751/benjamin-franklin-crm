@@ -32,23 +32,25 @@ const spanishErrorMap: z.ZodErrorMap = (issue, ctx) => {
 z.setErrorMap(spanishErrorMap);
 
 export const professorFormSchema = BaseCreateProfessorSchema.extend({
+  // Ajustamos a min 2 caracteres para mejorar la UX en español
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   lastname: z.string().min(2, "El apellido debe tener al menos 2 caracteres"), 
 
-  corporate_email: z.preprocess(
-    (val) => (val === "" ? undefined : val), 
-    z.string().email().optional()
-  ),
-  cellphone: z.preprocess(
-    (val) => (val === "" ? undefined : val), 
-    z.string().regex(/^\d{9}$/).optional()
-  ),
+  // ⚠️ Quitamos el .optional() porque el backend los exige obligatoriamente
+  email: z.string().email("Por favor, ingresa un correo electrónico válido"),
+  
+  corporate_email: z.string().email("Por favor, ingresa un correo corporativo válido"),
+  
+  cellphone: z.string().regex(/^\d{9}$/, "El celular debe tener exactamente 9 dígitos numéricos"),
+
+  // ✅ Este sí está perfecto como opcional porque el backend lo permite
   moddle_account_id: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)), 
+    (val) => (val === "" || val === null ? undefined : Number(val)), 
     z.number().int().positive().optional()
   ),
-  moodle_user_status: z.enum(["ACTIVE", "SUSPENDED"], { required_error: "El estado de la cuenta es obligatorio" }).default("ACTIVE")
-}) as any;
+  
+  moodle_user_status: z.enum(["ACTIVE", "SUSPENDED"]).default("ACTIVE")
+});
 
 export type ProfessorFormValues = z.infer<typeof professorFormSchema>;
 
