@@ -23,6 +23,7 @@ export const useSalesForm = () => {
   const queryClient = useQueryClient();
   const mode = id ? "edit" : "create";
   const { user } = useAuthStore();
+  const sellerId = user?.seller?.id || user?.id;
 
   const form = useForm<LeadFormValues>({
     resolver: standardSchemaResolver(leadFormSchema),
@@ -158,7 +159,7 @@ export const useSalesForm = () => {
         const memberRes = await addLeadToCampaign(campaignId, {
           lead_id: leadId,
           campaing_id: campaignId, // Mantener typo del backend con 'g'
-          assigned_to: user?.seller?.id || user.id, // ID comercial de ventas o ID de usuario alterno
+          assigned_to: sellerId, // ID comercial de ventas o ID de usuario alterno
           source: values.source || "WHATSAPP",
           is_primary: true
         });

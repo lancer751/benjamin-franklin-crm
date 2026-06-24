@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getCampaignMembers } from "../services/leadService";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCampaignMembers, updateMemberStatus } from "../services/leadService";
 import { getCampaigns } from "@/features/marketing/services/campaignService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { adaptCampaignMembers, unpackLeads } from "../adapters/leadAdapter";
 import { filterLeads, DateRangeFilter } from "../utils/leadLogic";
+import { toast } from "sonner";
 
 export const useSalesProspects = () => {
   // 🌟 Estados de Filtros
@@ -53,7 +54,11 @@ export const useSalesProspects = () => {
     queryKey: ["campaigns-list"],
     queryFn: () => getCampaigns(),
   });
-  const campaigns = campaignsRes?.data?.data || [];
+  const campaigns = campaignsRes?.data?.data?.campaings
+    || campaignsRes?.data?.campaings
+    || campaignsRes?.campaings
+    || campaignsRes?.data
+    || [];
   const activeCampaigns = useMemo(() => {
     return campaigns.filter((c: any) => c.status === "ACTIVE");
   }, [campaigns]);
@@ -68,18 +73,33 @@ export const useSalesProspects = () => {
     }
   }, [activeCampaigns, selectedCampaignId]);
 
+  const queryClient = useQueryClient();
+
   // 3. Query principal de miembros de campaña para el vendedor
-  const { data: serverRes, isLoading: isLoadingLeads, isError } = useQuery({
-    queryKey: ["leads", "sales", selectedCampaignId, sellerId],
+  const { data: membersRes, isLoading, isError } = useQuery({
+    queryKey: ["campaign-members", selectedCampaignId, sellerId],
     queryFn: () => getCampaignMembers(selectedCampaignId, { assigned_to: sellerId }),
-    enabled: !!selectedCampaignId,
+    enabled: !!selectedCampaignId && !!sellerId,
   });
 
   // Aplanamiento y normalización de datos
   const leads = useMemo(() => {
-    const rawData = unpackLeads(serverRes);
+    const rawData = unpackLeads(membersRes);
     return adaptCampaignMembers(rawData);
-  }, [serverRes]);
+  }, [membersRes]);
+
+  // Mutación para actualizar el estado del miembro en el tablero
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ campaignId, memberId, status }: { campaignId: string; memberId: string; status: string }) =>
+      updateMemberStatus(campaignId, memberId, status),
+    onSuccess: () => {
+      toast.success("Estado del prospecto actualizado exitosamente.");
+      queryClient.invalidateQueries({ queryKey: ["campaign-members"] });
+    },
+    onError: () => {
+      toast.error("Ocurrió un error al actualizar el estado del prospecto.");
+    }
+  });
 
   // Lógica de Filtrado Avanzada
   const filteredLeads = useMemo(() => {
@@ -166,8 +186,10 @@ export const useSalesProspects = () => {
     isLoadingCampaigns,
     leads,
     filteredLeads,
-    isLoading: isLoadingLeads,
+    isLoading,
     isError,
+    updateStatus: updateStatusMutation.mutateAsync,
+    isUpdatingStatus: updateStatusMutation.isPending,
     getDateRangeLabel,
     handleQuickSelect,
     handleApplyCustomRange,

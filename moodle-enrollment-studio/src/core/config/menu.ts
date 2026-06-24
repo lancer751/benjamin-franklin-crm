@@ -57,6 +57,7 @@ export const canAccess = (userRole: string, permission: string): boolean => {
     ],
     // MARKETING has access to Prospects/Pipeline and the Marketing dashboard configuration
     MARKETING: [
+      "academic:view", "calendar:view", "products:view",
       "commercial:view", "prospects:view", "pipeline:view",
       "admin:view",
     ],
