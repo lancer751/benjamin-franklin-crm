@@ -81,7 +81,7 @@ export const addLeadToCampaign = async (campaignId: string, data: CreateCampaign
 
 /** PATCH: Actualiza el estado de tipificación comercial de un miembro (:memberId/status) */
 export const updateMemberStatus = async (campaignId: string, memberId: string, status: string): Promise<any> => {
-  const res = await (api.campaigns as any)[UUID_PATH].members[`:${memberId}/status` as any].$patch({
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].status.$patch({
     param: { campaignId, memberId },
     json: { status }
   });
@@ -90,7 +90,7 @@ export const updateMemberStatus = async (campaignId: string, memberId: string, s
 
 /** PATCH: Reasigna el prospecto de la campaña a otro asesor comercial (:memberId/reassign) */
 export const reassignMember = async (campaignId: string, memberId: string, assignedTo: string): Promise<any> => {
-  const res = await (api.campaigns as any)[UUID_PATH].members[`:${memberId}/reassign` as any].$patch({
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].reassign.$patch({
     param: { campaignId, memberId },
     json: { assigned_to: assignedTo }
   });
@@ -103,7 +103,7 @@ export const reassignMember = async (campaignId: string, memberId: string, assig
 
 /** GET: Obtiene el historial de interacciones y comentarios de gestión de un miembro */
 export const getMemberInteractions = async (campaignId: string, memberId: string): Promise<any> => {
-  const res = await (api.campaigns as any)[UUID_PATH].members[`:${memberId}/interactions` as any].$get({
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].interactions.$get({
     param: { campaignId, memberId }
   });
   return await res.json();
@@ -111,7 +111,7 @@ export const getMemberInteractions = async (campaignId: string, memberId: string
 
 /** POST: Registra una nueva interacción o bitácora de llamada para un miembro */
 export const createMemberInteraction = async (campaignId: string, memberId: string, notes: string, type: string, sellerId: string): Promise<any> => {
-  const res = await (api.campaigns as any)[UUID_PATH].members[`:${memberId}/interactions` as any].$post({
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].interactions.$post({
     param: { campaignId, memberId },
     json: { notes, type },
     headers: { "x-seller-id": sellerId }
@@ -121,7 +121,7 @@ export const createMemberInteraction = async (campaignId: string, memberId: stri
 
 /** GET: Obtiene las tareas y recordatorios pendientes de un miembro de campaña */
 export const getMemberTasks = async (campaignId: string, memberId: string): Promise<any> => {
-  const res = await (api.campaigns as any)[UUID_PATH].members[`:${memberId}/tasks` as any].$get({
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks.$get({
     param: { campaignId, memberId }
   });
   return await res.json();
@@ -129,7 +129,7 @@ export const getMemberTasks = async (campaignId: string, memberId: string): Prom
 
 /** POST: Crea un nuevo recordatorio o tarea para el miembro de campaña */
 export const createMemberTask = async (campaignId: string, memberId: string, taskData: any, sellerId: string): Promise<any> => {
-  const res = await (api.campaigns as any)[UUID_PATH].members[`:${memberId}/tasks` as any].$post({
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks.$post({
     param: { campaignId, memberId },
     json: taskData,
     headers: { "x-seller-id": sellerId }
@@ -139,7 +139,7 @@ export const createMemberTask = async (campaignId: string, memberId: string, tas
 
 /** PATCH: Actualiza o marca como completada una tarea específica */
 export const updateMemberTask = async (campaignId: string, memberId: string, taskId: string, taskData: any): Promise<any> => {
-  const res = await (api.campaigns as any)[UUID_PATH].members[`:${memberId}/tasks/:${taskId}` as any].$patch({
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks[":taskId"].$patch({
     param: { campaignId, memberId, taskId },
     json: taskData
   });
@@ -148,7 +148,7 @@ export const updateMemberTask = async (campaignId: string, memberId: string, tas
 
 /** DELETE: Elimina una tarea o recordatorio del sistema */
 export const deleteMemberTask = async (campaignId: string, memberId: string, taskId: string): Promise<any> => {
-  const res = await (api.campaigns as any)[UUID_PATH].members[`:${memberId}/tasks/:${taskId}` as any].$delete({
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks[":taskId"].$delete({
     param: { campaignId, memberId, taskId }
   });
   return await res.json();

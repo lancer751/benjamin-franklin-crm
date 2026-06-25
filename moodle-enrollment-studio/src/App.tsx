@@ -59,6 +59,17 @@ import UserDetailView from "@/features/users/views/UserDetailView";
 import SupervisorFollowUpView from "@/features/leads/views/SupervisorFollowUpView";
 
 
+const CampaignsRouteSwitcher = () => {
+  const user = useAuthStore((state) => state.user);
+  const userRole = user?.role?.name || "";
+  
+  if (userRole === "SALES_REP") {
+    return <SellerCampaignsView />;
+  }
+  return <CampaignsView />;
+};
+
+
 const App = () => {
   const { setUser, setLoading, isLoading, user } = useAuthStore();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -141,10 +152,11 @@ const App = () => {
               <Route path="/morosos" element={<OverdueView />} />
               
               {/* Campañas */}
-              <Route path="/marketing" element={<Navigate to="/campanas" replace />} />
-              <Route path="/campanas" element={isSalesRep ? <SellerCampaignsView /> : <CampaignsView />} />
+              <Route path="/marketing" element={<Navigate to="/admin/campanas" replace />} />
+              <Route path="/admin/campanas" element={<CampaignsRouteSwitcher />} />
+              <Route path="/admin/campanas/:id" element={<CampaignDetailView />} />
               <Route path="/campanas/:id" element={<CampaignDetailView />} />
-              <Route path="/origen-leads" element={isSalesRep ? <Navigate to="/campanas" replace /> : <LeadSourcesView />} />
+              <Route path="/origen-leads" element={isSalesRep ? <Navigate to="/admin/campanas" replace /> : <LeadSourcesView />} />
               <Route path="/comercial/mis-leads" element={<SellerLeadsView />} />
               <Route path="/admin/campaigns/seller/leads/:campaignId" element={<SellerLeadsView />} />
             </Route>

@@ -36,7 +36,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Auxiliar function 'canAccess(permission: string)' that validates if the user has access to a group or menu item
   const canAccess = (permission: string): boolean => {
     if (!user) return false;
-    const userRole = user.role?.name || "";
+    const userRole = (typeof user.role === 'object' ? user.role?.name : user.role) || "";
+    console.log("DEBUG RBAC SIDEPANEL:", { userRole, permission, hasAccess: canAccessGlobal(userRole, permission) });
     return canAccessGlobal(userRole, permission);
   };
 

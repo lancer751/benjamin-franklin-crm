@@ -50,10 +50,10 @@ export const canAccess = (userRole: string, permission: string): boolean => {
       "catalog:view", "certifications:view", "benefits:view", "faqs:view", "categories:view",
       "admin:view", "marketing:view", "finance:view", "supervisor:team-view"
     ],
-    // SALES_REP (Asesor de Ventas) has access only to Core Academic and Commercial modules
     SALES_REP: [
       "academic:view", "calendar:view", //"courses:view",  //"professors:view",
-      "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view"
+      "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view",
+      "marketing:view", "admin:view"
     ],
     // MARKETING has access to Prospects/Pipeline and the Marketing dashboard configuration
     MARKETING: [
@@ -76,11 +76,11 @@ export const sidebarSections: SidebarSection[] = [
     title: "Administración",
     icon: ShieldCheck,
     permission: "admin:view",
-    items: [
-      { to: "/admin/usuarios", label: "Usuarios", icon: Users, permission: "users:view" },
-      // { to: "/pagos", label: "Pagos", icon: Wallet, permission: "finance:view" },
-      { to: "/campanas", label: "Campañas", icon: Megaphone, permission: "marketing:view" },
-    ],
+      items: [
+        { to: "/admin/usuarios", label: "Usuarios", icon: Users, permission: "users:view" },
+        // { to: "/pagos", label: "Pagos", icon: Wallet, permission: "finance:view" },
+        { to: "/admin/campanas", label: "Campañas", icon: Megaphone, permission: "marketing:view" },
+      ],
   },
   {
     title: "Gestión Académica",
