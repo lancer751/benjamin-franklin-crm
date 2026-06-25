@@ -4,12 +4,12 @@ export const editionFormSchema = z.object({
   course_id: z.string().min(1, "Debes seleccionar un curso base"),
   // 🧠 Exigimos explícitamente un número del 1 al 9 para mantener el dígito único
   edition_number: z.coerce.number({
-    invalid_type_error: "Ingresa un número",
+    message: "Ingresa un número",
   }).int().min(1, "Debe ser al menos 1").max(9, "Solo se permite 1 dígito (1-9)"),
   edition_code: z.string().min(1, "El código es requerido").max(16, "Máximo 16 caracteres"),
-  start_date: z.date({ required_error: "La fecha de inicio es obligatoria" }),
-  end_date: z.date({ required_error: "La fecha de fin es obligatoria" }),
-  modality: z.enum(["PRESENCIAL", "VIRTUAL", "HIBRIDO", "ASINCRONICO"], { required_error: "Debes seleccionar una modalidad" }),
+  start_date: z.date({ message: "La fecha de inicio es obligatoria" }),
+  end_date: z.date({ message: "La fecha de fin es obligatoria" }),
+  modality: z.enum(["PRESENCIAL", "VIRTUAL", "HIBRIDO", "ASINCRONICO"], { message: "Debes seleccionar una modalidad" }),
   meet_link: z.string()
     .url("Debe ser una URL válida (ej: https://meet.google.com/...)")
     .optional()
@@ -17,16 +17,13 @@ export const editionFormSchema = z.object({
   edition_status: z.enum(["IN_PROGRESS", "COMPLETED", "OPEN", "SCHEDULED", "DRAFT", "CANCELLED"]).default("SCHEDULED"),
   
   hours_amount: z.coerce.number({
-    invalid_type_error: "Ingresa un número válido",
-    required_error: "Este campo es obligatorio",
+    message: "Ingresa un número válido",
   }).min(1, "Debe ser al menos 1"),
   classes_number: z.coerce.number({
-    invalid_type_error: "Ingresa un número válido",
-    required_error: "Este campo es obligatorio",
+    message: "Ingresa un número válido",
   }).min(1, "Debe ser al menos 1"),
   duration_value: z.coerce.number({
-    invalid_type_error: "Ingresa un número válido",
-    required_error: "Este campo es obligatorio",
+    message: "Ingresa un número válido",
   }).min(1, "Debe ser al menos 1"),
   duration_unit: z.enum(["WEEKS", "MONTHS"]).default("WEEKS"),
   whatsapp_group_link: z.string().url("Debe ser una URL válida").optional().or(z.literal("")),

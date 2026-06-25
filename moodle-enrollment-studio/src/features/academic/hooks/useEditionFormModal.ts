@@ -37,7 +37,7 @@ export const useEditionFormModal = (
   const [endMonth, setEndMonth] = useState<Date>(new Date());
 
   const form = useForm<EditionFormValues>({
-    resolver: standardSchemaResolver(editionFormSchema),
+    resolver: standardSchemaResolver(editionFormSchema) as any,
     mode: "onTouched",
     defaultValues: {
       ...defaultEditionFormValues,
