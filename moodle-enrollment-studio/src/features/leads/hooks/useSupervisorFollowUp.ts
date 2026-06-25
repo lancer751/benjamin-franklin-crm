@@ -6,6 +6,7 @@ import { reassignCampaignMember } from "@/features/marketing/services/campaignSe
 import { api } from "@/core/lib/api";
 import { adaptLeads, unpackLeads } from "../adapters/leadAdapter";
 import { extractSellers, calculateSupervisorKPIs, getActiveMembersForSeller } from "../utils/leadLogic";
+import { getSellers } from "@/features/users/services/userService";
 
 export const useSupervisorFollowUp = () => {
   const queryClient = useQueryClient();
@@ -23,6 +24,17 @@ export const useSupervisorFollowUp = () => {
     const rawData = unpackLeads(leadsRes);
     return adaptLeads(rawData);
   }, [leadsRes]);
+
+  // 1b. Obtener todos los vendedores reales
+  const { data: realSellersRes } = useQuery({
+    queryKey: ["real-sellers-list"],
+    queryFn: getSellers,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const realSellers = useMemo(() => {
+    return (realSellersRes as any)?.success ? (realSellersRes as any).data : (realSellersRes || []);
+  }, [realSellersRes]);
 
   // 2. Extraer de forma dinámica un listado único de asesores
   const sellers = useMemo(() => {
@@ -77,7 +89,11 @@ export const useSupervisorFollowUp = () => {
         });
         return await res.json();
       }
-      return reassignCampaignMember(selectedLead.campaing_id, selectedLead.id, { assigned_to: newSellerId });
+      return reassignCampaignMember(
+        selectedLead.campaing_id || selectedLead.campaing?.id, 
+        selectedLead.id, 
+        { assigned_to: newSellerId }
+      );
     },
     onSuccess: (res: any) => {
       if (res.success) {
@@ -118,5 +134,6 @@ export const useSupervisorFollowUp = () => {
     isLoadingInteractions,
     reassignMutation,
     kpis,
+    realSellers,
   };
 };

@@ -136,6 +136,7 @@ const SupervisorFollowUpView = () => {
     isLoadingInteractions,
     reassignMutation,
     kpis,
+    realSellers,
   } = useSupervisorFollowUp();
 
   const handleCopyPhone = (phone: string) => {
@@ -457,11 +458,11 @@ const SupervisorFollowUpView = () => {
                           <SelectValue placeholder="Seleccionar nuevo asesor" />
                         </SelectTrigger>
                         <SelectContent className="bg-white">
-                          {sellers.map((seller) => (
-                            <SelectItem key={seller.id} value={seller.id}>
-                              {seller.name}
-                            </SelectItem>
-                          ))}
+                          {realSellers.map((seller: any) => (
+                          <SelectItem key={seller.id} value={seller.id}>
+                            {`${seller.user?.first_name || ""} ${seller.user?.last_name || ""}`.trim() || "Vendedor"}
+                          </SelectItem>
+                        ))}
                         </SelectContent>
                       </Select>
                       {reassignMutation.isPending && (
