@@ -399,7 +399,7 @@ const SupervisorFollowUpView = () => {
 
       {/* Interactive Master-Detail Drawer (Sheet) */}
       <Sheet open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
-        <SheetContent className="w-[450px] sm:w-[540px] overflow-y-auto bg-white border-l border-slate-200 p-6 flex flex-col gap-6">
+        <SheetContent className="w-full sm:max-w-xl bg-white border-l border-slate-200 p-6 flex flex-col gap-6 h-full">
           {selectedLead && (
             <>
               {/* Header section */}
@@ -430,146 +430,140 @@ const SupervisorFollowUpView = () => {
                 </div>
               </SheetHeader>
 
-              {/* Matrix Section (3-level Classification) & Reassign Controls */}
-              <div className="space-y-4">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Matriz de Tipificación y Control
-                </h4>
-                <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-4 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-semibold text-slate-500">Estado de Tipificación</span>
-                    {getTipificacionBadge(selectedLead.status)}
-                  </div>
-                  
-                  {/* Control de Reasignación de Asesor */}
-                  <div className="border-t border-slate-100 pt-3 flex flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-slate-600 block">Reasignar Asesor Comercial</span>
-                    <Select 
-                      value={selectedLead.assigned_to} 
-                      onValueChange={(val) => {
-                        reassignMutation.mutate(val);
-                      }}
-                      disabled={reassignMutation.isPending}
-                    >
-                      <SelectTrigger className="w-full border-slate-200 rounded-lg">
-                        <SelectValue placeholder="Seleccionar nuevo asesor" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        {sellers.map((seller) => (
-                          <SelectItem key={seller.id} value={seller.id}>
-                            {seller.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {reassignMutation.isPending && (
-                      <span className="text-[10px] text-primary flex items-center gap-1 mt-0.5">
-                        <Loader2 size={10} className="animate-spin" />
-                        Procesando reasignación...
-                      </span>
-                    )}
+              {/* Scrollable Body Container */}
+              <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                {/* Matrix Section (3-level Classification) & Reassign Controls */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Matriz de Tipificación y Control
+                  </h4>
+                  <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-4 space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-semibold text-slate-500">Estado de Tipificación</span>
+                      {getTipificacionBadge(selectedLead.status)}
+                    </div>
+                    
+                    {/* Control de Reasignación de Asesor */}
+                    <div className="border-t border-slate-100 pt-3 flex flex-col gap-1.5">
+                      <span className="text-xs font-semibold text-slate-600 block">Reassignar Asesor Comercial</span>
+                      <Select 
+                        value={selectedLead.assigned_to} 
+                        onValueChange={(val) => {
+                          reassignMutation.mutate(val);
+                        }}
+                        disabled={reassignMutation.isPending}
+                      >
+                        <SelectTrigger className="w-full border-slate-200 rounded-lg">
+                          <SelectValue placeholder="Seleccionar nuevo asesor" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {sellers.map((seller) => (
+                            <SelectItem key={seller.id} value={seller.id}>
+                              {seller.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {reassignMutation.isPending && (
+                        <span className="text-[10px] text-primary flex items-center gap-1 mt-0.5">
+                          <Loader2 size={10} className="animate-spin" />
+                          Procesando reasignación...
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Comments Section */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Comentario de Gestión Comercial
-                </h4>
-                <div className="min-h-[120px] flex flex-col justify-start">
-                  {isLoadingInteractions ? (
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs py-8 bg-slate-50 border border-slate-100 rounded-xl shadow-inner">
-                      <Loader2 size={12} className="animate-spin text-primary" />
-                      <span>Cargando comentarios...</span>
-                    </div>
-                  ) : !(interactionsRes?.success && Array.isArray(interactionsRes.data) && interactionsRes.data.length > 0) ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-1.5 bg-slate-50 border border-slate-100 rounded-xl shadow-inner">
-                      <BookOpen size={24} className="opacity-40 mb-1" />
-                      <p className="text-xs font-medium">No hay bitácoras de llamadas aún para este período.</p>
-                    </div>
-                  ) : (
-                    <div className="border-l-2 border-slate-100 ml-3 space-y-5 relative py-1">
-                      {interactionsRes.data.map((interaction: any) => {
-                        let icon = <MessageSquare size={12} />;
-                        let bubbleClass = "bg-slate-50 text-slate-600 border border-slate-200";
+                {/* Comments Section */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Comentario de Gestión Comercial
+                  </h4>
+                  <div className="min-h-[120px] flex flex-col justify-start">
+                    {isLoadingInteractions ? (
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs py-8 bg-slate-50 border border-slate-100 rounded-xl shadow-inner">
+                        <Loader2 size={12} className="animate-spin text-primary" />
+                        <span>Cargando comentarios...</span>
+                      </div>
+                    ) : !(interactionsRes?.success && Array.isArray(interactionsRes.data) && interactionsRes.data.length > 0) ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-1.5 bg-slate-50 border border-slate-100 rounded-xl shadow-inner">
+                        <BookOpen size={24} className="opacity-40 mb-1" />
+                        <p className="text-xs font-medium">No hay bitácoras de llamadas aún para este período.</p>
+                      </div>
+                    ) : (
+                      <div className="relative border-l border-slate-200 ml-4 pl-6 space-y-6">
+                        {interactionsRes.data.map((interaction: any) => {
+                          const isWhatsapp = interaction.type === "WHATSAPP";
+                          const isCall = interaction.type === "CALL";
+                          const dotBorderColor = isWhatsapp 
+                            ? "border-green-500" 
+                            : isCall 
+                              ? "border-blue-500" 
+                              : "border-slate-300";
+                          const dotInnerBg = isWhatsapp
+                            ? "bg-green-500"
+                            : isCall
+                              ? "bg-blue-500"
+                              : "bg-slate-300";
 
-                        if (interaction.type === "CALL") {
-                          icon = <Phone size={12} />;
-                          bubbleClass = "bg-blue-50 text-blue-600 border border-blue-100";
-                        } else if (interaction.type === "WHATSAPP") {
-                          icon = <MessageSquare size={12} />;
-                          bubbleClass = "bg-green-50 text-green-600 border border-green-100";
-                        } else if (interaction.type === "EMAIL") {
-                          icon = <Mail size={12} />;
-                          bubbleClass = "bg-purple-50 text-purple-600 border border-purple-100";
-                        } else if (interaction.type === "MEETING") {
-                          icon = <Calendar size={12} />;
-                          bubbleClass = "bg-amber-50 text-amber-600 border border-amber-100";
-                        } else if (interaction.type === "SELL") {
-                          icon = <Award size={12} />;
-                          bubbleClass = "bg-emerald-50 text-emerald-600 border border-emerald-100";
-                        }
-
-                        return (
-                          <div key={interaction.id} className="relative pl-6">
-                            {/* Node bubble */}
-                            <div className={`absolute -left-[13px] top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white ${bubbleClass}`}>
-                              {icon}
-                            </div>
-                            {/* Content */}
-                            <div>
-                              <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 mt-1 whitespace-pre-wrap font-normal">
+                          return (
+                            <div key={interaction.id} className="relative">
+                              {/* absolute dot marker */}
+                              <div className={`absolute -left-[33px] top-1 w-4 h-4 rounded-full border-2 bg-white flex items-center justify-center ${dotBorderColor}`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${dotInnerBg}`} />
+                              </div>
+                              {/* content globe */}
+                              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
                                 {interaction.notes}
-                              </p>
+                              </div>
                               <span className="text-[10px] text-slate-400 mt-1 block">
                                 Por: {interaction.seller?.user?.first_name ? `${interaction.seller.user.first_name} ${interaction.seller.user.last_name || ""}`.trim() : "Sistema"} • Canal: {interaction.type || "N/A"}
                               </span>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Academic and Enrollment details (Bottom Card) */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Datos Académicos y Campaña
-                </h4>
-                <Card className="border-border/60 shadow-sm rounded-xl bg-card overflow-hidden">
-                  <CardContent className="p-4 space-y-3 text-xs">
-                    <div className="flex items-center gap-2.5 text-slate-700">
-                      <BookOpen size={14} className="text-muted-foreground shrink-0" />
-                      <span className="font-semibold w-20">Programa:</span>
-                      <span className="font-bold text-slate-900 truncate">{selectedLead.campaign?.name || selectedLead.campaing?.name || "Sin campaña"}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 text-slate-700">
-                      <Hash size={14} className="text-muted-foreground shrink-0" />
-                      <span className="font-semibold w-20">DNI:</span>
-                      <span className="font-medium text-slate-900">{selectedLead.lead?.dni || "N/D"}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 text-slate-700">
-                      <Mail size={14} className="text-muted-foreground shrink-0" />
-                      <span className="font-semibold w-20">Email:</span>
-                      <span className="font-medium text-slate-900 truncate">{selectedLead.lead?.email || "N/D"}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 text-slate-700">
-                      <Award size={14} className="text-muted-foreground shrink-0" />
-                      <span className="font-semibold w-20">Campaña:</span>
-                      <span className="font-medium text-slate-800">{selectedLead.campaign?.name || selectedLead.campaing?.name || "N/D"}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 text-slate-700">
-                      <AlertCircle size={14} className="text-muted-foreground shrink-0" />
-                      <span className="font-semibold w-20">Origen:</span>
-                      <Badge variant="outline" className="font-semibold rounded bg-sky-50 text-sky-700 border-sky-100">
-                        {selectedLead.source}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Academic and Enrollment details (Bottom Card) */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Datos Académicos y Campaña
+                  </h4>
+                  <Card className="border-border/60 shadow-sm rounded-xl bg-card overflow-hidden">
+                    <CardContent className="p-4 space-y-3 text-xs">
+                      <div className="flex items-center gap-2.5 text-slate-700">
+                        <BookOpen size={14} className="text-muted-foreground shrink-0" />
+                        <span className="font-semibold w-20">Programa:</span>
+                        <span className="font-bold text-slate-900 truncate">{selectedLead.campaign?.name || selectedLead.campaing?.name || "Sin campaña"}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-slate-700">
+                        <Hash size={14} className="text-muted-foreground shrink-0" />
+                        <span className="font-semibold w-20">DNI:</span>
+                        <span className="font-medium text-slate-900">{selectedLead.lead?.dni || "N/D"}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-slate-700">
+                        <Mail size={14} className="text-muted-foreground shrink-0" />
+                        <span className="font-semibold w-20">Email:</span>
+                        <span className="font-medium text-slate-900 truncate">{selectedLead.lead?.email || "N/D"}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-slate-700">
+                        <Award size={14} className="text-muted-foreground shrink-0" />
+                        <span className="font-semibold w-20">Campaña:</span>
+                        <span className="font-medium text-slate-800">{selectedLead.campaign?.name || selectedLead.campaing?.name || "N/D"}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-slate-700">
+                        <AlertCircle size={14} className="text-muted-foreground shrink-0" />
+                        <span className="font-semibold w-20">Origen:</span>
+                        <Badge variant="outline" className="font-semibold rounded bg-sky-50 text-sky-700 border-sky-100">
+                          {selectedLead.source}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </>
           )}
