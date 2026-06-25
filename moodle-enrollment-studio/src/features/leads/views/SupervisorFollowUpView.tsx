@@ -477,18 +477,59 @@ const SupervisorFollowUpView = () => {
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Comentario de Gestión Comercial
                 </h4>
-                <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 shadow-inner min-h-[120px] flex flex-col justify-center">
+                <div className="min-h-[120px] flex flex-col justify-start">
                   {isLoadingInteractions ? (
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs">
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground text-xs py-8 bg-slate-50 border border-slate-100 rounded-xl shadow-inner">
                       <Loader2 size={12} className="animate-spin text-primary" />
                       <span>Cargando comentarios...</span>
                     </div>
+                  ) : !(interactionsRes?.success && Array.isArray(interactionsRes.data) && interactionsRes.data.length > 0) ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-1.5 bg-slate-50 border border-slate-100 rounded-xl shadow-inner">
+                      <BookOpen size={24} className="opacity-40 mb-1" />
+                      <p className="text-xs font-medium">No hay bitácoras de llamadas aún para este período.</p>
+                    </div>
                   ) : (
-                    <p className="text-xs text-slate-700 leading-relaxed font-normal whitespace-pre-wrap">
-                      {interactionsRes?.success && interactionsRes.data?.[0]?.notes 
-                        ? interactionsRes.data[0].notes 
-                        : "No hay comentarios de gestión registrados en las interacciones."}
-                    </p>
+                    <div className="border-l-2 border-slate-100 ml-3 space-y-5 relative py-1">
+                      {interactionsRes.data.map((interaction: any) => {
+                        let icon = <MessageSquare size={12} />;
+                        let bubbleClass = "bg-slate-50 text-slate-600 border border-slate-200";
+
+                        if (interaction.type === "CALL") {
+                          icon = <Phone size={12} />;
+                          bubbleClass = "bg-blue-50 text-blue-600 border border-blue-100";
+                        } else if (interaction.type === "WHATSAPP") {
+                          icon = <MessageSquare size={12} />;
+                          bubbleClass = "bg-green-50 text-green-600 border border-green-100";
+                        } else if (interaction.type === "EMAIL") {
+                          icon = <Mail size={12} />;
+                          bubbleClass = "bg-purple-50 text-purple-600 border border-purple-100";
+                        } else if (interaction.type === "MEETING") {
+                          icon = <Calendar size={12} />;
+                          bubbleClass = "bg-amber-50 text-amber-600 border border-amber-100";
+                        } else if (interaction.type === "SELL") {
+                          icon = <Award size={12} />;
+                          bubbleClass = "bg-emerald-50 text-emerald-600 border border-emerald-100";
+                        }
+
+                        return (
+                          <div key={interaction.id} className="relative pl-6">
+                            {/* Node bubble */}
+                            <div className={`absolute -left-[13px] top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white ${bubbleClass}`}>
+                              {icon}
+                            </div>
+                            {/* Content */}
+                            <div>
+                              <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 mt-1 whitespace-pre-wrap font-normal">
+                                {interaction.notes}
+                              </p>
+                              <span className="text-[10px] text-slate-400 mt-1 block">
+                                Por: {interaction.seller?.user?.first_name ? `${interaction.seller.user.first_name} ${interaction.seller.user.last_name || ""}`.trim() : "Sistema"} • Canal: {interaction.type || "N/A"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>

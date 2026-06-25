@@ -47,7 +47,10 @@ export const useSupervisorFollowUp = () => {
     queryFn: async () => {
       if (!selectedLead) return null;
       const res = await api.campaigns[":campaignId"]["members"][":memberId"]["interactions"].$get({
-        param: { campaignId: selectedLead.campaing_id, memberId: selectedLead.id }
+        param: { 
+          campaignId: selectedLead.campaignId || selectedLead.campaing_id || selectedLead.campaing?.id, 
+          memberId: selectedLead.id 
+        }
       });
       return res.json();
     },
