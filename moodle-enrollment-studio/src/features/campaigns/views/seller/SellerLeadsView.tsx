@@ -37,7 +37,8 @@ import {
   Phone, 
   Mail, 
   Edit, 
-  MessageSquare, 
+  MessageSquare,
+  MessageCircle,
   Loader2, 
   RefreshCw,
   UserCheck,
@@ -108,6 +109,7 @@ const SellerLeadsView = () => {
 
   // Estado para nuevas interacciones
   const [newInteractionNotes, setNewInteractionNotes] = useState("");
+  const [interactionType, setInteractionType] = useState<"CALL" | "WHATSAPP" | "MEETING" | "EMAIL" | "SELL">("CALL");
 
   // Estado para nuevas tareas
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -197,7 +199,7 @@ const SellerLeadsView = () => {
 
   // Mutación para registrar interacciones (POST /api/campaigns/:campaignId/members/:memberId/interactions)
   const createInteractionMutation = useMutation({
-    mutationFn: (payload: { notes: string; type: "CALL" | "WHATSAPP" }) =>
+    mutationFn: (payload: { notes: string; type: "CALL" | "WHATSAPP" | "MEETING" | "EMAIL" | "SELL" }) =>
       createMemberInteraction(
         selectedCampaignId,
         selectedMemberId,
@@ -209,6 +211,7 @@ const SellerLeadsView = () => {
       toast.success("Interacción registrada correctamente");
       queryClient.invalidateQueries({ queryKey: ["member-interactions", selectedMemberId] });
       setNewInteractionNotes("");
+      setInteractionType("CALL");
     },
     onError: () => {
       toast.error("Error al registrar la interacción");
@@ -302,14 +305,14 @@ const SellerLeadsView = () => {
     setSearchParams({ campaignId: val });
   };
 
-  const handleCreateInteraction = (type: "CALL" | "WHATSAPP") => {
+  const handleCreateInteraction = () => {
     if (!newInteractionNotes.trim()) {
       toast.error("Debes agregar una nota descriptiva");
       return;
     }
     createInteractionMutation.mutate({
       notes: newInteractionNotes,
-      type
+      type: interactionType
     });
   };
 
@@ -691,6 +694,37 @@ const SellerLeadsView = () => {
                       <Label className="text-xs font-bold text-foreground flex items-center gap-1">
                         <MessageSquare size={13} className="text-primary" /> Registrar Gestión Comercial
                       </Label>
+                      <div className="space-y-1.5 pt-1">
+                        <Label className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Canal de Gestión</Label>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {[
+                            { value: "CALL", label: "Llamada", icon: Phone },
+                            { value: "WHATSAPP", label: "WhatsApp", icon: MessageCircle },
+                            { value: "MEETING", label: "Reunión", icon: Users },
+                            { value: "EMAIL", label: "Correo", icon: Mail }
+                          ].map((chan) => {
+                            const Icon = chan.icon;
+                            const isActive = interactionType === chan.value;
+                            return (
+                              <button
+                                key={chan.value}
+                                type="button"
+                                onClick={() => setInteractionType(chan.value as any)}
+                                className={cn(
+                                  "flex flex-col items-center justify-center py-2 px-1 rounded-xl border text-[9px] font-bold gap-1 transition-all shadow-sm",
+                                  isActive
+                                    ? "bg-primary/10 text-primary border-primary shadow-inner font-extrabold"
+                                    : "bg-card border-border text-muted-foreground hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-foreground"
+                                )}
+                              >
+                                <Icon size={13} className={isActive ? "text-primary" : "text-muted-foreground/80"} />
+                                {chan.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       <Textarea
                         placeholder="Escribe el resultado de la llamada o WhatsApp con el prospecto..."
                         value={newInteractionNotes}
@@ -703,34 +737,19 @@ const SellerLeadsView = () => {
                         <span className="text-[10px] text-muted-foreground font-semibold">
                           {newInteractionNotes.length}/255 caracteres
                         </span>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={() => handleCreateInteraction("CALL")}
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-8 px-3 rounded-lg shadow-sm gap-1 flex items-center"
-                            disabled={createInteractionMutation.isPending}
-                          >
-                            {createInteractionMutation.isPending && createInteractionMutation.variables?.type === "CALL" ? (
-                              <Loader2 size={12} className="animate-spin" />
-                            ) : (
-                              <Phone size={12} />
-                            )}
-                            Llamada
-                          </Button>
-                          <Button
-                            onClick={() => handleCreateInteraction("WHATSAPP")}
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3 rounded-lg shadow-sm gap-1 flex items-center"
-                            disabled={createInteractionMutation.isPending}
-                          >
-                            {createInteractionMutation.isPending && createInteractionMutation.variables?.type === "WHATSAPP" ? (
-                              <Loader2 size={12} className="animate-spin" />
-                            ) : (
-                              <MessageSquare size={12} />
-                            )}
-                            WhatsApp
-                          </Button>
-                        </div>
+                        <Button
+                          onClick={handleCreateInteraction}
+                          size="sm"
+                          className="btn-primary font-bold text-xs h-8 px-4 rounded-lg shadow-sm flex items-center gap-1.5"
+                          disabled={createInteractionMutation.isPending}
+                        >
+                          {createInteractionMutation.isPending ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            <Plus size={12} />
+                          )}
+                          Registrar Bitácora
+                        </Button>
                       </div>
                     </div>
 
@@ -762,7 +781,11 @@ const SellerLeadsView = () => {
                                 <div className="bg-card border border-border rounded-xl p-3.5 space-y-2 shadow-sm group-hover:border-primary/30 transition-colors">
                                   <div className="flex items-center justify-between text-[10px] text-muted-foreground font-semibold">
                                     <span className={cn("px-1.5 py-0.5 rounded font-extrabold text-[9px] uppercase tracking-wider", config.bg, config.color)}>
-                                      {item.type === "CALL" ? "Llamada" : "WhatsApp"}
+                                      {item.type === "CALL" ? "Llamada" : 
+                                       item.type === "WHATSAPP" ? "WhatsApp" : 
+                                       item.type === "MEETING" ? "Reunión" : 
+                                       item.type === "EMAIL" ? "Correo" : 
+                                       item.type === "SELL" ? "Venta" : item.type}
                                     </span>
                                     <span>{formatSafeDate(item.created_at)}</span>
                                   </div>
