@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
+import { api } from "@/core/lib/api";
 import { getCampaigns } from "@/features/campaigns/services/campaignService";
 import { 
   getCampaignMembers, 
@@ -10,7 +11,8 @@ import {
   createMemberInteraction,
   getMemberTasks,
   createMemberTask,
-  updateMemberTask
+  updateMemberTask,
+  deleteMemberTask
 } from "@/features/leads/services/leadService";
 import { adaptCampaignMembers, unpackLeads } from "@/features/leads/adapters/leadAdapter";
 import { Button } from "@/core/components/ui/button";
@@ -42,7 +44,8 @@ import {
   Plus,
   CheckCircle2,
   Clock,
-  ClipboardList
+  ClipboardList,
+  Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -214,18 +217,30 @@ const SellerLeadsView = () => {
 
   // Mutación para crear tareas/recordatorios (POST /api/campaigns/:campaignId/members/:memberId/tasks)
   const createTaskMutation = useMutation({
-    mutationFn: (payload: { title: string; content: string; due_date: string }) =>
-      createMemberTask(
-        selectedCampaignId,
-        selectedMemberId,
-        {
+    mutationFn: async (payload: { title: string; content: string; due_date: string }) => {
+      const sellerProfileId = user?.seller?.id;
+      if (!sellerProfileId) {
+        throw new Error("Error: No se identificó tu perfil de asesor de ventas.");
+      }
+      console.log("Enviando x-seller-id:", user?.seller?.id);
+      const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks.$post({
+        param: { campaignId: selectedCampaignId, memberId: selectedMemberId },
+        json: {
           title: payload.title,
           content: payload.content,
           is_done: false,
           due_date: payload.due_date,
         },
-        user?.seller?.id || ""
-      ),
+        headers: {
+          "x-seller-id": sellerProfileId
+        }
+      } as any, {
+        headers: {
+          "x-seller-id": sellerProfileId
+        }
+      });
+      return await res.json();
+    },
     onSuccess: () => {
       toast.success("Tarea registrada correctamente");
       queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedMemberId] });
@@ -248,6 +263,19 @@ const SellerLeadsView = () => {
     },
     onError: () => {
       toast.error("Error al actualizar la tarea");
+    }
+  });
+
+  // Mutación para eliminar tareas (DELETE /api/campaigns/:campaignId/members/:memberId/tasks/:taskId)
+  const deleteTaskMutation = useMutation({
+    mutationFn: ({ campaignId, memberId, taskId }: { campaignId: string; memberId: string; taskId: string }) =>
+      deleteMemberTask(campaignId, memberId, taskId),
+    onSuccess: () => {
+      toast.success("Tarea eliminada correctamente");
+      queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedMemberId] });
+    },
+    onError: () => {
+      toast.error("Error al eliminar la tarea");
     }
   });
 
@@ -287,6 +315,11 @@ const SellerLeadsView = () => {
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
+    const sellerProfileId = user?.seller?.id;
+    if (!sellerProfileId) {
+      toast.error("Error: No se identificó tu perfil de asesor de ventas.");
+      return;
+    }
     if (!newTaskTitle.trim()) {
       toast.error("Debes especificar un título para la tarea");
       return;
@@ -863,6 +896,21 @@ const SellerLeadsView = () => {
                                   </span>
                                 </div>
                               </div>
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-400 hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0 self-center"
+                                disabled={deleteTaskMutation.isPending}
+                                onClick={() => deleteTaskMutation.mutate({ 
+                                  campaignId: selectedCampaignId, 
+                                  memberId: selectedMemberId, 
+                                  taskId: item.id 
+                                })}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           ))}
                         </div>

@@ -115,6 +115,8 @@ export const createMemberInteraction = async (campaignId: string, memberId: stri
     param: { campaignId, memberId },
     json: { notes, type },
     headers: { "x-seller-id": sellerId }
+  } as any, {
+    headers: { "x-seller-id": sellerId }
   });
   return await res.json();
 };
@@ -132,6 +134,8 @@ export const createMemberTask = async (campaignId: string, memberId: string, tas
   const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks.$post({
     param: { campaignId, memberId },
     json: taskData,
+    headers: { "x-seller-id": sellerId }
+  } as any, {
     headers: { "x-seller-id": sellerId }
   });
   return await res.json();

@@ -37,7 +37,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const canAccess = (permission: string): boolean => {
     if (!user) return false;
     const userRole = (typeof user.role === 'object' ? user.role?.name : user.role) || "";
-    console.log("DEBUG RBAC SIDEPANEL:", { userRole, permission, hasAccess: canAccessGlobal(userRole, permission) });
     return canAccessGlobal(userRole, permission);
   };
 
