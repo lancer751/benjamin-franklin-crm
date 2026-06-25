@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getCampaigns } from "@/features/marketing/services/campaignService";
+import { getCampaigns } from "@/features/campaigns/services/campaignService";
 import {
   createLead,
   updateLead,

@@ -48,18 +48,21 @@ import PaymentDetailView from "@/features/payments/views/PaymentDetailView";
 import PaymentPlansView from "@/features/payments/views/PaymentPlansView";
 import OverdueView from "@/features/payments/views/OverdueView";
 
-// Módulo de Marketing
-import MarketingDashboardView from "@/features/marketing/views/MarketingDashboardView";
-import CampaignsView from "@/features/marketing/views/CampaignsView";
-import CampaignDetailView from "@/features/marketing/views/CampaignDetailView";
-import LeadSourcesView from "@/features/marketing/views/LeadSourcesView";
+// Módulo de Campañas
+import MarketingDashboardView from "@/features/campaigns/views/admin-marketing/MarketingDashboardView";
+import CampaignsView from "@/features/campaigns/views/admin-marketing/CampaignsView";
+import CampaignDetailView from "@/features/campaigns/views/CampaignDetailView";
+import LeadSourcesView from "@/features/campaigns/views/admin-marketing/LeadSourcesView";
+import SellerCampaignsView from "@/features/campaigns/views/seller/SellerCampaignsView";
+import SellerLeadsView from "@/features/campaigns/views/seller/SellerLeadsView";
 import UserDetailView from "@/features/users/views/UserDetailView";
 import SupervisorFollowUpView from "@/features/leads/views/SupervisorFollowUpView";
 
 
 const App = () => {
-  const { setUser, setLoading, isLoading } = useAuthStore();
+  const { setUser, setLoading, isLoading, user } = useAuthStore();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const isSalesRep = user?.role?.name === "SALES_REP";
 
   useEffect(() => {
     const initAuth = async () => {
@@ -137,11 +140,13 @@ const App = () => {
               <Route path="/planes-pago" element={<PaymentPlansView />} />
               <Route path="/morosos" element={<OverdueView />} />
               
-              {/* Marketing */}
+              {/* Campañas */}
               <Route path="/marketing" element={<Navigate to="/campanas" replace />} />
-              <Route path="/campanas" element={<CampaignsView />} />
+              <Route path="/campanas" element={isSalesRep ? <SellerCampaignsView /> : <CampaignsView />} />
               <Route path="/campanas/:id" element={<CampaignDetailView />} />
-              <Route path="/origen-leads" element={<LeadSourcesView />} />
+              <Route path="/origen-leads" element={isSalesRep ? <Navigate to="/campanas" replace /> : <LeadSourcesView />} />
+              <Route path="/comercial/mis-leads" element={<SellerLeadsView />} />
+              <Route path="/admin/campaigns/seller/leads/:campaignId" element={<SellerLeadsView />} />
             </Route>
           </Route>
           

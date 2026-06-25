@@ -1,9 +1,9 @@
 import { Button } from "@/core/components/ui/button";
 import DeleteConfirmModal from "@/core/components/DeleteConfirmModal";
-import CampaignFormModal from "../components/CampaignFormModal";
-import { useCampaigns } from "../hooks/useCampaigns";
-import { CampaignStatsCards } from "../components/CampaignStatsCards";
-import { CampaignsTable } from "../components/CampaignsTable";
+import CampaignFormModal from "@/features/campaigns/components/CampaignFormModal";
+import { useCampaigns } from "@/features/campaigns/hooks/useCampaigns";
+import { CampaignStatsCards } from "@/features/campaigns/components/CampaignStatsCards";
+import { CampaignsTable } from "@/features/campaigns/components/CampaignsTable";
 
 const CampaignsView = () => {
   const {

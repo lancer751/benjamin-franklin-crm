@@ -7,7 +7,6 @@ import {
   removeSellerFromCampaign, 
   deleteCampaign 
 } from "../services/campaignService";
-import { mockCampaigns } from "../mockCampaigns";
 import { toast } from "sonner";
 
 export const useCampaignDetail = (id: string | undefined) => {

@@ -5,16 +5,16 @@ import type { SuccessResponse } from "@/app";
 // ==========================================
 // INFERENCIA DE TIPOS ESTRICTA DESDE HONO
 // ==========================================
-type CampaignsQueryReq = InferRequestType<typeof api.campaigns.$get>["query"];
-type CampaignsRes = InferResponseType<typeof api.campaigns.$get>;
-type CampaignByIdRes = InferResponseType<typeof api.campaigns[":id"]["$get"]>;
-type CreateCampaignReq = InferRequestType<typeof api.campaigns.$post>["json"];
-type UpdateCampaignReq = InferRequestType<typeof api.campaigns[":id"]["$put"]>["json"];
-type DeleteCampaignRes = InferResponseType<typeof api.campaigns[":id"]["$delete"]>;
+export type CampaignsQueryReq = InferRequestType<typeof api.campaigns.$get>["query"];
+export type CampaignsRes = InferResponseType<typeof api.campaigns.$get>;
+export type CampaignByIdRes = InferResponseType<typeof api.campaigns[":id"]["$get"]>;
+export type CreateCampaignReq = InferRequestType<typeof api.campaigns.$post>["json"];
+export type UpdateCampaignReq = InferRequestType<typeof api.campaigns[":id"]["$put"]>["json"];
+export type DeleteCampaignRes = InferResponseType<typeof api.campaigns[":id"]["$delete"]>;
 
 // Endpoints para el Supervisor (Matriz Excalidraw)
-type AssignSellersReq = InferRequestType<typeof api.campaigns[":id"]["sellers"]["$post"]>["json"];
-type AssignSellersRes = InferResponseType<typeof api.campaigns[":id"]["sellers"]["$post"]>;
+export type AssignSellersReq = InferRequestType<typeof api.campaigns[":id"]["sellers"]["$post"]>["json"];
+export type AssignSellersRes = InferResponseType<typeof api.campaigns[":id"]["sellers"]["$post"]>;
 
 // ==========================================
 // SERVICIOS COMERCIALES DE CAMPAÑAS

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCampaignMembers, updateMemberStatus } from "../services/leadService";
-import { getCampaigns } from "@/features/marketing/services/campaignService";
+import { getCampaigns } from "@/features/campaigns/services/campaignService";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { adaptCampaignMembers, unpackLeads } from "../adapters/leadAdapter";

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getAllLeads } from "../services/leadService";
-import { reassignCampaignMember } from "@/features/marketing/services/campaignService";
+import { reassignCampaignMember } from "@/features/campaigns/services/campaignService";
 import { api } from "@/core/lib/api";
 import { adaptLeads, unpackLeads } from "../adapters/leadAdapter";
 import { extractSellers, calculateSupervisorKPIs, getActiveMembersForSeller } from "../utils/leadLogic";

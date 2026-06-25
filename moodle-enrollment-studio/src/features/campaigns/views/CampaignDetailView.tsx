@@ -5,15 +5,15 @@ import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import CampaignForm from "../components/CampaignForm";
+import CampaignForm from "@/features/campaigns/components/CampaignForm";
 import { getSellers } from "@/features/users/services/userService";
 import { toast } from "sonner";
 import ModalWrapper from "@/core/components/ModalWrapper";
-import { useCampaignDetail } from "../hooks/useCampaignDetail";
-import { CampaignDetailHeader } from "../components/CampaignDetailHeader";
-import { CampaignDetailStats } from "../components/CampaignDetailStats";
-import { CampaignRelationsGrid } from "../components/CampaignRelationsGrid";
-import { CampaignSellersTable } from "../components/CampaignSellersTable";
+import { useCampaignDetail } from "@/features/campaigns/hooks/useCampaignDetail";
+import { CampaignDetailHeader } from "@/features/campaigns/components/CampaignDetailHeader";
+import { CampaignDetailStats } from "@/features/campaigns/components/CampaignDetailStats";
+import { CampaignRelationsGrid } from "@/features/campaigns/components/CampaignRelationsGrid";
+import { CampaignSellersTable } from "@/features/campaigns/components/CampaignSellersTable";
 
 interface AssignSellersModalProps {
   open: boolean;
