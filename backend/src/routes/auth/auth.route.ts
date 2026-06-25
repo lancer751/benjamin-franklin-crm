@@ -18,18 +18,48 @@ import {
 import { verify } from "hono/jwt";
 import { getCookie } from "hono/cookie";
 import type { AuthTokenPayload } from "@/utils/jwt";
+import type { RoleAccess } from "@repo/database";
+
+function selectAndReturnUserProfileId(
+  introducedRoleName: RoleAccess,
+  expectedRoleName: RoleAccess,
+) {
+  if (introducedRoleName !== expectedRoleName) {
+    return undefined;
+  }
+
+  return {
+    select: { id: true },
+  };
+}
 
 export const authRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
   .get("/me", verifyUserAccessAuth, async (c) => {
     const authenticatedUser = c.var.authUser;
-    console.log(authenticatedUser);
+    const authenticatedUserRole = authenticatedUser.role
     const user = await c.get("prisma").user.findUnique({
       where: { id: authenticatedUser.userId },
-      include: { role: true },
-      omit: { role_id: true, password: true },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        seller: selectAndReturnUserProfileId(
+          authenticatedUserRole,
+          "SALES_REP",
+        ),
+        marketing: selectAndReturnUserProfileId(
+          authenticatedUserRole,
+          "MARKETING",
+        ),
+        salesSupervisor: selectAndReturnUserProfileId(
+          authenticatedUserRole,
+          "SALES_SUPERVISOR",
+        ),
+      },
     });
 
+    // sending the user profile id relying on their role
     if (!user) {
       throw new HTTPException(404, {
         message: "User not found while retrieving profile",
