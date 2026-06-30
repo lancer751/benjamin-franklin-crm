@@ -80,5 +80,8 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
     benefits,
     faqs,
     certification,
+    frequentQuestions: data.frequentQuestions,
+    relatedBenefits: data.relatedBenefits,
+    relatedCertifications: data.relatedCertifications,
   };
 };

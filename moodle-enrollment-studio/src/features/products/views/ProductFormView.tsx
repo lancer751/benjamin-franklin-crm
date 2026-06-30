@@ -24,6 +24,7 @@ import { uploadImageToCloudinary, uploadPdfToCloudinary } from "@/core/lib/uploa
 import { useProductFormModal } from "../hooks/useProductFormModal";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "sonner";
+import { PRODUCT_PERMISSIONS, RoleAccess } from "../utils/productPermissions";
 
 import ProductPageHeader from "@/features/products/components/shared/ProductPageHeader";
 import AcademicDetailsCard from "@/features/products/components/form/AcademicDetailsCard";
@@ -39,21 +40,48 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/core/components/ui/t
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/core/components/ui/card";
 import { cn } from "@/core/lib/utils";
 
+const TABS_CONFIG = [
+  {
+    id: "general" as const,
+    label: "1. Configuración y Precios (Gerencia)",
+    icon: <Sparkles size={14} className="mr-2 text-sky-500" />,
+  },
+  {
+    id: "marketing" as const,
+    label: "2. Diseño y Certificados (Marketing)",
+    icon: <Award size={14} className="mr-2 text-amber-500" />,
+  },
+  {
+    id: "commercial" as const,
+    label: "3. Contenido Comercial Web (Plataforma)",
+    icon: <Globe size={14} className="mr-2 text-emerald-500" />,
+  },
+];
+
 const ProductFormView = () => {
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState("general");
+  // Obtener rol del usuario real logueado en el store del CRM y mapear permisos RBAC
+  const authUser = useAuthStore((state) => state.user);
+  const role = (authUser?.role?.name || "ADMIN") as RoleAccess;
+  const permissions = PRODUCT_PERMISSIONS[role] || PRODUCT_PERMISSIONS["ADMIN"];
+  const isMarketingRole = role === "MARKETING";
+
+  const [activeTab, setActiveTab] = useState(() => {
+    return role === "MARKETING" ? "marketing" : "general";
+  });
   const [isSavingTab2, setIsSavingTab2] = useState(false);
   const [isSavingTab3, setIsSavingTab3] = useState(false);
   const [isUploadingBrochure, setIsUploadingBrochure] = useState(false);
 
-  // Obtener rol del usuario real logueado en el store del CRM
-  const authUser = useAuthStore((state) => state.user);
-  const userRole = authUser?.role?.name || "ADMIN";
-  const isMarketingRole = userRole === "MARKETING";
+  useEffect(() => {
+    if (role === "MARKETING") {
+      setActiveTab("marketing");
+    }
+  }, [role]);
 
   // Obtener data inicial si estamos en modo edición
   const { data: productRes, isLoading: isLoadingProduct } = useQuery({
@@ -62,7 +90,7 @@ const ProductFormView = () => {
     enabled: !!id,
   });
 
-  const initialData = productRes?.success ? productRes.data : undefined;
+  const initialData = (productRes as any)?.success ? (productRes as any).data : undefined;
 
   // Obtener beneficios dinámicos de la API
   const { data: benefitsRes, isLoading: isLoadingBenefits } = useQuery({
@@ -70,7 +98,7 @@ const ProductFormView = () => {
     queryFn: getBenefits,
   });
 
-  const availableBenefits = benefitsRes?.data || [];
+  const availableBenefits = (benefitsRes as any)?.data || [];
 
   const {
     form,
@@ -89,7 +117,7 @@ const ProductFormView = () => {
     handleLoadDefaultFAQs
   } = useProductFormModal(
     true, 
-    (data: any) => {
+    ((data: any) => {
       // Si el producto se creó por primera vez y el backend devolvió el id del producto
       if (!isEdit && data?.success && data?.data?.id) {
         navigate(`/productos/${data.data.id}/editar`);
@@ -98,7 +126,7 @@ const ProductFormView = () => {
       } else {
         navigate("/productos");
       }
-    }, 
+    }) as any, 
     initialData
   );
 
@@ -170,8 +198,8 @@ const ProductFormView = () => {
 
       // 2. Ejecutar la función del servicio con el payload de marketing
       const res = await updateProductCommercialContent(id, {
-        image_url: form.image_url && form.image_url.trim() !== "" ? form.image_url : null,
-        brochure_url: form.brochure_url && form.brochure_url.trim() !== "" ? form.brochure_url : null,
+        image_url: (form as any).image_url && typeof (form as any).image_url === "string" && ((form as any).image_url).trim() !== "" ? (form as any).image_url : null,
+        brochure_url: (form as any).brochure_url && typeof (form as any).brochure_url === "string" && ((form as any).brochure_url).trim() !== "" ? (form as any).brochure_url : null,
         certification_ids: certificationIds.length > 0 ? certificationIds : undefined
       });
 
@@ -289,114 +317,128 @@ const ProductFormView = () => {
             >
               Cancelar
             </Button>
-            <Button 
-              className="rounded-xl btn-primary gap-2 shadow-md shadow-primary/20"
-              onClick={handleHeaderSubmit}
-              disabled={isPending || isSavingTab2 || isSavingTab3}
-            >
-              {isPending ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" /> Guardando...
-                </>
-              ) : (
-                <>
-                  <Save size={16} /> {isEdit ? "Actualizar Producto" : "Publicar Producto"}
-                </>
-              )}
-            </Button>
+            {!permissions.readonly && (
+              <Button 
+                className="rounded-xl btn-primary gap-2 shadow-md shadow-primary/20"
+                onClick={handleHeaderSubmit}
+                disabled={isPending || isSavingTab2 || isSavingTab3}
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} /> {isEdit ? "Actualizar Producto" : "Publicar Producto"}
+                  </>
+                )}
+              </Button>
+            )}
           </>
         }
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl grid grid-cols-1 md:grid-cols-3 max-w-3xl border border-slate-200">
-          <TabsTrigger 
-            value="general"
-            className="rounded-xl py-2.5 text-xs font-semibold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 transition-all"
-          >
-            <Sparkles size={14} className="mr-2 text-sky-500" /> 1. Configuración y Precios (Gerencia)
-          </TabsTrigger>
-          <TabsTrigger 
-            value="marketing"
-            className="rounded-xl py-2.5 text-xs font-semibold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 transition-all"
-          >
-            <Award size={14} className="mr-2 text-amber-500" /> 2. Diseño y Certificados (Marketing)
-          </TabsTrigger>
-          <TabsTrigger 
-            value="commercial"
-            className="rounded-xl py-2.5 text-xs font-semibold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 transition-all"
-          >
-            <Globe size={14} className="mr-2 text-emerald-500" /> 3. Contenido Comercial Web (Plataforma)
-          </TabsTrigger>
+        <TabsList className={cn(
+          "bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl grid max-w-3xl border border-slate-200",
+          TABS_CONFIG.filter(t => permissions.allowedTabs.includes(t.id)).length === 1 ? "grid-cols-1" : "grid-cols-1 md:grid-cols-3"
+        )}>
+          {TABS_CONFIG.filter(t => permissions.allowedTabs.includes(t.id)).map((tab) => (
+            <TabsTrigger 
+              key={tab.id}
+              value={tab.id}
+              className="rounded-xl py-2.5 text-xs font-semibold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 transition-all"
+            >
+              {tab.icon} {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         {/* ================= PESTAÑA 1: CONFIGURACIÓN Y PRECIOS (GERENCIA) ================= */}
-        <TabsContent value="general" className="outline-none space-y-6">
-          {isMarketingRole && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 shadow-sm animate-fadeIn">
-              <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-amber-900 text-sm">Modo de lectura activo</h4>
-                <p className="text-xs text-amber-800/90 mt-0.5">
-                  Tu rol no permite modificar la estructura de precios ni cohortes académicas de Gerencia.
-                </p>
+        {permissions.allowedTabs.includes("general") && (
+          <TabsContent value="general" className="outline-none space-y-6">
+            {(isMarketingRole || permissions.readonly) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 shadow-sm animate-fadeIn">
+                <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-amber-900 text-sm">
+                    {permissions.readonly ? "Modo de lectura activo" : "Restricción de acceso de Gerencia"}
+                  </h4>
+                  <p className="text-xs text-amber-800/90 mt-0.5">
+                    {permissions.readonly 
+                      ? "Tu rol solo permite visualizar los precios y detalles comerciales de Gerencia (Solo Lectura)." 
+                      : "Tu rol no permite modificar la estructura de precios ni cohortes académicas de Gerencia."}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Lado Izquierdo: Nombre, Detalles Académicos y Campaña de Descuento */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className={cn("space-y-6 transition-all duration-300", isMarketingRole && "opacity-70 pointer-events-none select-none")}>
-                
-                {/* Nombre Comercial Card */}
-                <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
-                  <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Settings size={16} className="text-primary" />
+            <fieldset disabled={permissions.readonly || !permissions.canEditAll} className="space-y-6 border-none p-0 m-0 w-full">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Lado Izquierdo: Nombre, Detalles Académicos y Campaña de Descuento */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Nombre Comercial Card */}
+                  <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <Settings size={16} className="text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-sm font-semibold text-slate-900">Nombre del Producto Comercial</CardTitle>
+                          <CardDescription className="text-xs">Identifica el producto en catálogos y plataformas.</CardDescription>
+                        </div>
                       </div>
-                      <div>
-                        <CardTitle className="text-sm font-semibold text-slate-900">Nombre del Producto Comercial</CardTitle>
-                        <CardDescription className="text-xs">Identifica el producto en catálogos y plataformas.</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <label className="form-label text-xs font-bold text-slate-700 mb-2 block">
-                      Nombre Comercial del Producto
-                    </label>
-                    <input 
-                      type="text" 
-                      className={cn("form-input rounded-xl h-11 border-slate-200 text-sm bg-white shadow-sm focus:ring-primary", errors.name && 'border-destructive')} 
-                      placeholder="Ej. Curso de React - Cohorte 1" 
-                      value={form.name} 
-                      onChange={(e) => setFieldValue("name", e.target.value)} 
-                    />
-                    {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <label className="form-label text-xs font-bold text-slate-700 mb-2 block">
+                        Nombre Comercial del Producto
+                      </label>
+                      <input 
+                        type="text" 
+                        className={cn("form-input rounded-xl h-11 border-slate-200 text-sm bg-white shadow-sm focus:ring-primary", errors.name && 'border-destructive')} 
+                        placeholder="Ej. Curso de React - Cohorte 1" 
+                        value={form.name} 
+                        onChange={(e) => setFieldValue("name", e.target.value)} 
+                        disabled={permissions.readonly || !permissions.canEditAll}
+                      />
+                      {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
+                    </CardContent>
+                  </Card>
 
-                <AcademicDetailsCard
-                  form={form}
-                  errors={errors}
-                  setFieldValue={setFieldValue}
-                  editions={editions}
-                  categories={categories}
-                  isLoadingEditions={isLoadingEditions}
-                  isLoadingCategories={isLoadingCategories}
-                  isEdit={isEdit}
-                  selectedEdition={selectedEdition}
-                />
+                  <AcademicDetailsCard
+                    form={form}
+                    errors={errors}
+                    setFieldValue={setFieldValue}
+                    editions={editions}
+                    categories={categories}
+                    isLoadingEditions={isLoadingEditions}
+                    isLoadingCategories={isLoadingCategories}
+                    isEdit={isEdit}
+                    selectedEdition={selectedEdition}
+                  />
 
-                <DiscountSection
-                  form={form}
-                  errors={errors}
-                  setFieldValue={setFieldValue}
-                />
+                  <DiscountSection
+                    form={form as any}
+                    errors={errors}
+                    setFieldValue={setFieldValue}
+                  />
+                </div>
+
+                {/* Lado Derecho: Precios y Financiamiento por Modalidades */}
+                <div className="space-y-6">
+                  <PricingCard
+                    form={form as any}
+                    errors={errors}
+                    setFieldValue={setFieldValue}
+                    setPriceValue={setPriceValue}
+                    selectedEdition={selectedEdition}
+                    isEdit={isEdit}
+                  />
+                </div>
               </div>
 
-              {!isMarketingRole && (
+              {!isMarketingRole && !permissions.readonly && (
                 <div className="flex justify-end pt-4">
                   <Button
                     type="button"
@@ -416,203 +458,221 @@ const ProductFormView = () => {
                   </Button>
                 </div>
               )}
-            </div>
-
-            {/* Lado Derecho: Precios y Financiamiento por Modalidades */}
-            <div className="space-y-6">
-              <div className={cn("transition-all duration-300", isMarketingRole && "opacity-70 pointer-events-none select-none")}>
-                <PricingCard
-                  form={form}
-                  errors={errors}
-                  setFieldValue={setFieldValue}
-                  setPriceValue={setPriceValue}
-                  selectedEdition={selectedEdition}
-                  isEdit={isEdit}
-                />
-              </div>
-            </div>
-          </div>
-        </TabsContent>
+            </fieldset>
+          </TabsContent>
+        )}
 
         {/* ================= PESTAÑA 2: DISEÑO Y CERTIFICADOS (MARKETING) ================= */}
-        <TabsContent value="marketing" className="outline-none space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Lado Izquierdo: Certificados y Firmas */}
-            <div className="lg:col-span-2 space-y-6">
-              <CertificationCard
+        {permissions.allowedTabs.includes("marketing") && (
+          <TabsContent value="marketing" className="outline-none space-y-6">
+            {permissions.readonly && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 shadow-sm animate-fadeIn">
+                <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-amber-900 text-sm">Modo de lectura activo</h4>
+                  <p className="text-xs text-amber-800/90 mt-0.5">
+                    Tu rol solo permite visualizar el contenido de diseño y multimedia (Solo Lectura).
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <fieldset disabled={permissions.readonly} className="space-y-6 border-none p-0 m-0 w-full">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Lado Izquierdo: Certificados y Firmas */}
+                <div className="lg:col-span-2 space-y-6">
+                  <CertificationCard
+                    form={form}
+                    errors={errors}
+                    setFieldValue={setFieldValue}
+                  />
+
+                  {!permissions.readonly && (
+                    <div className="flex justify-end pt-4 gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSaveMarketing()}
+                        disabled={isSavingTab2}
+                        className="rounded-xl border-slate-200"
+                      >
+                        {isSavingTab2 ? "Guardando..." : "Guardar Multimedia"}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => handleSaveMarketing("commercial")}
+                        disabled={isSavingTab2}
+                        className="rounded-xl btn-primary bg-sky-600 hover:bg-sky-700 text-white gap-2 font-medium shadow-md shadow-sky-600/10"
+                      >
+                        {isSavingTab2 ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" /> Guardando...
+                          </>
+                        ) : (
+                          <>
+                            Guardar y Continuar <ArrowRight size={16} />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Lado Derecho: Portada de Imagen y Brochure PDF */}
+                <div className="space-y-6">
+                  <CoverImageUploader
+                    imageUrl={form.image_url as any}
+                    isUploading={isUploading}
+                    onUpload={handleImageUpload}
+                  />
+
+                  {/* Brochure Informativo PDF Card */}
+                  <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
+                          <FileText size={16} className="text-emerald-600" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-sm font-semibold text-slate-900">Brochure Informativo (PDF)</CardTitle>
+                          <CardDescription className="text-xs">Sube el documento descargable para la plataforma web.</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                      {form.brochure_url ? (
+                        <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/20 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                              <FileText size={18} className="text-emerald-600" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-800 truncate">Folleto del Producto.pdf</p>
+                              <a 
+                                href={form.brochure_url as string} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-emerald-600 font-semibold hover:underline"
+                              >
+                                Ver Archivo PDF
+                              </a>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-lg text-slate-400 hover:text-red-500 shrink-0"
+                            onClick={handleRemoveBrochure}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div 
+                          className="relative border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:border-emerald-500/50 hover:bg-slate-50/50 transition-all"
+                          onClick={() => document.getElementById("brochure-upload")?.click()}
+                        >
+                          <FileText size={32} className="text-slate-400 mb-2 strokeWidth={1.5}" />
+                          <p className="text-xs font-semibold text-slate-700">Subir Brochure Comercial</p>
+                          <p className="text-[10px] text-slate-400 mt-1 max-w-[200px] leading-normal">Sube archivos PDF de hasta 10 MB para su descarga.</p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 rounded-xl text-xs border-slate-200 bg-white"
+                          >
+                            Seleccionar Archivo
+                          </Button>
+                        </div>
+                      )}
+
+                      {isUploadingBrochure && (
+                        <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center gap-2">
+                          <Loader2 size={16} className="animate-spin text-emerald-500" />
+                          <span className="text-[11px] font-bold text-emerald-600 animate-pulse">Subiendo PDF...</span>
+                        </div>
+                      )}
+
+                      <input 
+                        id="brochure-upload" 
+                        type="file" 
+                        accept=".pdf" 
+                        className="hidden" 
+                        onChange={handleBrochureFileChange}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </fieldset>
+          </TabsContent>
+        )}
+
+        {/* ================= PESTAÑA 3: CONTENIDO COMERCIAL WEB (PLATAFORMA) ================= */}
+        {permissions.allowedTabs.includes("commercial") && (
+          <TabsContent value="commercial" className="outline-none">
+            {permissions.readonly && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 shadow-sm animate-fadeIn mb-6">
+                <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-amber-900 text-sm">Modo de lectura activo</h4>
+                  <p className="text-xs text-amber-800/90 mt-0.5">
+                    Tu rol solo permite visualizar el catálogo y contenido comercial de la plataforma (Solo Lectura).
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <fieldset disabled={permissions.readonly} className="flex flex-col space-y-8 w-full max-w-full border-none p-0 m-0">
+              {/* 1. BLOQUE PRINCIPAL - CONFIGURACIÓN DE TEXTOS */}
+              <CommercialConfigCard
                 form={form}
                 errors={errors}
                 setFieldValue={setFieldValue}
               />
 
-              <div className="flex justify-end pt-4 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleSaveMarketing()}
-                  disabled={isSavingTab2}
-                  className="rounded-xl border-slate-200"
-                >
-                  {isSavingTab2 ? "Guardando..." : "Guardar Multimedia"}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => handleSaveMarketing("commercial")}
-                  disabled={isSavingTab2}
-                  className="rounded-xl btn-primary bg-sky-600 hover:bg-sky-700 text-white gap-2 font-medium shadow-md shadow-sky-600/10"
-                >
-                  {isSavingTab2 ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" /> Guardando...
-                    </>
-                  ) : (
-                    <>
-                      Guardar y Continuar <ArrowRight size={16} />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* Lado Derecho: Portada de Imagen y Brochure PDF */}
-            <div className="space-y-6">
-              <CoverImageUploader
-                imageUrl={form.image_url}
-                isUploading={isUploading}
-                onUpload={handleImageUpload}
+              {/* 2. BLOQUE DE BENEFICIOS DESTACADOS (Rediseño horizontal) */}
+              <BenefitsCard
+                availableBenefits={availableBenefits}
+                isLoadingBenefits={isLoadingBenefits}
+                benefitIds={form.benefit_ids || []}
+                errors={errors}
+                onToggle={handleToggleBenefit}
+                setFieldValue={setFieldValue}
               />
 
-              {/* Brochure Informativo PDF Card */}
-              <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
-                      <FileText size={16} className="text-emerald-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-semibold text-slate-900">Brochure Informativo (PDF)</CardTitle>
-                      <CardDescription className="text-xs">Sube el documento descargable para la plataforma web.</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6 space-y-4">
-                  {form.brochure_url ? (
-                    <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/20 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-                          <FileText size={18} className="text-emerald-600" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-800 truncate">Folleto del Producto.pdf</p>
-                          <a 
-                            href={form.brochure_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-[10px] text-emerald-600 font-semibold hover:underline"
-                          >
-                            Ver Archivo PDF
-                          </a>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-lg text-slate-400 hover:text-red-500 shrink-0"
-                        onClick={handleRemoveBrochure}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div 
-                      className="relative border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:border-emerald-500/50 hover:bg-slate-50/50 transition-all"
-                      onClick={() => document.getElementById("brochure-upload")?.click()}
-                    >
-                      <FileText size={32} className="text-slate-400 mb-2 strokeWidth={1.5}" />
-                      <p className="text-xs font-semibold text-slate-700">Subir Brochure Comercial</p>
-                      <p className="text-[10px] text-slate-400 mt-1 max-w-[200px] leading-normal">Sube archivos PDF de hasta 10 MB para su descarga.</p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-3 rounded-xl text-xs border-slate-200 bg-white"
-                      >
-                        Seleccionar Archivo
-                      </Button>
-                    </div>
-                  )}
+              {/* 3. BLOQUE DE PREGUNTAS FRECUENTES (FAQs) */}
+              <FAQsSectionCard
+                form={form as any}
+                setFieldValue={setFieldValue}
+                handleLoadDefaultFAQs={handleLoadDefaultFAQs}
+              />
 
-                  {isUploadingBrochure && (
-                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center gap-2">
-                      <Loader2 size={16} className="animate-spin text-emerald-500" />
-                      <span className="text-[11px] font-bold text-emerald-600 animate-pulse">Subiendo PDF...</span>
-                    </div>
-                  )}
-
-                  <input 
-                    id="brochure-upload" 
-                    type="file" 
-                    accept=".pdf" 
-                    className="hidden" 
-                    onChange={handleBrochureFileChange}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* ================= PESTAÑA 3: CONTENIDO COMERCIAL WEB (PLATAFORMA) ================= */}
-        <TabsContent value="commercial" className="outline-none">
-          <div className="flex flex-col space-y-8 w-full max-w-full">
-            
-            {/* 1. BLOQUE PRINCIPAL - CONFIGURACIÓN DE TEXTOS */}
-            <CommercialConfigCard
-              form={form}
-              errors={errors}
-              setFieldValue={setFieldValue}
-            />
-
-            {/* 2. BLOQUE DE BENEFICIOS DESTACADOS (Rediseño horizontal) */}
-            <BenefitsCard
-              availableBenefits={availableBenefits}
-              isLoadingBenefits={isLoadingBenefits}
-              benefitIds={form.benefit_ids || []}
-              errors={errors}
-              onToggle={handleToggleBenefit}
-              setFieldValue={setFieldValue}
-            />
-
-            {/* 3. BLOQUE DE PREGUNTAS FRECUENTES (FAQs) */}
-            <FAQsSectionCard
-              form={form}
-              setFieldValue={setFieldValue}
-              handleLoadDefaultFAQs={handleLoadDefaultFAQs}
-            />
-
-            {/* BOTÓN DE ACCIÓN EXPLICITA DE GUARDADO */}
-            <div className="flex justify-end pt-2">
-              <Button
-                type="button"
-                onClick={handleSaveCommercial}
-                disabled={isSavingTab3}
-                className="rounded-xl btn-primary bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-medium shadow-md shadow-emerald-600/10 px-8 py-3 h-auto"
-              >
-                {isSavingTab3 ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" /> Guardando...
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} /> Actualizar Contenido Comercial
-                  </>
-                )}
-              </Button>
-            </div>
-
-          </div>
-        </TabsContent>
+              {/* BOTÓN DE ACCIÓN EXPLICITA DE GUARDADO */}
+              {!permissions.readonly && (
+                <div className="flex justify-end pt-2">
+                  <Button
+                    type="button"
+                    onClick={handleSaveCommercial}
+                    disabled={isSavingTab3}
+                    className="rounded-xl btn-primary bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-medium shadow-md shadow-emerald-600/10 px-8 py-3 h-auto"
+                  >
+                    {isSavingTab3 ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" /> Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} /> Actualizar Contenido Comercial
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </fieldset>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

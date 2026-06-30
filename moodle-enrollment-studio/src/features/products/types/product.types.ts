@@ -124,4 +124,35 @@ export interface UIProduct {
     hasDigital: boolean;
     hasPhysical: boolean;
   } | null;
+  frequentQuestions?: {
+    faq_id: string;
+    faq?: {
+      id: string;
+      question: string;
+      answer: string;
+      order?: number;
+    } | null;
+  }[];
+  relatedBenefits?: {
+    benefit_id: string;
+    benefits?: {
+      id: string;
+      name: string;
+      description?: string | null;
+      icon_name?: string | null;
+    } | null;
+  }[];
+  relatedCertifications?: {
+    certification_id: string;
+    certification?: {
+      id: string;
+      title: string;
+      description?: string | null;
+      image_url?: string | null;
+      issuing_authority?: string | null;
+      registry_validity?: string | null;
+      has_digital?: boolean | null;
+      has_physical?: boolean | null;
+    } | null;
+  }[];
 }

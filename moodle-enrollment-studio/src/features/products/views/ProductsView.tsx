@@ -28,8 +28,14 @@ import { es } from "date-fns/locale";
 import { cn } from "@/core/lib/utils";
 import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
 import { CustomTable } from "@/core/components/CustomTable";
+import { useAuthStore } from "@/store/useAuthStore";
+import { PRODUCT_PERMISSIONS, RoleAccess } from "../utils/productPermissions";
 
 const ProductsView = () => {
+  const user = useAuthStore((state) => state.user);
+  const role = (user?.role?.name || "ADMIN") as RoleAccess;
+  const permissions = PRODUCT_PERMISSIONS[role] || PRODUCT_PERMISSIONS["ADMIN"];
+
   const { 
     products, 
     isLoading, 
@@ -166,17 +172,19 @@ const ProductsView = () => {
                     e.stopPropagation();
                     actions.navigate(`/productos/${p.id}/editar`);
                   }} className="gap-2">
-                    <Plus size={14} /> Editar Producto
+                    <Plus size={14} /> {permissions.readonly ? "Ver Catálogo / Detalles" : "Editar Producto"}
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-destructive focus:bg-destructive focus:text-destructive-foreground gap-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      actions.handleDeleteRequest(p);
-                    }}
-                  >
-                    <AlertCircle size={14} /> Eliminar Producto
-                  </DropdownMenuItem>
+                  {role === "ADMIN" && (
+                    <DropdownMenuItem 
+                      className="text-destructive focus:bg-destructive focus:text-destructive-foreground gap-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        actions.handleDeleteRequest(p);
+                      }}
+                    >
+                      <AlertCircle size={14} /> Eliminar Producto
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -184,7 +192,7 @@ const ProductsView = () => {
         },
       },
     ],
-    [actions.navigate, actions.handleDeleteRequest]
+    [actions.navigate, actions.handleDeleteRequest, permissions, role]
   );
 
   return (
@@ -195,9 +203,11 @@ const ProductsView = () => {
           <h1 className="text-2xl font-bold text-foreground">Catálogo de Productos</h1>
           <p className="text-sm text-muted-foreground mt-1">Gestiona cursos, ediciones y precios del ecosistema académico.</p>
         </div>
-        <button onClick={() => actions.navigate("/productos/nuevo")} className="btn-primary">
-          <Plus size={18} /> Nuevo Producto
-        </button>
+        {permissions.canCreateProduct && (
+          <button onClick={() => actions.navigate("/productos/nuevo")} className="btn-primary">
+            <Plus size={18} /> Nuevo Producto
+          </button>
+        )}
       </div>
 
       {/* --- STATS DINÁMICOS --- */}
