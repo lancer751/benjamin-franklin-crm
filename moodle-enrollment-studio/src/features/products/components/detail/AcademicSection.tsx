@@ -3,6 +3,8 @@ import { Button } from "@/core/components/ui/button";
 import { BookOpen, Plus, User, Calendar, CheckCircle2, Clock } from "lucide-react";
 import DetailSection from "../shared/DetailSection";
 import InfoField from "../shared/InfoField";
+import { cn } from "@/core/lib/utils";
+import { translateEnum, EditionStatusMap, ModalityMap } from "@/core/utils/dictionaries";
 
 interface AcademicSectionProps {
   edition: any; 
@@ -41,7 +43,8 @@ const AcademicSection = ({
     );
   }
 
-  const hasCode = !!edition.edition_code;
+  const hasEditionNumber = edition.edition_number != null;
+  const hasStatus = !!edition.edition_status;
   const hasTeacher = !!edition.teacher_fullname;
   const hasModality = !!edition.modality;
   const hasStartDate = !!edition.start_date;
@@ -50,11 +53,10 @@ const AcademicSection = ({
   const hasClasses = edition.classes_number != null;
   const hasHours = edition.hours_amount != null;
 
-  const formattedModality = formatAttendanceMode(edition.modality);
   const formattedStartDate = formatDate(edition.start_date, "PPP");
   const formattedEndDate = formatDate(edition.end_date, "PPP");
 
-  const showHeaderBlock = hasCode || hasTeacher || hasModality;
+  const showHeaderBlock = hasEditionNumber || hasStatus || hasTeacher || hasModality;
   const showDateBlock = (hasStartDate && formattedStartDate && formattedStartDate !== "No definida") || (hasEndDate && formattedEndDate && formattedEndDate !== "No definida");
   const showDurationBlock = hasDuration || hasClasses || hasHours;
 
@@ -68,29 +70,56 @@ const AcademicSection = ({
     >
       <div className="space-y-6">
         {showHeaderBlock && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {hasCode && (
+          <div className="space-y-6">
+            {/* GRID SUPERIOR DE METADATOS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* COLUMNA 1 (Modalidad existente) */}
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Código Cohorte</span>
-                <p className="font-mono font-bold text-slate-900 text-xs bg-slate-100 px-2 py-1 rounded inline-block">
-                  {edition.edition_code}
-                </p>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                  MODALIDAD DE COHORTE
+                </span>
+                <span className="text-slate-900 font-semibold text-sm">
+                  {translateEnum(edition.modality, ModalityMap)}
+                </span>
               </div>
-            )}
 
+              {/* COLUMNA 2 (Nueva - Número de Edición) */}
+              <div className="space-y-1">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                  NÚMERO DE EDICIÓN
+                </span>
+                <span className="text-slate-900 font-semibold text-sm block">
+                  Edición #{edition.edition_number || 1}
+                </span>
+              </div>
+
+              {/* COLUMNA 3 (Nueva - Estado de la Edición) */}
+              <div className="space-y-1 flex flex-col justify-start">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                  ESTADO DE LA EDICIÓN
+                </span>
+                <div>
+                  <span className={cn(
+                    "rounded-md px-2.5 py-0.5 text-xs font-semibold inline-block w-fit mt-1 border",
+                    edition.edition_status === "OPEN" && "bg-emerald-50 text-emerald-700 border-emerald-100",
+                    edition.edition_status === "SCHEDULED" && "bg-sky-50 text-sky-700 border-sky-100",
+                    edition.edition_status !== "OPEN" && edition.edition_status !== "SCHEDULED" && "bg-slate-50 text-slate-700 border-slate-100"
+                  )}>
+                    {translateEnum(edition.edition_status, EditionStatusMap)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Profesor Principal (Fila secundaria) */}
             {hasTeacher && (
-              <InfoField 
-                label="Profesor Principal" 
-                value={edition.teacher_fullname} 
-                icon={User}
-              />
-            )}
-
-            {hasModality && (
-              <InfoField 
-                label="Modalidad de Cohorte" 
-                value={formattedModality} 
-              />
+              <div className="pt-2 border-t border-slate-100">
+                <InfoField 
+                  label="Profesor Principal" 
+                  value={edition.teacher_fullname} 
+                  icon={User}
+                />
+              </div>
             )}
           </div>
         )}

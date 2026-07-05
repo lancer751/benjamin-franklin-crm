@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { 
   Plus, GraduationCap, MoreVertical, Loader2, User, Calendar, 
-  AlertCircle, Clock 
+  AlertCircle, Clock, ShoppingBag, Globe, EyeOff, ClipboardList
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { useProductsView } from "../hooks/useProductsView";
@@ -45,6 +45,23 @@ const ProductsView = () => {
     actions, 
     modals 
   } = useProductsView();
+
+  const catalogStats = useMemo(() => {
+    let onSale = 0;
+    let published = 0;
+    let draft = 0;
+    products.forEach((p: any) => {
+      if (p.sales_status === "ON_SALE") onSale++;
+      else if (p.sales_status === "PUBLISHED") published++;
+      else if (p.sales_status === "DRAFT") draft++;
+    });
+    return {
+      onSale,
+      published,
+      draft,
+      total: products.length
+    };
+  }, [products]);
 
   const getModalityBadge = (modality: string) => {
     const mod = (modality || "").toUpperCase();
@@ -131,24 +148,78 @@ const ProductsView = () => {
         },
       },
       {
-        header: "Precios y Frescura",
+        header: "Precios",
         accessorKey: "prices",
         cell: ({ row }) => {
           const p = row.original;
-          return (
-            <div className="flex flex-col gap-1 text-right w-full md:w-auto">
-              <span className="text-base font-black text-slate-900">
-                S/ {Number(p.prices?.[0]?.cash_price || 0).toFixed(2)}
-              </span>
-              <div className="flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground font-medium">
-                <Clock size={10} />
-                {p.updated_at 
-                  ? `Actualizado hace ${formatDistanceToNow(new Date(p.updated_at), { locale: es })}`
-                  : "Sin registro de cambios"
-                }
+          const prices = p.prices || [];
+
+          if (prices.length === 0) {
+            return <span className="text-xs text-muted-foreground font-semibold">Sin precios</span>;
+          }
+
+          if (prices.length === 1) {
+            const firstPrice = prices[0];
+            const cashPrice = Number(firstPrice.cash_price || 0).toFixed(2);
+            const installmentPrice = Number(firstPrice.installment_price || 0).toFixed(2);
+            const enrollmentFee = Number(firstPrice.enrollment_fee || 0).toFixed(2);
+
+            return (
+              <div className="flex flex-col text-left">
+                <span className="font-bold text-sm text-emerald-600">
+                  S/ {cashPrice} Contado
+                </span>
+                <span className="text-[11px] text-muted-foreground mt-0.5">
+                  En cuotas: S/ {installmentPrice} • Matrícula: S/ {enrollmentFee}
+                </span>
               </div>
-            </div>
-          );
+            );
+          }
+
+          if (prices.length >= 2) {
+            const virtualPrice = prices.find((pr: any) => pr.attendance_mode === "VIRTUAL") || prices[0];
+            const presencialPrice = prices.find((pr: any) => pr.attendance_mode === "PRESENCIAL") || prices[1];
+
+            const vCash = Number(virtualPrice.cash_price || 0).toFixed(2);
+            const vInstallment = Number(virtualPrice.installment_price || 0).toFixed(2);
+            const vEnrollment = Number(virtualPrice.enrollment_fee || 0).toFixed(2);
+
+            const pCash = Number(presencialPrice.cash_price || 0).toFixed(2);
+            const pInstallment = Number(presencialPrice.installment_price || 0).toFixed(2);
+            const pEnrollment = Number(presencialPrice.enrollment_fee || 0).toFixed(2);
+
+            return (
+              <div className="flex flex-col gap-2 text-left">
+                {/* Bloque Virtual */}
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-xs text-emerald-600">
+                      S/ {vCash} Contado
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium">(Virtual)</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground mt-0.5">
+                    Cuotas: S/ {vInstallment} • Matrícula: S/ {vEnrollment}
+                  </span>
+                </div>
+
+                {/* Bloque Presencial */}
+                <div className="flex flex-col border-t border-slate-100 pt-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-xs text-indigo-600">
+                      S/ {pCash} Contado
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium">(Presencial)</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground mt-0.5">
+                    Cuotas: S/ {pInstallment} • Matrícula: S/ {pEnrollment}
+                  </span>
+                </div>
+              </div>
+            );
+          }
+
+          return null;
         },
       },
       {
@@ -212,33 +283,61 @@ const ProductsView = () => {
 
       {/* --- STATS DINÁMICOS --- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl bg-card border border-border p-5 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Productos Activos</p>
-          <p className="text-2xl font-bold text-foreground mt-2">
-            {isLoading ? <Loader2 size={24} className="animate-spin text-muted-foreground" /> : stats.activeProductsCount}
-          </p>
+        {/* Card 1: Productos en Venta */}
+        <div className="rounded-xl bg-card border border-border p-5 shadow-sm hover:border-slate-300 transition-colors flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Productos en Venta</p>
+            <p className="text-2xl font-bold text-slate-900 mt-2">
+              {isLoading ? <Loader2 size={24} className="animate-spin text-muted-foreground" /> : catalogStats.onSale}
+            </p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+            <ShoppingBag size={20} />
+          </div>
         </div>
-        
-        <div className="rounded-xl bg-card border border-border p-5 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ediciones con Precio</p>
-          <p className="text-2xl font-bold text-foreground mt-2">
-            {isLoading ? <Loader2 size={24} className="animate-spin text-muted-foreground" /> : stats.uniqueEditionsCount}
-          </p>
+
+        {/* Card 2: Productos Publicados */}
+        <div className="rounded-xl bg-card border border-border p-5 shadow-sm hover:border-slate-300 transition-colors flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Productos Publicados</p>
+            <p className="text-2xl font-bold text-slate-900 mt-2">
+              {isLoading ? <Loader2 size={24} className="animate-spin text-muted-foreground" /> : catalogStats.published}
+            </p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center text-sky-600 shrink-0">
+            <Globe size={20} />
+          </div>
         </div>
-        
-        <div className="rounded-xl bg-card border border-border p-5 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Inscritos</p>
-          <p className="text-2xl font-bold text-foreground mt-2">
-            {isLoading ? "-" : stats.totalInscritos}
-          </p>
-          <p className="text-[10px] text-muted-foreground mt-1">Módulo de ventas</p>
+
+        {/* Card 3: Productos en Borrador */}
+        <div className="rounded-xl bg-card border border-border p-5 shadow-sm hover:border-slate-300 transition-colors flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Productos en Borrador</p>
+            <p className="text-2xl font-bold text-slate-900 mt-2">
+              {isLoading ? <Loader2 size={24} className="animate-spin text-muted-foreground" /> : catalogStats.draft}
+            </p>
+            {!isLoading && catalogStats.draft > 5 && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 font-medium mt-1 animate-pulse bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                <AlertCircle size={10} /> Revisar borradores retenidos
+              </span>
+            )}
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+            <EyeOff size={20} />
+          </div>
         </div>
-        
-        <div className="rounded-xl bg-card border border-border p-5 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Precio Promedio</p>
-          <p className="text-2xl font-bold text-foreground mt-2">
-            {isLoading ? "-" : `S/ ${stats.averagePrice.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          </p>
+
+        {/* Card 4: Total Productos */}
+        <div className="rounded-xl bg-card border border-border p-5 shadow-sm hover:border-slate-300 transition-colors flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Productos</p>
+            <p className="text-2xl font-bold text-slate-900 mt-2">
+              {isLoading ? <Loader2 size={24} className="animate-spin text-muted-foreground" /> : catalogStats.total}
+            </p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
+            <ClipboardList size={20} />
+          </div>
         </div>
       </div>
 

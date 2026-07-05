@@ -3,6 +3,7 @@ import { Card } from "@/core/components/ui/card";
 import { DollarSign, Tag, Calendar, Sparkles, Layers } from "lucide-react";
 import PriceCard from "../shared/PriceCard";
 import DiscountBadge from "../shared/DiscountBadge";
+import { translateEnum, ModalityMap } from "@/core/utils/dictionaries";
 
 interface PricingCardListProps {
   product: any;
@@ -48,12 +49,22 @@ const PricingCardList = ({
               const formattedCash = formatCurrency(p.cash_price);
               const formattedEnrollment = formatCurrency(p.enrollment_fee);
               const formattedInstallment = formatCurrency(p.installment_price);
-              const formattedMode = formatAttendanceMode(p.attendance_mode);
+
+              const rawMode = p.attendance_mode;
+              const editionModalityRaw = product.edition?.modality;
+              const editionModality = typeof editionModalityRaw === 'object' ? editionModalityRaw.name : editionModalityRaw;
+
+              const resolvedMode = rawMode === "HEREDADO" 
+                ? editionModality 
+                : rawMode;
+
+              const translatedMode = translateEnum(resolvedMode, ModalityMap);
+              const uppercaseMode = (translatedMode || "").toUpperCase();
 
               return (
                 <PriceCard 
                   key={idx}
-                  attendanceMode={formattedMode}
+                  attendanceMode={uppercaseMode}
                   cashPrice={formattedCash}
                   enrollmentFee={formattedEnrollment}
                   installmentPrice={formattedInstallment}

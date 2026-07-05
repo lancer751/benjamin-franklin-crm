@@ -12,6 +12,8 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
     ? {
         id: data.edition.id || "",
         edition_code: data.edition.edition_code || "",
+        edition_number: data.edition.edition_number != null ? Number(data.edition.edition_number) : undefined,
+        edition_status: data.edition.edition_status || "",
         teacher_fullname: data.edition.teacher_fullname || "",
         modality: data.edition.modality || "",
         start_date: data.edition.start_date || "",

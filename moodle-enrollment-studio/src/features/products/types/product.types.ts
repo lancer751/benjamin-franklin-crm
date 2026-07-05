@@ -19,6 +19,8 @@ export interface BackendProductResponse {
   edition?: {
     id: string;
     edition_code?: string | null;
+    edition_number?: number | null;
+    edition_status?: string | null;
     teacher_fullname?: string | null;
     modality?: string | null;
     start_date?: string | null;
@@ -88,6 +90,8 @@ export interface UIProduct {
   edition: {
     id: string;
     edition_code: string;
+    edition_number?: number;
+    edition_status?: string;
     teacher_fullname: string;
     modality: string;
     start_date: string;

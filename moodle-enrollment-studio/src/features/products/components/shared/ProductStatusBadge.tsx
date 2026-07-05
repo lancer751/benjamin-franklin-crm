@@ -1,12 +1,12 @@
 import { Badge } from "@/core/components/ui/badge";
-import { ProductSalesStatusMap } from "@/core/utils/dictionaries";
+import { ProductSalesStatusMap, translateEnum } from "@/core/utils/dictionaries";
 
 interface ProductStatusBadgeProps {
   status: string;
 }
 
 const ProductStatusBadge = ({ status }: ProductStatusBadgeProps) => {
-  const label = ProductSalesStatusMap[status] || status || "Desconocido";
+  const label = translateEnum(status, ProductSalesStatusMap);
 
   switch (status) {
     case "ON_SALE":
