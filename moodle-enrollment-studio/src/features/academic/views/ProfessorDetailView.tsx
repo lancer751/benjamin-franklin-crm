@@ -251,30 +251,25 @@ export default function ProfessorDetailView() {
                       {professor.assigned_editions.map((ed: any, idx: number) => (
                         <div 
                           key={ed.edition_id || idx} 
-                          className="w-full bg-slate-50/60 border border-slate-100 hover:bg-slate-50 rounded-xl p-4 flex items-center justify-between gap-4 transition-all dark:bg-slate-900/10 dark:border-slate-800 dark:hover:bg-slate-900/20 cursor-pointer group"
+                          className="w-full bg-slate-50/60 border border-slate-100 hover:bg-slate-50 rounded-xl flex flex-col items-start justify-between min-h-[140px] p-5 transition-all dark:bg-slate-900/10 dark:border-slate-800 dark:hover:bg-slate-900/20 cursor-pointer group"
                           onClick={() => navigate(`/admin/academic/editions/${ed.edition_id}`)}
                         >
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <h5 className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-snug break-words">
-                              {ed.course?.name || "Curso Académico"}
-                            </h5>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1 font-semibold">
+                          {/* Bloque Superior */}
+                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-snug block w-full">
+                            {ed.course?.name || "Curso Académico"}
+                          </span>
+                          
+                          {/* Bloque Inferior */}
+                          <div className="w-full flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3 mt-auto">
+                            {/* Al lado izquierdo */}
+                            <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
                               <Calendar size={12} className="inline shrink-0" />
                               Edición N° {ed.edition_number || "-"}
-                            </p>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-mono text-xs bg-white border border-slate-200 dark:bg-slate-950 dark:border-slate-800 px-2 py-0.5 rounded-md text-slate-600 dark:text-slate-400 shrink-0 font-bold shadow-sm self-center">
-                              {ed.edition_code || "TBD"}
                             </span>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="opacity-0 group-hover:opacity-100 transition-opacity font-bold text-xs h-8 rounded-lg"
-                            >
-                              Ver Cohorte
-                            </Button>
+                            {/* Al lado derecho */}
+                            <span className="text-xs font-bold text-primary group-hover:underline">
+                              Ver Cohorte →
+                            </span>
                           </div>
                         </div>
                       ))}

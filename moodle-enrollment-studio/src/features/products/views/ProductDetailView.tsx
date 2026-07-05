@@ -23,6 +23,8 @@ import AcademicSection from "@/features/products/components/detail/AcademicSecti
 import PricingCardList from "@/features/products/components/detail/PricingCardList";
 import LinkEditionModal from "@/features/products/components/detail/LinkEditionModal";
 import DetailSection from "@/features/products/components/shared/DetailSection";
+import CertificationSection from "@/features/products/components/detail/CertificationSection";
+import BenefitsSection from "@/features/products/components/detail/BenefitsSection";
 
 const ProductDetailView = () => {
   const navigate = useNavigate();
@@ -81,16 +83,6 @@ const ProductDetailView = () => {
         }
       }));
 
-  // Preparación defensiva del certificado
-  const rawCert = product.certification || product.relatedCertifications?.[0]?.certification;
-  const certificate = rawCert ? {
-    title: rawCert.title || "",
-    description: rawCert.description || "",
-    imageUrl: (rawCert as any).imageUrl || (rawCert as any).image_url || "",
-    registryValidity: (rawCert as any).registryValidity || (rawCert as any).registry_validity || "",
-    hasDigital: !!((rawCert as any).hasDigital ?? (rawCert as any).has_digital ?? true),
-    hasPhysical: !!((rawCert as any).hasPhysical ?? (rawCert as any).has_physical ?? true),
-  } : null;
 
   return (
     <div className="space-y-6 pb-12 max-w-7xl mx-auto">
@@ -156,52 +148,8 @@ const ProductDetailView = () => {
                 onAssignClick={() => setModalMode('LINK')} 
               />
 
-              {/* CARD DE CERTIFICADO */}
-              {certificate && (
-                <Card className="shadow-sm border border-slate-200/80 rounded-2xl overflow-hidden hover:border-slate-350 hover:shadow-md transition-all duration-300 bg-white">
-                  <div className="bg-slate-50/50 border-b border-slate-100 p-4">
-                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <Award size={14} className="text-amber-500 animate-pulse" /> Certificación Oficial
-                    </h4>
-                  </div>
-                  <div className="p-5 flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-                    <div className="flex-1 space-y-3 w-full">
-                      <h5 className="text-sm font-bold text-slate-900 leading-snug">
-                        {certificate.title || "Diploma Oficial"}
-                      </h5>
-                      {certificate.description && (
-                        <p className="text-xs text-slate-500 leading-relaxed font-normal">
-                          {certificate.description}
-                        </p>
-                      )}
-                      {certificate.registryValidity && (
-                        <div className="text-[10px] text-slate-400 font-semibold bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 inline-block">
-                          Validez de Registro: <span className="text-slate-700">{certificate.registryValidity}</span>
-                        </div>
-                      )}
-                      {(certificate.hasDigital || certificate.hasPhysical) && (
-                        <div className="flex gap-2 pt-1">
-                          {certificate.hasDigital && (
-                            <span className="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-100 shadow-sm">Digital</span>
-                          )}
-                          {certificate.hasPhysical && (
-                            <span className="px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-100 shadow-sm">Físico</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    {certificate.imageUrl && (
-                      <div className="w-full sm:w-48 aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0 shadow-inner group relative">
-                        <img 
-                          src={certificate.imageUrl} 
-                          alt={certificate.title || "Diploma"} 
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
-                        />
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              )}
+              {/* SECCIÓN DE CERTIFICACIÓN */}
+              <CertificationSection product={product} />
             </div>
 
             {/* LADO DERECHO (1/3) */}
@@ -239,7 +187,7 @@ const ProductDetailView = () => {
                     className="w-full rounded-2xl py-6 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/10 transition-all duration-200 flex items-center justify-center gap-2 font-bold text-xs"
                     onClick={() => window.open(product.brochure_url, "_blank")}
                   >
-                    <Download size={15} /> Descargar Folleto Informativo
+                    <Download size={15} /> Descargar Brochure Informativo
                   </Button>
                 )}
               </div>
@@ -254,44 +202,8 @@ const ProductDetailView = () => {
           {/* INFORMACIÓN Y DESCRIPCIÓN COMERCIAL */}
           <CommercialSection product={product} />
 
-          {/* GRID DE BENEFICIOS DESTACADOS */}
-          <DetailSection 
-            title="Beneficios Destacados" 
-            description="Regalos comerciales y ventajas de valor agregado para el alumno."
-            icon={Sparkles}
-            iconBg="bg-amber-50"
-            iconColor="text-amber-600"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {product.relatedBenefits && product.relatedBenefits.length > 0 ? (
-                product.relatedBenefits.map((rb, idx) => {
-                  const desc = rb.benefits?.description || rb.benefits?.name || "";
-                  if (!desc) return null;
-                  return (
-                    <div key={idx} className="flex items-start gap-3 p-4 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-300 hover:bg-slate-50/50 transition-all duration-200">
-                      <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0 mt-0.5">
-                        <Sparkles size={12} />
-                      </div>
-                      <span className="text-xs font-bold text-slate-800 leading-normal">{desc}</span>
-                    </div>
-                  );
-                })
-              ) : product.benefits && product.benefits.length > 0 ? (
-                product.benefits.map((b, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-4 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-300 hover:bg-slate-50/50 transition-all duration-200">
-                    <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0 mt-0.5">
-                      <Sparkles size={12} />
-                    </div>
-                    <span className="text-xs font-bold text-slate-800 leading-normal">{b.description}</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs font-medium text-slate-400 italic text-center py-4 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 col-span-2">
-                  No hay beneficios destacados registrados
-                </p>
-              )}
-            </div>
-          </DetailSection>
+          {/* SECCIÓN DE BENEFICIOS */}
+          <BenefitsSection product={product} />
 
           {/* ACORDEÓN DE PREGUNTAS FRECUENTES (FAQs) */}
           <DetailSection 
