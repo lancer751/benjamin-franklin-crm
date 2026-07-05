@@ -377,6 +377,18 @@ const ProductFormView = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Lado Izquierdo: Nombre, Detalles Académicos y Campaña de Descuento */}
                 <div className="lg:col-span-2 space-y-6">
+                  <AcademicDetailsCard
+                    form={form}
+                    errors={errors}
+                    setFieldValue={setFieldValue}
+                    editions={editions}
+                    categories={categories}
+                    isLoadingEditions={isLoadingEditions}
+                    isLoadingCategories={isLoadingCategories}
+                    isEdit={isEdit}
+                    selectedEdition={selectedEdition}
+                  />
+
                   {/* Nombre Comercial Card */}
                   <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100">
@@ -405,18 +417,6 @@ const ProductFormView = () => {
                       {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
                     </CardContent>
                   </Card>
-
-                  <AcademicDetailsCard
-                    form={form}
-                    errors={errors}
-                    setFieldValue={setFieldValue}
-                    editions={editions}
-                    categories={categories}
-                    isLoadingEditions={isLoadingEditions}
-                    isLoadingCategories={isLoadingCategories}
-                    isEdit={isEdit}
-                    selectedEdition={selectedEdition}
-                  />
 
                   <DiscountSection
                     form={form as any}

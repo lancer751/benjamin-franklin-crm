@@ -46,7 +46,7 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
   }));
 
   // ✅ CORREGIDO: Mapeo de Certificación compatible con Prisma anidado
-  const certObj = data.relatedCertifications?.[0]?.certification || data.relatedCertifications?.[0];
+  const certObj = (data.relatedCertifications?.[0]?.certification || data.relatedCertifications?.[0]) as any;
   const certification = certObj
     ? {
         id: certObj.id || "",

@@ -16,15 +16,15 @@ export const priceSchema = z.object({
   attendance_mode: z.enum(["VIRTUAL", "PRESENCIAL", "HEREDADO"]),
   cash_price: z.preprocess(
     preprocessNumber,
-    z.number({ required_error: "El precio al contado es obligatorio" }).min(0, "Debe ser mayor o igual a 0")
+    z.number({ message: "El precio al contado es obligatorio" }).min(0, "Debe ser mayor o igual a 0")
   ),
   installment_price: z.preprocess(
     preprocessNumber,
-    z.number({ required_error: "El precio en cuotas es obligatorio" }).min(0, "Debe ser mayor o igual a 0")
+    z.number({ message: "El precio en cuotas es obligatorio" }).min(0, "Debe ser mayor o igual a 0")
   ),
   enrollment_fee: z.preprocess(
     preprocessNumber,
-    z.number({ required_error: "La matrícula es obligatoria" }).min(0, "Debe ser mayor o igual a 0")
+    z.number({ message: "La matrícula es obligatoria" }).min(0, "Debe ser mayor o igual a 0")
   ),
 });
 

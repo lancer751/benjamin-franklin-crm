@@ -31,7 +31,7 @@ const LinkEditionModal = ({ isOpen, onClose, onLink, isPending }: LinkEditionMod
     enabled: isOpen,
   });
 
-  const editions = editionsRes?.success ? editionsRes.data : [];
+  const editions = (editionsRes as any)?.success ? (editionsRes as any).data : [];
 
   const filteredEditions = editions.filter((e: any) => {
     const code = (e.edition_code || "").toLowerCase();

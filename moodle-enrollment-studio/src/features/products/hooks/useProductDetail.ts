@@ -20,7 +20,7 @@ export const useProductDetail = () => {
     enabled: !!id,
   });
 
-  const productRaw = productRes?.success ? (productRes.data as unknown as BackendProductResponse) : null;
+  const productRaw = (productRes as any)?.success ? ((productRes as any).data as unknown as BackendProductResponse) : null;
   const product: UIProduct | null = productRaw ? adaptProductToUI(productRaw) : null;
 
   const linkMutation = useMutation({

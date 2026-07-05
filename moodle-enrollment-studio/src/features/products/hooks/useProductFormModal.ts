@@ -68,7 +68,7 @@ const emptyData: ProductFormValues = {
   },
 };
 
-export const useProductFormModal = (open: boolean, onClose: () => void, initialData?: any) => {
+export const useProductFormModal = (open: boolean, onClose: (data?: any) => void, initialData?: any) => {
   const isEdit = !!initialData;
   const [form, setForm] = useState<ProductFormValues>(emptyData);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -147,7 +147,7 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     queryFn: getBenefits,
     enabled: open,
   });
-  const availableBenefits = benefitsRes?.data || [];
+  const availableBenefits = (benefitsRes as any)?.data || [];
 
   // Pre-poblar los 4 beneficios institucionales en modo creación una vez cargados de la BD
   useEffect(() => {
@@ -171,14 +171,15 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     }
   }, [availableBenefits, open, isEdit]);
 
-  const editions = editionsRes?.success ? editionsRes.data : [];
+  const editions = (editionsRes as any)?.success ? (editionsRes as any).data : [];
   const selectedEdition = editions.find((e: any) => e.id === form.edition_id);
 
   const categories = useMemo(() => {
-    if (!categoriesRes) return [];
-    if (Array.isArray(categoriesRes)) return categoriesRes;
-    if ("data" in categoriesRes && Array.isArray(categoriesRes.data)) {
-      return categoriesRes.data;
+    const res = categoriesRes as any;
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (res && typeof res === "object" && "data" in res && Array.isArray(res.data)) {
+      return res.data;
     }
     return [];
   }, [categoriesRes]);
@@ -187,13 +188,14 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
     if (!selectedEdition) return;
 
     const courseName = selectedEdition.course?.name || "";
-    const generatedName = courseName.trim();
-    const generatedSlug = generateSlug(generatedName);
-    const courseImage = selectedEdition.course?.image_url || "";
-    const defaultDesc = getCertificationDefaultText(generatedName);
-
+    const cleanCourseName = courseName.trim();
     const modalityRaw = (selectedEdition as any).modality;
     const editionModality = typeof modalityRaw === 'object' ? modalityRaw.name : modalityRaw;
+
+    const generatedName = `Curso de ${cleanCourseName} — Edición ${selectedEdition.edition_number}`;
+    const generatedSlug = generateSlug(generatedName);
+    const courseImage = selectedEdition.course?.image_url || "";
+    const defaultDesc = getCertificationDefaultText(cleanCourseName);
 
     setForm(prev => {
       let nextForm = { ...prev };
@@ -216,10 +218,10 @@ export const useProductFormModal = (open: boolean, onClose: () => void, initialD
       const hasNoCertDesc = !prev.certification?.description || prev.certification.description === "";
 
       if (!isEdit || hasNoCertTitle) {
-        nextForm.certification_title = `Certificado de Especialización en ${generatedName}`;
+        nextForm.certification_title = `Certificado de Especialización en ${cleanCourseName}`;
         nextForm.certification = {
           ...nextForm.certification,
-          title: `Certificado de Especialización en ${generatedName}`,
+          title: `Certificado de Especialización en ${cleanCourseName}`,
           issuing_authority: prev.certification?.issuing_authority || "Corporación Educativa Benjamin Franklin",
         } as any;
       }

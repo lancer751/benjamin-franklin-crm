@@ -4,6 +4,8 @@ import { Button } from "@/core/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/core/components/ui/command";
 import { Search, Check } from "lucide-react";
 import { cn } from "@/core/lib/utils";
+import { displayFriendlyDate } from "@/core/utils/date-utils";
+import { EditionStatusMap, translateEnum } from "@/core/utils/dictionaries";
 
 interface EditionComboboxProps {
   editionId: string | undefined;
@@ -25,12 +27,12 @@ const EditionCombobox = ({
   const [openCombobox, setOpenCombobox] = useState(false);
 
   const availableEditions = editions?.filter(
-    (edition) => edition.edition_status === "SCHEDULED"
+    (edition) => edition.edition_status === "SCHEDULED" || edition.edition_status === "OPEN"
   ) || [];
 
   const selectedEdition = editions.find((ed: any) => ed.id === editionId);
   const displayLabel = selectedEdition
-    ? `${selectedEdition.edition_code} - ${selectedEdition.course?.name || ""}`
+    ? `${selectedEdition.course?.name || ""} (Edición #${selectedEdition.edition_number})`
     : isLoadingEditions
       ? "Cargando..."
       : "Buscar edición por código o curso...";
@@ -63,28 +65,43 @@ const EditionCombobox = ({
             <CommandList className="max-h-[300px]">
               <CommandEmpty>No se encontraron ediciones.</CommandEmpty>
               <CommandGroup>
-                {availableEditions.map((ed: any) => (
-                  <CommandItem
-                    key={ed.id}
-                    value={`${ed.edition_code} ${ed.course?.name}`}
-                    onSelect={() => {
-                      setFieldValue("edition_id", ed.id);
-                      setOpenCombobox(false);
-                    }}
-                    className="flex items-center gap-2 py-3 cursor-pointer"
-                  >
-                    <Check
-                      className={cn(
-                        "h-4 w-4 text-primary",
-                        editionId === ed.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-bold text-slate-900">{ed.edition_code}</span>
-                      <span className="text-xs text-slate-500">{ed.course?.name}</span>
-                    </div>
-                  </CommandItem>
-                ))}
+                {availableEditions.map((ed: any) => {
+                  return (
+                    <CommandItem
+                      key={ed.id}
+                      value={`Edición #${ed.edition_number} ${ed.course?.name || ""}`}
+                      onSelect={() => {
+                        setFieldValue("edition_id", ed.id);
+                        const courseName = ed.course?.name || "";
+                        setFieldValue("name", `Curso de ${courseName} — Edición ${ed.edition_number}`);
+                        setOpenCombobox(false);
+                      }}
+                      className="flex items-center gap-2 py-3 cursor-pointer"
+                    >
+                      <Check
+                        className={cn(
+                          "h-4 w-4 text-primary",
+                          editionId === ed.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm text-slate-900 block">{ed.course?.name}</span>
+                        <div className="text-xs text-slate-500 flex gap-2 items-center mt-1">
+                          <span className="font-medium text-slate-700">Edición #{ed.edition_number}</span>
+                          <span className="text-slate-300">•</span>
+                          <span>Inicio: {displayFriendlyDate(ed.start_date)}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className={cn(
+                            "px-1.5 py-0.5 text-[10px] font-semibold rounded-md border",
+                            ed.edition_status === "SCHEDULED" ? "bg-sky-50 text-sky-700 border-sky-100" : "bg-emerald-50 text-emerald-700 border-emerald-100"
+                          )}>
+                            {translateEnum(ed.edition_status, EditionStatusMap)}
+                          </span>
+                        </div>
+                      </div>
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             </CommandList>
           </Command>
