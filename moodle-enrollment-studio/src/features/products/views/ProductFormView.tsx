@@ -385,7 +385,6 @@ const ProductFormView = () => {
                     categories={categories}
                     isLoadingEditions={isLoadingEditions}
                     isLoadingCategories={isLoadingCategories}
-                    isEdit={isEdit}
                     selectedEdition={selectedEdition}
                   />
 

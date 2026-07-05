@@ -13,7 +13,6 @@ interface EditionComboboxProps {
   setFieldValue: (key: string, value: any) => void;
   editions: any[];
   isLoadingEditions: boolean;
-  isEdit: boolean;
 }
 
 const EditionCombobox = ({
@@ -22,7 +21,6 @@ const EditionCombobox = ({
   setFieldValue,
   editions,
   isLoadingEditions,
-  isEdit,
 }: EditionComboboxProps) => {
   const [openCombobox, setOpenCombobox] = useState(false);
 
@@ -51,7 +49,7 @@ const EditionCombobox = ({
               !editionId && "text-muted-foreground",
               errors.edition_id && "border-destructive ring-1 ring-destructive"
             )}
-            disabled={isLoadingEditions || isEdit}
+            disabled={isLoadingEditions}
           >
             <span className="truncate">
               {displayLabel}

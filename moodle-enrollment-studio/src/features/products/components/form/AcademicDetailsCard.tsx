@@ -16,7 +16,6 @@ interface AcademicDetailsCardProps {
   categories: any[];
   isLoadingEditions: boolean;
   isLoadingCategories: boolean;
-  isEdit: boolean;
   selectedEdition: any;
 }
 
@@ -28,7 +27,6 @@ const AcademicDetailsCard = ({
   categories,
   isLoadingEditions,
   isLoadingCategories,
-  isEdit,
   selectedEdition,
 }: AcademicDetailsCardProps) => {
   return (
@@ -51,7 +49,6 @@ const AcademicDetailsCard = ({
           setFieldValue={setFieldValue}
           editions={editions}
           isLoadingEditions={isLoadingEditions}
-          isEdit={isEdit}
         />
 
         <div>
