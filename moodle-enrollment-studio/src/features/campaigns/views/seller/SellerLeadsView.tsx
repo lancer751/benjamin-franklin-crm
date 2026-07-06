@@ -51,31 +51,34 @@ import {
 import { format } from "date-fns";
 
 // Mapeo de columnas y configuraciones de estilo
-const STAGES = [
-  { id: "ACTIVE", label: "Nuevo / Activo", color: "border-blue-200 bg-blue-50/20 text-blue-700 dark:text-blue-400 dark:bg-blue-950/10", dotColor: "bg-blue-500" },
-  { id: "stage_Volver_a_llamar", label: "Volver a Llamar", color: "border-amber-200 bg-amber-50/20 text-amber-700 dark:text-amber-400 dark:bg-amber-950/10", dotColor: "bg-amber-500" },
-  { id: "stage_Muy_interesado", label: "Muy Interesado", color: "border-purple-200 bg-purple-50/20 text-purple-700 dark:text-purple-400 dark:bg-purple-950/10", dotColor: "bg-purple-500" },
-  { id: "stage_No_contesta", label: "No Contesta", color: "border-orange-200 bg-orange-50/20 text-orange-700 dark:text-orange-400 dark:bg-orange-950/10", dotColor: "bg-orange-500" },
-  { id: "stage_No_interesado", label: "No Interesado", color: "border-rose-200 bg-rose-50/20 text-rose-700 dark:text-rose-400 dark:bg-rose-950/10", dotColor: "bg-rose-500" }
+export const FUNNEL_COLUMNS = [
+  { id: "NUEVO", label: "NUEVO", backendStatuses: ["NEW"], borderStyle: "border-blue-200 bg-blue-50/20 text-blue-700 dark:text-blue-400 dark:bg-blue-950/10", dotColor: "bg-blue-500" },
+  { id: "CONTACTADO", label: "CONTACTADO", backendStatuses: ["CONTACTED", "FOLLOW_UP"], borderStyle: "border-amber-200 bg-amber-50/20 text-amber-700 dark:text-amber-400 dark:bg-amber-950/10", dotColor: "bg-amber-500" },
+  { id: "NO_CONTACTADO", label: "NO CONTACTADO", backendStatuses: ["ATTEMPTED_CONTACT"], borderStyle: "border-purple-200 bg-purple-50/20 text-purple-700 dark:text-purple-400 dark:bg-purple-950/10", dotColor: "bg-purple-500" },
+  { id: "PREVENTA_CITA", label: "PREVENTA - CITA", backendStatuses: ["QUALIFIED", "ON_HOLD"], borderStyle: "border-indigo-200 bg-indigo-50/20 text-indigo-700 dark:text-indigo-400 dark:bg-indigo-950/10", dotColor: "bg-indigo-500" },
+  { id: "MATRICULADO", label: "MATRICULADO", backendStatuses: ["WON"], borderStyle: "border-2 border-emerald-350 bg-emerald-50/30 text-emerald-800 dark:text-emerald-450 dark:bg-emerald-950/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]", dotColor: "bg-emerald-500" },
+  { id: "DESCARTADO", label: "DESCARTADO", backendStatuses: ["LOST", "UNQUALIFIED"], borderStyle: "border-rose-200 bg-rose-50/20 text-rose-700 dark:text-rose-400 dark:bg-rose-950/10", dotColor: "bg-rose-500" }
 ];
 
 const KANBAN_STAGE_TO_ENUM: Record<string, string> = {
-  ACTIVE: "NEW",
-  stage_Nuevo: "NEW",
-  stage_Volver_a_llamar: "FOLLOW_UP",
-  stage_Muy_interesado: "QUALIFIED",
-  stage_No_contesta: "ATTEMPTED_CONTACT",
-  stage_No_interesado: "LOST"
+  NUEVO: "NEW",
+  CONTACTADO: "CONTACTED",
+  NO_CONTACTADO: "ATTEMPTED_CONTACT",
+  PREVENTA_CITA: "QUALIFIED",
+  MATRICULADO: "WON",
+  DESCARTADO: "LOST",
 };
 
 const ENUM_TO_KANBAN_STAGE: Record<string, string> = {
-  NEW: "ACTIVE",
-  FOLLOW_UP: "stage_Volver_a_llamar",
-  QUALIFIED: "stage_Muy_interesado",
-  ATTEMPTED_CONTACT: "stage_No_contesta",
-  LOST: "stage_No_interesado",
-  UNQUALIFIED: "stage_No_interesado",
-  WON: "stage_Muy_interesado"
+  NEW: "NUEVO",
+  CONTACTED: "CONTACTADO",
+  FOLLOW_UP: "CONTACTADO",
+  ATTEMPTED_CONTACT: "NO_CONTACTADO",
+  QUALIFIED: "PREVENTA_CITA",
+  ON_HOLD: "PREVENTA_CITA",
+  WON: "MATRICULADO",
+  LOST: "DESCARTADO",
+  UNQUALIFIED: "DESCARTADO",
 };
   
 const typeIcons: Record<string, { icon: any; color: string; bg: string }> = {
@@ -357,20 +360,21 @@ const SellerLeadsView = () => {
   // Agrupamiento por etapa
   const leadsByStage = useMemo(() => {
     const groups: Record<string, any[]> = {
-      ACTIVE: [],
-      stage_Volver_a_llamar: [],
-      stage_Muy_interesado: [],
-      stage_No_contesta: [],
-      stage_No_interesado: []
+      NUEVO: [],
+      CONTACTADO: [],
+      NO_CONTACTADO: [],
+      PREVENTA_CITA: [],
+      MATRICULADO: [],
+      DESCARTADO: []
     };
 
     filteredLeads.forEach((lead: any) => {
-      const status = lead.lead_status || "ACTIVE";
-      const mappedStage = ENUM_TO_KANBAN_STAGE[status] || status;
+      const status = lead.lead_status || "NEW";
+      const mappedStage = ENUM_TO_KANBAN_STAGE[status] || "NUEVO";
       if (groups[mappedStage]) {
         groups[mappedStage].push(lead);
       } else {
-        groups["ACTIVE"].push(lead);
+        groups["NUEVO"].push(lead);
       }
     });
 
@@ -448,12 +452,12 @@ const SellerLeadsView = () => {
 
       {/* Kanban Board Funnel Lanes */}
       {isLoadingLeads ? (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {STAGES.map((stage) => (
-            <div key={stage.id} className="rounded-2xl border border-border p-4 bg-slate-50/20 space-y-4">
-              <Skeleton className="h-6 w-2/3 mb-4" />
-              <Skeleton className="h-24 w-full rounded-xl" />
-              <Skeleton className="h-24 w-full rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full animate-pulse">
+          {FUNNEL_COLUMNS.map((stage) => (
+            <div key={stage.id} className="rounded-2xl border border-border p-4 bg-slate-50/20 space-y-4 h-[70vh]">
+              <Skeleton className="h-6 w-2/3 mb-4 animate-none" />
+              <Skeleton className="h-24 w-full rounded-xl animate-none" />
+              <Skeleton className="h-24 w-full rounded-xl animate-none" />
             </div>
           ))}
         </div>
@@ -462,22 +466,25 @@ const SellerLeadsView = () => {
           <p className="font-bold">Error al conectar con el servidor para obtener los miembros de la campaña.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
-          {STAGES.map((stage) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 items-start w-full">
+          {FUNNEL_COLUMNS.map((stage) => {
             const laneLeads = leadsByStage[stage.id] || [];
 
             return (
               <div
                 key={stage.id}
-                className="flex flex-col rounded-2xl border border-border bg-card overflow-hidden shadow-sm h-[70vh] hover:shadow transition-all duration-300"
+                className={cn(
+                  "flex flex-col rounded-2xl border bg-card overflow-hidden shadow-sm h-[70vh] hover:shadow transition-all duration-300",
+                  stage.id === "MATRICULADO" ? "border-emerald-350 dark:border-emerald-500/30 ring-1 ring-emerald-500/10 shadow-[0_0_8px_rgba(16,185,129,0.05)]" : "border-border"
+                )}
               >
                 {/* Lane Header */}
-                <div className={cn("px-4 py-3.5 border-b flex items-center justify-between font-bold text-xs tracking-wider uppercase", stage.color)}>
+                <div className={cn("px-4 py-3.5 border-b flex items-center justify-between font-bold text-xs tracking-wider uppercase", stage.borderStyle)}>
                   <div className="flex items-center gap-2">
                     <span className={cn("h-2 w-2 rounded-full", stage.dotColor)} />
                     {stage.label}
                   </div>
-                  <span className="bg-white/40 dark:bg-black/20 text-foreground px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+                  <span className="bg-white/40 dark:bg-black/20 text-foreground px-2 py-0.5 rounded-full text-[10px] font-extrabold font-mono">
                     {laneLeads.length}
                   </span>
                 </div>
@@ -534,12 +541,12 @@ const SellerLeadsView = () => {
                           >
                             <div className="w-full">
                               <select
-                                value={ENUM_TO_KANBAN_STAGE[lead.lead_status] || lead.lead_status || "ACTIVE"}
+                                value={ENUM_TO_KANBAN_STAGE[lead.lead_status] || lead.lead_status || "NUEVO"}
                                 onChange={(e) => handleStatusChange(memberId, e.target.value)}
                                 className="w-full h-7 px-1.5 rounded-lg border border-border bg-slate-50 dark:bg-slate-900 text-[10px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer shadow-sm"
                                 disabled={updateStatusMutation.isPending}
                               >
-                                {STAGES.map((s) => (
+                                {FUNNEL_COLUMNS.map((s) => (
                                   <option key={s.id} value={s.id}>
                                     Mover a: {s.label}
                                   </option>
@@ -608,16 +615,20 @@ const SellerLeadsView = () => {
                   <div className="space-y-1">
                     <Label className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Estado</Label>
                     <select
-                      value={ENUM_TO_KANBAN_STAGE[selectedLead.lead_status] || selectedLead.lead_status || "ACTIVE"}
+                      value={ENUM_TO_KANBAN_STAGE[selectedLead.lead_status] || selectedLead.lead_status || "NUEVO"}
                       onChange={(e) => {
                         const newStatus = e.target.value;
                         handleStatusChange(selectedMemberId, newStatus);
-                        setSelectedLead((prev: any) => prev ? { ...prev, lead_status: newStatus } : null);
+                        setSelectedLead((prev: any) => {
+                          if (!prev) return null;
+                          const nextStatusEnum = KANBAN_STAGE_TO_ENUM[newStatus] || newStatus;
+                          return { ...prev, lead_status: nextStatusEnum };
+                        });
                       }}
                       className="w-full h-8 px-2 rounded-lg border border-border bg-slate-50 dark:bg-slate-900 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer shadow-sm"
                       disabled={updateStatusMutation.isPending}
                     >
-                      {STAGES.map((s) => (
+                      {FUNNEL_COLUMNS.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.label}
                         </option>
