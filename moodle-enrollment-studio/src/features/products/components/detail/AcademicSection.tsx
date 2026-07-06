@@ -11,13 +11,15 @@ interface AcademicSectionProps {
   formatAttendanceMode: (m: any) => string | undefined; 
   formatDate: (d: any, f?: string) => string | undefined; 
   onAssignClick: () => void;
+  readonly?: boolean;
 }
 
 const AcademicSection = ({ 
   edition, 
   formatAttendanceMode, 
   formatDate, 
-  onAssignClick 
+  onAssignClick,
+  readonly
 }: AcademicSectionProps) => {
   if (!edition) {
     return (
@@ -31,14 +33,16 @@ const AcademicSection = ({
             Este producto comercial no cuenta con un vínculo a cohorte académica. Asigna una edición para programar docentes y calendarios.
           </p>
         </div>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          className="rounded-xl mt-1 text-[11px] font-bold border-slate-200 bg-white hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all duration-200 shadow-sm"
-          onClick={onAssignClick}
-        >
-          <Plus size={12} className="mr-1" /> Asignar Edición
-        </Button>
+        {!readonly && (
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="rounded-xl mt-1 text-[11px] font-bold border-slate-200 bg-white hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all duration-200 shadow-sm"
+            onClick={onAssignClick}
+          >
+            <Plus size={12} className="mr-1" /> Asignar Edición
+          </Button>
+        )}
       </div>
     );
   }

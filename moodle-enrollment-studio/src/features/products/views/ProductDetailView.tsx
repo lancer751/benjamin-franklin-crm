@@ -16,6 +16,8 @@ import { Card } from "@/core/components/ui/card";
 import { Button } from "@/core/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/core/components/ui/tabs";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/core/components/ui/accordion";
+import { useAuthStore } from "@/store/useAuthStore";
+import { PRODUCT_PERMISSIONS, RoleAccess } from "../utils/productPermissions";
 
 import ProductPageHeader from "@/features/products/components/shared/ProductPageHeader";
 import CommercialSection from "@/features/products/components/detail/CommercialSection";
@@ -28,6 +30,10 @@ import BenefitsSection from "@/features/products/components/detail/BenefitsSecti
 
 const ProductDetailView = () => {
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const currentRole = user?.role?.name;
+  const permissions = currentRole ? PRODUCT_PERMISSIONS[currentRole as RoleAccess] : undefined;
+
   const { product, isLoading, isError, actions } = useProductDetail();
   const { 
     formatCurrency, 
@@ -108,12 +114,14 @@ const ProductDetailView = () => {
             >
               Volver al catálogo
             </Button>
-            <Button 
-              className="rounded-xl btn-primary gap-2 shadow-md shadow-primary/20"
-              onClick={handleEditRedirect}
-            >
-              <Edit size={16} /> Editar Producto
-            </Button>
+            {permissions?.canEditAll && (
+              <Button 
+                className="rounded-xl btn-primary gap-2 shadow-md shadow-primary/20"
+                onClick={handleEditRedirect}
+              >
+                <Edit size={16} /> Editar Producto
+              </Button>
+            )}
           </>
         }
       />
@@ -146,6 +154,7 @@ const ProductDetailView = () => {
                 formatAttendanceMode={formatAttendanceMode} 
                 formatDate={formatDate}
                 onAssignClick={() => setModalMode('LINK')} 
+                readonly={permissions?.readonly}
               />
 
               {/* SECCIÓN DE CERTIFICACIÓN */}

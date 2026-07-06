@@ -227,6 +227,9 @@ const ProductsView = () => {
         id: "actions",
         cell: ({ row }) => {
           const p = row.original;
+          if (role === "SALES_REP") {
+            return null;
+          }
           return (
             <div className="flex items-center justify-end w-full md:w-auto" onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>
@@ -274,7 +277,7 @@ const ProductsView = () => {
           <h1 className="text-2xl font-bold text-foreground">Catálogo de Productos</h1>
           <p className="text-sm text-muted-foreground mt-1">Gestiona cursos, ediciones y precios del ecosistema académico.</p>
         </div>
-        {permissions.canCreateProduct && (
+        {permissions?.canCreateProduct && (
           <button onClick={() => actions.navigate("/productos/nuevo")} className="btn-primary">
             <Plus size={18} /> Nuevo Producto
           </button>
