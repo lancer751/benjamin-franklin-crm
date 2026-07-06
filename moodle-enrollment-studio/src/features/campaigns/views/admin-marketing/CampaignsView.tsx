@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/core/components/ui/button";
 import DeleteConfirmModal from "@/core/components/DeleteConfirmModal";
 import CampaignFormModal from "@/features/campaigns/components/CampaignFormModal";
@@ -25,6 +26,8 @@ const CampaignsView = () => {
     activeCampaigns,
     spentPercent,
   } = useCampaigns();
+
+  const [campaignToEdit, setCampaignToEdit] = useState<any | null>(null);
 
   return (
     <div className="space-y-6">
@@ -65,6 +68,7 @@ const CampaignsView = () => {
         itemsPerPage={itemsPerPage}
         onPageChange={setCurrentPage}
         onDeleteClick={setCampaignToDelete}
+        onEditClick={(c) => setCampaignToEdit(c)}
       />
 
       {/* Modal de confirmación para eliminar */}
@@ -81,8 +85,12 @@ const CampaignsView = () => {
       />
 
       <CampaignFormModal
-        open={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        open={isCreateModalOpen || !!campaignToEdit}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setCampaignToEdit(null);
+        }}
+        initialData={campaignToEdit}
       />
     </div>
   );

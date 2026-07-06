@@ -39,6 +39,7 @@ interface CampaignsTableProps {
   itemsPerPage: number;
   onPageChange: (page: number | ((prev: number) => number)) => void;
   onDeleteClick: (campaign: { id: string; name: string }) => void;
+  onEditClick?: (campaign: any) => void;
 }
 
 const platformColors: Record<string, string> = {
@@ -78,6 +79,7 @@ export const CampaignsTable = ({
   itemsPerPage,
   onPageChange,
   onDeleteClick,
+  onEditClick,
 }: CampaignsTableProps) => {
   const navigate = useNavigate();
 
@@ -314,16 +316,12 @@ export const CampaignsTable = ({
                             Ver detalles
                       </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => {
-                              toast.info(
-                                "Para editar la configuración, ingresa a la vista de detalles de la campaña."
-                              );
-                            }}
+                            onClick={() => onEditClick?.(c)}
                             className="flex items-center gap-2 text-xs"
                           >
                             <Pencil size={14} className="text-muted-foreground" />
                             Editar configuración
-                      </DropdownMenuItem>
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => onDeleteClick({ id: c.id, name: c.name })}
                             className="flex items-center gap-2 text-xs text-destructive focus:bg-destructive/10 focus:text-destructive animate-in fade-in"

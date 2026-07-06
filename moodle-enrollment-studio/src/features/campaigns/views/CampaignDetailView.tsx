@@ -186,6 +186,41 @@ const CampaignDetailView = () => {
     deleteCampaignMutation,
   } = useCampaignDetail(id);
 
+  const campaignMetrics = useMemo(() => {
+    if (!campaign) {
+      return {
+        totalOrders: 0,
+        totalLeads: 0,
+        cashPrice: 0,
+        conversionRate: "0.0",
+        totalRevenue: 0,
+      };
+    }
+
+    const totalOrders = campaign.sellersOnCampaign?.reduce(
+      (acc: number, curr: any) => acc + (curr.seller?.total_orders || 0),
+      0
+    ) || 0;
+
+    const totalLeads = campaign._count?.leadsOnCampaign || 0;
+
+    const cashPrice = parseFloat(campaign.relatedProduct?.prices?.[0]?.cash_price || "0");
+
+    const conversionRate = totalLeads > 0 
+      ? ((totalOrders / totalLeads) * 100).toFixed(1) 
+      : "0.0";
+
+    const totalRevenue = totalOrders * cashPrice;
+
+    return {
+      totalOrders,
+      totalLeads,
+      cashPrice,
+      conversionRate,
+      totalRevenue,
+    };
+  }, [campaign]);
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-muted-foreground">
@@ -219,31 +254,6 @@ const CampaignDetailView = () => {
   // Obtener IDs de vendedores actualmente asignados
   const sellersList = campaign.sellersOnCampaign || campaign.sellers || [];
   const assignedSellerIds = sellersList.map((s: any) => s.seller_id || s.seller?.id || s.id) || [];
-
-  const campaignMetrics = useMemo(() => {
-    const totalOrders = campaign.sellersOnCampaign?.reduce(
-      (acc: number, curr: any) => acc + (curr.seller?.total_orders || 0),
-      0
-    ) || 0;
-
-    const totalLeads = campaign._count?.leadsOnCampaign || 0;
-
-    const cashPrice = parseFloat(campaign.relatedProduct?.prices?.[0]?.cash_price || "0");
-
-    const conversionRate = totalLeads > 0 
-      ? ((totalOrders / totalLeads) * 100).toFixed(1) 
-      : "0.0";
-
-    const totalRevenue = totalOrders * cashPrice;
-
-    return {
-      totalOrders,
-      totalLeads,
-      cashPrice,
-      conversionRate,
-      totalRevenue,
-    };
-  }, [campaign]);
 
   const supervisor = campaign.assignedSupervisor || campaign.supervisor;
   const supervisorUser = supervisor?.user;

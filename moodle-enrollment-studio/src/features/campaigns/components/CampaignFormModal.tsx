@@ -1,10 +1,11 @@
+import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Megaphone, DollarSign, Loader2 } from "lucide-react";
 import { CreateCampaignSchema, type CreateCampaignInput } from "shared";
-import { createCampaign } from "../services/campaignService";
+import { createCampaign, updateCampaign } from "../services/campaignService";
 import { getProducts } from "@/features/products/services/productService";
 import { getSupervisors } from "@/features/users/services/userService";
 import { CampaignStatusMap, CampaignPlatformMap } from "@/core/utils/dictionaries";
@@ -34,9 +35,10 @@ import { cn } from "@/core/lib/utils";
 interface CampaignFormModalProps {
   open: boolean;
   onClose: () => void;
+  initialData?: any;
 }
 
-export default function CampaignFormModal({ open, onClose }: CampaignFormModalProps) {
+export default function CampaignFormModal({ open, onClose, initialData }: CampaignFormModalProps) {
   const queryClient = useQueryClient();
 
   // 1. Cargar Productos Comerciales Reales
@@ -85,17 +87,53 @@ export default function CampaignFormModal({ open, onClose }: CampaignFormModalPr
     },
   });
 
+  useEffect(() => {
+    if (initialData && open) {
+      reset({
+        campaing_name: initialData.name || initialData.campaing_name || "",
+        initial_budget: parseFloat(initialData.initial_budget || "0"),
+        start_date: initialData.start_date ? new Date(initialData.start_date).toISOString().split('T')[0] : undefined,
+        end_date: initialData.end_date ? new Date(initialData.end_date).toISOString().split('T')[0] : null,
+        platform: initialData.platform || "FACEBOOK",
+        is_organic: !!initialData.is_organic,
+        status: initialData.status || "ACTIVE",
+        product_id: initialData.product_id || initialData.product?.id || initialData.relatedProduct?.id || "",
+        supervisor_id: initialData.supervisor_id || "",
+        meta_form_id: initialData.meta_form_id || "",
+      });
+    } else if (open) {
+      reset({
+        campaing_name: "",
+        initial_budget: 0,
+        start_date: undefined,
+        end_date: null,
+        platform: "FACEBOOK",
+        is_organic: false,
+        status: "ACTIVE",
+        product_id: "",
+        supervisor_id: "",
+        meta_form_id: "",
+      });
+    }
+  }, [initialData, open, reset]);
+
   const mutation = useMutation({
-    mutationFn: createCampaign,
+    mutationFn: async (data: CreateCampaignInput) => {
+      if (initialData?.id) {
+        return await updateCampaign(initialData.id, data as any);
+      } else {
+        return await createCampaign(data);
+      }
+    },
     onSuccess: () => {
-      toast.success("Campaña creada exitosamente");
+      toast.success(initialData?.id ? "Campaña actualizada exitosamente" : "Campaña creada exitosamente");
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       onClose();
       reset();
     },
     onError: (err) => {
       console.error(err);
-      toast.error("Hubo un error al crear la campaña.");
+      toast.error(initialData?.id ? "Hubo un error al actualizar la campaña." : "Hubo un error al crear la campaña.");
     },
   });
 
@@ -121,9 +159,13 @@ export default function CampaignFormModal({ open, onClose }: CampaignFormModalPr
               <Megaphone className="h-6 w-6" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold text-foreground">Crear Nueva Campaña</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-foreground">
+                {initialData?.id ? "Editar Campaña" : "Crear Nueva Campaña"}
+              </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-0.5">
-                Ingresa los datos comerciales de la campaña para su gestión y asignación local.
+                {initialData?.id
+                  ? "Modifica los datos comerciales de la campaña seleccionada."
+                  : "Ingresa los datos comerciales de la campaña para su gestión y asignación local."}
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -173,7 +215,7 @@ export default function CampaignFormModal({ open, onClose }: CampaignFormModalPr
             ) : (
               /* Inputs de Formulario reales */
               <div className="space-y-5">
-                {/* Fila 1: Nombre de la Campaña */}
+                {/* Nombre de la Campaña */}
                 <div className="space-y-1.5 col-span-full">
                   <Label htmlFor="campaing_name" className="text-xs font-semibold text-slate-700 dark:text-slate-350">
                     Nombre de la Campaña <span className="text-destructive">*</span>
@@ -192,7 +234,7 @@ export default function CampaignFormModal({ open, onClose }: CampaignFormModalPr
                   )}
                 </div>
 
-                {/* Fila 2: Producto Relacionado y Supervisor Responsable */}
+                {/* Producto Relacionado y Supervisor Responsable */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700 dark:text-slate-350">
@@ -264,7 +306,7 @@ export default function CampaignFormModal({ open, onClose }: CampaignFormModalPr
                   </div>
                 </div>
 
-                {/* Fila 3: Plataforma y Presupuesto Inicial */}
+                {/* Plataforma y Presupuesto Inicial */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700 dark:text-slate-350">
@@ -318,7 +360,7 @@ export default function CampaignFormModal({ open, onClose }: CampaignFormModalPr
                   </div>
                 </div>
 
-                {/* Fila 4: Fecha de Inicio y Fecha de Fin */}
+                {/* Fecha de Inicio y Fecha de Fin */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="start_date" className="text-xs font-semibold text-slate-700 dark:text-slate-350">
@@ -359,7 +401,7 @@ export default function CampaignFormModal({ open, onClose }: CampaignFormModalPr
                   </div>
                 </div>
 
-                {/* Fila 5: ID de Formulario de Meta */}
+                {/* ID de Formulario de Meta */}
                 <div className="space-y-1.5">
                   <Label htmlFor="meta_form_id" className="text-xs font-semibold text-slate-700 dark:text-slate-350">
                     ID Formulario de Meta (Opcional)
@@ -375,7 +417,7 @@ export default function CampaignFormModal({ open, onClose }: CampaignFormModalPr
                   />
                 </div>
 
-                {/* Fila 6: Estado de Campaña y Tráfico Orgánico */}
+                {/* Estado de Campaña y Tráfico Orgánico */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center pt-2">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700 dark:text-slate-350">
@@ -455,7 +497,7 @@ export default function CampaignFormModal({ open, onClose }: CampaignFormModalPr
               className="h-9 px-5 rounded-xl text-xs flex items-center gap-2"
             >
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isPending ? "Guardando..." : "Crear Campaña"}
+              {isPending ? "Guardando..." : (initialData?.id ? "Guardar Cambios" : "Crear Campaña")}
             </Button>
           </div>
         </form>
