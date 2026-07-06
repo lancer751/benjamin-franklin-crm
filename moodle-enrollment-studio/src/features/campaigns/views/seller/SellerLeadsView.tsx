@@ -10,7 +10,6 @@ import {
   getMemberInteractions,
   createMemberInteraction,
   getMemberTasks,
-  createMemberTask,
   updateMemberTask,
   deleteMemberTask
 } from "@/features/leads/services/leadService";
@@ -18,37 +17,17 @@ import { adaptCampaignMembers, unpackLeads } from "@/features/leads/adapters/lea
 import { Button } from "@/core/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Input } from "@/core/components/ui/input";
-import { Label } from "@/core/components/ui/label";
-import { Textarea } from "@/core/components/ui/textarea";
 import { Skeleton } from "@/core/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/core/lib/utils";
 import { 
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription
-} from "@/core/components/ui/sheet";
-import { 
   Users, 
   Search, 
-  Calendar, 
-  Phone, 
-  Mail, 
-  Edit, 
-  MessageSquare,
-  MessageCircle,
-  Loader2, 
   RefreshCw,
   UserCheck,
-  Plus,
-  CheckCircle2,
-  Clock,
-  ClipboardList,
-  Trash2
 } from "lucide-react";
-import { format } from "date-fns";
+import KanbanColumn from "./components/KanbanColumn";
+import LeadDetailsSheet from "./components/LeadDetailsSheet";
 
 // Mapeo de columnas y configuraciones de estilo
 export const FUNNEL_COLUMNS = [
@@ -60,7 +39,7 @@ export const FUNNEL_COLUMNS = [
   { id: "DESCARTADO", label: "DESCARTADO", backendStatuses: ["LOST", "UNQUALIFIED"], borderStyle: "border-rose-200 bg-rose-50/20 text-rose-700 dark:text-rose-400 dark:bg-rose-950/10", dotColor: "bg-rose-500" }
 ];
 
-const KANBAN_STAGE_TO_ENUM: Record<string, string> = {
+export const KANBAN_STAGE_TO_ENUM: Record<string, string> = {
   NUEVO: "NEW",
   CONTACTADO: "CONTACTED",
   NO_CONTACTADO: "ATTEMPTED_CONTACT",
@@ -69,7 +48,7 @@ const KANBAN_STAGE_TO_ENUM: Record<string, string> = {
   DESCARTADO: "LOST",
 };
 
-const ENUM_TO_KANBAN_STAGE: Record<string, string> = {
+export const ENUM_TO_KANBAN_STAGE: Record<string, string> = {
   NEW: "NUEVO",
   CONTACTED: "CONTACTADO",
   FOLLOW_UP: "CONTACTADO",
@@ -79,13 +58,6 @@ const ENUM_TO_KANBAN_STAGE: Record<string, string> = {
   WON: "MATRICULADO",
   LOST: "DESCARTADO",
   UNQUALIFIED: "DESCARTADO",
-};
-  
-const typeIcons: Record<string, { icon: any; color: string; bg: string }> = {
-  CALL: { icon: Phone, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/20" },
-  WHATSAPP: { icon: MessageSquare, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/20" },
-  EMAIL: { icon: Mail, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/20" },
-  MEETING: { icon: Calendar, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-950/20" },
 };
 
 const getPhone = (lead: any) => {
@@ -108,31 +80,11 @@ const SellerLeadsView = () => {
 
   // Estado para el lead seleccionado (Sheet lateral)
   const [selectedLead, setSelectedLead] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"interactions" | "tasks">("interactions");
-
-  // Estado para nuevas interacciones
-  const [newInteractionNotes, setNewInteractionNotes] = useState("");
-  const [interactionType, setInteractionType] = useState<"CALL" | "WHATSAPP" | "MEETING" | "EMAIL" | "SELL">("CALL");
-
-  // Estado para nuevas tareas
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskContent, setNewTaskContent] = useState("");
-  const [newTaskDueDate, setNewTaskDueDate] = useState("");
 
   // Obtener el memberId del lead seleccionado
   const selectedMemberId = useMemo(() => {
     return selectedLead?.campaignsEngaging?.[0]?.id || selectedLead?.id || "";
   }, [selectedLead]);
-
-  // Safe Date formatter
-  const formatSafeDate = (dateStr: string | null | undefined, pattern = "dd/MM/yyyy HH:mm") => {
-    if (!dateStr) return "-";
-    try {
-      return format(new Date(dateStr), pattern);
-    } catch (e) {
-      return dateStr;
-    }
-  };
 
   // 1. Obtener campañas asignadas al vendedor
   const { data: campaignsRes, isLoading: isLoadingCampaigns } = useQuery({
@@ -213,8 +165,6 @@ const SellerLeadsView = () => {
     onSuccess: () => {
       toast.success("Interacción registrada correctamente");
       queryClient.invalidateQueries({ queryKey: ["member-interactions", selectedMemberId] });
-      setNewInteractionNotes("");
-      setInteractionType("CALL");
     },
     onError: () => {
       toast.error("Error al registrar la interacción");
@@ -250,11 +200,9 @@ const SellerLeadsView = () => {
     onSuccess: () => {
       toast.success("Tarea registrada correctamente");
       queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedMemberId] });
-      setNewTaskTitle("");
-      setNewTaskContent("");
-      setNewTaskDueDate("");
     },
-    onError: () => {
+    onError: (err) => {
+      console.error(err);
       toast.error("Error al registrar la tarea");
     }
   });
@@ -306,43 +254,6 @@ const SellerLeadsView = () => {
 
   const handleCampaignChange = (val: string) => {
     setSearchParams({ campaignId: val });
-  };
-
-  const handleCreateInteraction = () => {
-    if (!newInteractionNotes.trim()) {
-      toast.error("Debes agregar una nota descriptiva");
-      return;
-    }
-    createInteractionMutation.mutate({
-      notes: newInteractionNotes,
-      type: interactionType
-    });
-  };
-
-  const handleCreateTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    const sellerProfileId = user?.seller?.id;
-    if (!sellerProfileId) {
-      toast.error("Error: No se identificó tu perfil de asesor de ventas.");
-      return;
-    }
-    if (!newTaskTitle.trim()) {
-      toast.error("Debes especificar un título para la tarea");
-      return;
-    }
-    createTaskMutation.mutate({
-      title: newTaskTitle,
-      content: newTaskContent,
-      due_date: newTaskDueDate || new Date(Date.now() + 86400000).toISOString().split("T")[0] // default mañana
-    });
-  };
-
-  const handleToggleTask = (taskId: string, currentDone: boolean) => {
-    // Si ya está completada, la mandamos como false, si no como true. El backend pide is_done: true para completada.
-    updateTaskMutation.mutate({
-      taskId,
-      is_done: !currentDone
-    });
   };
 
   // Filtrado de leads por la barra de búsqueda (nombre, email o celular)
@@ -469,494 +380,37 @@ const SellerLeadsView = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 items-start w-full">
           {FUNNEL_COLUMNS.map((stage) => {
             const laneLeads = leadsByStage[stage.id] || [];
-
             return (
-              <div
+              <KanbanColumn
                 key={stage.id}
-                className={cn(
-                  "flex flex-col rounded-2xl border bg-card overflow-hidden shadow-sm h-[70vh] hover:shadow transition-all duration-300",
-                  stage.id === "MATRICULADO" ? "border-emerald-350 dark:border-emerald-500/30 ring-1 ring-emerald-500/10 shadow-[0_0_8px_rgba(16,185,129,0.05)]" : "border-border"
-                )}
-              >
-                {/* Lane Header */}
-                <div className={cn("px-4 py-3.5 border-b flex items-center justify-between font-bold text-xs tracking-wider uppercase", stage.borderStyle)}>
-                  <div className="flex items-center gap-2">
-                    <span className={cn("h-2 w-2 rounded-full", stage.dotColor)} />
-                    {stage.label}
-                  </div>
-                  <span className="bg-white/40 dark:bg-black/20 text-foreground px-2 py-0.5 rounded-full text-[10px] font-extrabold font-mono">
-                    {laneLeads.length}
-                  </span>
-                </div>
-
-                {/* Lane Body Scrollable */}
-                <div className="p-3 overflow-y-auto flex-1 space-y-3 bg-slate-50/30 dark:bg-slate-900/10">
-                  {laneLeads.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-4 text-muted-foreground/60 select-none">
-                      <Users size={28} className="opacity-20 mb-2" />
-                      <p className="text-[10px] font-medium">Sin prospectos en esta etapa</p>
-                    </div>
-                  ) : (
-                    laneLeads.map((lead: any) => {
-                      const phone = getPhone(lead);
-                      const formattedPhone = phone ? phone.replace(/\D/g, "") : "";
-                      const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}` : "";
-                      const displayDate = formatSafeDate(lead.created_at, "dd/MM/yy HH:mm");
-                      const memberId = lead.campaignsEngaging?.[0]?.id || lead.id || "";
-
-                      return (
-                        <div
-                          key={lead.id}
-                          onClick={() => setSelectedLead(lead)}
-                          className="bg-card border border-border rounded-xl p-3.5 shadow-sm hover:border-primary/50 hover:shadow-md transition-all duration-200 group relative space-y-3 cursor-pointer"
-                        >
-                          {/* Top Lead Info */}
-                          <div className="space-y-1">
-                            <h4 className="font-bold text-foreground text-xs leading-snug group-hover:text-primary transition-colors">
-                              {lead.first_name} {lead.last_name}
-                            </h4>
-                            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Calendar size={11} /> {displayDate}
-                            </p>
-                          </div>
-
-                          {/* Contact Details */}
-                          <div className="space-y-1 text-[10px] text-muted-foreground pt-1 border-t border-border/40">
-                            {phone && (
-                              <p className="flex items-center gap-1.5 font-medium text-foreground">
-                                <Phone size={10} className="text-muted-foreground/80" /> {phone}
-                              </p>
-                            )}
-                            {lead.email && (
-                              <p className="flex items-center gap-1.5 truncate" title={lead.email}>
-                                <Mail size={10} className="text-muted-foreground/80" /> {lead.email}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Action Bar / Dropdown to change stage */}
-                          <div 
-                            className="pt-2 border-t border-border/40 flex items-center justify-between gap-2"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="w-full">
-                              <select
-                                value={ENUM_TO_KANBAN_STAGE[lead.lead_status] || lead.lead_status || "NUEVO"}
-                                onChange={(e) => handleStatusChange(memberId, e.target.value)}
-                                className="w-full h-7 px-1.5 rounded-lg border border-border bg-slate-50 dark:bg-slate-900 text-[10px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer shadow-sm"
-                                disabled={updateStatusMutation.isPending}
-                              >
-                                {FUNNEL_COLUMNS.map((s) => (
-                                  <option key={s.id} value={s.id}>
-                                    Mover a: {s.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Quick External Actions */}
-                            <div className="flex items-center gap-1 shrink-0">
-                              {whatsappUrl && (
-                                <a
-                                  href={whatsappUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="h-7 w-7 rounded-lg border border-border hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-muted-foreground hover:text-emerald-600 flex items-center justify-center transition-all shadow-sm"
-                                  title="Enviar WhatsApp"
-                                >
-                                  <MessageSquare size={13} />
-                                </a>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => navigate(`/prospectos/${lead.id}/editar`)}
-                                className="h-7 w-7 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 text-muted-foreground hover:text-primary transition-all shadow-sm"
-                                title="Editar Prospecto"
-                              >
-                                <Edit size={12} />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
+                stage={stage}
+                leads={laneLeads}
+                onSelect={setSelectedLead}
+                onStatusChange={handleStatusChange}
+                isPending={updateStatusMutation.isPending}
+              />
             );
           })}
         </div>
       )}
 
       {/* Lateral Sheet of Details */}
-      <Sheet open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
-        <SheetContent className="sm:max-w-md w-full flex flex-col h-full bg-background border-l border-border p-0 shadow-2xl" side="right">
-          {selectedLead && (
-            <>
-              {/* Header Panel */}
-              <div className="p-6 border-b border-border space-y-4 shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-md font-bold text-primary uppercase border border-primary/20 shrink-0">
-                    {selectedLead.first_name?.[0] || ""}{selectedLead.last_name?.[0] || ""}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <SheetTitle className="text-md font-extrabold text-foreground truncate">
-                      {selectedLead.first_name} {selectedLead.last_name}
-                    </SheetTitle>
-                    <SheetDescription className="text-xs text-muted-foreground truncate">
-                      {selectedLead.email || "Sin correo electrónico"}
-                    </SheetDescription>
-                  </div>
-                </div>
-
-                {/* Status Selector & Call Actions */}
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/60">
-                  <div className="space-y-1">
-                    <Label className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Estado</Label>
-                    <select
-                      value={ENUM_TO_KANBAN_STAGE[selectedLead.lead_status] || selectedLead.lead_status || "NUEVO"}
-                      onChange={(e) => {
-                        const newStatus = e.target.value;
-                        handleStatusChange(selectedMemberId, newStatus);
-                        setSelectedLead((prev: any) => {
-                          if (!prev) return null;
-                          const nextStatusEnum = KANBAN_STAGE_TO_ENUM[newStatus] || newStatus;
-                          return { ...prev, lead_status: nextStatusEnum };
-                        });
-                      }}
-                      className="w-full h-8 px-2 rounded-lg border border-border bg-slate-50 dark:bg-slate-900 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer shadow-sm"
-                      disabled={updateStatusMutation.isPending}
-                    >
-                      {FUNNEL_COLUMNS.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex items-end gap-1.5 justify-end">
-                    {getPhone(selectedLead) && (
-                      <a
-                        href={`tel:${getPhone(selectedLead)}`}
-                        className="h-8 flex-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-950/40 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm"
-                        title="Llamar"
-                      >
-                        <Phone size={12} /> Llamar
-                      </a>
-                    )}
-                    {getPhone(selectedLead) && (
-                      <a
-                        href={`https://wa.me/${getPhone(selectedLead).replace(/\D/g, "")}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="h-8 flex-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-950/40 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm"
-                        title="Enviar WhatsApp"
-                      >
-                        <MessageSquare size={12} /> Chat
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation Tabs */}
-              <div className="px-6 py-3 border-b border-border bg-slate-50/50 dark:bg-slate-900/10 shrink-0">
-                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                  <button
-                    onClick={() => setActiveTab("interactions")}
-                    className={cn(
-                      "flex-1 text-xs py-2 px-3 rounded-lg font-bold transition-all flex items-center justify-center gap-1.5",
-                      activeTab === "interactions"
-                        ? "bg-white dark:bg-slate-700 shadow text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <MessageSquare size={13} />
-                    Gestión
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("tasks")}
-                    className={cn(
-                      "flex-1 text-xs py-2 px-3 rounded-lg font-bold transition-all flex items-center justify-center gap-1.5",
-                      activeTab === "tasks"
-                        ? "bg-white dark:bg-slate-700 shadow text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <ClipboardList size={13} />
-                    Tareas
-                    {tasks.filter((t: any) => !t.is_done).length > 0 && (
-                      <span className="bg-primary text-primary-foreground text-[9px] h-4 min-w-4 px-1 rounded-full flex items-center justify-center font-extrabold shrink-0">
-                        {tasks.filter((t: any) => !t.is_done).length}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {activeTab === "interactions" ? (
-                  <div className="space-y-6">
-                    {/* Form to log interaction */}
-                    <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
-                      <Label className="text-xs font-bold text-foreground flex items-center gap-1">
-                        <MessageSquare size={13} className="text-primary" /> Registrar Gestión Comercial
-                      </Label>
-                      <div className="space-y-1.5 pt-1">
-                        <Label className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Canal de Gestión</Label>
-                        <div className="grid grid-cols-4 gap-1.5">
-                          {[
-                            { value: "CALL", label: "Llamada", icon: Phone },
-                            { value: "WHATSAPP", label: "WhatsApp", icon: MessageCircle },
-                            { value: "MEETING", label: "Reunión", icon: Users },
-                            { value: "EMAIL", label: "Correo", icon: Mail }
-                          ].map((chan) => {
-                            const Icon = chan.icon;
-                            const isActive = interactionType === chan.value;
-                            return (
-                              <button
-                                key={chan.value}
-                                type="button"
-                                onClick={() => setInteractionType(chan.value as any)}
-                                className={cn(
-                                  "flex flex-col items-center justify-center py-2 px-1 rounded-xl border text-[9px] font-bold gap-1 transition-all shadow-sm",
-                                  isActive
-                                    ? "bg-primary/10 text-primary border-primary shadow-inner font-extrabold"
-                                    : "bg-card border-border text-muted-foreground hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-foreground"
-                                )}
-                              >
-                                <Icon size={13} className={isActive ? "text-primary" : "text-muted-foreground/80"} />
-                                {chan.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <Textarea
-                        placeholder="Escribe el resultado de la llamada o WhatsApp con el prospecto..."
-                        value={newInteractionNotes}
-                        onChange={(e) => setNewInteractionNotes(e.target.value)}
-                        maxLength={255}
-                        className="min-h-[80px] bg-slate-50/20 text-xs focus:bg-card border-border rounded-xl"
-                        disabled={createInteractionMutation.isPending}
-                      />
-                      <div className="flex items-center justify-between gap-2 pt-1">
-                        <span className="text-[10px] text-muted-foreground font-semibold">
-                          {newInteractionNotes.length}/255 caracteres
-                        </span>
-                        <Button
-                          onClick={handleCreateInteraction}
-                          size="sm"
-                          className="btn-primary font-bold text-xs h-8 px-4 rounded-lg shadow-sm flex items-center gap-1.5"
-                          disabled={createInteractionMutation.isPending}
-                        >
-                          {createInteractionMutation.isPending ? (
-                            <Loader2 size={12} className="animate-spin" />
-                          ) : (
-                            <Plus size={12} />
-                          )}
-                          Registrar Bitácora
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Timeline List */}
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        Historial de Interacciones
-                      </h4>
-                      {isLoadingInteractions ? (
-                        <div className="space-y-3">
-                          <Skeleton className="h-16 w-full rounded-xl" />
-                          <Skeleton className="h-16 w-full rounded-xl" />
-                        </div>
-                      ) : interactions.length === 0 ? (
-                        <div className="text-center py-6 text-muted-foreground bg-slate-50/50 dark:bg-slate-900/10 rounded-xl border border-dashed border-border/80">
-                          <p className="text-xs font-medium">Sin interacciones registradas.</p>
-                        </div>
-                      ) : (
-                        <div className="relative pl-4 space-y-4 border-l border-border/80 ml-2 pt-1">
-                          {interactions.map((item: any) => {
-                            const config = typeIcons[item.type] || { icon: MessageSquare, color: "text-slate-500", bg: "bg-slate-100" };
-                            const Icon = config.icon;
-                            return (
-                              <div key={item.id} className="relative group">
-                                {/* Dotted Indicator */}
-                                <span className={cn("absolute -left-[23px] top-0 h-5 w-5 rounded-full flex items-center justify-center border border-border bg-background shadow-sm text-center text-muted-foreground", config.color)}>
-                                  <Icon size={9} />
-                                </span>
-                                <div className="bg-card border border-border rounded-xl p-3.5 space-y-2 shadow-sm group-hover:border-primary/30 transition-colors">
-                                  <div className="flex items-center justify-between text-[10px] text-muted-foreground font-semibold">
-                                    <span className={cn("px-1.5 py-0.5 rounded font-extrabold text-[9px] uppercase tracking-wider", config.bg, config.color)}>
-                                      {item.type === "CALL" ? "Llamada" : 
-                                       item.type === "WHATSAPP" ? "WhatsApp" : 
-                                       item.type === "MEETING" ? "Reunión" : 
-                                       item.type === "EMAIL" ? "Correo" : 
-                                       item.type === "SELL" ? "Venta" : item.type}
-                                    </span>
-                                    <span>{formatSafeDate(item.created_at)}</span>
-                                  </div>
-                                  <p className="text-xs text-foreground leading-relaxed break-words">
-                                    {item.notes}
-                                  </p>
-                                  <div className="text-[9px] text-muted-foreground font-medium flex items-center gap-1 border-t border-border/40 pt-1.5">
-                                    <span>Por:</span>
-                                    <span className="font-semibold text-foreground">{item.created_by || "Asesor Comercial"}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {/* Form to create task */}
-                    <form onSubmit={handleCreateTask} className="rounded-xl border border-border bg-card p-4 space-y-3.5 shadow-sm">
-                      <Label className="text-xs font-bold text-foreground flex items-center gap-1">
-                        <Plus size={13} className="text-primary" /> Crear Recordatorio / Tarea
-                      </Label>
-                      <div className="space-y-2">
-                        <Input
-                          placeholder="¿Qué necesitas recordar? (ej. Volver a llamar)"
-                          value={newTaskTitle}
-                          onChange={(e) => setNewTaskTitle(e.target.value)}
-                          className="h-8 bg-slate-50/20 text-xs border-border rounded-xl focus:bg-card"
-                          disabled={createTaskMutation.isPending}
-                          required
-                        />
-                        <Textarea
-                          placeholder="Detalle o descripción de la tarea (opcional)..."
-                          value={newTaskContent}
-                          onChange={(e) => setNewTaskContent(e.target.value)}
-                          className="min-h-[60px] bg-slate-50/20 text-xs border-border rounded-xl focus:bg-card"
-                          disabled={createTaskMutation.isPending}
-                        />
-                        <div className="space-y-1">
-                          <Label className="text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground">Fecha de vencimiento</Label>
-                          <Input
-                            type="date"
-                            value={newTaskDueDate}
-                            onChange={(e) => setNewTaskDueDate(e.target.value)}
-                            className="h-8 bg-slate-50/20 text-xs border-border rounded-xl focus:bg-card"
-                            disabled={createTaskMutation.isPending}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-end pt-1">
-                        <Button
-                          type="submit"
-                          size="sm"
-                          className="btn-primary font-bold text-xs h-8 px-4 rounded-lg shadow-sm"
-                          disabled={createTaskMutation.isPending}
-                        >
-                          {createTaskMutation.isPending ? (
-                            <Loader2 size={12} className="animate-spin mr-1.5" />
-                          ) : (
-                            <Plus size={12} className="mr-1.5" />
-                          )}
-                          Crear Tarea
-                        </Button>
-                      </div>
-                    </form>
-
-                    {/* Tasks List */}
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        Tareas Asignadas
-                      </h4>
-                      {isLoadingTasks ? (
-                        <div className="space-y-3">
-                          <Skeleton className="h-14 w-full rounded-xl" />
-                          <Skeleton className="h-14 w-full rounded-xl" />
-                        </div>
-                      ) : tasks.length === 0 ? (
-                        <div className="text-center py-6 text-muted-foreground bg-slate-50/50 dark:bg-slate-900/10 rounded-xl border border-dashed border-border/80">
-                          <p className="text-xs font-medium">Sin tareas pendientes de seguimiento.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2.5">
-                          {tasks.map((item: any) => (
-                            <div
-                              key={item.id}
-                              className={cn(
-                                "flex items-start gap-3 p-3.5 rounded-xl border border-border bg-card shadow-sm transition-all duration-200",
-                                item.is_done && "bg-slate-50/50 dark:bg-slate-900/5 opacity-70 border-border/60"
-                              )}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => handleToggleTask(item.id, item.is_done)}
-                                className={cn(
-                                  "mt-0.5 h-4 w-4 rounded border border-border flex items-center justify-center transition-all shrink-0 focus:outline-none",
-                                  item.is_done
-                                    ? "bg-primary border-primary text-primary-foreground"
-                                    : "hover:border-primary/50 bg-background"
-                                )}
-                                disabled={updateTaskMutation.isPending}
-                              >
-                                {item.is_done && <CheckCircle2 size={11} className="stroke-[3]" />}
-                              </button>
-
-                              <div className="flex-1 min-w-0 space-y-1">
-                                <h5 className={cn(
-                                  "font-bold text-xs leading-none text-foreground truncate",
-                                  item.is_done && "line-through text-muted-foreground"
-                                )}>
-                                  {item.title}
-                                </h5>
-                                {item.content && (
-                                  <p className={cn(
-                                    "text-[11px] text-muted-foreground leading-normal break-words",
-                                    item.is_done && "line-through"
-                                  )}>
-                                    {item.content}
-                                  </p>
-                                )}
-                                <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground pt-1 border-t border-border/30 mt-1">
-                                  <Clock size={10} />
-                                  <span>Vence:</span>
-                                  <span className={cn(
-                                    "text-foreground",
-                                    !item.is_done && new Date(item.due_date) < new Date() && "text-rose-500 font-extrabold"
-                                  )}>
-                                    {formatSafeDate(item.due_date, "dd/MM/yyyy")}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-slate-400 hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0 self-center"
-                                disabled={deleteTaskMutation.isPending}
-                                onClick={() => deleteTaskMutation.mutate({ 
-                                  campaignId: selectedCampaignId, 
-                                  memberId: selectedMemberId, 
-                                  taskId: item.id 
-                                })}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <LeadDetailsSheet
+        selectedLead={selectedLead}
+        onClose={() => setSelectedLead(null)}
+        onStatusChange={handleStatusChange}
+        isStatusPending={updateStatusMutation.isPending}
+        setSelectedLead={setSelectedLead}
+        interactions={interactions}
+        isLoadingInteractions={isLoadingInteractions}
+        createInteractionMutation={createInteractionMutation}
+        tasks={tasks}
+        isLoadingTasks={isLoadingTasks}
+        createTaskMutation={createTaskMutation}
+        updateTaskMutation={updateTaskMutation}
+        deleteTaskMutation={deleteTaskMutation}
+        selectedCampaignId={selectedCampaignId}
+      />
     </div>
   );
 };
