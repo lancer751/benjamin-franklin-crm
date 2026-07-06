@@ -65,6 +65,7 @@ export function campaignRepository(prisma: PrismaClient) {
               name: true,
               sales_status: true,
               prices: { select: { attendance_mode: true, cash_price: true } },
+              edition: { select: { modality: true } },
             },
           },
           assignedSupervisor: {

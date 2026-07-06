@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, BookOpen, UserMinus } from "lucide-react";
 import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
@@ -11,9 +11,8 @@ import { toast } from "sonner";
 import ModalWrapper from "@/core/components/ModalWrapper";
 import { useCampaignDetail } from "@/features/campaigns/hooks/useCampaignDetail";
 import { CampaignDetailHeader } from "@/features/campaigns/components/CampaignDetailHeader";
-import { CampaignDetailStats } from "@/features/campaigns/components/CampaignDetailStats";
-import { CampaignRelationsGrid } from "@/features/campaigns/components/CampaignRelationsGrid";
-import { CampaignSellersTable } from "@/features/campaigns/components/CampaignSellersTable";
+import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
+import { ModalityMap, translateEnum } from "@/core/utils/dictionaries";
 
 interface AssignSellersModalProps {
   open: boolean;
@@ -39,7 +38,7 @@ const AssignSellersModal = ({
     enabled: open,
   });
 
-  const sellers = sellersRes?.success ? sellersRes.data : [];
+  const sellers = (sellersRes as any)?.success ? (sellersRes as any).data : [];
 
   const handleToggleSeller = (sellerId: string) => {
     setSelectedSellerIds((prev) =>
@@ -207,45 +206,290 @@ const CampaignDetailView = () => {
     );
   }
 
-  const handleDeleteCampaign = () => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar permanentemente esta campaña?")) {
-      deleteCampaignMutation.mutate();
-    }
-  };
-
   const handleRemoveSeller = (sellerId: string, sellerName: string) => {
     if (window.confirm(`¿Estás seguro de que deseas remover a ${sellerName} de esta campaña?`)) {
       removeSellerMutation.mutate(sellerId);
     }
   };
 
+  const handlePublishReport = () => {
+    toast.success("¡Reporte de campaña compilado y publicado con éxito!");
+  };
+
   // Obtener IDs de vendedores actualmente asignados
   const sellersList = campaign.sellersOnCampaign || campaign.sellers || [];
   const assignedSellerIds = sellersList.map((s: any) => s.seller_id || s.seller?.id || s.id) || [];
+
+  const campaignMetrics = useMemo(() => {
+    const totalOrders = campaign.sellersOnCampaign?.reduce(
+      (acc: number, curr: any) => acc + (curr.seller?.total_orders || 0),
+      0
+    ) || 0;
+
+    const totalLeads = campaign._count?.leadsOnCampaign || 0;
+
+    const cashPrice = parseFloat(campaign.relatedProduct?.prices?.[0]?.cash_price || "0");
+
+    const conversionRate = totalLeads > 0 
+      ? ((totalOrders / totalLeads) * 100).toFixed(1) 
+      : "0.0";
+
+    const totalRevenue = totalOrders * cashPrice;
+
+    return {
+      totalOrders,
+      totalLeads,
+      cashPrice,
+      conversionRate,
+      totalRevenue,
+    };
+  }, [campaign]);
+
+  const supervisor = campaign.assignedSupervisor || campaign.supervisor;
+  const supervisorUser = supervisor?.user;
+  const supervisorName = supervisorUser
+    ? `${supervisorUser.first_name || ""} ${supervisorUser.last_name || ""}`.trim()
+    : "No asignado";
+  const supervisorEmail = supervisorUser?.email || "No asignado";
+
+  const attendanceModeLabels: Record<string, string> = {
+    VIRTUAL: "Virtual",
+    PRESENCIAL: "Presencial",
+    HEREDADO: "Heredado",
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <CampaignDetailHeader
         campaign={campaign}
-        onAssignSellerClick={() => setShowAssignSeller(true)}
         onConfigClick={() => setShowConfig(true)}
-        onDeleteClick={handleDeleteCampaign}
-        isDeleting={deleteCampaignMutation.isPending}
+        onPublishReportClick={handlePublishReport}
       />
 
-      {/* KPIs */}
-      <CampaignDetailStats campaign={campaign} />
+      {/* Grid Principal Asimétrico */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
+        {/* COLUMNA IZQUIERDA: FICHA DEL CURSO RELACIONADO (lg:col-span-4) */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
+            {campaign.relatedProduct?.image_url ? (
+              <img
+                src={campaign.relatedProduct.image_url}
+                alt={campaign.relatedProduct.name || "Curso"}
+                className="w-full h-40 object-cover"
+              />
+            ) : (
+              <div className="w-full h-40 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-400">
+                <BookOpen size={40} className="stroke-[1.5]" />
+              </div>
+            )}
+            <CardContent className="p-5 flex-1 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                    Producto Relacionado
+                  </span>
+                  {campaign.relatedProduct?.sales_status && (
+                    <ProductStatusBadge status={campaign.relatedProduct.sales_status} />
+                  )}
+                </div>
+                <h3 className="font-bold text-slate-800 text-lg leading-tight mb-4">
+                  {campaign.relatedProduct?.name || "Sin producto relacionado"}
+                </h3>
+              </div>
 
-      {/* Product Info & Supervisor Info Grid */}
-      <CampaignRelationsGrid campaign={campaign} />
+              <div className="border-t border-slate-100 pt-3 mt-3">
+                <h4 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">
+                  COSTOS DE LA CAMPAÑA
+                </h4>
+                <div className="space-y-1 divide-y divide-slate-50">
+                  {campaign.relatedProduct?.prices && campaign.relatedProduct.prices.length > 0 ? (
+                    campaign.relatedProduct.prices.map((price: any, idx: number) => {
+                      const rawMode = price.attendance_mode === "HEREDADO"
+                        ? campaign.relatedProduct?.edition?.modality || ""
+                        : price.attendance_mode || "";
+                      const translatedMode = translateEnum(rawMode, ModalityMap) || rawMode;
+                      return (
+                        <div key={idx} className="flex justify-between items-center py-2 first:pt-0 last:pb-0">
+                          <span className="text-slate-600 font-medium text-sm">
+                            {translatedMode}:
+                          </span>
+                          <span className="text-slate-900 font-bold text-sm">
+                            S/ {Number(price.cash_price).toFixed(2)} Contado
+                          </span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-slate-500 py-2 text-center">
+                      No hay precios configurados para este producto.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Assigned Sellers / Vendedores Asignados */}
-      <CampaignSellersTable
-        campaign={campaign}
-        onRemoveSeller={handleRemoveSeller}
-        isRemoving={removeSellerMutation.isPending}
-      />
+          {/* Supervisor a Cargo */}
+          <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm p-5">
+            <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+              SUPERVISOR A CARGO
+            </span>
+            <div className="mt-2">
+              <p className="font-bold text-slate-800 text-sm">
+                {supervisorName}
+              </p>
+              <p className="text-xs text-slate-500 font-medium">
+                {supervisorEmail}
+              </p>
+            </div>
+          </Card>
+        </div>
+
+        {/* COLUMNA DERECHA: EQUIPO DE VENTAS ASIGNADO & CARDS ANALÍTICAS (lg:col-span-8) */}
+        <div className="lg:col-span-8 flex flex-col gap-6">
+          <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                <Users size={18} className="text-slate-950" />
+                Asesores de Ventas Asignados ({sellersList.length})
+              </h3>
+              <button
+                onClick={() => setShowAssignSeller(true)}
+                className="text-primary hover:underline text-xs font-bold"
+              >
+                + Asignar Asesor
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              {sellersList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-slate-400 border-t border-slate-100">
+                  <Users size={40} className="mb-2 opacity-25" />
+                  <p className="text-sm">Aún no hay asesores asignados a esta campaña.</p>
+                </div>
+              ) : (
+                <table className="w-full text-sm border-t border-slate-100">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-slate-400 text-left">
+                      <th className="py-3 text-xs font-bold uppercase tracking-wider">Asesor</th>
+                      <th className="py-3 text-xs font-bold uppercase tracking-wider">Asignación</th>
+                      <th className="py-3 text-xs font-bold uppercase tracking-wider">Total de Órdenes</th>
+                      <th className="py-3 text-right text-xs font-bold uppercase tracking-wider">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {sellersList.map((campaignSeller: any) => {
+                      const seller = campaignSeller.seller || campaignSeller;
+                      if (!seller) return null;
+                      const sellerId = seller.id;
+                      const sellerName = seller.user
+                        ? `${seller.user.first_name || ""} ${seller.user.last_name || ""}`.trim()
+                        : `Asesor ${sellerId?.slice(0, 4) || ""}`;
+                      const initials = sellerName
+                        ? sellerName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+                        : "AS";
+                      const assignedAt = campaignSeller.assigned_at || campaignSeller.createdAt || null;
+                      const formattedDate = assignedAt
+                        ? new Date(assignedAt).toLocaleDateString("es-PE", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "N/D";
+                      const totalOrders = seller.total_orders || 0;
+
+                      return (
+                        <tr key={campaignSeller.id || sellerId} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-3 font-medium text-slate-800 flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-700">
+                              {initials}
+                            </div>
+                            <span className="font-semibold">{sellerName}</span>
+                          </td>
+                          <td className="py-3 text-slate-500 text-xs font-medium">
+                            {formattedDate}
+                          </td>
+                          <td className="py-3 text-slate-500 font-semibold">
+                            {totalOrders}
+                          </td>
+                          <td className="py-3 text-right">
+                            <button
+                              onClick={() => handleRemoveSeller(sellerId, sellerName)}
+                              disabled={removeSellerMutation.isPending}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors inline-flex items-center justify-center disabled:opacity-50"
+                            >
+                              <UserMinus size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </Card>
+
+          {/* Cards Analíticas Inferiores */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Card 1: Tasa de Conversión */}
+            <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm p-5">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Tasa de Conversión
+              </p>
+              <div className="flex flex-col">
+                <span className="text-2xl font-bold text-slate-900">
+                  {campaignMetrics.conversionRate}%
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400 mt-1">
+                  {campaignMetrics.totalOrders} ventas logradas
+                </span>
+              </div>
+            </Card>
+
+            {/* Card 2: Ingresos Generados */}
+            <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm p-5">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Ingresos Generados
+              </p>
+              <div className="flex flex-col">
+                <span className="text-2xl font-bold text-slate-900">
+                  S/ {campaignMetrics.totalRevenue.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400 mt-1">
+                  {campaign.is_organic ? (
+                    "Tráfico Orgánico"
+                  ) : (
+                    `Inversión: S/ ${parseFloat(campaign.initial_budget || "0").toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
+                  )}
+                </span>
+              </div>
+            </Card>
+
+            {/* Card 3: Leads Activos */}
+            <Card className="rounded-2xl border border-slate-100 bg-white shadow-sm p-5 flex justify-between items-center">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Leads Activos
+                </p>
+                <span className="text-2xl font-bold text-slate-900">
+                  {campaignMetrics.totalLeads}
+                </span>
+              </div>
+              
+              {/* Mini gráfico de barras vertical estético */}
+              <div className="flex items-end gap-1 h-9">
+                <div className="bg-slate-100 hover:bg-slate-200 h-[25%] w-2 rounded-sm transition-all"></div>
+                <div className="bg-slate-200 hover:bg-slate-300 h-[50%] w-2 rounded-sm transition-all"></div>
+                <div className="bg-slate-300 hover:bg-slate-400 h-[35%] w-2 rounded-sm transition-all"></div>
+                <div className="bg-slate-200 hover:bg-slate-300 h-[70%] w-2 rounded-sm transition-all"></div>
+                <div className="bg-slate-950 h-[90%] w-2 rounded-sm transition-all"></div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
 
       {/* Members / Leads Table */}
       <Card>

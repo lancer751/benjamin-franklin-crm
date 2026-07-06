@@ -1,23 +1,20 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, UserPlus, Edit, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Pencil, Share2 } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { Badge } from "@/core/components/ui/badge";
 import { translateEnum, CampaignStatusMap, CampaignPlatformMap } from "@/core/utils/dictionaries";
+import { displayFriendlyDate } from "@/core/utils/date-utils";
 
 interface CampaignDetailHeaderProps {
   campaign: any;
-  onAssignSellerClick: () => void;
   onConfigClick: () => void;
-  onDeleteClick: () => void;
-  isDeleting: boolean;
+  onPublishReportClick?: () => void;
 }
 
 export const CampaignDetailHeader = ({
   campaign,
-  onAssignSellerClick,
   onConfigClick,
-  onDeleteClick,
-  isDeleting,
+  onPublishReportClick,
 }: CampaignDetailHeaderProps) => {
   const navigate = useNavigate();
 
@@ -27,7 +24,7 @@ export const CampaignDetailHeader = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/campanas")}
+          onClick={() => navigate("/admin/campanas")}
           className="mt-1"
         >
           <ArrowLeft size={20} />
@@ -50,38 +47,51 @@ export const CampaignDetailHeader = ({
           </div>
           {/* Metadatos detallados */}
           <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted-foreground">
-            <span className="font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md">
-              UUID: {campaign.id}
-            </span>
-            {campaign.meta_form_id && (
-              <span className="font-mono bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-900 px-2 py-0.5 rounded-md flex items-center gap-1">
-                Meta Form ID: {campaign.meta_form_id}
-              </span>
-            )}
+            {/* Tipo de Distribución */}
+            <Badge
+              variant="outline"
+              className={
+                campaign.is_organic
+                  ? "bg-sky-50 text-sky-700 border-sky-200 rounded-lg font-bold"
+                  : "bg-purple-50 text-purple-700 border-purple-200 rounded-lg font-bold"
+              }
+            >
+              {campaign.is_organic ? "Orgánica" : "Paga"}
+            </Badge>
+
             <span>•</span>
-            <span>Plataforma: {translateEnum(campaign.platform, CampaignPlatformMap)}</span>
+
+            {/* Plataforma */}
+            <span className="font-semibold text-slate-700">
+              {translateEnum(campaign.platform, CampaignPlatformMap)}
+            </span>
+
+            <span>•</span>
+
+            {/* Fechas de Gestión */}
+            <span>
+              Inicio: {displayFriendlyDate(campaign.start_date)}
+            </span>
+            <span>•</span>
+            <span>
+              Creada: {displayFriendlyDate(campaign.created_at)}
+            </span>
           </div>
         </div>
       </div>
       <div className="flex items-center gap-2 self-end sm:self-auto">
-        <Button variant="outline" size="sm" onClick={onAssignSellerClick}>
-          <UserPlus size={16} className="mr-1.5" /> Asignar Vendedor
-        </Button>
-        <Button variant="outline" size="sm" onClick={onConfigClick}>
-          <Edit size={16} className="mr-1.5" /> Configurar Campaña
+        <Button
+          variant="outline"
+          className="rounded-xl font-bold bg-white border-slate-200 text-slate-700 shadow-sm"
+          onClick={onConfigClick}
+        >
+          <Pencil size={16} className="mr-1.5" /> Editar Campaña
         </Button>
         <Button
-          variant="destructive"
-          size="sm"
-          onClick={onDeleteClick}
-          disabled={isDeleting}
+          className="rounded-xl font-bold bg-slate-950 text-white shadow-md hover:bg-slate-900"
+          onClick={onPublishReportClick}
         >
-          {isDeleting ? (
-            <Loader2 size={16} className="mr-1.5 animate-spin" />
-          ) : (
-            <Trash2 size={16} className="mr-1.5" />
-          )}
-          Eliminar
+          <Share2 size={16} className="mr-1.5" /> Publicar Reporte
         </Button>
       </div>
     </div>
