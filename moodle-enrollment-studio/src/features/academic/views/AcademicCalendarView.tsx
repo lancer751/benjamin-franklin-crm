@@ -12,6 +12,9 @@ import { Progress } from '@/core/components/ui/progress';
 import { useAcademicCalendarView } from '../hooks/useAcademicCalendarView';
 import { formatToLocalTime, displayFriendlyDate, formatFriendlySpanishDate } from '@/core/utils/date-utils';
 import { translateEnum, EditionStatusMap } from '@/core/utils/dictionaries';
+import { Popover, PopoverTrigger, PopoverContent } from '@/core/components/ui/popover';
+import { Checkbox } from '@/core/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/core/components/ui/select';
 
 const getStatusStyles = (status: string) => {
   switch (status) {
@@ -33,7 +36,16 @@ const getStatusText = (status: string) => translateEnum(status, EditionStatusMap
 
 export const AcademicCalendarView = () => {
   const navigate = useNavigate();
-  const { editions: rawEditions, isLoading } = useAcademicCalendarView();
+  const { 
+    editions: rawEditions, 
+    isLoading,
+    search,
+    setSearch,
+    statusFilter,
+    setStatusFilter,
+    modalityFilter,
+    setModalityFilter
+  } = useAcademicCalendarView();
   const editions = rawEditions ?? [];
   const [viewMode, setViewMode] = useState<"Mes" | "Semestre" | "Año">("Año");
 
@@ -299,15 +311,98 @@ export const AcademicCalendarView = () => {
             <Input
               type="search"
               placeholder="Buscar ediciones..."
-              className="pl-8 bg-white border-none shadow-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 bg-white border-none shadow-sm animate-fade-in"
             />
           </div>
           
           <div className="flex items-center gap-2 w-full sm:w-auto justify-between">
-            <Button variant="outline" className="bg-white border-none shadow-sm flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Filtros
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="bg-white border-none shadow-sm flex items-center gap-2 relative transition-all duration-200 hover:bg-slate-50">
+                  <Filter className="h-4 w-4" />
+                  Filtros
+                  {(statusFilter.length > 0 || modalityFilter !== "ALL") && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white animate-pulse">
+                      {(statusFilter.length > 0 ? 1 : 0) + (modalityFilter !== "ALL" ? 1 : 0)}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-5 bg-white rounded-xl border border-slate-200 shadow-xl z-50">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-sm text-slate-800 mb-3 tracking-tight">Estados de Edición</h4>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {[
+                        { label: 'En Progreso', value: 'IN_PROGRESS' },
+                        { label: 'Programado', value: 'SCHEDULED' },
+                        { label: 'Abierto (Inscripciones)', value: 'OPEN' },
+                        { label: 'Completado', value: 'COMPLETED' },
+                        { label: 'Cancelado', value: 'CANCELLED' },
+                        { label: 'Borrador', value: 'DRAFT' }
+                      ].map((status) => {
+                        const isChecked = statusFilter.includes(status.value);
+                        return (
+                          <div key={status.value} className="flex items-center space-x-3 transition-colors duration-150 hover:bg-slate-50 p-1.5 rounded-md cursor-pointer">
+                            <Checkbox 
+                              id={`status-${status.value}`}
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setStatusFilter([...statusFilter, status.value]);
+                                } else {
+                                  setStatusFilter(statusFilter.filter(s => s !== status.value));
+                                }
+                              }}
+                            />
+                            <label 
+                              htmlFor={`status-${status.value}`}
+                              className="text-sm font-medium text-slate-600 cursor-pointer select-none flex-1"
+                            >
+                              {status.label}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-slate-100 pt-4">
+                    <h4 className="font-semibold text-sm text-slate-800 mb-3 tracking-tight">Modalidad</h4>
+                    <Select value={modalityFilter} onValueChange={setModalityFilter}>
+                      <SelectTrigger className="w-full bg-slate-50 border border-slate-200 rounded-lg shadow-inner text-slate-700">
+                        <SelectValue placeholder="Seleccione modalidad" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 rounded-lg shadow-lg">
+                        <SelectItem value="ALL" className="cursor-pointer hover:bg-slate-50">Todas</SelectItem>
+                        <SelectItem value="VIRTUAL" className="cursor-pointer hover:bg-slate-50">Virtual</SelectItem>
+                        <SelectItem value="PRESENCIAL" className="cursor-pointer hover:bg-slate-50">Presencial</SelectItem>
+                        <SelectItem value="HIBRIDO" className="cursor-pointer hover:bg-slate-50">Híbrido</SelectItem>
+                        <SelectItem value="ASINCRONICO" className="cursor-pointer hover:bg-slate-50">Asincrónico</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {(statusFilter.length > 0 || modalityFilter !== "ALL") && (
+                    <div className="border-t border-slate-100 pt-3 flex justify-end">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors h-8 px-3 rounded-lg"
+                        onClick={() => {
+                          setStatusFilter([]);
+                          setModalityFilter("ALL");
+                        }}
+                      >
+                        Limpiar filtros
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
             
             <div className="bg-white rounded-md shadow-sm p-1 flex-1 sm:flex-initial">
               <ToggleGroup type="single" value={viewMode} onValueChange={(val: any) => val && setViewMode(val)} className="flex-1 sm:flex-initial">
