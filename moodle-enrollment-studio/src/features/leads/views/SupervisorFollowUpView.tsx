@@ -54,70 +54,44 @@ import {
 import { toast } from "sonner";
 import { useSupervisorFollowUp } from "../hooks/useSupervisorFollowUp";
 
+// Helper para mapear estados a español
+const mapStatusToSpanish = (status: string): string => {
+  const normalized = status?.toUpperCase() || "";
+  if (normalized === "NEW") return "NUEVO";
+  if (normalized === "CONTACTED" || normalized === "FOLLOW_UP") return "CONTACTADO";
+  if (normalized === "ATTEMPTED_CONTACT") return "NO CONTACTADO";
+  if (normalized === "QUALIFIED" || normalized === "ON_HOLD") return "PREVENTA - CITA";
+  if (normalized === "WON") return "MATRICULADO";
+  if (normalized === "LOST" || normalized === "UNQUALIFIED") return "DESCARTADO";
+  return normalized;
+};
+
 // Helper para badges de Tipificación (CampaignMemberStatus)
 const getTipificacionBadge = (status: string) => {
-  switch (status) {
-    case "NEW":
-      return (
-        <Badge className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-50 font-semibold text-[10px] rounded-full px-2.5 py-0.5 border">
-          NUEVO
-        </Badge>
-      );
-    case "CONTACTED":
-      return (
-        <Badge className="bg-sky-50 text-sky-700 border-sky-200/50 hover:bg-sky-50 font-semibold text-[10px] rounded-full px-2.5 py-0.5 border">
-          CONTACTADO
-        </Badge>
-      );
-    case "QUALIFIED":
-      return (
-        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50 font-semibold text-[10px] rounded-full px-2.5 py-0.5 border">
-          CALIFICADO
-        </Badge>
-      );
-    case "UNQUALIFIED":
-      return (
-        <Badge className="bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-50 font-semibold text-[10px] rounded-full px-2.5 py-0.5 border">
-          NO CALIFICADO
-        </Badge>
-      );
-    case "ATTEMPTED_CONTACT":
-      return (
-        <Badge className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 font-semibold text-[10px] rounded-full px-2.5 py-0.5 border">
-          INTENTO CONTACTO
-        </Badge>
-      );
-    case "FOLLOW_UP":
-      return (
-        <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-semibold text-[10px] rounded-full px-2.5 py-0.5 border">
-          SEGUIMIENTO
-        </Badge>
-      );
-    case "ON_HOLD":
-      return (
-        <Badge className="bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-50 font-semibold text-[10px] rounded-full px-2.5 py-0.5 border">
-          EN ESPERA
-        </Badge>
-      );
-    case "WON":
-      return (
-        <Badge className="bg-green-50 text-green-700 border-green-200 hover:bg-green-50 font-semibold text-[10px] rounded-full px-2.5 py-0.5 border">
-          GANADO
-        </Badge>
-      );
-    case "LOST":
-      return (
-        <Badge className="bg-red-55 text-red-700 border-red-200 hover:bg-red-55 font-semibold text-[10px] rounded-full px-2.5 py-0.5 border">
-          PERDIDO
-        </Badge>
-      );
-    default:
-      return (
-        <Badge className="bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-50 font-semibold text-[10px] rounded-full px-2.5 py-0.5 border">
-          {status}
-        </Badge>
-      );
+  const spanishStage = mapStatusToSpanish(status);
+  let classes = "font-semibold text-[10px] rounded-full px-2.5 py-0.5 border shadow-none ";
+
+  if (spanishStage === "MATRICULADO") {
+    classes += "border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-50/50";
+  } else if (spanishStage === "PREVENTA - CITA") {
+    classes += "border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50/50";
+  } else if (spanishStage === "NO CONTACTADO") {
+    classes += "border-purple-200 text-purple-700 bg-purple-50/50 hover:bg-purple-50/50";
+  } else if (spanishStage === "CONTACTADO") {
+    classes += "border-amber-200 text-amber-700 bg-amber-50/50 hover:bg-amber-50/50";
+  } else if (spanishStage === "NUEVO") {
+    classes += "border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-50/50";
+  } else if (spanishStage === "DESCARTADO") {
+    classes += "border-rose-200 text-rose-700 bg-rose-50/50 hover:bg-rose-50/50";
+  } else {
+    classes += "border-slate-200 text-slate-700 bg-slate-50/50 hover:bg-slate-50/50";
   }
+
+  return (
+    <Badge className={classes} variant="outline">
+      {spanishStage}
+    </Badge>
+  );
 };
 
 const SupervisorFollowUpView = () => {

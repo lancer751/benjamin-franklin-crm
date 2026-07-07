@@ -67,6 +67,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       return;
     }
 
+    const userRole = (typeof user.role === 'object' ? user.role?.name : user.role) || "";
+
     const filtered = sidebarSections
       .map((section) => {
         // 1. Check section permission using our single-parameter canAccess helper
@@ -75,10 +77,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           return null;
         }
 
-        // 2. Filter child items by permissions restriction using the same helper
-        const filteredItems = section.items.filter((item) => {
-          return canAccess(item.permission);
-        });
+        // 2. Filter child items by permissions restriction and dynamically rewrite campaigns route for sales rep
+        const filteredItems = section.items
+          .filter((item) => canAccess(item.permission))
+          .map((item) => {
+            if (userRole === "SALES_REP" && item.to === "/admin/campanas") {
+              return { ...item, to: "/seller/campanas" };
+            }
+            return item;
+          });
 
         // 3. Keep section metadata but use filtered items list
         return {

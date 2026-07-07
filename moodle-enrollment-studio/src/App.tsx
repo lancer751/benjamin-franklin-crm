@@ -79,8 +79,8 @@ const App = () => {
     const initAuth = async () => {
       try {
         const res = await getMe();
-        if (res && res.id) {
-          setUser(res);
+        if (res && typeof res === "object" && "id" in res) {
+          setUser(res as any);
         } else {
           setUser(null);
         }
@@ -159,6 +159,8 @@ const App = () => {
               <Route path="/origen-leads" element={isSalesRep ? <Navigate to="/admin/campanas" replace /> : <LeadSourcesView />} />
               <Route path="/comercial/mis-leads" element={<SellerLeadsView />} />
               <Route path="/admin/campaigns/seller/leads/:campaignId" element={<SellerLeadsView />} />
+              <Route path="/seller/campanas" element={<SellerCampaignsView />} />
+              <Route path="/seller/campaigns" element={<SellerCampaignsView />} />
             </Route>
           </Route>
           

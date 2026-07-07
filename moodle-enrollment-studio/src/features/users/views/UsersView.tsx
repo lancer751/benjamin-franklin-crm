@@ -80,6 +80,8 @@ export default function UsersView() {
               className={
                 roleName === "ADMIN"
                   ? "border-red-200 text-red-700 bg-red-50/50 hover:bg-red-50/80"
+                  : roleName === "SALES_SUPERVISOR"
+                  ? "border-purple-200 text-purple-700 bg-purple-50/50 hover:bg-purple-50/80"
                   : roleName === "SALES_REP"
                   ? "border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-50/80"
                   : roleName === "MARKETING"
@@ -238,6 +240,12 @@ export default function UsersView() {
               className="px-4 py-2 rounded-full border border-transparent data-[state=active]:border-primary/20 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted transition-all text-muted-foreground font-medium"
             >
               Administradores
+            </TabsTrigger>
+            <TabsTrigger
+              value="SALES_SUPERVISOR"
+              className="px-4 py-2 rounded-full border border-transparent data-[state=active]:border-primary/20 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted transition-all text-muted-foreground font-medium"
+            >
+              Supervisores de Ventas
             </TabsTrigger>
             <TabsTrigger
               value="SALES_REP"
