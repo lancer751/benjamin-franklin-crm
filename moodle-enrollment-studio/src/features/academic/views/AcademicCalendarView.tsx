@@ -257,7 +257,7 @@ export const AcademicCalendarView = () => {
 
   // 4. Variable 'Próximo Inicio'
   const sortedEditionsForNext = [...(editions ?? [])]
-    .filter(e => e?.start_date)
+    .filter(e => e?.start_date && e?.edition_status !== 'CANCELLED')
     .sort((a, b) => {
       const dateA = a?.start_date ? new Date(a.start_date).getTime() : 0;
       const dateB = b?.start_date ? new Date(b.start_date).getTime() : 0;
