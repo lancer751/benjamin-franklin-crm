@@ -144,11 +144,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-          M
+          BF
         </div>
         <div>
-          <p className="text-sm font-bold text-sidebar-accent-foreground">Moodle Manager</p>
-          <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/60">Enrollment Suite</p>
+          <p className="text-sm font-bold text-sidebar-accent-foreground">PRAGMATIC CRM</p>
+          <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/60">Benjamin Franklin</p>
         </div>
       </div>
 
