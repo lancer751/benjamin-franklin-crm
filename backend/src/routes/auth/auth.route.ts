@@ -56,6 +56,12 @@ export const authRoutes = new Hono<ContextWithPrisma>()
           authenticatedUserRole,
           "SALES_SUPERVISOR",
         ),
+        role: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       },
     });
 

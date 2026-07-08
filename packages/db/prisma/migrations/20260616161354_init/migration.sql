@@ -6,5 +6,5 @@
 
 */
 -- AlterTable
-ALTER TABLE "Campaing" DROP COLUMN "campaing_name",
-ADD COLUMN     "name" TEXT NOT NULL;
+ALTER TABLE "Campaing" DROP COLUMN IF EXISTS "campaing_name",
+ADD COLUMN IF NOT EXISTS  "name" TEXT NOT NULL;
