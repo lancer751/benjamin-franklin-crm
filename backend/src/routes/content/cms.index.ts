@@ -12,7 +12,7 @@ import { productsComercialContent } from "./content.route";
 export const cmsRoutes = new Hono()
   .use(withPrisma)
   .use(verifyUserAccessAuth)
-  .use(verifyUserRoleAccess("ADMIN"))
+  .use(verifyUserRoleAccess("ADMIN", "MARKETING"))
   .route("/products", productsComercialContent)
   .route("/benefits", benefitRoutes)
   .route("/certifications", certificationRoutes)

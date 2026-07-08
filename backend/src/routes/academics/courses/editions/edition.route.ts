@@ -11,7 +11,6 @@ import { z } from "zod";
 
 export const editionRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
-  .use(verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"))
   .get("/", async (c) => {
     const courseEditions = await c.get("prisma").edition.findMany({
       include: {

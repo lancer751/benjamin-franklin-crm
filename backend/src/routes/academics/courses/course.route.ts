@@ -11,7 +11,6 @@ import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
   .get(
     "/",
-    verifyUserRoleAccess("SALES_SUPERVISOR", "SALES_REP", "ADMIN"),
     async (c) => {
       const courses = await c.get("prisma").course.findMany({
         orderBy: {
@@ -30,7 +29,6 @@ export const courseGeneralRoutes = new Hono<ContextWithPrisma>()
   )
   .get(
     UUID_ROUTE,
-    verifyUserRoleAccess("ADMIN"),
     zValidator("param", z.object({ id: z.uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
