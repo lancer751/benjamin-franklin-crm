@@ -85,7 +85,7 @@ export const getSellerProfileById = async (id: string): Promise<SellerProfileByI
 };
 
 export const getSellerCampaigns = async (id: string): Promise<SellerCampaignsRes> => {
-  const res = await (api.users.sellers as any)["sellers"][":id"]["campaigns"].$get({ param: { id } });
+  const res = await (api.users.sellers as any)[":id"]["campaigns"].$get({ param: { id } });
   return await res.json();
 };
 

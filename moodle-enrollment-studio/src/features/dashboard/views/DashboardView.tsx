@@ -23,7 +23,7 @@ const DashboardView = () => {
       </div>
 
       {/* TARJETA DE PERFIL (Ficha de Datos Reales) */}
-      <div className="bg-card border border-border/80 rounded-2xl p-5 md:p-6 shadow-sm">
+      {/*<div className="bg-card border border-border/80 rounded-2xl p-5 md:p-6 shadow-sm">
         <div className="flex items-center gap-3 border-b border-border/60 pb-4 mb-5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <User className="h-4 w-4" />
@@ -35,7 +35,7 @@ const DashboardView = () => {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Columna Izquierda: Información de Identidad */}
+          {/* Columna Izquierda: Información de Identidad 
           <div className="space-y-4">
             <div className="space-y-1">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nombre Completo</span>
@@ -53,7 +53,7 @@ const DashboardView = () => {
             </div>
           </div>
 
-          {/* Columna Derecha: Estado y Permisos */}
+          {/* Columna Derecha: Estado y Permisos 
           <div className="space-y-4 flex flex-col justify-start">
             <div className="space-y-2">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Estado del Acceso</span>
@@ -83,7 +83,7 @@ const DashboardView = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
