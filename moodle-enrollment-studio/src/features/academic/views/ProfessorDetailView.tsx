@@ -30,7 +30,7 @@ export default function ProfessorDetailView() {
     staleTime: 0,
   });
 
-  const professor = professorRes || null;
+  const professor = (professorRes as any) || null;
   
   return (
     <div className="bg-slate-50/50 min-h-screen p-6 md:p-10">

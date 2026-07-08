@@ -8,8 +8,6 @@ export const useProfessorsView = () => {
   const queryClient = useQueryClient();
   
   // Estados de UI
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedProfessor, setSelectedProfessor] = useState<any | null>(null);
   const [professorToDelete, setProfessorToDelete] = useState<string | null>(null);
 
   // Paginación
@@ -35,15 +33,18 @@ export const useProfessorsView = () => {
     queryFn: getProfessors,
   });
 
-  const professors = useMemo(() => response?.success ? response.data : [], [response]);
+  const professors = useMemo(() => {
+    const resObj = response as any;
+    return resObj?.success ? resObj.data : [];
+  }, [response]);
 
   // ==========================================================
   // MUTACIÓN: ELIMINAR DOCENTE
   // ==========================================================
   const deleteMutation = useMutation({
     mutationFn: deleteProfessor,
-    onSuccess: (res) => {
-      if (res.success) {
+    onSuccess: (res: any) => {
+      if (res?.success) {
         toast.success("Docente eliminado correctamente");
         queryClient.invalidateQueries({ queryKey: ["professors"] });
         setProfessorToDelete(null);
@@ -68,16 +69,7 @@ export const useProfessorsView = () => {
   // Lógica de Paginación
   const paginatedProfessors = filteredProfessors.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Handlers
-  const handleOpenModal = (professor: any | null = null) => {
-    setSelectedProfessor(professor);
-    setIsModalOpen(true);
-  };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedProfessor(null);
-  };
 
   const handleDeleteConfirm = () => {
     if (professorToDelete) {
@@ -91,12 +83,9 @@ export const useProfessorsView = () => {
     professors: filteredProfessors,
     totalFiltered: filteredProfessors.length,
     pagination: { currentPage, itemsPerPage },
-    modal: { isOpen: isModalOpen, selectedProfessor },
     deleteAlert: { isOpen: !!professorToDelete, isPending: deleteMutation.isPending },
     setCurrentPage,
     setProfessorToDelete,
-    handleOpenModal,
-    handleCloseModal,
     handleDeleteConfirm,
   };
 };

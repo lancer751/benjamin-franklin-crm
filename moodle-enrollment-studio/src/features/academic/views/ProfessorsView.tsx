@@ -16,7 +16,6 @@ import {
   AlertDialogAction,
 } from "@/core/components/ui/alert-dialog";
 import { CustomTable } from "@/core/components/CustomTable";
-import { ProfessorFormModal } from "../components/ProfessorFormModal";
 import { useProfessorsView } from "../hooks/useProfessorsView";
 
 export default function ProfessorsView() {
@@ -25,11 +24,8 @@ export default function ProfessorsView() {
     isLoading,
     isError,
     professors,
-    modal,
     deleteAlert,
     setProfessorToDelete,
-    handleOpenModal,
-    handleCloseModal,
     handleDeleteConfirm,
   } = useProfessorsView();
 
@@ -55,11 +51,11 @@ export default function ProfessorsView() {
         cell: ({ row }) => row.original.cellphone || "-",
       },
       {
-        header: "Estado Moodle",
-        accessorKey: "moodle_user_status",
+        header: "Estado",
+        accessorKey: "is_active",
         cell: ({ row }) => {
-          const status = row.original.moodle_user_status;
-          if (status === "ACTIVE") {
+          const isActive = row.original.is_active;
+          if (isActive) {
             return (
               <Badge className="bg-emerald-100 text-emerald-800 border-transparent hover:bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold rounded-lg shadow-sm">
                 Activo
@@ -68,7 +64,7 @@ export default function ProfessorsView() {
           }
           return (
             <Badge className="bg-rose-100 text-rose-800 border-transparent hover:bg-rose-100 px-2.5 py-0.5 text-xs font-semibold rounded-lg shadow-sm">
-              Suspendido
+              Inactivo
             </Badge>
           );
         },
@@ -97,7 +93,7 @@ export default function ProfessorsView() {
                 className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleOpenModal(p);
+                  navigate(`/admin/profesores/${p.id}/editar`);
                 }}
                 title="Editar"
               >
@@ -120,7 +116,7 @@ export default function ProfessorsView() {
         },
       },
     ],
-    [handleOpenModal, setProfessorToDelete]
+    [navigate, setProfessorToDelete]
   );
 
   return (
@@ -130,7 +126,7 @@ export default function ProfessorsView() {
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Gestión de Docentes</h1>
         <Button
           className="flex items-center gap-2 shadow-sm rounded-lg"
-          onClick={() => handleOpenModal()}
+          onClick={() => navigate("/admin/profesores/nuevo")}
         >
           <Plus size={16} />
           Nuevo Docente
@@ -158,12 +154,7 @@ export default function ProfessorsView() {
         )}
       </Card>
 
-      {/* Modales */}
-      <ProfessorFormModal
-        isOpen={modal.isOpen}
-        onClose={handleCloseModal}
-        professor={modal.selectedProfessor}
-      />
+
 
 
 

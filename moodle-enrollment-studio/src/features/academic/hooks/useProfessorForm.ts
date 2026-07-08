@@ -2,13 +2,17 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { createProfessor, updateProfessor, getProfessorById, deactivateProfessor, restoreProfessor } from "../services/professorService";
 import { professorFormSchema, type ProfessorFormValues } from "../schemas/professorFormSchema";
 import { professorAdapter } from "../adapters/professorAdapter";
 
-export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, professor?: any | null) => {
+export const useProfessorForm = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = !!id;
 
   const form = useForm<ProfessorFormValues>({
     resolver: standardSchemaResolver(professorFormSchema) as any,
@@ -16,45 +20,38 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
     defaultValues: professorAdapter.toForm(null),
   });
 
-  const { data: fullProfessorRes, isLoading: isLoadingProfessor } = useQuery({
-    queryKey: ["professor", professor?.id],
-    queryFn: () => getProfessorById(professor!.id),
-    enabled: isOpen && !!professor?.id,
+  const { data: fullProfessorRes, isLoading: isLoadingProfessor, isError } = useQuery({
+    queryKey: ["professor", id],
+    queryFn: () => getProfessorById(id as string),
+    enabled: isEditMode,
     staleTime: 5 * 60 * 1000,
   });
 
-  const fullProfessorDetails = (fullProfessorRes as any)?.success ? (fullProfessorRes as any).data : null;
+  const fullProfessorDetails = fullProfessorRes 
+    ? ((fullProfessorRes as any).success ? (fullProfessorRes as any).data : fullProfessorRes)
+    : null;
 
   useEffect(() => {
-    if (!isOpen) return;
-
-    if (fullProfessorDetails) {
+    if (isEditMode && fullProfessorDetails) {
       form.reset(professorAdapter.toForm(fullProfessorDetails));
-    } else if (!professor) {
+    } else if (!isEditMode) {
       form.reset(professorAdapter.toForm(null));
-    } else if (professor && !fullProfessorDetails) {
-      form.reset(professorAdapter.toForm(professor));
     }
-  }, [fullProfessorDetails, professor, isOpen, form]);
-
-  const closeAndReset = () => {
-    form.reset(professorAdapter.toForm(null));
-    onClose();
-  };
+  }, [fullProfessorDetails, isEditMode, form]);
 
   const mutation = useMutation({
     mutationFn: async (values: ProfessorFormValues) => {
       const payload = professorAdapter.toPayload(values);
-      if (!professor) {
+      if (!isEditMode) {
         await createProfessor(payload);
         return "create";
       } else {
-        await updateProfessor(professor.id, payload);
-        if (values.is_active !== professor.is_active) {
+        await updateProfessor(id!, payload);
+        if (fullProfessorDetails && values.is_active !== fullProfessorDetails.is_active) {
           if (values.is_active === true) {
-            await restoreProfessor(professor.id);
+            await restoreProfessor(id!);
           } else {
-            await deactivateProfessor(professor.id);
+            await deactivateProfessor(id!);
           }
         }
         return "update";
@@ -62,8 +59,8 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
     },
     onSuccess: (actionType) => {
       queryClient.invalidateQueries({ queryKey: ["professors"] });
-      if (professor?.id) {
-        queryClient.invalidateQueries({ queryKey: ["professor", professor.id] });
+      if (id) {
+        queryClient.invalidateQueries({ queryKey: ["professor", id] });
       }
       
       if (actionType === "create") {
@@ -72,7 +69,7 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
          toast.success("Docente actualizado correctamente");
       }
       
-      closeAndReset();
+      navigate("/admin/profesores");
     },
     onError: (error: any) => {
       toast.error("Error al guardar el docente");
@@ -84,11 +81,17 @@ export const useProfessorFormModal = (isOpen: boolean, onClose: () => void, prof
     mutation.mutate(values);
   };
 
+  const handleBack = () => {
+    navigate("/admin/profesores");
+  };
+
   return {
     form,
-    isLoadingProfessor: isOpen && !!professor?.id && isLoadingProfessor,
+    isEditMode,
+    isLoadingProfessor: isEditMode && isLoadingProfessor,
+    isError,
     isPending: mutation.isPending,
-    closeAndReset,
     onSubmit,
+    handleBack,
   };
 };
