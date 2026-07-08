@@ -11,6 +11,6 @@ import withPrisma from "@/lib/prisma";
 export const productRoutes = new Hono()
   .use(withPrisma)
   .use(verifyUserAccessAuth)
-  .use(verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"))
+  .use(verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR", "MARKETING"))
   .route("/", productGeneralRoutes)
   .route("/categories", categoryRoutes)

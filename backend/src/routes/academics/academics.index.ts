@@ -10,6 +10,6 @@ import withPrisma from "@/lib/prisma";
 export const academicRoutes = new Hono()
   .use(withPrisma)
   .use(verifyUserAccessAuth)
-  .use(verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "SALES_REP"))
+  .use(verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "SALES_REP", "MARKETING"))
   .route("/professors", professorRoutes)
   .route("/courses", courseRoutes)

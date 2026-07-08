@@ -9,8 +9,8 @@ import {
 } from "@/middlewares/auth.middleware";
 
 export const userRoutes = new Hono()
-  //.use(verifyUserAccessAuth)
-  //.use(verifyUserRoleAccess("ADMIN"))
+  .use(verifyUserAccessAuth)
+  .use(verifyUserRoleAccess("ADMIN"))
   .route("/", userGeneralRoutes)
   .route("/sellers", sellersRoutes)
   .route("/sales-supervisors", salesSupervisorsRoutes)
