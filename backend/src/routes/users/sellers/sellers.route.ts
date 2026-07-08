@@ -2,78 +2,88 @@ import type { SuccessResponse } from "@/app";
 import { validateIdParamSchema } from "@/helpers/params-validator";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
 import withPrisma from "@/lib/prisma";
+import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { UpdateSellerProfileSchema } from "shared";
 
 export const sellersRoutes = new Hono<ContextWithPrisma>()
+  .use(verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "SALES_REP"))
   .use(withPrisma)
-  .get("/", async (c) => {
-    const sellers = await c.get("prisma").sellerProfile.findMany({
-      include: {
-        user: true
-      },
-      orderBy: {
-        total_sales: "desc",
-      },
-    });
-
-    return c.json(
-      {
-        success: true,
-        data: sellers,
-      },
-      200,
-    );
-  })
-  .get("/:id/campaigns", zValidator("param" ,validateIdParamSchema),async(c) => {
-    const sellerProfileId = c.req.valid("param").id
-
-    const result = await c.get("prisma").sellerProfile.findUnique({
-      where: {id: sellerProfileId},
-      select: {
-        assignedCampaing: true
-      }
-    })
-
-    return c.json(result,200)
-  })
-  // Get seller details by ID
   .get(
-    "/:id",
-    zValidator("param", validateIdParamSchema),
+    "/",
+    verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "MARKETING"),
     async (c) => {
-      const { id } = c.req.valid("param");
-
-      const sellerDetails = await c.get("prisma").sellerProfile.findUnique({
-        where: { user_id: id },
+      const sellers = await c.get("prisma").sellerProfile.findMany({
         include: {
           user: true,
-          campaignMembers: true,
-          orders: true,
+        },
+        orderBy: {
+          total_sales: "desc",
         },
       });
 
-      if (!sellerDetails) {
-        throw new HTTPException(404, {
-          message: "Seller profile not found",
-        });
-      }
-
-      return c.json<SuccessResponse<typeof sellerDetails>>(
+      return c.json(
         {
           success: true,
-          message: "Seller profile retrieved successfully",
-          data: sellerDetails,
+          data: sellers,
         },
         200,
       );
     },
   )
+  .get(
+    "/:id/campaigns",
+    verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "MARKETING"),
+    zValidator("param", validateIdParamSchema),
+    async (c) => {
+      const sellerProfileId = c.req.valid("param").id;
+
+      const result = await c.get("prisma").sellerProfile.findUnique({
+        where: { id: sellerProfileId },
+        select: {
+          assignedCampaing: {
+            include: { campaign: true },
+          },
+        },
+      });
+
+      return c.json(result, 200);
+    },
+  )
+  // Get seller details by ID
+  .get("/:id", zValidator("param", validateIdParamSchema), async (c) => {
+    const { id } = c.req.valid("param");
+
+    const sellerDetails = await c.get("prisma").sellerProfile.findUnique({
+      where: { user_id: id },
+      include: {
+        user: true,
+        campaignMembers: true,
+        orders: true,
+      },
+    });
+
+    if (!sellerDetails) {
+      throw new HTTPException(404, {
+        message: "Seller profile not found",
+      });
+    }
+
+    return c.json<SuccessResponse<typeof sellerDetails>>(
+      {
+        success: true,
+        message: "Seller profile retrieved successfully",
+        data: sellerDetails,
+      },
+      200,
+    );
+  })
   .put(
     "/:id",
     withPrisma,
+    verifyUserRoleAccess("ADMIN"),
     zValidator("param", validateIdParamSchema),
     zValidator("json", UpdateSellerProfileSchema),
     async (c) => {

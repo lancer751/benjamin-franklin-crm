@@ -13,6 +13,11 @@ import {
   CampaignQuerySchema,
 } from "shared";
 import { campaignRepository } from "@/repositories/campaign.repository";
+import {
+  verifyUserAccessAuth,
+  verifyUserRoleAccess,
+} from "@/middlewares/auth.middleware";
+import { validateIdParamSchema } from "@/helpers/params-validator";
 
 const UUIDParam = z.object({ id: z.string().uuid().length(36) });
 
@@ -33,7 +38,10 @@ function handleRepoError(err: unknown): never {
 
 export const campaignRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
-
+  .use(verifyUserAccessAuth)
+  .use(
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
+  )
   // GET /campaigns
   .get("/", zValidator("query", CampaignQuerySchema), async (c) => {
     const repo = campaignRepository(c.get("prisma"));
@@ -50,7 +58,8 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
     const { id } = c.req.valid("param");
     const repo = campaignRepository(c.get("prisma"));
     const campaign = await repo.findById(id);
-    if (!campaign) throw new HTTPException(404, { message: "Campaign not found" });
+    if (!campaign)
+      throw new HTTPException(404, { message: "Campaign not found" });
     return c.json<SuccessResponse<typeof campaign>>(
       { success: true, message: "Campaign retrieved", data: campaign },
       200,
@@ -58,29 +67,36 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
   })
 
   // POST /campaigns
-  .post("/", zValidator("json", CreateCampaignSchema), async (c) => {
-    const repo = campaignRepository(c.get("prisma"));
-    try {
-      const campaign = await repo.create(c.req.valid("json"));
-      return c.json<SuccessResponse<typeof campaign>>(
-        { success: true, message: "Campaign created", data: campaign },
-        201,
-      );
-    } catch (err) {
-      handleRepoError(err);
-    }
-  })
+  .post(
+    "/",
+    verifyUserRoleAccess("ADMIN", "MARKETING"),
+    zValidator("json", CreateCampaignSchema),
+    async (c) => {
+      const repo = campaignRepository(c.get("prisma"));
+      try {
+        const campaign = await repo.create(c.req.valid("json"));
+        return c.json<SuccessResponse<typeof campaign>>(
+          { success: true, message: "Campaign created", data: campaign },
+          201,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  )
 
   // PUT /campaigns/:id
   .put(
     "/:id",
+    verifyUserRoleAccess("ADMIN", "MARKETING"),
     zValidator("param", UUIDParam),
     zValidator("json", UpdateCampaignSchema),
     async (c) => {
       const { id } = c.req.valid("param");
       const repo = campaignRepository(c.get("prisma"));
       const existing = await repo.findById(id);
-      if (!existing) throw new HTTPException(404, { message: "Campaign not found" });
+      if (!existing)
+        throw new HTTPException(404, { message: "Campaign not found" });
 
       try {
         const updated = await repo.update(id, c.req.valid("json"));
@@ -95,24 +111,30 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
   )
 
   // DELETE /campaigns/:id
-  .delete("/:id", zValidator("param", UUIDParam), async (c) => {
-    const { id } = c.req.valid("param");
-    const repo = campaignRepository(c.get("prisma"));
-    try {
-      await repo.delete(id);
-      return c.json<SuccessResponse>(
-        { success: true, message: "Campaign deleted" },
-        200,
-      );
-    } catch (err) {
-      handleRepoError(err);
-    }
-  })
+  .delete(
+    "/:id",
+    verifyUserRoleAccess("ADMIN", "MARKETING"),
+    zValidator("param", UUIDParam),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const repo = campaignRepository(c.get("prisma"));
+      try {
+        await repo.delete(id);
+        return c.json<SuccessResponse>(
+          { success: true, message: "Campaign deleted" },
+          200,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  )
 
   // POST /campaigns/:id/sellers  — assign sellers
   .post(
     "/:id/sellers",
     zValidator("param", UUIDParam),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("json", AssignSellersSchema),
     async (c) => {
       const { id } = c.req.valid("param");
@@ -132,7 +154,14 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
   // DELETE /campaigns/:id/sellers/:sellerId  — remove seller from campaign
   .delete(
     "/:id/sellers/:sellerId",
-    zValidator("param", z.object({ id: z.string().uuid().length(36), sellerId: z.string().uuid().length(36) })),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+    zValidator(
+      "param",
+      z.object({
+        id: z.string().uuid().length(36),
+        sellerId: z.string().uuid().length(36),
+      }),
+    ),
     async (c) => {
       const { id, sellerId } = c.req.valid("param");
       const repo = campaignRepository(c.get("prisma"));

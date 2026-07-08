@@ -19,13 +19,16 @@ import {
   CampaignMemberQuerySchema,
 } from "shared";
 import { leadRepository } from "@/repositories/lead.repository";
-import { validateIdParamSchema } from "@/helpers/params-validator";
+import {
+  verifyUserAccessAuth,
+  verifyUserRoleAccess,
+} from "@/middlewares/auth.middleware";
 
 const UUIDParam = z.object({ id: z.string().uuid().length(36) });
 const MemberParam = z.object({ memberId: z.string().uuid().length(36) });
 const TaskParam = z.object({
-  memberId: z.string().uuid().length(36),
-  taskId: z.string().uuid().length(36),
+  memberId: z.uuid().length(36),
+  taskId: z.uuid().length(36),
 });
 
 function handleRepoError(err: unknown): never {
@@ -44,7 +47,10 @@ function handleRepoError(err: unknown): never {
 // ── /leads ───────────────────────────────────────────────────────────────────
 export const leadRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
-
+  .use(verifyUserAccessAuth)
+  .use(
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
+  )
   .get("/", zValidator("query", LeadQuerySchema), async (c) => {
     const repo = leadRepository(c.get("prisma"));
     const result = await repo.findMany(c.req.valid("query"));
@@ -65,21 +71,27 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
     );
   })
 
-  .post("/", zValidator("json", CreateLeadSchema), async (c) => {
-    const repo = leadRepository(c.get("prisma"));
-    try {
-      const lead = await repo.create(c.req.valid("json"));
-      return c.json<SuccessResponse<typeof lead>>(
-        { success: true, message: "Lead created", data: lead },
-        201,
-      );
-    } catch (err) {
-      handleRepoError(err);
-    }
-  })
+  .post(
+    "/",
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+    zValidator("json", CreateLeadSchema),
+    async (c) => {
+      const repo = leadRepository(c.get("prisma"));
+      try {
+        const lead = await repo.create(c.req.valid("json"));
+        return c.json<SuccessResponse<typeof lead>>(
+          { success: true, message: "Lead created", data: lead },
+          201,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  )
 
   .put(
     "/:id",
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("param", UUIDParam),
     zValidator("json", UpdateLeadSchema),
     async (c) => {
@@ -100,16 +112,22 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
 // ── /campaigns/:id/members ────────────────────────────────────────────────────
 export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
-
+  .use(verifyUserAccessAuth)
+  .use(
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
+  )
   // GET all members of a campaign
   .get(
     "/",
     zValidator("param", z.object({ campaignId: z.uuid().length(36) })),
     zValidator("query", CampaignMemberQuerySchema),
     async (c) => {
-      const {campaignId} = c.req.valid("param");
+      const { campaignId } = c.req.valid("param");
       const repo = leadRepository(c.get("prisma"));
-      const result = await repo.findMembersByMember(campaignId, c.req.valid("query"));
+      const result = await repo.findMembersByMember(
+        campaignId,
+        c.req.valid("query"),
+      );
       return c.json<SuccessResponse<typeof result>>(
         { success: true, message: "Members retrieved", data: result },
         200,
@@ -118,28 +136,37 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   )
 
   // POST — add a lead to a campaign (creates CampaignMember)
-  .post("/", zValidator("json", CreateCampaignMemberSchema), async (c) => {
-    const repo = leadRepository(c.get("prisma"));
-    try {
-      const member = await repo.createMember(c.req.valid("json"));
-      return c.json<SuccessResponse<typeof member>>(
-        { success: true, message: "Lead added to campaign", data: member },
-        201,
-      );
-    } catch (err) {
-      handleRepoError(err);
-    }
-  })
+  .post(
+    "/",
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+    zValidator("json", CreateCampaignMemberSchema),
+    async (c) => {
+      const repo = leadRepository(c.get("prisma"));
+      try {
+        const member = await repo.createMember(c.req.valid("json"));
+        return c.json<SuccessResponse<typeof member>>(
+          { success: true, message: "Lead added to campaign", data: member },
+          201,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  )
 
   // PATCH /:memberId/status — update CampaignMemberStatus
   .patch(
     "/:memberId/status",
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("param", MemberParam),
     zValidator("json", UpdateCampaignMemberStatusSchema),
     async (c) => {
       const { memberId } = c.req.valid("param");
       const repo = leadRepository(c.get("prisma"));
-      const updated = await repo.updateMemberStatus(memberId, c.req.valid("json"));
+      const updated = await repo.updateMemberStatus(
+        memberId,
+        c.req.valid("json"),
+      );
       return c.json<SuccessResponse<typeof updated>>(
         { success: true, message: "Status updated", data: updated },
         200,
@@ -150,13 +177,17 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // PATCH /:memberId/reassign — reassign lead to another seller
   .patch(
     "/:memberId/reassign",
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("param", MemberParam),
     zValidator("json", ReassignCampaignMemberSchema),
     async (c) => {
       const { memberId } = c.req.valid("param");
       const repo = leadRepository(c.get("prisma"));
       try {
-        const updated = await repo.reassignMember(memberId, c.req.valid("json"));
+        const updated = await repo.reassignMember(
+          memberId,
+          c.req.valid("json"),
+        );
         return c.json<SuccessResponse<typeof updated>>(
           { success: true, message: "Lead reassigned", data: updated },
           200,
@@ -169,19 +200,28 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
 
   // ── Interactions under a member ────────────────────────────────────────────
   // GET /:memberId/interactions
-  .get("/:memberId/interactions", zValidator("param", MemberParam), async (c) => {
-    const { memberId } = c.req.valid("param");
-    const repo = leadRepository(c.get("prisma"));
-    const interactions = await repo.findInteractions(memberId);
-    return c.json<SuccessResponse<typeof interactions>>(
-      { success: true, message: "Interactions retrieved", data: interactions },
-      200,
-    );
-  })
+  .get(
+    "/:memberId/interactions",
+    zValidator("param", MemberParam),
+    async (c) => {
+      const { memberId } = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      const interactions = await repo.findInteractions(memberId);
+      return c.json<SuccessResponse<typeof interactions>>(
+        {
+          success: true,
+          message: "Interactions retrieved",
+          data: interactions,
+        },
+        200,
+      );
+    },
+  )
 
   // POST /:memberId/interactions
   .post(
     "/:memberId/interactions",
+    verifyUserRoleAccess("ADMIN", "SALES_REP", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("param", MemberParam),
     zValidator("json", CreateLeadInteractionSchema),
     async (c) => {
@@ -220,6 +260,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // POST /:memberId/tasks
   .post(
     "/:memberId/tasks",
+    verifyUserRoleAccess("ADMIN", "SALES_REP", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("param", MemberParam),
     zValidator("json", CreateTaskSchema),
     async (c) => {
@@ -227,7 +268,11 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
       const repo = leadRepository(c.get("prisma"));
       const sellerId = c.req.header("x-seller-id") ?? "";
       try {
-        const task = await repo.createTask(memberId, sellerId, c.req.valid("json"));
+        const task = await repo.createTask(
+          memberId,
+          sellerId,
+          c.req.valid("json"),
+        );
         return c.json<SuccessResponse<typeof task>>(
           { success: true, message: "Task created", data: task },
           201,
@@ -241,6 +286,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // PATCH /:memberId/tasks/:taskId
   .patch(
     "/:memberId/tasks/:taskId",
+    verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"),
     zValidator("param", TaskParam),
     zValidator("json", UpdateTaskSchema),
     async (c) => {
@@ -257,6 +303,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // DELETE /:memberId/tasks/:taskId
   .delete(
     "/:memberId/tasks/:taskId",
+    verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"),
     zValidator("param", TaskParam),
     async (c) => {
       const { taskId } = c.req.valid("param");
