@@ -10,7 +10,7 @@ import {
 
 export const userRoutes = new Hono()
   .use(verifyUserAccessAuth)
-  .use(verifyUserRoleAccess("ADMIN"))
+  .use(verifyUserRoleAccess("ADMIN", "SALES_REP"))
   .route("/", userGeneralRoutes)
   .route("/sellers", sellersRoutes)
   .route("/sales-supervisors", salesSupervisorsRoutes)

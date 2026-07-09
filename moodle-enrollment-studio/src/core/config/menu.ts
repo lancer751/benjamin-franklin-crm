@@ -59,7 +59,7 @@ export const canAccess = (userRole: string, permission: string): boolean => {
     MARKETING: [
       "academic:view", "calendar:view", "products:view",
       "commercial:view", "prospects:view", "pipeline:view",
-      "admin:view",
+      "admin:view", "marketing:view"
     ],
     // COLLECTIONS (Cobranzas) has access to Orders and Finance dashboards
     COLLECTIONS: [

@@ -35,7 +35,7 @@ export const sellersRoutes = new Hono<ContextWithPrisma>()
   )
   .get(
     "/:id/campaigns",
-    verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "MARKETING"),
+    verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "MARKETING", "SALES_REP"),
     zValidator("param", validateIdParamSchema),
     async (c) => {
       const sellerProfileId = c.req.valid("param").id;

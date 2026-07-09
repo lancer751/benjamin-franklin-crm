@@ -10,7 +10,8 @@ import {
   Sparkles, 
   Award, 
   FileText,
-  Download
+  Download,
+  Pencil
 } from "lucide-react";
 import { Card } from "@/core/components/ui/card";
 import { Button } from "@/core/components/ui/button";
@@ -32,6 +33,7 @@ const ProductDetailView = () => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const currentRole = user?.role?.name;
+  const userRole = user?.role?.name || "";
   const permissions = currentRole ? PRODUCT_PERMISSIONS[currentRole as RoleAccess] : undefined;
 
   const { product, isLoading, isError, actions } = useProductDetail();
@@ -114,12 +116,13 @@ const ProductDetailView = () => {
             >
               Volver al catálogo
             </Button>
-            {permissions?.canEditAll && (
-              <Button 
-                className="rounded-xl btn-primary gap-2 shadow-md shadow-primary/20"
-                onClick={handleEditRedirect}
+            {(userRole === "ADMIN" || userRole === "MARKETING") && (
+              <Button
+                className="bg-blue-600 text-white hover:bg-blue-700 shadow-sm rounded-xl flex items-center gap-2"
+                onClick={() => navigate(`/productos/${product.id}/editar`)}
               >
-                <Edit size={16} /> Editar Producto
+                <Pencil size={14} />
+                Editar Producto
               </Button>
             )}
           </>
