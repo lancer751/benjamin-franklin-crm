@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import { 
   Sheet, 
@@ -23,9 +23,14 @@ import {
   CheckCircle2, 
   Clock, 
   Trash2,
-  ClipboardList
+  ClipboardList,
+  Pencil,
+  Check,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { updateLead } from "@/features/leads/services/leadService";
 import { FUNNEL_COLUMNS, KANBAN_STAGE_TO_ENUM, ENUM_TO_KANBAN_STAGE } from "../SellerLeadsView";
 
 const typeIcons: Record<string, { icon: any; color: string; bg: string }> = {
@@ -71,6 +76,22 @@ export default function LeadDetailsSheet({
   selectedCampaignId,
 }: LeadDetailsSheetProps) {
   const [activeTab, setActiveTab] = useState<"interactions" | "tasks">("interactions");
+
+  // Local editing states
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+
+  useEffect(() => {
+    if (selectedLead) {
+      setEditFirstName(selectedLead.first_name || "");
+      setEditLastName(selectedLead.last_name || "");
+      setEditEmail(selectedLead.email || "");
+    } else {
+      setIsEditing(false);
+    }
+  }, [selectedLead]);
 
   // Interaction Form State
   const [newInteractionNotes, setNewInteractionNotes] = useState("");
@@ -147,6 +168,68 @@ export default function LeadDetailsSheet({
     });
   };
 
+  const queryClient = useQueryClient();
+  const leadId = selectedLead?.id || "";
+
+  const { mutate: handleUpdateLead, isPending: isUpdatingLead } = useMutation({
+    mutationFn: async (updatedData: any) => {
+      return await updateLead(leadId, updatedData);
+    },
+    onSuccess: () => {
+      setIsEditing(false);
+      // Refrescar las queries activas para actualizar el Kanban y el panel
+      queryClient.invalidateQueries({ queryKey: ["campaign-members"] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-members-seller"] });
+      
+      // Actualizar localmente selectedLead
+      setSelectedLead((prev: any) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          first_name: editFirstName.trim(),
+          last_name: editLastName.trim(),
+          email: editEmail.trim(),
+        };
+      });
+
+      toast.success("Información del prospecto actualizada exitosamente.");
+    },
+    onError: (err: any) => {
+      console.error(err);
+      toast.error(err.message || "Error al actualizar la información del prospecto.");
+    }
+  });
+
+  const onSaveEdit = () => {
+    if (!editFirstName.trim()) {
+      toast.error("El nombre es requerido");
+      return;
+    }
+    if (!editLastName.trim()) {
+      toast.error("El apellido es requerido");
+      return;
+    }
+    if (!editEmail.trim()) {
+      toast.error("El correo es requerido");
+      return;
+    }
+
+    handleUpdateLead({
+      first_name: editFirstName.trim(),
+      last_name: editLastName.trim(),
+      email: editEmail.trim(),
+    });
+  };
+
+  const onCancelEdit = () => {
+    if (selectedLead) {
+      setEditFirstName(selectedLead.first_name || "");
+      setEditLastName(selectedLead.last_name || "");
+      setEditEmail(selectedLead.email || "");
+    }
+    setIsEditing(false);
+  };
+
   const phone = selectedLead ? getPhone(selectedLead) : null;
 
   return (
@@ -156,17 +239,90 @@ export default function LeadDetailsSheet({
           <>
             {/* Header Panel */}
             <div className="p-6 border-b border-border space-y-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-md font-bold text-primary uppercase border border-primary/20 shrink-0">
-                  {selectedLead.first_name?.[0] || ""}{selectedLead.last_name?.[0] || ""}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-md font-bold text-primary uppercase border border-primary/20 shrink-0">
+                    {selectedLead.first_name?.[0] || ""}{selectedLead.last_name?.[0] || ""}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {!isEditing ? (
+                      <>
+                        <SheetTitle className="text-md font-extrabold text-foreground truncate flex items-center gap-2">
+                          <span>{selectedLead.first_name} {selectedLead.last_name}</span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-5 w-5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md shrink-0"
+                            onClick={() => setIsEditing(true)}
+                            title="Editar información"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </SheetTitle>
+                        <SheetDescription className="text-xs text-muted-foreground truncate">
+                          {selectedLead.email || "Sin correo electrónico"}
+                        </SheetDescription>
+                      </>
+                    ) : (
+                      <div className="space-y-2 mt-1">
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <Input
+                            placeholder="Nombre"
+                            value={editFirstName}
+                            onChange={(e) => setEditFirstName(e.target.value)}
+                            className="h-8 text-xs px-2 rounded-lg bg-slate-50/50 dark:bg-slate-900/50"
+                            disabled={isUpdatingLead}
+                          />
+                          <Input
+                            placeholder="Apellido"
+                            value={editLastName}
+                            onChange={(e) => setEditLastName(e.target.value)}
+                            className="h-8 text-xs px-2 rounded-lg bg-slate-50/50 dark:bg-slate-900/50"
+                            disabled={isUpdatingLead}
+                          />
+                        </div>
+                        <Input
+                          placeholder="Correo electrónico"
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          className="h-8 text-xs px-2 rounded-lg w-full bg-slate-50/50 dark:bg-slate-900/50"
+                          disabled={isUpdatingLead}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <SheetTitle className="text-md font-extrabold text-foreground truncate">
-                    {selectedLead.first_name} {selectedLead.last_name}
-                  </SheetTitle>
-                  <SheetDescription className="text-xs text-muted-foreground truncate">
-                    {selectedLead.email || "Sin correo electrónico"}
-                  </SheetDescription>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  {isEditing && (
+                    <>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 rounded-lg"
+                        onClick={onSaveEdit}
+                        disabled={isUpdatingLead}
+                        title="Guardar cambios"
+                      >
+                        {isUpdatingLead ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg"
+                        onClick={onCancelEdit}
+                        disabled={isUpdatingLead}
+                        title="Cancelar edición"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -196,22 +352,13 @@ export default function LeadDetailsSheet({
                   </select>
                 </div>
 
-                <div className="flex items-end gap-1.5 justify-end">
-                  {phone && (
-                    <a
-                      href={`tel:${phone}`}
-                      className="h-8 flex-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/20 dark:hover:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-950/40 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm"
-                      title="Llamar"
-                    >
-                      <Phone size={12} /> Llamar
-                    </a>
-                  )}
+                <div className="flex items-end justify-end">
                   {phone && (
                     <a
                       href={`https://wa.me/${phone.replace(/\D/g, "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="h-8 flex-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-450 border border-emerald-100 dark:border-emerald-950/40 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm"
+                      className="h-8 w-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40 text-emerald-650 dark:text-emerald-450 border border-emerald-100 dark:border-emerald-950/40 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm"
                       title="Enviar WhatsApp"
                     >
                       <MessageSquare size={12} /> Chat

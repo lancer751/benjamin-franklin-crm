@@ -40,8 +40,12 @@ export const getLeadById = async (id: string): Promise<GetLeadByIdRes> => {
 };
 
 /** Registra un nuevo lead base (con sus respectivos teléfonos) */
-export const createLead = async (data: CreateLeadReq): Promise<InferResponseType<typeof api.leads.$post>> => {
-  const res = await api.leads.$post({ json: data });
+export const createLead = async (data: CreateLeadReq, sellerId?: string): Promise<InferResponseType<typeof api.leads.$post>> => {
+  const headers: Record<string, string> = {};
+  if (sellerId) {
+    headers["x-seller-id"] = sellerId;
+  }
+  const res = await api.leads.$post({ json: data } as any, { headers });
   return await res.json();
 };
 
@@ -70,12 +74,16 @@ export const getCampaignMembers = async (campaignId?: string, query?: any): Prom
 };
 
 /** POST: Asigna o añade un Lead existente a una campaña (Crea el CampaignMember) */
-export const addLeadToCampaign = async (campaignId: string, data: CreateCampaignMemberReq): Promise<any> => {
+export const addLeadToCampaign = async (campaignId: string, data: CreateCampaignMemberReq, sellerId?: string): Promise<any> => {
   // Si usas el cliente indexado por RPC de Hono, el objeto 'param' debe mapear 'campaignId'
+  const headers: Record<string, string> = {};
+  if (sellerId) {
+    headers["x-seller-id"] = sellerId;
+  }
   const res = await api.campaigns[":campaignId"].members.$post({
     param: { campaignId }, 
     json: data
-  });
+  } as any, { headers });
   return await res.json();
 };
 

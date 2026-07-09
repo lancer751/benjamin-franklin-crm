@@ -11,7 +11,9 @@ import {
   createMemberInteraction,
   getMemberTasks,
   updateMemberTask,
-  deleteMemberTask
+  deleteMemberTask,
+  createLead,
+  addLeadToCampaign
 } from "@/features/leads/services/leadService";
 import { adaptCampaignMembers, unpackLeads } from "@/features/leads/adapters/leadAdapter";
 import { Button } from "@/core/components/ui/button";
@@ -25,9 +27,12 @@ import {
   Search, 
   RefreshCw,
   UserCheck,
+  Plus,
+  ArrowLeft,
 } from "lucide-react";
 import KanbanColumn from "./components/KanbanColumn";
 import LeadDetailsSheet from "./components/LeadDetailsSheet";
+import NewLeadModal from "./components/NewLeadModal";
 
 // Mapeo de columnas y configuraciones de estilo
 export const FUNNEL_COLUMNS = [
@@ -71,11 +76,11 @@ const SellerLeadsView = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const sellerId = user?.seller?.id || user?.id;
+  const sellerId = user?.seller?.id;
 
-  const { campaignId: routeCampaignId } = useParams<{ campaignId: string }>();
+  const { campaignId } = useParams<{ campaignId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const selectedCampaignId = routeCampaignId || searchParams.get("campaignId") || "";
+  const selectedCampaignId = campaignId || searchParams.get("campaignId") || "";
   const [searchQuery, setSearchQuery] = useState("");
 
   // Estado para el lead seleccionado (Sheet lateral)
@@ -247,6 +252,65 @@ const SellerLeadsView = () => {
     }
   });
 
+  // Estado para el modal de registro manual de lead
+  const [isOpenNewLeadModal, setIsOpenNewLeadModal] = useState(false);
+
+  // Mutación secuencial de registro manual de lead
+  const createManualLeadMutation = useMutation({
+    mutationFn: async (payload: { first_name: string; last_name: string; email: string; cellphone: string }) => {
+      if (!sellerId) {
+        throw new Error("No se identificó el perfil de asesor de ventas.");
+      }
+      if (!selectedCampaignId) {
+        throw new Error("No hay una campaña activa seleccionada.");
+      }
+
+      // Paso 1: Invoca createLead
+      const leadPayload = {
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        email: payload.email,
+        phones: [{ number: payload.cellphone, type: "WHATSAPP" as const }],
+        status: "ACTIVE",
+        gender: "NOT_SPECIFIED" as const
+      };
+
+      const leadResponse = (await createLead(leadPayload as any, sellerId)) as any;
+      
+      // Paso 2: Extrae el ID del lead generado desde la respuesta
+      if (!leadResponse.success || !leadResponse.data?.id) {
+        throw new Error(leadResponse.message || "Error al crear los datos base del prospecto.");
+      }
+      const newLeadId = leadResponse.data.id;
+
+      // Paso 3: Invoca inmediatamente addLeadToCampaign
+      const memberPayload = {
+        lead_id: newLeadId,
+        campaing_id: selectedCampaignId, // Mantener el typo 'campaing_id' requerido por la DB
+        assigned_to: sellerId,
+        source: "WHATSAPP",
+        is_primary: true
+      };
+
+      const memberResponse = (await addLeadToCampaign(selectedCampaignId, memberPayload as any, sellerId)) as any;
+      if (!memberResponse.success) {
+        throw new Error(memberResponse.message || "Error al asociar el prospecto a la campaña.");
+      }
+
+      return memberResponse;
+    },
+    onSuccess: () => {
+      toast.success("Prospecto registrado y asignado exitosamente.");
+      // 4. REFRESCAR EL KANBAN DE FORMA OPTIMISTA
+      queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", selectedCampaignId, sellerId] });
+      setIsOpenNewLeadModal(false);
+    },
+    onError: (err: any) => {
+      console.error(err);
+      toast.error(err.message || "Ocurrió un error al registrar el prospecto.");
+    }
+  });
+
   const handleStatusChange = (memberId: string, newStatus: string) => {
     const backendStatus = KANBAN_STAGE_TO_ENUM[newStatus] || newStatus;
     updateStatusMutation.mutate({ memberId, status: backendStatus });
@@ -302,9 +366,20 @@ const SellerLeadsView = () => {
       {/* Header Panel */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <UserCheck className="text-primary h-6 w-6" /> Funnel de Tipificación
-          </h1>
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="mr-2 h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
+              title="Retroceder"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <UserCheck className="text-primary h-6 w-6" /> Funnel de Tipificación
+            </h1>
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
             Visualiza tu pipeline de leads en {selectedCampaignName} y actualiza sus estados en tiempo real.
           </p>
@@ -330,6 +405,14 @@ const SellerLeadsView = () => {
               </SelectContent>
             </Select>
           </div>
+
+          <Button
+            onClick={() => setIsOpenNewLeadModal(true)}
+            className="h-9 gap-1.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm flex items-center border border-blue-500/20"
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo Lead
+          </Button>
 
           <Button
             variant="outline"
@@ -410,6 +493,14 @@ const SellerLeadsView = () => {
         updateTaskMutation={updateTaskMutation}
         deleteTaskMutation={deleteTaskMutation}
         selectedCampaignId={selectedCampaignId}
+      />
+
+      {/* Modal de Registro Manual de Lead */}
+      <NewLeadModal
+        isOpen={isOpenNewLeadModal}
+        onClose={() => setIsOpenNewLeadModal(false)}
+        onSubmit={createManualLeadMutation.mutateAsync}
+        isSubmitting={createManualLeadMutation.isPending}
       />
     </div>
   );

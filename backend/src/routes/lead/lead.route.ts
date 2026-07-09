@@ -73,7 +73,7 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
 
   .post(
     "/",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
     zValidator("json", CreateLeadSchema),
     async (c) => {
       const repo = leadRepository(c.get("prisma"));
@@ -91,7 +91,7 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
 
   .put(
     "/:id",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
     zValidator("param", UUIDParam),
     zValidator("json", UpdateLeadSchema),
     async (c) => {
@@ -138,7 +138,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // POST — add a lead to a campaign (creates CampaignMember)
   .post(
     "/",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
     zValidator("json", CreateCampaignMemberSchema),
     async (c) => {
       const repo = leadRepository(c.get("prisma"));

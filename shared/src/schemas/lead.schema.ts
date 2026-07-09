@@ -53,7 +53,7 @@ const LeadBaseSchema = z.object({
   email: z.email("Invalid email").optional().nullable(),
   profession: z.string().optional().nullable(),
   gender: GenderSchema.optional().nullable(),
-  status: LeadStatusSchema.default("ACTIVE"),
+  lead_status: LeadStatusSchema.default("ACTIVE"),
   address: z.string().optional().nullable(),
   secondary_email: z.email().optional().nullable(),
   dni: z.string().length(8, "DNI must be 8 digits").optional().nullable(),
