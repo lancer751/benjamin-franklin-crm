@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
 import { api } from "@/core/lib/api";
 import { getCampaigns } from "@/features/campaigns/services/campaignService";
+import { getSellerCampaigns } from "@/features/users/services/userService";
 import { 
   getCampaignMembers, 
   updateMemberStatus,
@@ -92,36 +93,25 @@ const SellerLeadsView = () => {
   }, [selectedLead]);
 
   // 1. Obtener campañas asignadas al vendedor
-  const { data: campaignsRes, isLoading: isLoadingCampaigns } = useQuery({
-    queryKey: ["campaigns-list-seller", sellerId],
-    queryFn: () => getCampaigns(),
+  const { data: sellerCampaignsRes, isLoading: isLoadingCampaigns } = useQuery({
+    queryKey: ["seller-assigned-campaigns", sellerId],
+    queryFn: () => getSellerCampaigns(sellerId || ""),
     enabled: !!sellerId,
   });
 
-  const campaigns = (campaignsRes as any)?.data?.data?.campaings
-    || (campaignsRes as any)?.data?.campaings
-    || (campaignsRes as any)?.campaings
-    || (campaignsRes as any)?.data
-    || [];
+  const assignedCampaignList = useMemo(() => {
+    return (sellerCampaignsRes as any)?.success && (sellerCampaignsRes as any)?.data?.assignedCampaing
+      ? (sellerCampaignsRes as any).data.assignedCampaing
+      : (sellerCampaignsRes as any)?.assignedCampaing || [];
+  }, [sellerCampaignsRes]);
 
-  const sellerCampaigns = useMemo(() => {
-    return campaigns.filter((c: any) => {
-      const sellersList = c.sellers || [];
-      return sellersList.some(
-        (s: any) =>
-          s.seller_id === sellerId ||
-          s.seller?.id === sellerId ||
-          s.id === sellerId
-      );
-    });
-  }, [campaigns, sellerId]);
-
-  // Preseleccionar la primera campaña si no hay seleccionada en los query params
+  // Preseleccionar la primera campaña si no hay seleccionada
   useEffect(() => {
-    if (sellerCampaigns.length > 0 && !selectedCampaignId) {
-      setSearchParams({ campaignId: sellerCampaigns[0].id });
+    if (assignedCampaignList.length > 0 && !selectedCampaignId) {
+      const firstCamp = assignedCampaignList[0].campaing || assignedCampaignList[0].campaign || assignedCampaignList[0];
+      navigate(`/admin/campaigns/seller/leads/${firstCamp.id}`, { replace: true });
     }
-  }, [sellerCampaigns, selectedCampaignId, setSearchParams]);
+  }, [assignedCampaignList, selectedCampaignId, navigate]);
 
   // 2. Obtener los leads de la campaña seleccionada asignados a este asesor
   const { data: membersRes, isLoading: isLoadingLeads, isError: isErrorLeads } = useQuery({
@@ -317,7 +307,7 @@ const SellerLeadsView = () => {
   };
 
   const handleCampaignChange = (val: string) => {
-    setSearchParams({ campaignId: val });
+    navigate(`/admin/campaigns/seller/leads/${val}`);
   };
 
   // Filtrado de leads por la barra de búsqueda (nombre, email o celular)
@@ -357,9 +347,13 @@ const SellerLeadsView = () => {
   }, [filteredLeads]);
 
   const selectedCampaignName = useMemo(() => {
-    const camp = sellerCampaigns.find((c: any) => c.id === selectedCampaignId);
+    const activeItem = assignedCampaignList.find((item: any) => {
+      const c = item.campaing || item.campaign || item;
+      return c.id === selectedCampaignId;
+    });
+    const camp = activeItem?.campaing || activeItem?.campaign || activeItem;
     return camp?.name || "Campaña";
-  }, [sellerCampaigns, selectedCampaignId]);
+  }, [assignedCampaignList, selectedCampaignId]);
 
   return (
     <div className="space-y-6 fade-in">
@@ -395,12 +389,17 @@ const SellerLeadsView = () => {
               <SelectContent>
                 {isLoadingCampaigns ? (
                   <SelectItem value="loading" disabled>Cargando campañas...</SelectItem>
-                ) : sellerCampaigns.length === 0 ? (
-                  <SelectItem value="empty" disabled>Sin campañas</SelectItem>
+                ) : assignedCampaignList.length === 0 ? (
+                  <SelectItem value="empty" disabled>Sin campañas asignadas</SelectItem>
                 ) : (
-                  sellerCampaigns.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))
+                  assignedCampaignList.map((item: any) => {
+                    const c = item.campaing || item.campaign || item;
+                    return (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    );
+                  })
                 )}
               </SelectContent>
             </Select>

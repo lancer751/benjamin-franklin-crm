@@ -157,7 +157,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // PATCH /:memberId/status — update CampaignMemberStatus
   .patch(
     "/:memberId/status",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
     zValidator("param", MemberParam),
     zValidator("json", UpdateCampaignMemberStatusSchema),
     async (c) => {
@@ -177,7 +177,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // PATCH /:memberId/reassign — reassign lead to another seller
   .patch(
     "/:memberId/reassign",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
     zValidator("param", MemberParam),
     zValidator("json", ReassignCampaignMemberSchema),
     async (c) => {
