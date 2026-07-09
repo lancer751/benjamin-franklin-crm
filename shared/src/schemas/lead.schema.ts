@@ -86,6 +86,16 @@ export const UpdateCampaignMemberStatusSchema = z.object({
   status: CampaignMemberStatusSchema,
 });
 
+export const ReassignMultipleCampaignMembersSchema = z.object({
+  member_ids: z
+    .array(UUIDField)
+    .min(1, "At least one campaign member must be selected")
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "Duplicate member_ids are not allowed",
+    }),
+  assigned_to: UUIDField,
+});
+
 export const ReassignCampaignMemberSchema = z.object({
   assigned_to: UUIDField,
 });
@@ -154,6 +164,8 @@ export type ReassignCampaignMemberInput = z.infer<
 export type CreateLeadInteractionInput = z.infer<
   typeof CreateLeadInteractionSchema
 >;
+export type ReassignMultipleCampaignMembersInput = z.infer<
+  typeof ReassignMultipleCampaignMembersSchema>;
 export type CreateTaskInput = z.infer<typeof CreateTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof UpdateTaskSchema>;
 export type LeadQuery = z.infer<typeof LeadQuerySchema>;

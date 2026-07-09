@@ -52,7 +52,6 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
       200,
     );
   })
-
   // GET /campaigns/:id
   .get("/:id", zValidator("param", UUIDParam), async (c) => {
     const { id } = c.req.valid("param");
@@ -65,7 +64,6 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
       200,
     );
   })
-
   // POST /campaigns
   .post(
     "/",
@@ -84,7 +82,6 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
       }
     },
   )
-
   // PUT /campaigns/:id
   .put(
     "/:id",
@@ -109,7 +106,6 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
       }
     },
   )
-
   // DELETE /campaigns/:id
   .delete(
     "/:id",
@@ -129,7 +125,6 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
       }
     },
   )
-
   // POST /campaigns/:id/sellers  — assign sellers
   .post(
     "/:id/sellers",
@@ -150,7 +145,6 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
       }
     },
   )
-
   // DELETE /campaigns/:id/sellers/:sellerId  — remove seller from campaign
   .delete(
     "/:id/sellers/:sellerId",
@@ -158,8 +152,8 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
     zValidator(
       "param",
       z.object({
-        id: z.string().uuid().length(36),
-        sellerId: z.string().uuid().length(36),
+        id: z.uuid().length(36),
+        sellerId: z.uuid().length(36),
       }),
     ),
     async (c) => {
