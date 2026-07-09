@@ -17,6 +17,7 @@ import {
   UpdateTaskSchema,
   LeadQuerySchema,
   CampaignMemberQuerySchema,
+  ReassignMultipleCampaignMembersSchema,
 } from "shared";
 import { leadRepository } from "@/repositories/lead.repository";
 import {
@@ -109,6 +110,7 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
     },
   );
 
+// ACTIONS WITH THE LEADS ON CAMPAIGNS
 // ── /campaigns/:id/members ────────────────────────────────────────────────────
 export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
@@ -197,7 +199,28 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
       }
     },
   )
-
+  // PATCH /members/reassign-bulk — reassign multiple leads to a seller
+.patch(
+  "/reassign-bulk",
+  verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+  zValidator("json", ReassignMultipleCampaignMembersSchema),
+  async (c) => {
+    const repo = leadRepository(c.get("prisma"));
+    try {
+      const updated = await repo.reassignMembersBeforeRemove(c.req.valid("json"));
+      return c.json<SuccessResponse<typeof updated>>(
+        {
+          success: true,
+          message: `${updated.length} lead(s) reassigned`,
+          data: updated,
+        },
+        200,
+      );
+    } catch (err) {
+      handleRepoError(err);
+    }
+  },
+)
   // ── Interactions under a member ────────────────────────────────────────────
   // GET /:memberId/interactions
   .get(
