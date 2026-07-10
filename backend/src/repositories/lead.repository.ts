@@ -92,23 +92,19 @@ export function leadRepository(prisma: PrismaClient) {
         },
       });
     },
-
     async create(data: CreateLeadInput) {
-      // Check phone type telephone uniqueness
+      const { phones, ...leadFields } = data;
+      const principal = phones.find((p) => p.isPrincipal)!; // Zod guarantees exactly one
+
       const existing = await prisma.lead.findFirst({
         where: {
           OR: [
-            { email: data.email },
-            ...data.phones
-              .filter((p) => p.type === "TELEPHONE")
-              .map((p) => ({
-                phones: {
-                  some: {
-                    number: p.number,
-                    type: PhoneType.TELEPHONE,
-                  },
-                },
-              })),
+            { email: leadFields.email },
+            {
+              phones: {
+                some: { number: principal.number, isPrincipal: true },
+              },
+            },
           ],
         },
         select: { id: true },
@@ -117,10 +113,11 @@ export function leadRepository(prisma: PrismaClient) {
       if (existing)
         throw {
           code: "CONFLICT",
-          message: `Email "${data.email}" is already registered`,
+          message: existing
+            ? `Email or principal phone number is already registered`
+            : undefined,
         };
 
-      const { phones, ...leadFields } = data;
       return prisma.lead.create({
         data: {
           ...leadFields,
@@ -129,22 +126,156 @@ export function leadRepository(prisma: PrismaClient) {
         include: { phones: true },
       });
     },
-
     async update(id: string, data: UpdateLeadInput) {
-      if (data.email) {
+      const { phones, ...leadFields } = data;
+
+      if (leadFields.email) {
         const conflict = await prisma.lead.findFirst({
-          where: { email: data.email, NOT: { id } },
+          where: { email: leadFields.email, NOT: { id } },
           select: { id: true },
         });
         if (conflict)
           throw {
             code: "CONFLICT",
-            message: `Email "${data.email}" is already in use`,
+            message: `Email "${leadFields.email}" is already in use`,
           };
       }
-      return prisma.lead.update({ where: { id }, data });
+
+      if (leadFields.dni) {
+        const conflict = await prisma.lead.findFirst({
+          where: { dni: leadFields.dni, NOT: { id } },
+          select: { id: true },
+        });
+        if (conflict)
+          throw {
+            code: "CONFLICT",
+            message: `DNI "${leadFields.dni}" is already in use`,
+          };
+      }
+
+      // Principal phone number uniqueness — checked before the transaction
+      // so we fail fast without touching any rows
+      if (phones) {
+        const principal = phones.find((p) => p.isPrincipal);
+        // Zod guarantees exactly one exists when `phones` is provided, but guard anyway
+        if (principal) {
+          const phoneConflict = await prisma.leadPhone.findFirst({
+            where: {
+              number: principal.number,
+              isPrincipal: true,
+              lead_id: { not: id },
+            },
+            select: { id: true, lead_id: true },
+          });
+          if (phoneConflict)
+            throw {
+              code: "CONFLICT",
+              message: `Phone number "${principal.number}" is already registered as another lead's principal number`,
+            };
+        }
+      }
+
+      return prisma.$transaction(async (tx) => {
+        const existingLead = await tx.lead.findUnique({
+          where: { id },
+          select: { id: true },
+        });
+        if (!existingLead)
+          throw { code: "NOT_FOUND", message: "Lead not found" };
+
+        if (Object.keys(leadFields).length > 0) {
+          await tx.lead.update({ where: { id }, data: leadFields });
+        }
+
+        if (phones) {
+          const existingPhones = await tx.leadPhone.findMany({
+            where: { lead_id: id },
+            select: { id: true },
+          });
+          const existingIds = new Set(existingPhones.map((p) => p.id));
+          const incomingIds = new Set(
+            phones.filter((p) => p.id).map((p) => p.id!),
+          );
+
+          const invalidIds = [...incomingIds].filter(
+            (pid) => !existingIds.has(pid),
+          );
+          if (invalidIds.length > 0)
+            throw {
+              code: "INVALID",
+              message: `Phone IDs do not belong to this lead: ${invalidIds.join(", ")}`,
+            };
+
+          const idsToDelete = [...existingIds].filter(
+            (pid) => !incomingIds.has(pid),
+          );
+          if (idsToDelete.length > 0) {
+            await tx.leadPhone.deleteMany({
+              where: { id: { in: idsToDelete } },
+            });
+          }
+
+          for (const phone of phones.filter((p) => p.id)) {
+            await tx.leadPhone.update({
+              where: { id: phone.id },
+              data: {
+                number: phone.number,
+                type: phone.type,
+                isPrincipal: phone.isPrincipal,
+              },
+            });
+          }
+
+          const newPhones = phones.filter((p) => !p.id);
+          if (newPhones.length > 0) {
+            await tx.leadPhone.createMany({
+              data: newPhones.map((p) => ({
+                lead_id: id,
+                number: p.number,
+                type: p.type,
+                isPrincipal: p.isPrincipal,
+              })),
+            });
+          }
+        }
+
+        return tx.lead.findUniqueOrThrow({
+          where: { id },
+          include: { phones: true },
+        });
+      });
+    },
+    async remove(id: string) {
+      const lead = await prisma.lead.findUnique({
+        where: { id },
+        select: { id: true, deleted_at: true },
+      });
+
+      if (!lead) throw { code: "NOT_FOUND", message: "Lead not found" };
+      if (lead.deleted_at)
+        throw { code: "CONFLICT", message: "Lead is already deleted" };
+
+      return prisma.lead.update({
+        where: { id },
+        data: { deleted_at: new Date() },
+      });
     },
 
+    async restore(id: string) {
+      const lead = await prisma.lead.findUnique({
+        where: { id },
+        select: { id: true, deleted_at: true },
+      });
+
+      if (!lead) throw { code: "NOT_FOUND", message: "Lead not found" };
+      if (!lead.deleted_at)
+        throw { code: "CONFLICT", message: "Lead is not deleted" };
+
+      return prisma.lead.update({
+        where: { id },
+        data: { deleted_at: null },
+      });
+    },
     // ── CampaignMember ───────────────────────────────────────────────────────
 
     async findMembersByMember(campaignId: string, query: CampaignMemberQuery) {

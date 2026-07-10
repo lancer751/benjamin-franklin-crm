@@ -71,10 +71,9 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       200,
     );
   })
-
   .post(
     "/",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR", "SALES_REP"),
     zValidator("json", CreateLeadSchema),
     async (c) => {
       const repo = leadRepository(c.get("prisma"));
@@ -89,10 +88,9 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       }
     },
   )
-
   .put(
     "/:id",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR", "SALES_REP"),
     zValidator("param", UUIDParam),
     zValidator("json", UpdateLeadSchema),
     async (c) => {
@@ -108,8 +106,44 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
         handleRepoError(err);
       }
     },
+  ) // DELETE /leads/:id — soft delete
+  .delete(
+    "/:id",
+    verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR"),
+    zValidator("param", UUIDParam),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      try {
+        await repo.remove(id);
+        return c.json<SuccessResponse>(
+          { success: true, message: "Lead removed" },
+          200,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  )
+  // PATCH /leads/:id/restore — undo a soft delete
+  .patch(
+    "/:id/restore",
+    verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR"),
+    zValidator("param", UUIDParam),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const repo = leadRepository(c.get("prisma"));
+      try {
+        const lead = await repo.restore(id);
+        return c.json<SuccessResponse<typeof lead>>(
+          { success: true, message: "Lead restored", data: lead },
+          200,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
   );
-
 // ACTIONS WITH THE LEADS ON CAMPAIGNS
 // ── /campaigns/:id/members ────────────────────────────────────────────────────
 export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
@@ -140,7 +174,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // POST — add a lead to a campaign (creates CampaignMember)
   .post(
     "/",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("json", CreateCampaignMemberSchema),
     async (c) => {
       const repo = leadRepository(c.get("prisma"));
@@ -159,7 +193,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // PATCH /:memberId/status — update CampaignMemberStatus
   .patch(
     "/:memberId/status",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("param", MemberParam),
     zValidator("json", UpdateCampaignMemberStatusSchema),
     async (c) => {
@@ -179,7 +213,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // PATCH /:memberId/reassign — reassign lead to another seller
   .patch(
     "/:memberId/reassign",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("param", MemberParam),
     zValidator("json", ReassignCampaignMemberSchema),
     async (c) => {
@@ -200,27 +234,29 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
     },
   )
   // PATCH /members/reassign-bulk — reassign multiple leads to a seller
-.patch(
-  "/reassign-bulk",
-  verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
-  zValidator("json", ReassignMultipleCampaignMembersSchema),
-  async (c) => {
-    const repo = leadRepository(c.get("prisma"));
-    try {
-      const updated = await repo.reassignMembersBeforeRemove(c.req.valid("json"));
-      return c.json<SuccessResponse<typeof updated>>(
-        {
-          success: true,
-          message: `${updated.length} lead(s) reassigned`,
-          data: updated,
-        },
-        200,
-      );
-    } catch (err) {
-      handleRepoError(err);
-    }
-  },
-)
+  .patch(
+    "/reassign-bulk",
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+    zValidator("json", ReassignMultipleCampaignMembersSchema),
+    async (c) => {
+      const repo = leadRepository(c.get("prisma"));
+      try {
+        const updated = await repo.reassignMembersBeforeRemove(
+          c.req.valid("json"),
+        );
+        return c.json<SuccessResponse<typeof updated>>(
+          {
+            success: true,
+            message: `${updated.length} lead(s) reassigned`,
+            data: updated,
+          },
+          200,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  )
   // ── Interactions under a member ────────────────────────────────────────────
   // GET /:memberId/interactions
   .get(

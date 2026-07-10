@@ -232,10 +232,13 @@ enum PhoneType {
 model LeadPhone {
   id      String    @id @default(uuid()) @db.Char(36)
   number  String
+  isPrincipal Boolean @default(false)
   type    PhoneType
   lead_id String
 
   lead Lead @relation(fields: [lead_id], references: [id])
+
+   @@index([lead_id])
 }
 
 model CampaignMember {
@@ -295,6 +298,7 @@ model Lead {
   dni                 String?    @unique @db.Char(8)
   lead_status         LeadStatus @default(ACTIVE)
   primary_campaign_id String?
+  deleted_at          DateTime?
   created_at          DateTime   @default(now())
   updated_at          DateTime   @updatedAt
 
@@ -306,6 +310,8 @@ model Lead {
   customerProfile     CustomerProfile?
   leadPrimaryCampaing Campaing?         @relation("PrimaryCampaign", fields: [primary_campaign_id], references: [id])
   createdTasks        Tasks[]
+
+   @@index([deleted_at])
 }
 
 enum InteractionType {

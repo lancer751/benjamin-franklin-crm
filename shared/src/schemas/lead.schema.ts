@@ -38,13 +38,17 @@ export const InteractionTypeSchema = z.enum([
 // ── Lead ─────────────────────────────────────────────────────────────────────
 
 const LeadPhoneSchema = z.object({
-  // adaptiing to peruvian phone numbers because they have 9 digits and start with 9
+  id: UUIDField.optional(),
   number: z
     .string()
     .length(9, "Phone number must be 9 digits")
     .refine((num) => /^9\d{8}$/.test(num)),
   type: PhoneTypeSchema,
+  isPrincipal: z.boolean().default(false),
 });
+
+const exactlyOnePrincipal = (phones: z.infer<typeof LeadPhoneSchema>[]) =>
+  phones.filter((p) => p.isPrincipal).length === 1;
 
 const LeadBaseSchema = z.object({
   first_name: z.string().min(1, "First name is required").optional().nullable(),
@@ -62,12 +66,21 @@ const LeadBaseSchema = z.object({
     .min(1, "At least one phone number is required"),
 });
 
-export const CreateLeadSchema = LeadBaseSchema;
+export const CreateLeadSchema = LeadBaseSchema.refine(
+  (data) => exactlyOnePrincipal(data.phones),
+  {
+    message: "Exactly one phone must be marked as principal",
+    path: ["phones"],
+  },
+);
 
-export const UpdateLeadSchema = LeadBaseSchema.omit({ phones: true })
-  .partial()
+export const UpdateLeadSchema = LeadBaseSchema.partial()
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided",
+  })
+  .refine((data) => !data.phones || exactlyOnePrincipal(data.phones), {
+    message: "Exactly one phone must be marked as principal",
+    path: ["phones"],
   });
 
 // ── CampaignMember (the lead's assignment to a campaign) ─────────────────────
@@ -165,7 +178,8 @@ export type CreateLeadInteractionInput = z.infer<
   typeof CreateLeadInteractionSchema
 >;
 export type ReassignMultipleCampaignMembersInput = z.infer<
-  typeof ReassignMultipleCampaignMembersSchema>;
+  typeof ReassignMultipleCampaignMembersSchema
+>;
 export type CreateTaskInput = z.infer<typeof CreateTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof UpdateTaskSchema>;
 export type LeadQuery = z.infer<typeof LeadQuerySchema>;
