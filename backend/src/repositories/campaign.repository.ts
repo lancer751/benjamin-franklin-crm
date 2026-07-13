@@ -149,7 +149,7 @@ export function campaignRepository(prisma: PrismaClient) {
     },
 
     async update(id: string, data: UpdateCampaignInput) {
-      const { product_id, supervisor_id, ...rest } = data;
+      const { product_id, supervisor_id, campaing_name, ...rest } = data;
 
       if (rest.status === "ACTIVE") {
         // Check if campaign has at least one seller assigned before activating
@@ -202,17 +202,21 @@ export function campaignRepository(prisma: PrismaClient) {
           };
       }
 
-      // verify if meta_form_id is an existing form from meta
+      const prismaData = {
+      ...rest,
+      ...(campaing_name !== undefined && { name: campaing_name }),
+      };
+
 
       return prisma.campaing.update({
         where: { id },
         data: {
-          ...rest,
+          ...prismaData,
           ...(product_id && {
             relatedProduct: { connect: { id: product_id } },
           }),
           ...(supervisor_id && {
-            supervisor: { connect: { id: supervisor_id } },
+            assignedSupervisor: { connect: { id: supervisor_id } },
           }),
         },
       });
