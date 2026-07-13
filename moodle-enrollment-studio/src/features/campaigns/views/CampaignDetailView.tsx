@@ -4,7 +4,7 @@ import { Loader2, Users, BookOpen, UserMinus } from "lucide-react";
 import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import CampaignForm from "@/features/campaigns/components/CampaignForm";
 import { getSellers } from "@/features/users/services/userService";
 import { toast } from "sonner";
@@ -13,6 +13,26 @@ import { useCampaignDetail } from "@/features/campaigns/hooks/useCampaignDetail"
 import { CampaignDetailHeader } from "@/features/campaigns/components/CampaignDetailHeader";
 import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
 import { ModalityMap, translateEnum } from "@/core/utils/dictionaries";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/core/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/components/ui/select";
+import {
+  getCampaignMembers,
+  reassignBulkCampaignMembers,
+  removeSellerFromCampaign,
+} from "@/features/campaigns/services/campaignService";
 
 interface AssignSellersModalProps {
   open: boolean;
@@ -172,6 +192,7 @@ const UserPlusIcon = () => (
 const CampaignDetailView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const {
     campaign,
@@ -185,6 +206,27 @@ const CampaignDetailView = () => {
     removeSellerMutation,
     deleteCampaignMutation,
   } = useCampaignDetail(id);
+
+  const [sellerToRemove, setSellerToRemove] = useState<any>(null);
+  const [newAssigneeId, setNewAssigneeId] = useState<string>("");
+  const [isReassigning, setIsReassigning] = useState<boolean>(false);
+
+  // Obtener IDs de vendedores actualmente asignados
+  const sellersList = useMemo(() => {
+    if (!campaign) return [];
+    return campaign.sellersOnCampaign || campaign.sellers || [];
+  }, [campaign]);
+
+  const assignedSellerIds = useMemo(() => {
+    return sellersList.map((s: any) => s.seller_id || s.seller?.id || s.id) || [];
+  }, [sellersList]);
+
+  const otherSellers = useMemo(() => {
+    if (!sellerToRemove) return [];
+    return sellersList
+      .map((cs: any) => cs.seller || cs)
+      .filter((s: any) => s && s.id !== sellerToRemove.id);
+  }, [sellersList, sellerToRemove]);
 
   const campaignMetrics = useMemo(() => {
     if (!campaign) {
@@ -241,19 +283,69 @@ const CampaignDetailView = () => {
     );
   }
 
-  const handleRemoveSeller = (sellerId: string, sellerName: string) => {
-    if (window.confirm(`¿Estás seguro de que deseas remover a ${sellerName} de esta campaña?`)) {
-      removeSellerMutation.mutate(sellerId);
+  const handleRemoveSeller = (seller: any) => {
+    setSellerToRemove(seller);
+    setNewAssigneeId("");
+  };
+
+  const handleConfirmRetiro = async () => {
+    if (!sellerToRemove || !newAssigneeId) {
+      toast.error("Por favor, selecciona un asesor para reasignar los prospectos.");
+      return;
+    }
+
+    setIsReassigning(true);
+
+    try {
+      const campaignId = campaign.id;
+
+      // 1. Obtener los leads de este asesor en esta campaña
+      const response = await getCampaignMembers(campaignId, { 
+        assigned_to: sellerToRemove.id, 
+        limit: 1000 
+      });
+      const memberIds = response?.data?.map((m: any) => m.id) || [];
+
+      // 2. Reasignar si tiene leads
+      if (memberIds.length > 0) {
+        const reassignRes = await reassignBulkCampaignMembers(campaignId, {
+          member_ids: memberIds,
+          assigned_to: newAssigneeId,
+        });
+
+        if (!reassignRes.success) {
+          throw new Error(reassignRes.message || "Error al reasignar los prospectos.");
+        }
+        toast.success(`Se reasignaron ${memberIds.length} prospectos con éxito.`);
+      }
+
+      // 3. Remover el vendedor de la campaña
+      const removeRes = await removeSellerFromCampaign(campaignId, sellerToRemove.id);
+      if (!removeRes.success) {
+        throw new Error(removeRes.message || "Error al retirar al asesor.");
+      }
+
+      toast.success("Asesor retirado y leads reasignados correctamente.");
+
+      // 4. Invalidar queries para refrescar la campaña en tiempo real
+      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leads"] });
+
+      // 5. Cerrar modal y limpiar
+      setSellerToRemove(null);
+      setNewAssigneeId("");
+    } catch (err: any) {
+      toast.error(err?.message || "Error en el proceso de retiro y reasignación.");
+    } finally {
+      setIsReassigning(false);
     }
   };
 
   const handlePublishReport = () => {
     toast.success("¡Reporte de campaña compilado y publicado con éxito!");
   };
-
-  // Obtener IDs de vendedores actualmente asignados
-  const sellersList = campaign.sellersOnCampaign || campaign.sellers || [];
-  const assignedSellerIds = sellersList.map((s: any) => s.seller_id || s.seller?.id || s.id) || [];
 
   const supervisor = campaign.assignedSupervisor || campaign.supervisor;
   const supervisorUser = supervisor?.user;
@@ -425,8 +517,8 @@ const CampaignDetailView = () => {
                           </td>
                           <td className="py-3 text-right">
                             <button
-                              onClick={() => handleRemoveSeller(sellerId, sellerName)}
-                              disabled={removeSellerMutation.isPending}
+                              onClick={() => handleRemoveSeller(seller)}
+                              disabled={removeSellerMutation.isPending || isReassigning}
                               className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors inline-flex items-center justify-center disabled:opacity-50"
                             >
                               <UserMinus size={16} />
@@ -581,6 +673,70 @@ const CampaignDetailView = () => {
         assignedSellerIds={assignedSellerIds}
         assignMutation={assignSellersMutation}
       />
+
+      {/* Modal de confirmación de retiro y reasignación obligatoria */}
+      <Dialog open={!!sellerToRemove} onOpenChange={(open) => { if (!open) setSellerToRemove(null); }}>
+        <DialogContent className="max-w-md bg-white rounded-xl shadow-lg border border-slate-100">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 font-bold text-lg">Retirar Asesor de Campaña</DialogTitle>
+            <DialogDescription className="text-slate-500 text-sm mt-1">
+              ¿Estás seguro de retirar a <strong>{sellerToRemove?.user?.first_name || "este asesor"}</strong> de esta campaña?
+              Para proceder, debes reasignar de forma obligatoria los leads que tiene asignados en esta campaña.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-3">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+              Asesor de Ventas Destino
+            </label>
+            <Select value={newAssigneeId} onValueChange={setNewAssigneeId}>
+              <SelectTrigger className="w-full border-slate-200 rounded-lg">
+                <SelectValue placeholder="Seleccionar asesor para reasignar" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                {otherSellers.map((s: any) => {
+                  const sName = `${s.user?.first_name || ""} ${s.user?.last_name || ""}`.trim();
+                  return (
+                    <SelectItem key={s.id} value={s.id}>
+                      {sName || `Asesor ${s.id.slice(0, 4)}`}
+                    </SelectItem>
+                  );
+                })}
+                {otherSellers.length === 0 && (
+                  <p className="text-xs text-muted-foreground p-2 text-center">
+                    No hay otros asesores en esta campaña para reasignar.
+                  </p>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setSellerToRemove(null)}
+              disabled={isReassigning}
+              className="border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmRetiro}
+              disabled={isReassigning || !newAssigneeId || otherSellers.length === 0}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              {isReassigning ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Reasignando...
+                </>
+              ) : (
+                "Confirmar Retiro y Reasignar"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
