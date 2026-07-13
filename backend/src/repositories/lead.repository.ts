@@ -17,20 +17,41 @@ import type { LeadWhereInput } from "../../../packages/db/dist/generated/prisma/
 export function leadRepository(prisma: PrismaClient) {
   return {
     //  Leads
-    async findMany({ page, limit, search, status }: LeadQuery) {
+    async findMany({ page, limit, search, status, assigned_to }: LeadQuery) {
       const skip = (page - 1) * limit;
-      const where: LeadWhereInput = search
-        ? {
-            OR: [
-              { email: { contains: search, mode: "insensitive" as const } },
-              {
-                first_name: { contains: search, mode: "insensitive" as const },
-              },
-              { last_name: { contains: search, mode: "insensitive" as const } },
-            ],
-            AND: [{ lead_status: status ?? "ACTIVE" }],
+      const andConditions: any[] = [
+        { lead_status: status ?? "ACTIVE" }
+      ];
+
+      if (search) {
+        andConditions.push({
+          OR: [
+            { email: { contains: search, mode: "insensitive" as const } },
+            { first_name: { contains: search, mode: "insensitive" as const } },
+            { last_name: { contains: search, mode: "insensitive" as const } },
+          ]
+        });
+      }
+
+      if (assigned_to === "unassigned") {
+        andConditions.push({
+          campaignsEngaging: {
+            none: {}
           }
-        : {};
+        });
+      } else if (assigned_to) {
+        andConditions.push({
+          campaignsEngaging: {
+            some: {
+              assigned_to,
+            }
+          }
+        });
+      }
+
+      const where: LeadWhereInput = {
+        AND: andConditions
+      };
 
       const [leads, total] = await Promise.all([
         prisma.lead.findMany({

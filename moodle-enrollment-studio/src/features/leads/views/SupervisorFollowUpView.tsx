@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Users, 
@@ -25,6 +26,8 @@ import {
   TableRow, 
   TableCell 
 } from "@/core/components/ui/table";
+import { Checkbox } from "@/core/components/ui/checkbox";
+import { Button } from "@/core/components/ui/button";
 import { 
   Tabs, 
   TabsList, 
@@ -97,6 +100,9 @@ const getTipificacionBadge = (status: string) => {
 const SupervisorFollowUpView = () => {
   const navigate = useNavigate();
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [targetSellerId, setTargetSellerId] = useState<string>("");
+
   const {
     sellers,
     activeSellerTab,
@@ -109,9 +115,15 @@ const SupervisorFollowUpView = () => {
     interactionsRes,
     isLoadingInteractions,
     reassignMutation,
+    bulkReassignMutation,
     kpis,
     realSellers,
   } = useSupervisorFollowUp();
+
+  useEffect(() => {
+    setSelectedIds([]);
+    setTargetSellerId("");
+  }, [activeSellerTab]);
 
   const handleCopyPhone = (phone: string) => {
     navigator.clipboard.writeText(phone);
@@ -260,11 +272,6 @@ const SupervisorFollowUpView = () => {
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <span>Cargando equipo de ventas...</span>
           </div>
-        ) : sellers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Users size={48} className="mb-3 opacity-20" />
-            <p className="text-sm font-semibold">No se encontraron asesores con prospectos asignados.</p>
-          </div>
         ) : (
           <Tabs value={activeSellerTab} onValueChange={setActiveSellerTab} className="w-full">
             <div className="bg-slate-50 border-b border-border p-2">
@@ -272,15 +279,25 @@ const SupervisorFollowUpView = () => {
                 Hojas de Asesores (Estilo Excel)
               </span>
               <TabsList className="bg-slate-200/50 p-1 rounded-lg border border-slate-300/40 w-fit flex-wrap">
-                {sellers.map((seller) => (
-                  <TabsTrigger 
-                    key={seller.id}
-                    value={seller.id}
-                    className="rounded-md py-1.5 px-4 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all uppercase"
-                  >
-                    {seller.name}
-                  </TabsTrigger>
-                ))}
+                <TabsTrigger 
+                  key="UNASSIGNED"
+                  value="UNASSIGNED"
+                  className="rounded-md py-1.5 px-4 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all uppercase"
+                >
+                  SIN ASIGNAR ⚠️
+                </TabsTrigger>
+                {realSellers.map((seller: any) => {
+                  const sellerName = `${seller.user?.first_name || ""} ${seller.user?.last_name || ""}`.trim().toUpperCase();
+                  return (
+                    <TabsTrigger 
+                      key={seller.id}
+                      value={seller.id}
+                      className="rounded-md py-1.5 px-4 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all uppercase"
+                    >
+                      {sellerName}
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
             </div>
 
@@ -299,6 +316,32 @@ const SupervisorFollowUpView = () => {
                 <Table>
                   <TableHeader className="bg-slate-50 border-b border-slate-250">
                     <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[50px] text-center">
+                        {activeSellerTab !== "UNASSIGNED" && (
+                          <Checkbox 
+                            checked={
+                              activeMembers.length > 0 && 
+                              activeMembers.every(m => {
+                                const id = m.lead?.campaignsEngaging?.[0]?.id;
+                                return id ? selectedIds.includes(id) : false;
+                              })
+                            }
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                const idsToAdd = activeMembers
+                                  .map(m => m.lead?.campaignsEngaging?.[0]?.id)
+                                  .filter((id): id is string => !!id);
+                                setSelectedIds(prev => Array.from(new Set([...prev, ...idsToAdd])));
+                              } else {
+                                const idsToRemove = activeMembers
+                                  .map(m => m.lead?.campaignsEngaging?.[0]?.id)
+                                  .filter((id): id is string => !!id);
+                                setSelectedIds(prev => prev.filter(id => !idsToRemove.includes(id)));
+                              }
+                            }}
+                          />
+                        )}
+                      </TableHead>
                       <TableHead className="text-xs font-bold text-slate-700 h-10 w-[160px]">
                         <span className="flex items-center gap-1.5"><Calendar size={13} /> FECHA / HORA</span>
                       </TableHead>
@@ -322,7 +365,7 @@ const SupervisorFollowUpView = () => {
                   <TableBody>
                     {activeMembers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-10 text-muted-foreground text-xs font-medium">
+                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground text-xs font-medium">
                           No hay prospectos asignados a este vendedor.
                         </TableCell>
                       </TableRow>
@@ -342,6 +385,21 @@ const SupervisorFollowUpView = () => {
                               idx % 2 === 0 ? "bg-white" : "bg-slate-50/20"
                             }`}
                           >
+                            <TableCell className="w-[50px] text-center" onClick={(e) => e.stopPropagation()}>
+                              {activeSellerTab !== "UNASSIGNED" && member.lead?.campaignsEngaging?.[0]?.id ? (
+                                <Checkbox
+                                  checked={selectedIds.includes(member.lead.campaignsEngaging[0].id)}
+                                  onCheckedChange={(checked) => {
+                                    const id = member.lead.campaignsEngaging[0].id;
+                                    if (checked) {
+                                      setSelectedIds((prev) => [...prev, id]);
+                                    } else {
+                                      setSelectedIds((prev) => prev.filter((x) => x !== id));
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                            </TableCell>
                             <TableCell className="text-xs font-semibold text-slate-600">
                               {formatDate(member.lead?.created_at || member.created_at)}
                             </TableCell>
@@ -544,6 +602,58 @@ const SupervisorFollowUpView = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Floating Action Bar for Bulk Reassignment */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white border border-slate-200 shadow-xl rounded-full px-6 py-3 flex items-center gap-4 z-50 animate-in fade-in slide-in-from-bottom-4">
+          <span className="text-sm font-semibold text-slate-700">
+            {selectedIds.length} leads seleccionados
+          </span>
+          <Select value={targetSellerId} onValueChange={setTargetSellerId}>
+            <SelectTrigger className="w-[200px] border-slate-200 rounded-full h-9 bg-white">
+              <SelectValue placeholder="Seleccionar asesor" />
+            </SelectTrigger>
+            <SelectContent className="bg-white">
+              {realSellers.map((seller: any) => (
+                <SelectItem key={seller.id} value={seller.id}>
+                  {`${seller.user?.first_name || ""} ${seller.user?.last_name || ""}`.trim() || "Vendedor"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button 
+            variant="default"
+            size="sm"
+            className="rounded-full bg-primary text-white hover:bg-primary/90"
+            disabled={!targetSellerId || bulkReassignMutation.isPending}
+            onClick={() => {
+              const firstSelectedId = selectedIds[0];
+              const member = activeMembers.find(
+                m => m.lead?.campaignsEngaging?.[0]?.id === firstSelectedId
+              );
+              const campaignId = member?.campaing_id || member?.campaign_id || member?.campaign?.id || member?.campaing?.id;
+              
+              if (!campaignId) {
+                toast.error("No se pudo determinar la campaña asociada.");
+                return;
+              }
+
+              bulkReassignMutation.mutate({
+                campaignId,
+                memberIds: selectedIds,
+                assignedTo: targetSellerId
+              }, {
+                onSuccess: () => {
+                  setSelectedIds([]);
+                  setTargetSellerId("");
+                }
+              });
+            }}
+          >
+            {bulkReassignMutation.isPending ? "Reasignando..." : "Reasignar Asesor"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

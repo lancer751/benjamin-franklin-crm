@@ -153,6 +153,7 @@ export const LeadQuerySchema = z.object({
   search: z.string().optional(),
   status: LeadStatusSchema.optional(),
   campaign_id: UUIDField.optional(),
+  assigned_to: z.string().optional(),
 });
 
 export const CampaignMemberQuerySchema = z.object({

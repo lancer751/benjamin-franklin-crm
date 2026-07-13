@@ -109,4 +109,15 @@ export const reassignCampaignMember = async (campaignId: string, memberId: strin
     json: data
   });
   return await res.json();
+};
+
+/**
+ * Reasignar de manera masiva múltiples miembros de la campaña a otro asesor
+ */
+export const reassignBulkCampaignMembers = async (campaignId: string, data: { member_ids: string[]; assigned_to: string }) => {
+  const res = await (api.campaigns as any)[":campaignId"].members["reassign-bulk"].$patch({
+    param: { campaignId },
+    json: data
+  });
+  return await res.json();
 };
