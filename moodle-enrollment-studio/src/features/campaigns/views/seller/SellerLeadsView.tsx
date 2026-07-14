@@ -260,7 +260,7 @@ const SellerLeadsView = () => {
         first_name: payload.first_name,
         last_name: payload.last_name,
         email: payload.email,
-        phones: [{ number: payload.cellphone, type: "WHATSAPP" as const }],
+        phones: [{ number: payload.cellphone, type: "WHATSAPP" as const, isPrincipal: true }],
         status: "ACTIVE",
         gender: "NOT_SPECIFIED" as const
       };

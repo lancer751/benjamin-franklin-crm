@@ -35,29 +35,45 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit, isSubmitting }
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.first_name.trim()) {
-      toast.error("El nombre es requerido");
+
+    const trimmedFirstName = formData.first_name.trim();
+    const trimmedLastName = formData.last_name.trim();
+    const trimmedEmail = formData.email.trim();
+    const trimmedCellphone = formData.cellphone.trim();
+
+    // Validations: first_name and cellphone are mandatory
+    if (!trimmedFirstName) {
+      toast.error("El nombre es obligatorio");
       return;
     }
-    if (!formData.last_name.trim()) {
-      toast.error("El apellido es requerido");
+
+    if (!trimmedCellphone) {
+      toast.error("El celular es obligatorio");
       return;
     }
-    if (!formData.email.trim()) {
-      toast.error("El email es requerido");
+
+    // Cellphone format validation: 9 digits starting with 9 (Peru)
+    const phoneRegex = /^9\d{8}$/;
+    if (!phoneRegex.test(trimmedCellphone)) {
+      toast.error("El celular debe tener 9 dígitos numéricos y comenzar con 9 (formato Perú)");
       return;
     }
-    if (!formData.cellphone.trim()) {
-      toast.error("El celular es requerido");
-      return;
+
+    // Email format validation: only if it contains text
+    if (trimmedEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        toast.error("El formato del correo electrónico no es válido");
+        return;
+      }
     }
 
     try {
       await onSubmit({
-        first_name: formData.first_name.trim(),
-        last_name: formData.last_name.trim(),
-        email: formData.email.trim(),
-        cellphone: formData.cellphone.trim(),
+        first_name: trimmedFirstName,
+        last_name: trimmedLastName,
+        email: trimmedEmail,
+        cellphone: trimmedCellphone,
       });
       // Reset form after successful submission
       setFormData({
@@ -84,7 +100,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit, isSubmitting }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[480px] w-[95vw] rounded-2xl p-6 bg-card border border-border shadow-2xl flex flex-col gap-4">
+      <DialogContent className="sm:max-w-[480px] w-[95vw] rounded-xl p-6 bg-card border border-border shadow-2xl flex flex-col gap-4">
         <DialogHeader className="space-y-1.5">
           <DialogTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
             <UserPlus className="h-5 w-5 text-primary" /> Registrar Nuevo Lead
@@ -98,7 +114,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit, isSubmitting }
           <div className="space-y-3">
             <div className="space-y-1">
               <Label htmlFor="first_name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Nombre
+                Nombre <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="first_name"
@@ -124,7 +140,6 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit, isSubmitting }
                 placeholder="Ej. Pérez"
                 className="h-10 bg-slate-50/20 focus:bg-card border-border rounded-xl text-sm"
                 disabled={isSubmitting}
-                required
               />
             </div>
 
@@ -141,13 +156,12 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit, isSubmitting }
                 placeholder="ejemplo@correo.com"
                 className="h-10 bg-slate-50/20 focus:bg-card border-border rounded-xl text-sm"
                 disabled={isSubmitting}
-                required
               />
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="cellphone" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Celular
+                Celular <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="cellphone"
