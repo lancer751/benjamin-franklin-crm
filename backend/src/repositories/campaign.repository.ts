@@ -1,3 +1,4 @@
+import { syncMetaLeadsForCampaign } from "@/services/leadgenProcessor";
 import type { PrismaClient } from "@repo/database";
 import type {
   CreateCampaignInput,
@@ -47,7 +48,9 @@ export function campaignRepository(prisma: PrismaClient) {
                 },
               },
             },
-            _count: { select: { leadsOnCampaign: true, sellersOnCampaign: true } },
+            _count: {
+              select: { leadsOnCampaign: true, sellersOnCampaign: true },
+            },
           },
         }),
         prisma.campaing.count({ where }),
@@ -85,14 +88,13 @@ export function campaignRepository(prisma: PrismaClient) {
               },
             },
           },
-          _count: { select: { leadsOnCampaign: true, sellersOnCampaign: true } },
+          _count: {
+            select: { leadsOnCampaign: true, sellersOnCampaign: true },
+          },
         },
       });
     },
-
-    // ── Write
     async create(data: CreateCampaignInput) {
-      // Verify product exists and is publishable
       const product = await prisma.product.findUnique({
         where: { id: data.product_id },
         select: {
@@ -113,8 +115,6 @@ export function campaignRepository(prisma: PrismaClient) {
           message: "Only PUBLISHED or ON_SALE products can have a campaign",
         };
 
-      // Verify supervisor exists
-      // Be careful it take the salessupervisorprofile id and not the user id
       const supervisor = await prisma.salesSupervisorProfile.findUnique({
         where: { id: data.supervisor_id },
         select: { id: true },
@@ -122,32 +122,70 @@ export function campaignRepository(prisma: PrismaClient) {
       if (!supervisor)
         throw { code: "NOT_FOUND", message: "Supervisor not found" };
 
-      return prisma.campaing.create({
-        data: {
-          name: data.campaing_name,
-          initial_budget: data.initial_budget,
-          start_date: data.start_date,
-          end_date: data.end_date,
-          platform: data.platform,
-          is_organic: data.is_organic,
-          status: data.status,
-          meta_form_id: data.meta_form_id,
-          relatedProduct: { connect: { id: data.product_id } },
-          assignedSupervisor: { connect: { id: data.supervisor_id } },
-        },
-        include: {
-          relatedProduct: { select: { id: true, name: true } },
-          assignedSupervisor: {
-            select: {
-              id: true,
-              user: { select: { first_name: true, last_name: true } },
+      const sellers = await prisma.sellerProfile.findMany({
+        where: { id: { in: data.seller_ids } },
+        select: { id: true },
+      });
+      if (sellers.length !== data.seller_ids.length)
+        throw { code: "NOT_FOUND", message: "One or more sellers not found" };
+
+      return prisma.$transaction(async (tx) => {
+        const campaign = await tx.campaing.create({
+          data: {
+            name: data.campaing_name,
+            initial_budget: data.initial_budget,
+            start_date: data.start_date,
+            end_date: data.end_date,
+            platform: data.platform,
+            is_organic: data.is_organic,
+            status: data.status,
+            meta_campaign_id: data.meta_campaign_id,
+            meta_form_id: data.meta_form_id,
+            click_to_whatsapp: data.click_to_whatsapp,
+            whatsapp_number: data.whatsapp_number,
+            relatedProduct: { connect: { id: data.product_id } },
+            assignedSupervisor: { connect: { id: data.supervisor_id } },
+          },
+        });
+
+        await tx.campaignSeller.createMany({
+          data: data.seller_ids.map((seller_id) => ({
+            campaign_id: campaign.id,
+            seller_id,
+          })),
+        });
+
+        return tx.campaing.findUniqueOrThrow({
+          where: { id: campaign.id },
+          include: {
+            relatedProduct: { select: { id: true, name: true } },
+            sellersOnCampaign: {
+              include: {
+                seller: {
+                  select: {
+                    id: true,
+                    user: { select: { first_name: true, last_name: true } },
+                  },
+                },
+              },
             },
           },
-        },
+        });
       });
     },
 
     async update(id: string, data: UpdateCampaignInput) {
+      const current = await prisma.campaing.findUnique({
+        where: { id },
+        select: {
+          status: true,
+          meta_form_id: true,
+          leads_last_synced_at: true,
+          start_date: true,
+        },
+      });
+      if (!current) throw { code: "NOT_FOUND", message: "Campaign not found" };
+
       const { product_id, supervisor_id, ...rest } = data;
 
       if (rest.status === "ACTIVE") {
@@ -203,7 +241,7 @@ export function campaignRepository(prisma: PrismaClient) {
 
       // verify if meta_form_id is an existing form from meta
 
-      return prisma.campaing.update({
+      const updated = prisma.campaing.update({
         where: { id },
         data: {
           ...rest,
@@ -211,20 +249,39 @@ export function campaignRepository(prisma: PrismaClient) {
             relatedProduct: { connect: { id: product_id } },
           }),
           ...(supervisor_id && {
-            supervisor: { connect: { id: supervisor_id } },
+            assignedSupervisor: { connect: { id: supervisor_id } },
           }),
         },
       });
+
+      const isReactivating =
+        current.status !== "ACTIVE" && data.status === "ACTIVE";
+      if (isReactivating && current.meta_form_id) {
+        // Fire-and-forget — don't block the response on Meta's API latency.
+        // Log failures; this can also be safely re-run manually via the endpoint below.
+        syncMetaLeadsForCampaign(prisma, id).catch((err) =>
+          console.error("Catch-up sync failed for campaign", id, err),
+        );
+      }
+
+      return updated;
     },
 
     async delete(id: string) {
       // Block deletion if campaign has members (leads have been assigned)
       const campaign = await prisma.campaing.findUnique({
         where: { id },
-        select: { _count: { select: { leadsOnCampaign: true, sellersOnCampaign: true } } },
+        select: {
+          _count: {
+            select: { leadsOnCampaign: true, sellersOnCampaign: true },
+          },
+        },
       });
       if (!campaign) throw { code: "NOT_FOUND", message: "Campaign not found" };
-      if (campaign._count.leadsOnCampaign > 0 || campaign._count.sellersOnCampaign > 0)
+      if (
+        campaign._count.leadsOnCampaign > 0 ||
+        campaign._count.sellersOnCampaign > 0
+      )
         throw {
           code: "CONFLICT",
           message:

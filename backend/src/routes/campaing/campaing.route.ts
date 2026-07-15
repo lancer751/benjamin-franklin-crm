@@ -17,7 +17,7 @@ import {
   verifyUserAccessAuth,
   verifyUserRoleAccess,
 } from "@/middlewares/auth.middleware";
-import { validateIdParamSchema } from "@/helpers/params-validator";
+import { syncMetaLeadsForCampaign } from "@/services/leadgenProcessor";
 
 const UUIDParam = z.object({ id: z.string().uuid().length(36) });
 
@@ -163,6 +163,24 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
         await repo.removeSeller(id, sellerId);
         return c.json<SuccessResponse>(
           { success: true, message: "Seller removed from campaign" },
+          200,
+        );
+      } catch (err) {
+        handleRepoError(err);
+      }
+    },
+  )
+  // POST /campaigns/:id/sync-meta-leads
+  .post(
+    "/:id/sync-meta-leads",
+    verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR"),
+    zValidator("param", UUIDParam),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      try {
+        const result = await syncMetaLeadsForCampaign(c.get("prisma"), id);
+        return c.json<SuccessResponse<typeof result>>(
+          { success: true, message: "Meta leads synced", data: result },
           200,
         );
       } catch (err) {

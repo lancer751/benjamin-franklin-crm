@@ -46,15 +46,29 @@ const envSchema = z.object({
   CLOUDINARY_URL: z.url().refine((url) => url.startsWith("cloudinary://"), {
     message: "CLOUDINARY_URL must start with cloudinary://",
   }),
+  // meta
+  META_ACCESS_TOKEN: z
+    .string()
+    .min(50, "META_ACCESS_TOKEN appears to be invalid"),
+  META_AD_ACCOUNT_ID: z.string().regex(/^act_\d+$/, {
+    message: "META_AD_ACCOUNT_ID must have format act_<numbers>",
+  }),
+  META_APP_SECRET: z.string().regex(/^[a-fA-F0-9]{32}$/, {
+    message: "META_APP_SECRET must be a 32-character hexadecimal string",
+  }),
+  META_WEBHOOK_VERIFY_TOKEN: z.string().min(32).max(128),
 });
 // Validate at startup — fail fast if anything is missing or wrong
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
   console.error("❌ Invalid environment variables:\n");
-  console.error(JSON.stringify(parsed.error.format(), null, 2));
+  for (const issue of parsed.error.issues) {
+    console.error(
+      `- ${issue.path.join(".") || "root"}: ${issue.message}`,
+    );
+  }
   process.exit(1);
 }
-
 export const envParsed = parsed.data;
 export type Env = z.infer<typeof envSchema>;
