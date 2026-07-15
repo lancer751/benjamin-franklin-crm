@@ -33,6 +33,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateLead } from "@/features/leads/services/leadService";
 import { FUNNEL_COLUMNS, KANBAN_STAGE_TO_ENUM, ENUM_TO_KANBAN_STAGE } from "../SellerLeadsView";
 
+interface LeadPhone {
+  id?: string;
+  number: string;
+  type: string;
+  isPrincipal?: boolean;
+}
+
 const typeIcons: Record<string, { icon: any; color: string; bg: string }> = {
   CALL: { icon: Phone, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/20" },
   WHATSAPP: { icon: MessageSquare, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/20" },
@@ -82,12 +89,15 @@ export default function LeadDetailsSheet({
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editCellphone, setEditCellphone] = useState("");
 
   useEffect(() => {
     if (selectedLead) {
       setEditFirstName(selectedLead.first_name || "");
       setEditLastName(selectedLead.last_name || "");
       setEditEmail(selectedLead.email || "");
+      const principalPhone = selectedLead.phones?.find((p: LeadPhone) => p.isPrincipal)?.number || "";
+      setEditCellphone(principalPhone);
     } else {
       setIsEditing(false);
     }
@@ -184,11 +194,27 @@ export default function LeadDetailsSheet({
       // Actualizar localmente selectedLead
       setSelectedLead((prev: any) => {
         if (!prev) return null;
+        
+        let updatedPhones = prev.phones || [];
+        const initialCellphone = prev.phones?.find((p: LeadPhone) => p.isPrincipal)?.number || "";
+        
+        if (editCellphone !== initialCellphone) {
+          const hasPrincipal = updatedPhones.some((p: LeadPhone) => p.isPrincipal);
+          if (hasPrincipal) {
+            updatedPhones = updatedPhones.map((p: LeadPhone) => 
+              p.isPrincipal ? { ...p, number: editCellphone, type: "WHATSAPP" } : p
+            );
+          } else {
+            updatedPhones = [...updatedPhones, { number: editCellphone, type: "WHATSAPP", isPrincipal: true }];
+          }
+        }
+
         return {
           ...prev,
           first_name: editFirstName.trim(),
           last_name: editLastName.trim(),
           email: editEmail.trim(),
+          phones: updatedPhones
         };
       });
 
@@ -214,11 +240,28 @@ export default function LeadDetailsSheet({
       return;
     }
 
-    handleUpdateLead({
+    const updatedData: any = {
       first_name: editFirstName.trim(),
       last_name: editLastName.trim(),
-      email: editEmail.trim(),
-    });
+      email: editEmail.trim() || null,
+    };
+
+    const initialCellphone = selectedLead?.phones?.find((p: LeadPhone) => p.isPrincipal)?.number || "";
+    if (editCellphone !== initialCellphone) {
+      if (!/^9\d{8}$/.test(editCellphone)) {
+        toast.error("El número de celular debe tener exactamente 9 dígitos y empezar con 9.");
+        return;
+      }
+      updatedData.phones = [
+        {
+          number: editCellphone,
+          type: "WHATSAPP",
+          isPrincipal: true
+        }
+      ];
+    }
+
+    handleUpdateLead(updatedData);
   };
 
   const onCancelEdit = () => {
@@ -226,6 +269,8 @@ export default function LeadDetailsSheet({
       setEditFirstName(selectedLead.first_name || "");
       setEditLastName(selectedLead.last_name || "");
       setEditEmail(selectedLead.email || "");
+      const principalPhone = selectedLead.phones?.find((p: LeadPhone) => p.isPrincipal)?.number || "";
+      setEditCellphone(principalPhone);
     }
     setIsEditing(false);
   };
@@ -286,6 +331,14 @@ export default function LeadDetailsSheet({
                           type="email"
                           value={editEmail}
                           onChange={(e) => setEditEmail(e.target.value)}
+                          className="h-8 text-xs px-2 rounded-lg w-full bg-slate-50/50 dark:bg-slate-900/50"
+                          disabled={isUpdatingLead}
+                        />
+                        <Input
+                          placeholder="Celular"
+                          type="text"
+                          value={editCellphone}
+                          onChange={(e) => setEditCellphone(e.target.value.replace(/\D/g, "").slice(0, 9))}
                           className="h-8 text-xs px-2 rounded-lg w-full bg-slate-50/50 dark:bg-slate-900/50"
                           disabled={isUpdatingLead}
                         />
