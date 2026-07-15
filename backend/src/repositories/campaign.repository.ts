@@ -68,7 +68,6 @@ export function campaignRepository(prisma: PrismaClient) {
               name: true,
               sales_status: true,
               prices: { select: { attendance_mode: true, cash_price: true } },
-              edition: { select: { modality: true } },
             },
           },
           assignedSupervisor: {
@@ -240,16 +239,12 @@ export function campaignRepository(prisma: PrismaClient) {
           };
       }
 
-      const prismaData = {
-        ...rest,
-        ...(campaing_name !== undefined && { name: campaing_name }),
-      };
-
+      // verify if meta_form_id is an existing form from meta
 
       const updated = prisma.campaing.update({
         where: { id },
         data: {
-          ...prismaData,
+          ...rest,
           ...(product_id && {
             relatedProduct: { connect: { id: product_id } },
           }),

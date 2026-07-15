@@ -29,10 +29,9 @@ type UpdateSupervisorProfileReq = InferRequestType<
 
 // Sellers
 type SellersRes = InferResponseType<typeof api.users.sellers.$get>;
-type SellerProfileByIdRes = InferResponseType<(typeof api.users.sellers.sellers)[":id"]["$get"]>; 
-type UpdateSellerProfileReq = InferRequestType<(typeof api.users.sellers.sellers)[":id"]["$put"]>["json"];
-type SellerCampaignsRes = InferResponseType<(typeof api.users.sellers)["sellers"][":id"]["campaigns"]["$get"]>;
-
+type SellerProfileByIdRes = InferResponseType<(typeof api.users.sellers)[":id"]["$get"]>; 
+type UpdateSellerProfileReq = InferRequestType<(typeof api.users.sellers)[":id"]["$put"]>["json"];
+type SellerCampaignsRes = InferResponseType<(typeof api.users.sellers)[":id"]["campaigns"]["$get"]>;
 // ==========================================
 // SERVICIOS: USUARIOS GENERALES
 // ==========================================
@@ -80,17 +79,17 @@ export const getSellers = async (): Promise<SellersRes> => {
 };
 
 export const getSellerProfileById = async (id: string): Promise<SellerProfileByIdRes> => {
-  const res = await api.users.sellers.sellers[":id"].$get({ param: { id } });
+  const res = await api.users.sellers[":id"].$get({ param: { id } });
   return await res.json();
 };
 
 export const getSellerCampaigns = async (id: string): Promise<SellerCampaignsRes> => {
-  const res = await (api.users.sellers as any)[":id"]["campaigns"].$get({ param: { id } });
+  const res = await api.users.sellers[":id"]["campaigns"].$get({ param: { id } });
   return await res.json();
 };
 
 export const updateSellerProfile = async (id: string, data: UpdateSellerProfileReq) => {
-  const res = await api.users.sellers.sellers[":id"].$put({ 
+  const res = await api.users.sellers[":id"].$put({ 
     param: { id }, 
     json: data 
   });
