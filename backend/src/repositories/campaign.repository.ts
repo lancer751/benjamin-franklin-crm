@@ -132,7 +132,7 @@ export function campaignRepository(prisma: PrismaClient) {
       return prisma.$transaction(async (tx) => {
         const campaign = await tx.campaing.create({
           data: {
-            name: data.campaing_name,
+            name: data.name,
             initial_budget: data.initial_budget,
             start_date: data.start_date,
             end_date: data.end_date,

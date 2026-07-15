@@ -38,7 +38,7 @@ export async function processLeadgenEvent(
   return prisma.$transaction(async (tx) => {
     // Dedupe against existing leads by phone (same rule as your manual create flow)
     let lead = await tx.lead.findFirst({
-      where: { phones: { some: { number: phone, is_principal: true } } },
+      where: { phones: { some: { number: phone, isPrincipal: true } } },
       select: { id: true },
     });
 
@@ -48,7 +48,7 @@ export async function processLeadgenEvent(
           first_name,
           last_name,
           email: email ?? undefined,
-          phones: { create: [{ number: phone, type: "WHATSAPP", is_principal: true }] },
+          phones: { create: [{ number: phone, type: "WHATSAPP", isPrincipal: true }] },
         },
         select: { id: true },
       });
