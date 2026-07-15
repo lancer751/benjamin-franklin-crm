@@ -32,7 +32,7 @@ const TaskParam = z.object({
   taskId: z.uuid().length(36),
 });
 
-function handleRepoError(err: unknown): never {
+export function handleRepoError(err: unknown): never {
   if (err && typeof err === "object" && "code" in err) {
     const e = err as { code: string; message: string };
     const statusMap: Record<string, 400 | 404 | 409 | 422> = {

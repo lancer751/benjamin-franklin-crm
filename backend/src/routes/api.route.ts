@@ -9,6 +9,8 @@ import { productRoutes } from "./products/product.index";
 import { storefrontRoute } from "./storefront/storefront.route";
 import { cmsRoutes } from "./content/cms.index";
 import { campaignRoutes } from "./campaing/campaing.route";
+import { metaWebhookRoutes } from "./webhooks";
+import { metaRoutes } from "./integrations/meta/meta.route";
 
 export const apiRoutes = new Hono()
   .route("/auth", authRoutes)
@@ -22,3 +24,5 @@ export const apiRoutes = new Hono()
   .route("/academic", academicRoutes)
   .route("/storefront", storefrontRoute)
   .route("/cms", cmsRoutes)
+  .route("/webhooks", metaWebhookRoutes)
+  .route("/meta", metaRoutes)

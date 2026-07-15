@@ -24,9 +24,34 @@ const CampaignBaseSchema = z.object({
   meta_form_id: z.string().optional().nullable(),
 });
 
-export const CreateCampaignSchema = CampaignBaseSchema.refine(
-  ({ end_date, start_date }) => !end_date || end_date > start_date,
-  { message: "end_date must be after start_date", path: ["end_date"] },
+export const CreateCampaignSchema = z.object({
+  name: z.string().min(1),
+  initial_budget: z.coerce.number().positive(),
+  start_date: z.coerce.date(),
+  end_date: z.coerce.date().optional().nullable(),
+  platform: CampaignPlatformSchema,
+  is_organic: z.boolean(),
+  status: CampaignStatusSchema.default("INACTIVE"), // never create as ACTIVE directly
+  product_id: UUIDField,
+  supervisor_id: UUIDField,
+  seller_ids: z.array(UUIDField).min(1, "At least one seller must be assigned"),
+
+  // Meta linkage — all optional (organic/non-Meta campaigns skip these)
+  meta_campaign_id: z.string().optional().nullable(),
+  meta_form_id: z.string().optional().nullable(),
+  click_to_whatsapp: z.boolean().default(false),
+  whatsapp_number: z
+    .string()
+    .length(9)
+    .regex(/^9\d{8}$/)
+    .optional()
+    .nullable(),
+}).refine(
+  (data) => !data.click_to_whatsapp || !!data.whatsapp_number,
+  { message: "whatsapp_number is required when click_to_whatsapp is enabled", path: ["whatsapp_number"] },
+).refine(
+  (data) => !(data.meta_form_id && data.click_to_whatsapp),
+  { message: "A campaign can link a lead form or click-to-WhatsApp, not both", path: ["click_to_whatsapp"] },
 );
 
 export const UpdateCampaignSchema = CampaignBaseSchema.partial().refine(

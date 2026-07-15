@@ -230,27 +230,28 @@ enum PhoneType {
 }
 
 model LeadPhone {
-  id      String    @id @default(uuid()) @db.Char(36)
-  number  String
-  isPrincipal Boolean @default(false)
-  type    PhoneType
-  lead_id String
+  id          String    @id @default(uuid()) @db.Char(36)
+  number      String
+  isPrincipal Boolean   @default(false)
+  type        PhoneType
+  lead_id     String
 
   lead Lead @relation(fields: [lead_id], references: [id])
 
-   @@index([lead_id])
+  @@index([lead_id])
 }
 
 model CampaignMember {
-  id          String               @id @default(uuid()) @db.Char(36)
-  lead_id     String
-  campaing_id String
-  status      CampaignMemberStatus @default(NEW)
-  assigned_to String
-  source      LeadOriginSource
-  created_at  DateTime             @default(now())
-  updated_at  DateTime             @updatedAt
-  is_primary  Boolean              @default(false)
+  id              String               @id @default(uuid()) @db.Char(36)
+  lead_id         String
+  campaing_id     String
+  status          CampaignMemberStatus @default(NEW)
+  assigned_to     String
+  source          LeadOriginSource
+  meta_leadgen_id String?              @unique // NEW — idempotency key from Meta
+  created_at      DateTime             @default(now())
+  updated_at      DateTime             @updatedAt
+  is_primary      Boolean              @default(false)
 
   lead             Lead              @relation(fields: [lead_id], references: [id])
   campaing         Campaing          @relation(fields: [campaing_id], references: [id])
@@ -311,7 +312,7 @@ model Lead {
   leadPrimaryCampaing Campaing?         @relation("PrimaryCampaign", fields: [primary_campaign_id], references: [id])
   createdTasks        Tasks[]
 
-   @@index([deleted_at])
+  @@index([deleted_at])
 }
 
 enum InteractionType {
@@ -422,26 +423,33 @@ model Course {
 }
 
 model Campaing {
-  id             String           @id @default(uuid()) @db.Char(36)
-  name           String
-  initial_budget Decimal          @db.Decimal(10, 2)
-  total_spent    Decimal?         @db.Decimal(10, 2)
-  status         CampaingStatus
-  start_date     DateTime
-  end_date       DateTime?
-  platform       CampaingPlatform
-  is_organic     Boolean
-  meta_form_id   String? // NEW — links to a Meta Lead Ad form
-  created_at     DateTime         @default(now())
-  updated_at     DateTime         @updatedAt
-  product_id     String           @unique
-  supervisor_id  String // NEW — who manages this campaign
+  id                   String           @id @default(uuid()) @db.Char(36)
+  name                 String
+  initial_budget       Decimal          @db.Decimal(10, 2)
+  total_spent          Decimal?         @db.Decimal(10, 2)
+  status               CampaingStatus
+  start_date           DateTime
+  end_date             DateTime?
+  platform             CampaingPlatform
+  is_organic           Boolean
+  meta_campaign_id     String?          // NEW — Meta's own campaign ID
+  meta_form_id         String?          // existing — lead form ID
+  click_to_whatsapp    Boolean          @default(false) // NEW
+  whatsapp_number      String?          // NEW — required if click_to_whatsapp
+  next_seller_cursor   Int              @default(0) // NEW — round-robin pointer
+  leads_last_synced_at DateTime?        // NEW — catch-up bookmark
+  created_at           DateTime         @default(now())
+  updated_at           DateTime         @updatedAt
+  product_id           String           @unique
+  supervisor_id        String
 
   leadsOnCampaign    CampaignMember[]
   leads              Lead[]                 @relation("PrimaryCampaign")
   relatedProduct     Product                @relation(fields: [product_id], references: [id])
   sellersOnCampaign  CampaignSeller[]
-  assignedSupervisor SalesSupervisorProfile @relation(fields: [supervisor_id], references: [id]) // NEW
+  assignedSupervisor SalesSupervisorProfile @relation(fields: [supervisor_id], references: [id])
+
+  @@index([meta_form_id])
 }
 
 enum WeekDays {
