@@ -6,6 +6,13 @@ export interface CleanSellerProfile {
   email: string;
   joinedAt: string;
   totalSales: number;
+  salesTarget: number;
+  completedOrders: number;
+  canceledOrders: number;
+  returnRate: string;
+  responseTimeAvg: string;
+  corporateEmail: string;
+  isActive: boolean;
   // Métricas calculadas
   metrics: {
     calculatedSalesVolume: number;
@@ -66,6 +73,13 @@ export function adaptSellerProfile(
     email: user?.email || "Sin correo",
     joinedAt: user?.created_at ? new Date(user.created_at).toLocaleDateString() : "No registrado",
     totalSales: Number(rawSeller?.total_sales) || 0,
+    salesTarget: Number(rawSeller?.sales_target) || 0,
+    completedOrders: Number(rawSeller?.completed_orders) || 0,
+    canceledOrders: Number(rawSeller?.canceled_orders) || 0,
+    returnRate: rawSeller?.return_rate || "0.0%",
+    responseTimeAvg: rawSeller?.response_time_avg || "N/A",
+    corporateEmail: user?.corporate_email || "Sin correo corporativo",
+    isActive: user?.is_active ?? true,
     metrics: {
       calculatedSalesVolume,
       totalOrders,

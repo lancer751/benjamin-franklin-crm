@@ -41,6 +41,7 @@ import OrderDetailView from "@/features/orders/views/OrderDetailView";
 import ProductsView from "@/features/products/views/ProductsView";
 import ProductDetailView from "@/features/products/views/ProductDetailView";
 import ProductFormView from "@/features/products/views/ProductFormView";
+import SellerDetailView from "@/features/users/views/SellerDetailView";
 
 // Módulo de Finanzas
 import FinanceDashboardView from "@/features/payments/views/FinanceDashboardView";
@@ -132,6 +133,7 @@ const App = () => {
               <Route path="/admin/profesores/nuevo" element={<ProfessorFormView />} />
               <Route path="/admin/profesores/:id" element={<ProfessorDetailView />} />
               <Route path="/admin/profesores/:id/editar" element={<ProfessorFormView />} />
+              <Route path="/users/sellers/:id" element={<SellerDetailView />} />
               
               {/* Ventas & Prospectos */}
               <Route path="/prospectos" element={<ProspectsView />} />

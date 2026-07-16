@@ -512,19 +512,17 @@ const SupervisorFollowUpView = () => {
                   <Badge className="bg-sky-50 text-sky-700 border-sky-200/80 font-bold px-3 py-1 text-xs">
                     Total Leads: {filteredMembers.length}
                   </Badge>
-                  <Button 
-                    variant="outline"
-                    className="bg-blue-50/50 hover:bg-blue-50 border border-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-none h-auto"
-                    onClick={() => {
-                      if (activeSellerTab !== "ALL" && activeSellerTab !== "UNASSIGNED") {
-                        toast.success(`Mostrando rendimiento comercial de: ${activeSellerName}`);
-                      } else {
-                        toast.info("Rendimiento comercial consolidado disponible en el panel general");
-                      }
-                    }}
-                  >
-                    Ver Rendimiento Comercial
-                  </Button>
+                  {currentTab === "SELLER_FILTER" && activeSellerTab && activeSellerTab !== "ALL" && activeSellerTab !== "UNASSIGNED" && (
+                    <Button 
+                      variant="outline"
+                      className="bg-blue-50/50 hover:bg-blue-50 border border-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-none h-auto"
+                      onClick={() => {
+                        navigate(`/users/sellers/${activeSellerTab}`);
+                      }}
+                    >
+                      Ver Rendimiento Comercial
+                    </Button>
+                  )}
                 </div>
               </div>
 
