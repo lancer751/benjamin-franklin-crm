@@ -11,17 +11,25 @@ import { getSellers } from "@/features/users/services/userService";
 export const useSupervisorFollowUp = () => {
   const queryClient = useQueryClient();
 
-  const [activeSellerTab, setActiveSellerTab] = useState<string>("UNASSIGNED");
+  const [activeSellerTab, setActiveSellerTab] = useState<string>("ALL");
   const [selectedLead, setSelectedLead] = useState<any>(null);
 
   // 1. Obtener los prospectos de la academia filtrados por el asesor activo en la base de datos
   const { data: leadsRes, isLoading: isLoadingLeads } = useQuery({
     queryKey: ["all-leads", activeSellerTab],
-    queryFn: () => getAllLeads({
-      assigned_to: activeSellerTab === "UNASSIGNED" ? "unassigned" : activeSellerTab,
-      page: 1,
-      limit: 20
-    }),
+    queryFn: () => {
+      const assignedToParam = activeSellerTab === "UNASSIGNED"
+        ? "unassigned"
+        : activeSellerTab === "ALL"
+        ? undefined
+        : activeSellerTab;
+
+      return getAllLeads({
+        ...(assignedToParam && { assigned_to: assignedToParam }),
+        page: 1,
+        limit: 20
+      });
+    },
   });
 
   const leads = useMemo(() => {
@@ -44,6 +52,11 @@ export const useSupervisorFollowUp = () => {
   const sellers = useMemo(() => {
     const list = [
       {
+        id: "ALL",
+        name: "👥 TODOS LOS LEADS",
+        email: "Vista global de prospectos",
+      },
+      {
         id: "UNASSIGNED",
         name: "SIN ASIGNAR ⚠️",
         email: "Prospectos entrantes sin asesor",
@@ -57,15 +70,40 @@ export const useSupervisorFollowUp = () => {
     return list;
   }, [realSellers]);
 
-  // Asegurar pestaña "UNASSIGNED" por defecto si queda vacía
+  // Asegurar pestaña "ALL" por defecto si queda vacía
   useEffect(() => {
     if (!activeSellerTab) {
-      setActiveSellerTab("UNASSIGNED");
+      setActiveSellerTab("ALL");
     }
   }, [activeSellerTab]);
 
   // 3. Mapear los prospectos devueltos al formato de miembros activos para la tabla
   const activeMembers = useMemo(() => {
+    if (activeSellerTab === "ALL") {
+      return leads.flatMap((lead) => {
+        if (!lead.campaignsEngaging || lead.campaignsEngaging.length === 0) {
+          return [
+            {
+              id: `unassigned-${lead.id}`,
+              created_at: lead.created_at,
+              status: "NEW",
+              assigned_to: "UNASSIGNED",
+              source: lead.phones?.[0]?.type || "WHATSAPP",
+              campaing_id: lead.primary_campaign_id || "",
+              campaign_id: lead.primary_campaign_id || "",
+              lead,
+              campaign: { id: lead.primary_campaign_id || "", name: "Bandeja de Entrada General", status: "ACTIVE" },
+              campaing: { id: lead.primary_campaign_id || "", name: "Bandeja de Entrada General", status: "ACTIVE" } // Typo backward compatibility
+            }
+          ];
+        }
+        return lead.campaignsEngaging.map((member) => ({
+          ...member,
+          lead
+        }));
+      });
+    }
+
     if (activeSellerTab === "UNASSIGNED") {
       return leads.map((lead) => ({
         id: `unassigned-${lead.id}`,

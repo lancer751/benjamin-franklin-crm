@@ -8,7 +8,7 @@ import {
   updateSellerProfile,
 } from "../services/userService";
 import { UserFormValues } from "../schemas/userFormSchema";
-import { userAdapter } from "../adapters/userAdapter";
+import { userAdapter } from "../adapters/user.adapter";
 
 export const useSaveUserMutation = (
   user: any | null,

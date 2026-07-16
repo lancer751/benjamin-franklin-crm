@@ -4,7 +4,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useQuery } from "@tanstack/react-query";
 import { getRoles, createUser, updateUser, getUserById, getSupervisors, updateSupervisorProfile, updateSellerProfile, getSellerProfileById, getSupervisorById } from "../services/userService";
 import { userFormSchema, type UserFormValues } from "../schemas/userFormSchema";
-import { userAdapter } from "../adapters/userAdapter";
+import { userAdapter } from "../adapters/user.adapter";
 import { useSaveUserMutation } from "./useSaveUserMutation";
 
 export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: any | null) => {

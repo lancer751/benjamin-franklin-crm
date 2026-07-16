@@ -278,23 +278,20 @@ const SupervisorFollowUpView = () => {
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-3">
                 Hojas de Asesores (Estilo Excel)
               </span>
-              <TabsList className="bg-slate-200/50 p-1 rounded-lg border border-slate-300/40 w-fit flex-wrap">
-                <TabsTrigger 
-                  key="UNASSIGNED"
-                  value="UNASSIGNED"
-                  className="rounded-md py-1.5 px-4 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all uppercase"
-                >
-                  SIN ASIGNAR ⚠️
-                </TabsTrigger>
-                {realSellers.map((seller: any) => {
-                  const sellerName = `${seller.user?.first_name || ""} ${seller.user?.last_name || ""}`.trim().toUpperCase();
+              <TabsList className="bg-slate-200/50 p-1 rounded-lg border border-slate-300/40 w-fit flex-wrap gap-1">
+                {sellers.map((seller: any) => {
+                  const isAll = seller.id === "ALL";
                   return (
                     <TabsTrigger 
                       key={seller.id}
                       value={seller.id}
-                      className="rounded-md py-1.5 px-4 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all uppercase"
+                      className={`rounded-md py-1.5 px-4 text-xs font-semibold transition-all uppercase ${
+                        isAll
+                          ? "data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-600 hover:text-slate-950"
+                          : "data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm text-slate-600 hover:text-slate-950"
+                      }`}
                     >
-                      {sellerName}
+                      {seller.name}
                     </TabsTrigger>
                   );
                 })}
@@ -305,10 +302,16 @@ const SupervisorFollowUpView = () => {
               <div className="p-4 border-b border-slate-100 bg-slate-50/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                 <div>
                   <h3 className="text-sm font-bold text-slate-800 uppercase">{activeSellerName}</h3>
-                  <p className="text-xs text-muted-foreground">{activeSellerEmail}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activeSellerTab === "ALL" 
+                      ? "Vista global de prospectos de la corporación" 
+                      : activeSellerEmail}
+                  </p>
                 </div>
                 <div className="flex gap-4 text-xs font-medium text-slate-600">
-                  <span>Total Leads Asignados: <strong>{activeMembers.length}</strong></span>
+                  <span>
+                    {activeSellerTab === "ALL" ? "Total Leads" : "Total Leads Asignados"}: <strong>{activeMembers.length}</strong>
+                  </span>
                 </div>
               </div>
 
@@ -321,21 +324,21 @@ const SupervisorFollowUpView = () => {
                           <Checkbox 
                             checked={
                               activeMembers.length > 0 && 
-                              activeMembers.every(m => {
-                                const id = m.lead?.campaignsEngaging?.[0]?.id;
-                                return id ? selectedIds.includes(id) : false;
-                              })
+                              activeMembers.filter(m => !m.id.startsWith("unassigned-")).length > 0 &&
+                              activeMembers
+                                .filter(m => !m.id.startsWith("unassigned-"))
+                                .every(m => selectedIds.includes(m.id))
                             }
                             onCheckedChange={(checked) => {
                               if (checked) {
                                 const idsToAdd = activeMembers
-                                  .map(m => m.lead?.campaignsEngaging?.[0]?.id)
-                                  .filter((id): id is string => !!id);
+                                  .filter(m => !m.id.startsWith("unassigned-"))
+                                  .map(m => m.id);
                                 setSelectedIds(prev => Array.from(new Set([...prev, ...idsToAdd])));
                               } else {
                                 const idsToRemove = activeMembers
-                                  .map(m => m.lead?.campaignsEngaging?.[0]?.id)
-                                  .filter((id): id is string => !!id);
+                                  .filter(m => !m.id.startsWith("unassigned-"))
+                                  .map(m => m.id);
                                 setSelectedIds(prev => prev.filter(id => !idsToRemove.includes(id)));
                               }
                             }}
@@ -386,15 +389,14 @@ const SupervisorFollowUpView = () => {
                             }`}
                           >
                             <TableCell className="w-[50px] text-center" onClick={(e) => e.stopPropagation()}>
-                              {activeSellerTab !== "UNASSIGNED" && member.lead?.campaignsEngaging?.[0]?.id ? (
+                              {activeSellerTab !== "UNASSIGNED" && !member.id.startsWith("unassigned-") ? (
                                 <Checkbox
-                                  checked={selectedIds.includes(member.lead.campaignsEngaging[0].id)}
+                                  checked={selectedIds.includes(member.id)}
                                   onCheckedChange={(checked) => {
-                                    const id = member.lead.campaignsEngaging[0].id;
                                     if (checked) {
-                                      setSelectedIds((prev) => [...prev, id]);
+                                      setSelectedIds((prev) => [...prev, member.id]);
                                     } else {
-                                      setSelectedIds((prev) => prev.filter((x) => x !== id));
+                                      setSelectedIds((prev) => prev.filter((x) => x !== member.id));
                                     }
                                   }}
                                 />
@@ -480,7 +482,7 @@ const SupervisorFollowUpView = () => {
                     <div className="border-t border-slate-100 pt-3 flex flex-col gap-1.5">
                       <span className="text-xs font-semibold text-slate-600 block">Reassignar Asesor Comercial</span>
                       <Select 
-                        value={selectedLead.assigned_to} 
+                        value={selectedLead.assigned_to === "UNASSIGNED" ? undefined : selectedLead.assigned_to} 
                         onValueChange={(val) => {
                           reassignMutation.mutate(val);
                         }}
@@ -629,7 +631,7 @@ const SupervisorFollowUpView = () => {
             onClick={() => {
               const firstSelectedId = selectedIds[0];
               const member = activeMembers.find(
-                m => m.lead?.campaignsEngaging?.[0]?.id === firstSelectedId
+                m => m.id === firstSelectedId
               );
               const campaignId = member?.campaing_id || member?.campaign_id || member?.campaign?.id || member?.campaing?.id;
               
