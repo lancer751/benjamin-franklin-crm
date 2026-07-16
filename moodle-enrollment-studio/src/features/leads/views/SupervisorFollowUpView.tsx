@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/core/lib/api";
 import { 
   Users, 
   TrendingUp, 
@@ -99,9 +101,16 @@ const getTipificacionBadge = (status: string) => {
 
 const SupervisorFollowUpView = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [targetSellerId, setTargetSellerId] = useState<string>("");
+  const [selectedSellerId, setSelectedSellerId] = useState<string>("");
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [campaignFilter, setCampaignFilter] = useState("ALL_CAMPAIGNS");
+  const [statusFilter, setStatusFilter] = useState("ALL_STATUS");
+  const [dateRangeFilter, setDateRangeFilter] = useState("30_DAYS");
 
   const {
     sellers,
@@ -120,8 +129,15 @@ const SupervisorFollowUpView = () => {
     realSellers,
   } = useSupervisorFollowUp();
 
+  // Inicializar el asesor seleccionado por defecto al cargar los vendedores
   useEffect(() => {
-    setSelectedIds([]);
+    if (realSellers && realSellers.length > 0 && !selectedSellerId) {
+      setSelectedSellerId(realSellers[0].id);
+    }
+  }, [realSellers, selectedSellerId]);
+
+  useEffect(() => {
+    setSelectedMemberIds([]);
     setTargetSellerId("");
   }, [activeSellerTab]);
 
@@ -143,6 +159,146 @@ const SupervisorFollowUpView = () => {
 
   const activeSellerName = activeSeller?.name || "Cargando asesor...";
   const activeSellerEmail = activeSeller?.email || "Sin email registrado";
+
+  // Tab actual calculada para que refleje "SELLER_FILTER" si el activeSellerTab es el id de un vendedor
+  const currentTab = (activeSellerTab === "ALL" || activeSellerTab === "UNASSIGNED") 
+    ? activeSellerTab 
+    : "SELLER_FILTER";
+
+  const handleTabChange = (val: string) => {
+    if (val === "ALL" || val === "UNASSIGNED") {
+      setActiveSellerTab(val);
+    } else if (val === "SELLER_FILTER") {
+      const defaultSeller = selectedSellerId || realSellers[0]?.id || "";
+      if (defaultSeller) {
+        setActiveSellerTab(defaultSeller);
+        setSelectedSellerId(defaultSeller);
+      }
+    }
+  };
+
+  // Filtrado de prospectos del lado del cliente
+  const filteredMembers = useMemo(() => {
+    return activeMembers.filter((member: any) => {
+      // 1. Búsqueda por nombre o celular
+      const fullName = member.lead 
+        ? `${member.lead.first_name || ""} ${member.lead.last_name || ""}`.toLowerCase()
+        : "";
+      const phone = member.lead?.phones?.[0]?.number || "";
+      const matchesSearch = searchQuery === "" || 
+        fullName.includes(searchQuery.toLowerCase()) || 
+        phone.includes(searchQuery);
+
+      // 2. Filtro por campaña
+      const campaignId = member.campaign?.id || member.campaing?.id || member.campaing_id || member.campaign_id || "";
+      const matchesCampaign = campaignFilter === "ALL_CAMPAIGNS" || campaignId === campaignFilter;
+
+      // 3. Filtro por estado / tipificación
+      const matchesStatus = statusFilter === "ALL_STATUS" || member.status === statusFilter;
+
+      // 4. Filtro por rango de fecha
+      let matchesDate = true;
+      const createdAt = member.lead?.created_at || member.created_at;
+      if (createdAt && dateRangeFilter !== "ALL_TIME") {
+        const dateLimit = new Date();
+        if (dateRangeFilter === "7_DAYS") {
+          dateLimit.setDate(dateLimit.getDate() - 7);
+        } else if (dateRangeFilter === "30_DAYS") {
+          dateLimit.setDate(dateLimit.getDate() - 30);
+        } else if (dateRangeFilter === "90_DAYS") {
+          dateLimit.setDate(dateLimit.getDate() - 90);
+        }
+        matchesDate = new Date(createdAt) >= dateLimit;
+      }
+
+      return matchesSearch && matchesCampaign && matchesStatus && matchesDate;
+    });
+  }, [activeMembers, searchQuery, campaignFilter, statusFilter, dateRangeFilter]);
+
+  // Campañas únicas deducidas de los datos activos para poblar el dropdown
+  const uniqueCampaigns = useMemo(() => {
+    const map = new Map<string, string>();
+    activeMembers.forEach((member: any) => {
+      const id = member.campaign?.id || member.campaing?.id || member.campaing_id || member.campaign_id;
+      const name = member.campaign?.name || member.campaing?.name || "Sin campaña";
+      if (id) {
+        map.set(id, name);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [activeMembers]);
+
+  // Estados únicos deducidos de los datos activos para poblar el dropdown
+  const uniqueStatuses = useMemo(() => {
+    const set = new Set<string>();
+    activeMembers.forEach((member: any) => {
+      if (member.status) {
+        set.add(member.status);
+      }
+    });
+    return Array.from(set);
+  }, [activeMembers]);
+
+  // Reasignación masiva robusta
+  const handleBulkReassign = async () => {
+    if (!targetSellerId) {
+      toast.error("Por favor, selecciona un asesor comercial.");
+      return;
+    }
+
+    try {
+      const assignedMembers = filteredMembers.filter(m => selectedMemberIds.includes(m.id) && !m.id.startsWith("unassigned-"));
+      const unassignedMembers = filteredMembers.filter(m => selectedMemberIds.includes(m.id) && m.id.startsWith("unassigned-"));
+
+      // Reasignar miembros ya creados (agrupados por campaña)
+      if (assignedMembers.length > 0) {
+        const groups: Record<string, string[]> = {};
+        assignedMembers.forEach(m => {
+          const campaignId = m.campaing_id || m.campaign_id || m.campaign?.id || m.campaing?.id;
+          if (campaignId) {
+            if (!groups[campaignId]) {
+              groups[campaignId] = [];
+            }
+            groups[campaignId].push(m.id);
+          }
+        });
+
+        for (const [campaignId, memberIds] of Object.entries(groups)) {
+          await bulkReassignMutation.mutateAsync({
+            campaignId,
+            memberIds,
+            assignedTo: targetSellerId
+          });
+        }
+      }
+
+      // Asignar y crear registros de campaña para prospectos sin asignar
+      if (unassignedMembers.length > 0) {
+        for (const member of unassignedMembers) {
+          const campaignId = member.campaing_id || member.campaign_id || member.lead?.primary_campaign_id;
+          if (campaignId && member.lead?.id) {
+            await api.campaigns[":campaignId"].members.$post({
+              param: { campaignId },
+              json: {
+                lead_id: member.lead.id,
+                campaing_id: campaignId,
+                assigned_to: targetSellerId,
+                source: member.lead.source || "WHATSAPP",
+                is_primary: true
+              }
+            });
+          }
+        }
+      }
+
+      toast.success("Prospectos reasignados con éxito.");
+      queryClient.invalidateQueries({ queryKey: ["all-leads"] });
+      setSelectedMemberIds([]);
+      setTargetSellerId("");
+    } catch (err: any) {
+      toast.error(err?.message || "Error al realizar la reasignación masiva");
+    }
+  };
 
   return (
     <div className="space-y-6 fade-in max-w-7xl mx-auto">
@@ -273,77 +429,191 @@ const SupervisorFollowUpView = () => {
             <span>Cargando equipo de ventas...</span>
           </div>
         ) : (
-          <Tabs value={activeSellerTab} onValueChange={setActiveSellerTab} className="w-full">
-            <div className="bg-slate-50 border-b border-border p-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2 px-3">
-                Hojas de Asesores (Estilo Excel)
-              </span>
-              <TabsList className="bg-slate-200/50 p-1 rounded-lg border border-slate-300/40 w-fit flex-wrap gap-1">
-                {sellers.map((seller: any) => {
-                  const isAll = seller.id === "ALL";
-                  return (
-                    <TabsTrigger 
-                      key={seller.id}
-                      value={seller.id}
-                      className={`rounded-md py-1.5 px-4 text-xs font-semibold transition-all uppercase ${
-                        isAll
-                          ? "data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-600 hover:text-slate-950"
-                          : "data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm text-slate-600 hover:text-slate-950"
-                      }`}
-                    >
-                      {seller.name}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
+          <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
+            {/* Header de Pestañas Rediseñadas (Escalable) */}
+            <div className="bg-slate-50 border-b border-border p-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Control de Asignación y Seguimiento
+                </span>
+                <TabsList className="bg-slate-200/50 p-1 rounded-lg border border-slate-300/40 w-fit flex gap-1">
+                  <TabsTrigger 
+                    value="ALL"
+                    className="rounded-md py-1.5 px-4 text-xs font-semibold transition-all uppercase data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-600 hover:text-slate-950"
+                  >
+                    👥 TODOS LOS LEADS
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="UNASSIGNED"
+                    className="rounded-md py-1.5 px-4 text-xs font-semibold transition-all uppercase data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm text-slate-600 hover:text-slate-950"
+                  >
+                    ⚠️ SIN ASIGNAR
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="SELLER_FILTER"
+                    className="rounded-md py-1.5 px-4 text-xs font-semibold transition-all uppercase data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm text-slate-600 hover:text-slate-950"
+                  >
+                    💼 POR ASESOR
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              {/* Selector de Asesor si la pestaña activa es "POR ASESOR" (SELLER_FILTER) */}
+              {currentTab === "SELLER_FILTER" && (
+                <div className="flex flex-col gap-1 w-full sm:w-auto">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Seleccionar Asesor Comercial
+                  </span>
+                  <Select 
+                    value={realSellers.some((s: any) => s.id === activeSellerTab) ? activeSellerTab : selectedSellerId}
+                    onValueChange={(val) => {
+                      setSelectedSellerId(val);
+                      setActiveSellerTab(val);
+                    }}
+                  >
+                    <SelectTrigger className="w-full sm:w-[240px] border-slate-200 rounded-lg h-9 bg-white text-xs font-semibold">
+                      <SelectValue placeholder="Seleccionar asesor..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {realSellers.map((seller: any) => (
+                        <SelectItem key={seller.id} value={seller.id}>
+                          {`${seller.user?.first_name || ""} ${seller.user?.last_name || ""}`.trim().toUpperCase() || "Asesor"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
-            <TabsContent value={activeSellerTab} className="outline-none m-0">
-              <div className="p-4 border-b border-slate-100 bg-slate-50/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+            <TabsContent value={currentTab} className="outline-none m-0">
+              {/* Cabecera de Información del Asesor (Diseño de 2 Columnas) */}
+              <div className="p-4 border-b border-slate-100 bg-slate-50/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                {/* Columna Izquierda */}
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800 uppercase">{activeSellerName}</h3>
-                  <p className="text-xs text-muted-foreground">
+                  <h3 className="text-sm font-bold text-slate-800 uppercase">
+                    {activeSellerTab === "ALL" 
+                      ? "👥 TODOS LOS LEADS" 
+                      : activeSellerTab === "UNASSIGNED" 
+                      ? "⚠️ SIN ASIGNAR" 
+                      : activeSellerName}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
                     {activeSellerTab === "ALL" 
                       ? "Vista global de prospectos de la corporación" 
+                      : activeSellerTab === "UNASSIGNED" 
+                      ? "Prospectos entrantes pendientes de asignación a un asesor" 
                       : activeSellerEmail}
                   </p>
                 </div>
-                <div className="flex gap-4 text-xs font-medium text-slate-600">
-                  <span>
-                    {activeSellerTab === "ALL" ? "Total Leads" : "Total Leads Asignados"}: <strong>{activeMembers.length}</strong>
-                  </span>
+
+                {/* Columna Derecha */}
+                <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end">
+                  <Badge className="bg-sky-50 text-sky-700 border-sky-200/80 font-bold px-3 py-1 text-xs">
+                    Total Leads: {filteredMembers.length}
+                  </Badge>
+                  <Button 
+                    variant="outline"
+                    className="bg-blue-50/50 hover:bg-blue-50 border border-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-none h-auto"
+                    onClick={() => {
+                      if (activeSellerTab !== "ALL" && activeSellerTab !== "UNASSIGNED") {
+                        toast.success(`Mostrando rendimiento comercial de: ${activeSellerName}`);
+                      } else {
+                        toast.info("Rendimiento comercial consolidado disponible en el panel general");
+                      }
+                    }}
+                  >
+                    Ver Rendimiento Comercial
+                  </Button>
                 </div>
               </div>
 
+              {/* Barra Horizontal de Filtros Compactos */}
+              <div className="p-4 bg-slate-50/50 border-b border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Búsqueda */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Buscar Prospecto</label>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Nombre o celular..."
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                </div>
+
+                {/* Filtro por Campaña */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Campaña</label>
+                  <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+                    <SelectTrigger className="w-full border-slate-200 rounded-lg h-8 text-xs bg-white">
+                      <SelectValue placeholder="Todas las campañas" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="ALL_CAMPAIGNS">Todas las campañas</SelectItem>
+                      {uniqueCampaigns.map((camp) => (
+                        <SelectItem key={camp.id} value={camp.id}>
+                          {camp.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro por Estado / Tipificación */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Estado / Tipificación</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full border-slate-200 rounded-lg h-8 text-xs bg-white">
+                      <SelectValue placeholder="Todos los estados" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="ALL_STATUS">Todos los estados</SelectItem>
+                      {uniqueStatuses.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {mapStatusToSpanish(status)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro por Rango de Fecha */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Rango de Fecha</label>
+                  <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+                    <SelectTrigger className="w-full border-slate-200 rounded-lg h-8 text-xs bg-white">
+                      <SelectValue placeholder="Seleccionar rango" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="ALL_TIME">Cualquier fecha</SelectItem>
+                      <SelectItem value="7_DAYS">Últimos 7 días</SelectItem>
+                      <SelectItem value="30_DAYS">Últimos 30 días</SelectItem>
+                      <SelectItem value="90_DAYS">Últimos 90 días</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Tabla de Leads */}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-slate-50 border-b border-slate-250">
                     <TableRow className="hover:bg-transparent">
                       <TableHead className="w-[50px] text-center">
-                        {activeSellerTab !== "UNASSIGNED" && (
-                          <Checkbox 
-                            checked={
-                              activeMembers.length > 0 && 
-                              activeMembers.filter(m => !m.id.startsWith("unassigned-")).length > 0 &&
-                              activeMembers
-                                .filter(m => !m.id.startsWith("unassigned-"))
-                                .every(m => selectedIds.includes(m.id))
+                        <Checkbox 
+                          checked={
+                            filteredMembers.length > 0 && 
+                            filteredMembers.every(m => selectedMemberIds.includes(m.id))
+                          }
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedMemberIds(filteredMembers.map(m => m.id));
+                            } else {
+                              setSelectedMemberIds([]);
                             }
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                const idsToAdd = activeMembers
-                                  .filter(m => !m.id.startsWith("unassigned-"))
-                                  .map(m => m.id);
-                                setSelectedIds(prev => Array.from(new Set([...prev, ...idsToAdd])));
-                              } else {
-                                const idsToRemove = activeMembers
-                                  .filter(m => !m.id.startsWith("unassigned-"))
-                                  .map(m => m.id);
-                                setSelectedIds(prev => prev.filter(id => !idsToRemove.includes(id)));
-                              }
-                            }}
-                          />
-                        )}
+                          }}
+                        />
                       </TableHead>
                       <TableHead className="text-xs font-bold text-slate-700 h-10 w-[160px]">
                         <span className="flex items-center gap-1.5"><Calendar size={13} /> FECHA / HORA</span>
@@ -366,14 +636,14 @@ const SupervisorFollowUpView = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {activeMembers.length === 0 ? (
+                    {filteredMembers.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-10 text-muted-foreground text-xs font-medium">
-                          No hay prospectos asignados a este vendedor.
+                          No se encontraron prospectos con los filtros actuales.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      activeMembers.map((member: any, idx: number) => {
+                      filteredMembers.map((member: any, idx: number) => {
                         const fullName = member.lead 
                           ? `${member.lead.first_name || ""} ${member.lead.last_name || ""}`.trim()
                           : "S/N";
@@ -389,18 +659,16 @@ const SupervisorFollowUpView = () => {
                             }`}
                           >
                             <TableCell className="w-[50px] text-center" onClick={(e) => e.stopPropagation()}>
-                              {activeSellerTab !== "UNASSIGNED" && !member.id.startsWith("unassigned-") ? (
-                                <Checkbox
-                                  checked={selectedIds.includes(member.id)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setSelectedIds((prev) => [...prev, member.id]);
-                                    } else {
-                                      setSelectedIds((prev) => prev.filter((x) => x !== member.id));
-                                    }
-                                  }}
-                                />
-                              ) : null}
+                              <Checkbox
+                                checked={selectedMemberIds.includes(member.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedMemberIds((prev) => [...prev, member.id]);
+                                  } else {
+                                    setSelectedMemberIds((prev) => prev.filter((x) => x !== member.id));
+                                  }
+                                }}
+                              />
                             </TableCell>
                             <TableCell className="text-xs font-semibold text-slate-600">
                               {formatDate(member.lead?.created_at || member.created_at)}
@@ -493,10 +761,10 @@ const SupervisorFollowUpView = () => {
                         </SelectTrigger>
                         <SelectContent className="bg-white">
                           {realSellers.map((seller: any) => (
-                          <SelectItem key={seller.id} value={seller.id}>
-                            {`${seller.user?.first_name || ""} ${seller.user?.last_name || ""}`.trim() || "Vendedor"}
-                          </SelectItem>
-                        ))}
+                            <SelectItem key={seller.id} value={seller.id}>
+                              {`${seller.user?.first_name || ""} ${seller.user?.last_name || ""}`.trim() || "Vendedor"}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       {reassignMutation.isPending && (
@@ -606,10 +874,10 @@ const SupervisorFollowUpView = () => {
       </Sheet>
 
       {/* Floating Action Bar for Bulk Reassignment */}
-      {selectedIds.length > 0 && (
+      {selectedMemberIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white border border-slate-200 shadow-xl rounded-full px-6 py-3 flex items-center gap-4 z-50 animate-in fade-in slide-in-from-bottom-4">
           <span className="text-sm font-semibold text-slate-700">
-            {selectedIds.length} leads seleccionados
+            {selectedMemberIds.length} leads seleccionados
           </span>
           <Select value={targetSellerId} onValueChange={setTargetSellerId}>
             <SelectTrigger className="w-[200px] border-slate-200 rounded-full h-9 bg-white">
@@ -628,29 +896,7 @@ const SupervisorFollowUpView = () => {
             size="sm"
             className="rounded-full bg-primary text-white hover:bg-primary/90"
             disabled={!targetSellerId || bulkReassignMutation.isPending}
-            onClick={() => {
-              const firstSelectedId = selectedIds[0];
-              const member = activeMembers.find(
-                m => m.id === firstSelectedId
-              );
-              const campaignId = member?.campaing_id || member?.campaign_id || member?.campaign?.id || member?.campaing?.id;
-              
-              if (!campaignId) {
-                toast.error("No se pudo determinar la campaña asociada.");
-                return;
-              }
-
-              bulkReassignMutation.mutate({
-                campaignId,
-                memberIds: selectedIds,
-                assignedTo: targetSellerId
-              }, {
-                onSuccess: () => {
-                  setSelectedIds([]);
-                  setTargetSellerId("");
-                }
-              });
-            }}
+            onClick={handleBulkReassign}
           >
             {bulkReassignMutation.isPending ? "Reasignando..." : "Reasignar Asesor"}
           </Button>
