@@ -1,24 +1,26 @@
+import type { SyntheticEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { Phone, Mail, Calendar, Edit, MessageSquare } from "lucide-react";
+import { Phone, Mail, Calendar, Edit, MessageSquare, GripVertical } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { FUNNEL_COLUMNS, ENUM_TO_KANBAN_STAGE } from "../SellerLeadsView";
+import type { NormalizedLead } from "@/features/leads/adapters/leadAdapter";
+import type { KanbanDragState } from "@/features/campaigns/components/kanban-dnd";
 
 interface LeadCardProps {
-  lead: any;
-  onSelect: (lead: any) => void;
+  lead: NormalizedLead;
+  onSelect: (lead: NormalizedLead) => void;
   onStatusChange: (memberId: string, newStatus: string) => void;
   isPending: boolean;
+  dragState?: KanbanDragState;
 }
 
-export default function LeadCard({ lead, onSelect, onStatusChange, isPending }: LeadCardProps) {
+export default function LeadCard({ lead, onSelect, onStatusChange, isPending, dragState }: LeadCardProps) {
   const navigate = useNavigate();
-
-  const getPhone = (l: any) => {
-    if (l.cellphone) return l.cellphone;
-    if (l.phone) return l.phone;
-    if (l.phones?.[0]?.number) return l.phones[0].number;
-    return null;
+  const stopDragStart = (event: SyntheticEvent) => event.stopPropagation();
+  const nonDraggableControlProps = {
+    onPointerDown: stopDragStart,
+    onMouseDown: stopDragStart,
   };
 
   const formatSafeDate = (dateStr: string | null | undefined, pattern = "dd/MM/yy HH:mm") => {
@@ -30,19 +32,33 @@ export default function LeadCard({ lead, onSelect, onStatusChange, isPending }: 
     }
   };
 
-  const phone = getPhone(lead);
+  const phone = lead.phones?.[0]?.number || null;
   const formattedPhone = phone ? phone.replace(/\D/g, "") : "";
   const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}` : "";
   const displayDate = formatSafeDate(lead.created_at, "dd/MM/yy HH:mm");
-  const memberId = lead.campaignsEngaging?.[0]?.id || lead.id || "";
+  const memberId = lead.campaignsEngaging?.[0]?.id || "";
 
   return (
     <div
       onClick={() => onSelect(lead)}
-      className="bg-card border border-border rounded-xl p-3.5 shadow-sm hover:border-primary/50 hover:shadow-md transition-all duration-200 group relative space-y-3 cursor-pointer"
+      className={`bg-card border border-border rounded-xl p-3.5 shadow-sm hover:border-primary/50 hover:shadow-md transition-all duration-200 group relative space-y-3 ${
+        dragState?.isDragging ? "cursor-grabbing" : dragState ? "cursor-grab" : "cursor-pointer"
+      }`}
     >
+      {dragState && (
+        <span
+          aria-hidden="true"
+          title="Arrastrar a otra etapa"
+          className={dragState.isDragging
+            ? "pointer-events-none absolute right-2 top-2 rounded-md p-1 text-primary"
+            : "pointer-events-none absolute right-2 top-2 rounded-md p-1 text-muted-foreground/60"}
+        >
+          <GripVertical size={14} />
+        </span>
+      )}
+
       {/* Top Lead Info */}
-      <div className="space-y-1">
+      <div className="space-y-1 pr-5">
         <h4 className="font-bold text-foreground text-xs leading-snug group-hover:text-primary transition-colors">
           {lead.first_name} {lead.last_name}
         </h4>
@@ -72,10 +88,11 @@ export default function LeadCard({ lead, onSelect, onStatusChange, isPending }: 
       >
         <div className="w-full">
           <select
+            {...nonDraggableControlProps}
             value={ENUM_TO_KANBAN_STAGE[lead.lead_status] || lead.lead_status || "NUEVO"}
             onChange={(e) => onStatusChange(memberId, e.target.value)}
             className="w-full h-7 px-1.5 rounded-lg border border-border bg-slate-50 dark:bg-slate-900 text-[10px] font-bold text-slate-700 dark:text-slate-350 focus:outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer shadow-sm"
-            disabled={isPending}
+            disabled={isPending || !memberId}
           >
             {FUNNEL_COLUMNS.map((s) => (
               <option key={s.id} value={s.id}>
@@ -89,6 +106,7 @@ export default function LeadCard({ lead, onSelect, onStatusChange, isPending }: 
         <div className="flex items-center gap-1 shrink-0">
           {whatsappUrl && (
             <a
+              {...nonDraggableControlProps}
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
@@ -99,6 +117,7 @@ export default function LeadCard({ lead, onSelect, onStatusChange, isPending }: 
             </a>
           )}
           <Button
+            {...nonDraggableControlProps}
             variant="ghost"
             size="icon"
             onClick={() => navigate(`/prospectos/${lead.id}/editar`)}

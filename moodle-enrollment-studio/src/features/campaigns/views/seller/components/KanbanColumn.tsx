@@ -1,6 +1,8 @@
 import { cn } from "@/core/lib/utils";
 import { Users } from "lucide-react";
 import LeadCard from "./LeadCard";
+import { DraggableLeadCard } from "@/features/campaigns/components/kanban-dnd";
+import type { NormalizedLead } from "@/features/leads/adapters/leadAdapter";
 
 interface KanbanColumnProps {
   stage: {
@@ -10,8 +12,8 @@ interface KanbanColumnProps {
     borderStyle: string;
     dotColor: string;
   };
-  leads: any[];
-  onSelect: (lead: any) => void;
+  leads: NormalizedLead[];
+  onSelect: (lead: NormalizedLead) => void;
   onStatusChange: (memberId: string, newStatus: string) => void;
   isPending: boolean;
 }
@@ -56,15 +58,41 @@ export default function KanbanColumn({
             <p className="text-[10px] font-medium">Sin prospectos en esta etapa</p>
           </div>
         ) : (
-          leads.map((lead) => (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              onSelect={onSelect}
-              onStatusChange={onStatusChange}
-              isPending={isPending}
-            />
-          ))
+          leads.map((lead) => {
+            const memberId = lead.campaignsEngaging?.[0]?.id || "";
+            const currentStage = stage.id;
+
+            if (!memberId) {
+              return (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onSelect={onSelect}
+                  onStatusChange={onStatusChange}
+                  isPending={isPending}
+                />
+              );
+            }
+
+            return (
+              <DraggableLeadCard
+                key={memberId || lead.id}
+                memberId={memberId}
+                currentStage={currentStage}
+                disabled={isPending}
+              >
+                {(dragState) => (
+                  <LeadCard
+                    lead={lead}
+                    onSelect={onSelect}
+                    onStatusChange={onStatusChange}
+                    isPending={isPending}
+                    dragState={dragState}
+                  />
+                )}
+              </DraggableLeadCard>
+            );
+          })
         )}
       </div>
     </div>

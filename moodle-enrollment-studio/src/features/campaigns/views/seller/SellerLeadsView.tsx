@@ -34,6 +34,11 @@ import {
 import KanbanColumn from "./components/KanbanColumn";
 import LeadDetailsSheet from "./components/LeadDetailsSheet";
 import NewLeadModal from "./components/NewLeadModal";
+import {
+  CampaignKanbanDndProvider,
+  DroppableKanbanColumn,
+  type CampaignKanbanMovePayload,
+} from "@/features/campaigns/components/kanban-dnd";
 
 export const FUNNEL_COLUMNS = [
   { id: "NUEVO", label: "NUEVO", backendStatuses: ["NEW"], borderStyle: "border-blue-200 bg-blue-50/20 text-blue-700 dark:text-blue-400 dark:bg-blue-950/10", dotColor: "bg-blue-500" },
@@ -295,6 +300,22 @@ const SellerLeadsView = () => {
     updateStatusMutation.mutate({ memberId, status: backendStatus });
   };
 
+  const handleKanbanMove = ({
+    memberId,
+    currentStage,
+    targetStage,
+  }: CampaignKanbanMovePayload) => {
+    if (
+      updateStatusMutation.isPending ||
+      currentStage === targetStage ||
+      !KANBAN_STAGE_TO_ENUM[targetStage]
+    ) {
+      return;
+    }
+
+    handleStatusChange(memberId, targetStage);
+  };
+
   const handleCampaignChange = (val: string) => {
     navigate(`/admin/campaigns/seller/leads/${val}`);
   };
@@ -442,21 +463,31 @@ const SellerLeadsView = () => {
           <p className="font-bold">Error al conectar con el servidor para obtener los miembros de la campaña.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 items-start w-full">
-          {FUNNEL_COLUMNS.map((stage) => {
-            const laneLeads = leadsByStage[stage.id] || [];
-            return (
-              <KanbanColumn
-                key={stage.id}
-                stage={stage}
-                leads={laneLeads}
-                onSelect={setSelectedLead}
-                onStatusChange={handleStatusChange}
-                isPending={updateStatusMutation.isPending}
-              />
-            );
-          })}
-        </div>
+        <CampaignKanbanDndProvider
+          disabled={updateStatusMutation.isPending}
+          onMove={handleKanbanMove}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 items-start w-full">
+            {FUNNEL_COLUMNS.map((stage) => {
+              const laneLeads = leadsByStage[stage.id] || [];
+              return (
+                <DroppableKanbanColumn
+                  key={stage.id}
+                  stageId={stage.id}
+                  disabled={updateStatusMutation.isPending}
+                >
+                  <KanbanColumn
+                    stage={stage}
+                    leads={laneLeads}
+                    onSelect={setSelectedLead}
+                    onStatusChange={handleStatusChange}
+                    isPending={updateStatusMutation.isPending}
+                  />
+                </DroppableKanbanColumn>
+              );
+            })}
+          </div>
+        </CampaignKanbanDndProvider>
       )}
 
       <LeadDetailsSheet
