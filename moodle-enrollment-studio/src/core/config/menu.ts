@@ -15,6 +15,7 @@ import {
   HelpCircle,
   Gift,
   Layers,
+  BarChart3,
   Settings,
   LucideIcon,
 } from "lucide-react";
@@ -53,7 +54,7 @@ export const canAccess = (userRole: string, permission: string): boolean => {
     SALES_REP: [
       "academic:view", "calendar:view", //"courses:view",  //"professors:view",
       "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view",
-      "marketing:view", "admin:view", 
+      "marketing:view", "admin:view", "seller:self-view",
     ],
     // MARKETING has access to Prospects/Pipeline and the Marketing dashboard configuration
     MARKETING: [
@@ -97,6 +98,7 @@ export const sidebarSections: SidebarSection[] = [
     permission: "commercial:view",
     items: [
       { to: "/admin/campanas", label: "Campañas", icon: Megaphone, permission: "marketing:view" },
+      { to: "/seller/mi-desempeno", label: "Mi desempeño", icon: BarChart3, permission: "seller:self-view" },
       { to: "/productos", label: "Productos", icon: Package, permission: "products:view" },
       { to: "/comercial/seguimiento-equipo", label: "Seguimiento Equipo", icon: Layers, permission: "supervisor:team-view" },
       { to: "/prospectos", label: "Prospectos", icon: Users, permission: "prospects:view" },

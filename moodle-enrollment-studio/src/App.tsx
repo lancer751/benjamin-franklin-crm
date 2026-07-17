@@ -71,6 +71,20 @@ const CampaignsRouteSwitcher = () => {
   return <CampaignsView />;
 };
 
+const SellerSelfDetailRoute = () => {
+  const user = useAuthStore((state) => state.user);
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (user.role.name !== "SALES_REP") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <SellerDetailView sellerUserId={user.id} />;
+};
+
 
 const App = () => {
   const { setUser, setLoading, isLoading, user } = useAuthStore();
@@ -134,6 +148,7 @@ const App = () => {
               <Route path="/admin/profesores/:id" element={<ProfessorDetailView />} />
               <Route path="/admin/profesores/:id/editar" element={<ProfessorFormView />} />
               <Route path="/users/sellers/:id" element={<SellerDetailView />} />
+              <Route path="/seller/mi-desempeno" element={<SellerSelfDetailRoute />} />
               
               {/* Ventas & Prospectos */}
               <Route path="/prospectos" element={<ProspectsView />} />
