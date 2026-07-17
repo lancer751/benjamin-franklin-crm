@@ -27,6 +27,7 @@ export const metaRoutes = new Hono()
   // GET /meta/campaigns/:metaCampaignId/forms — step: pick a lead form
   .get(
     "/campaigns/:metaCampaignId/forms",
+    verifyUserAccessAuth,
     verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("param", z.object({ metaCampaignId: z.string() })),
     async (c) => {

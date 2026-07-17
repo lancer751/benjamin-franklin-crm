@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-const GRAPH_API_BASE = "https://graph.facebook.com/v21.0";
+const GRAPH_API_BASE = "https://graph.facebook.com/v25.0";
 
 const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN!;
 const META_AD_ACCOUNT_ID = process.env.META_AD_ACCOUNT_ID!;
@@ -55,14 +55,65 @@ class ExternalError extends Error {
   }
 }
 
+interface GraphApiError {
+  message: string;
+  code: number;
+  error_subcode?: number;
+  type?: string;
+  fbtrace_id?: string;
+}
+
+interface GraphApiErrorResponse {
+  error: GraphApiError;
+}
+
 async function graphGet<T>(url: string): Promise<T> {
   const res = await fetch(url);
 
   if (!res.ok) {
-    throw new ExternalError(`Graph API request failed (${res.status})`);
+    const body = (await res.json().catch(() => null)) as GraphApiErrorResponse;
+    const metaMessage = body?.error?.message ?? "Unknown error";
+    const metaCode = body?.error?.code;
+    const metaSubcode = body?.error?.error_subcode;
+
+    console.error("Graph API error:", {
+      status: res.status,
+      metaCode,
+      metaSubcode,
+      metaMessage,
+      url,
+    });
+
+    throw new ExternalError(
+      `Graph API request failed (${res.status}): ${metaMessage}`,
+    );
   }
 
   return res.json() as Promise<T>;
+}
+
+// dentro de metaService, o como helper separado
+
+interface PageTokenResponse {
+  access_token: string;
+  id: string;
+}
+
+async function getPageAccessToken(pageId: string): Promise<string> {
+  const url =
+    `${GRAPH_API_BASE}/${pageId}` +
+    `?fields=access_token` +
+    `&access_token=${META_ACCESS_TOKEN}`;
+
+  const body = await graphGet<PageTokenResponse>(url);
+
+  if (!body.access_token) {
+    throw new ExternalError(
+      `No se pudo obtener el Page Access Token para la página ${pageId}`,
+    );
+  }
+
+  return body.access_token;
 }
 
 export const metaService = {
@@ -91,11 +142,14 @@ export const metaService = {
     if (!pageId) {
       return [];
     }
-
+    console.log(pageId)
+    // NEW — intercambiar por el token específico de esta página
+    const pageAccessToken = await getPageAccessToken(pageId);
+    console.log("pageAccessToken", pageAccessToken)
     const formsUrl =
       `${GRAPH_API_BASE}/${pageId}/leadgen_forms` +
       `?fields=id,name,status` +
-      `&access_token=${META_ACCESS_TOKEN}`;
+      `&access_token=${pageAccessToken}`;
 
     const body = await graphGet<GraphResponse<LeadForm[]>>(formsUrl);
 
@@ -104,15 +158,14 @@ export const metaService = {
 
   async getLeadgenData(leadgenId: string): Promise<LeadgenData> {
     const url =
-      `${GRAPH_API_BASE}/${leadgenId}` +
-      `?access_token=${META_ACCESS_TOKEN}`;
+      `${GRAPH_API_BASE}/${leadgenId}` + `?access_token=${META_ACCESS_TOKEN}`;
 
     return graphGet<LeadgenData>(url);
   },
 
   async listFormLeadsSince(
     formId: string,
-    since: Date
+    since: Date,
   ): Promise<LeadgenData[]> {
     const timestamp = Math.floor(since.getTime() / 1000);
 
@@ -123,7 +176,7 @@ export const metaService = {
           operator: "GREATER_THAN",
           value: timestamp,
         },
-      ])
+      ]),
     );
 
     const url =
@@ -137,10 +190,7 @@ export const metaService = {
     return body.data;
   },
 
-  verifyWebhookSignature(
-    rawBody: string,
-    signatureHeader?: string
-  ): boolean {
+  verifyWebhookSignature(rawBody: string, signatureHeader?: string): boolean {
     if (!signatureHeader) {
       return false;
     }
@@ -156,7 +206,7 @@ export const metaService = {
       expected.length === signatureHeader.length &&
       crypto.timingSafeEqual(
         Buffer.from(expected),
-        Buffer.from(signatureHeader)
+        Buffer.from(signatureHeader),
       )
     );
   },
@@ -169,8 +219,7 @@ export const metaService = {
 
     return {
       first_name: get("first_name") ?? fullName?.split(" ")[0],
-      last_name:
-        get("last_name") ?? fullName?.split(" ").slice(1).join(" "),
+      last_name: get("last_name") ?? fullName?.split(" ").slice(1).join(" "),
       email: get("email"),
       phone: get("phone_number")?.replace(/\D/g, "").slice(-9),
     };
