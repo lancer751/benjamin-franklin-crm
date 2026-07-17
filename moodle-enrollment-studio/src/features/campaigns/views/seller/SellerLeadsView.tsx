@@ -35,7 +35,6 @@ import KanbanColumn from "./components/KanbanColumn";
 import LeadDetailsSheet from "./components/LeadDetailsSheet";
 import NewLeadModal from "./components/NewLeadModal";
 
-// Mapeo de columnas y configuraciones de estilo
 export const FUNNEL_COLUMNS = [
   { id: "NUEVO", label: "NUEVO", backendStatuses: ["NEW"], borderStyle: "border-blue-200 bg-blue-50/20 text-blue-700 dark:text-blue-400 dark:bg-blue-950/10", dotColor: "bg-blue-500" },
   { id: "CONTACTADO", label: "CONTACTADO", backendStatuses: ["CONTACTED", "FOLLOW_UP"], borderStyle: "border-amber-200 bg-amber-50/20 text-amber-700 dark:text-amber-400 dark:bg-amber-950/10", dotColor: "bg-amber-500" },
@@ -77,26 +76,27 @@ const SellerLeadsView = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const sellerId = user?.seller?.id;
+  
+  // 🛡️ CORRECCIÓN DE IDs
+  const userId = user?.id; // Usado para consumir nuestro servicio modificado
+  const sellerId = user?.seller?.id; // Usado para las consultas directas de leads que pide el backend
 
   const { campaignId } = useParams<{ campaignId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCampaignId = campaignId || searchParams.get("campaignId") || "";
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Estado para el lead seleccionado (Sheet lateral)
   const [selectedLead, setSelectedLead] = useState<any>(null);
 
-  // Obtener el memberId del lead seleccionado
   const selectedMemberId = useMemo(() => {
     return selectedLead?.campaignsEngaging?.[0]?.id || selectedLead?.id || "";
   }, [selectedLead]);
 
-  // 1. Obtener campañas asignadas al vendedor
+  // 1. Obtener campañas asignadas pasando el USER_ID transparente
   const { data: sellerCampaignsRes, isLoading: isLoadingCampaigns } = useQuery({
-    queryKey: ["seller-assigned-campaigns", sellerId],
-    queryFn: () => getSellerCampaigns(sellerId || ""),
-    enabled: !!sellerId,
+    queryKey: ["seller-assigned-campaigns", userId],
+    queryFn: () => getSellerCampaigns(userId || ""),
+    enabled: !!userId,
   });
 
   const assignedCampaignList = useMemo(() => {
@@ -113,7 +113,7 @@ const SellerLeadsView = () => {
     }
   }, [assignedCampaignList, selectedCampaignId, navigate]);
 
-  // 2. Obtener los leads de la campaña seleccionada asignados a este asesor
+  // 2. Obtener los leads de la campaña usando el sellerId esperado por el backend
   const { data: membersRes, isLoading: isLoadingLeads, isError: isErrorLeads } = useQuery({
     queryKey: ["campaign-members-seller", selectedCampaignId, sellerId],
     queryFn: () => getCampaignMembers(selectedCampaignId, { assigned_to: sellerId }),
@@ -125,7 +125,7 @@ const SellerLeadsView = () => {
     return adaptCampaignMembers(rawData);
   }, [membersRes]);
 
-  // 3. Consultas e interacciones para el lead seleccionado en el Sheet lateral
+  // 3. Consultas e interacciones
   const { data: interactionsRes, isLoading: isLoadingInteractions } = useQuery({
     queryKey: ["member-interactions", selectedMemberId],
     queryFn: () => getMemberInteractions(selectedCampaignId, selectedMemberId),
@@ -136,7 +136,7 @@ const SellerLeadsView = () => {
     return interactionsRes?.data || (Array.isArray(interactionsRes) ? interactionsRes : []);
   }, [interactionsRes]);
 
-  // 4. Consultas de tareas para el lead seleccionado en el Sheet lateral
+  // 4. Consultas de tareas
   const { data: tasksRes, isLoading: isLoadingTasks } = useQuery({
     queryKey: ["member-tasks", selectedMemberId],
     queryFn: () => getMemberTasks(selectedCampaignId, selectedMemberId),
@@ -147,7 +147,7 @@ const SellerLeadsView = () => {
     return tasksRes?.data || (Array.isArray(tasksRes) ? tasksRes : []);
   }, [tasksRes]);
 
-  // Mutación para registrar interacciones (POST /api/campaigns/:campaignId/members/:memberId/interactions)
+  // Mutación para registrar interacciones
   const createInteractionMutation = useMutation({
     mutationFn: (payload: { notes: string; type: "CALL" | "WHATSAPP" | "MEETING" | "EMAIL" | "SELL" }) =>
       createMemberInteraction(
@@ -155,7 +155,7 @@ const SellerLeadsView = () => {
         selectedMemberId,
         payload.notes,
         payload.type,
-        user?.seller?.id || ""
+        sellerId || ""
       ),
     onSuccess: () => {
       toast.success("Interacción registrada correctamente");
@@ -166,14 +166,12 @@ const SellerLeadsView = () => {
     }
   });
 
-  // Mutación para crear tareas/recordatorios (POST /api/campaigns/:campaignId/members/:memberId/tasks)
+  // Mutación para crear tareas
   const createTaskMutation = useMutation({
     mutationFn: async (payload: { title: string; content: string; due_date: string }) => {
-      const sellerProfileId = user?.seller?.id;
-      if (!sellerProfileId) {
+      if (!sellerId) {
         throw new Error("Error: No se identificó tu perfil de asesor de ventas.");
       }
-      console.log("Enviando x-seller-id:", user?.seller?.id);
       const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks.$post({
         param: { campaignId: selectedCampaignId, memberId: selectedMemberId },
         json: {
@@ -183,13 +181,9 @@ const SellerLeadsView = () => {
           due_date: payload.due_date,
         },
         headers: {
-          "x-seller-id": sellerProfileId
+          "x-seller-id": sellerId
         }
-      } as any, {
-        headers: {
-          "x-seller-id": sellerProfileId
-        }
-      });
+      } as any);
       return await res.json();
     },
     onSuccess: () => {
@@ -202,7 +196,7 @@ const SellerLeadsView = () => {
     }
   });
 
-  // Mutación para marcar la tarea como completada (PATCH /api/campaigns/:campaignId/members/:memberId/tasks/:taskId)
+  // Mutación para marcar la tarea como completada
   const updateTaskMutation = useMutation({
     mutationFn: ({ taskId, is_done }: { taskId: string; is_done: boolean }) =>
       updateMemberTask(selectedCampaignId, selectedMemberId, taskId, { is_done }),
@@ -215,12 +209,12 @@ const SellerLeadsView = () => {
     }
   });
 
-  // Mutación para eliminar tareas (DELETE /api/campaigns/:campaignId/members/:memberId/tasks/:taskId)
+  // Mutación para eliminar tareas
   const deleteTaskMutation = useMutation({
     mutationFn: ({ campaignId, memberId, taskId }: { campaignId: string; memberId: string; taskId: string }) =>
       deleteMemberTask(campaignId, memberId, taskId),
     onSuccess: () => {
-      toast.success("Tarea eliminada correctamente");
+      toast.success("Tarea registrada correctamente");
       queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedMemberId] });
     },
     onError: () => {
@@ -242,10 +236,9 @@ const SellerLeadsView = () => {
     }
   });
 
-  // Estado para el modal de registro manual de lead
   const [isOpenNewLeadModal, setIsOpenNewLeadModal] = useState(false);
 
-  // Mutación secuencial de registro manual de lead
+  // Mutación de registro manual de lead
   const createManualLeadMutation = useMutation({
     mutationFn: async (payload: { first_name: string; last_name: string; email: string; cellphone: string }) => {
       if (!sellerId) {
@@ -255,7 +248,6 @@ const SellerLeadsView = () => {
         throw new Error("No hay una campaña activa seleccionada.");
       }
 
-      // Paso 1: Invoca createLead
       const leadPayload = {
         first_name: payload.first_name,
         last_name: payload.last_name,
@@ -267,16 +259,14 @@ const SellerLeadsView = () => {
 
       const leadResponse = (await createLead(leadPayload as any, sellerId)) as any;
       
-      // Paso 2: Extrae el ID del lead generado desde la respuesta
       if (!leadResponse.success || !leadResponse.data?.id) {
         throw new Error(leadResponse.message || "Error al crear los datos base del prospecto.");
       }
       const newLeadId = leadResponse.data.id;
 
-      // Paso 3: Invoca inmediatamente addLeadToCampaign
       const memberPayload = {
         lead_id: newLeadId,
-        campaing_id: selectedCampaignId, // Mantener el typo 'campaing_id' requerido por la DB
+        campaing_id: selectedCampaignId,
         assigned_to: sellerId,
         source: "WHATSAPP",
         is_primary: true
@@ -291,7 +281,6 @@ const SellerLeadsView = () => {
     },
     onSuccess: () => {
       toast.success("Prospecto registrado y asignado exitosamente.");
-      // 4. REFRESCAR EL KANBAN DE FORMA OPTIMISTA
       queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", selectedCampaignId, sellerId] });
       setIsOpenNewLeadModal(false);
     },
@@ -310,7 +299,6 @@ const SellerLeadsView = () => {
     navigate(`/admin/campaigns/seller/leads/${val}`);
   };
 
-  // Filtrado de leads por la barra de búsqueda (nombre, email o celular)
   const filteredLeads = useMemo(() => {
     if (!leads) return [];
     return leads.filter((l: any) => {
@@ -322,7 +310,6 @@ const SellerLeadsView = () => {
     });
   }, [leads, searchQuery]);
 
-  // Agrupamiento por etapa
   const leadsByStage = useMemo(() => {
     const groups: Record<string, any[]> = {
       NUEVO: [],
@@ -357,7 +344,6 @@ const SellerLeadsView = () => {
 
   return (
     <div className="space-y-6 fade-in">
-      {/* Header Panel */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center">
@@ -380,7 +366,6 @@ const SellerLeadsView = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Selector de Campaña */}
           <div className="min-w-[200px]">
             <Select value={selectedCampaignId} onValueChange={handleCampaignChange}>
               <SelectTrigger className="w-full h-9 bg-card rounded-xl border-border shadow-sm">
@@ -426,7 +411,6 @@ const SellerLeadsView = () => {
         </div>
       </div>
 
-      {/* Control Bar: Search and Filter Info */}
       <div className="flex items-center gap-3 rounded-xl bg-card border border-border p-4 shadow-sm">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -443,7 +427,6 @@ const SellerLeadsView = () => {
         </div>
       </div>
 
-      {/* Kanban Board Funnel Lanes */}
       {isLoadingLeads ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full animate-pulse">
           {FUNNEL_COLUMNS.map((stage) => (
@@ -476,7 +459,6 @@ const SellerLeadsView = () => {
         </div>
       )}
 
-      {/* Lateral Sheet of Details */}
       <LeadDetailsSheet
         selectedLead={selectedLead}
         onClose={() => setSelectedLead(null)}
@@ -494,7 +476,6 @@ const SellerLeadsView = () => {
         selectedCampaignId={selectedCampaignId}
       />
 
-      {/* Modal de Registro Manual de Lead */}
       <NewLeadModal
         isOpen={isOpenNewLeadModal}
         onClose={() => setIsOpenNewLeadModal(false)}

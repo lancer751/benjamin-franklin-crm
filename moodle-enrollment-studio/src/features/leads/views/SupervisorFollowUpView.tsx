@@ -517,7 +517,12 @@ const SupervisorFollowUpView = () => {
                       variant="outline"
                       className="bg-blue-50/50 hover:bg-blue-50 border border-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-none h-auto"
                       onClick={() => {
-                        navigate(`/users/sellers/${activeSellerTab}`);
+                        // Navegar con user_id (no con seller profile id) para que el backend lo encuentre
+                        const sellerProfile = realSellers.find((s: any) => s.id === activeSellerTab);
+                        const userId = sellerProfile?.user_id;
+                        if (userId) {
+                          navigate(`/users/sellers/${userId}`);
+                        }
                       }}
                     >
                       Ver Rendimiento Comercial

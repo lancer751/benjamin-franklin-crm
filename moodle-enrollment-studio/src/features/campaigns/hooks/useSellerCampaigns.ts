@@ -5,22 +5,21 @@ import { getSellerCampaigns } from "@/features/users/services/userService";
 export const useSellerCampaigns = () => {
   const { user } = useAuthStore();
   
-  // Soporte dual para sellerProfile o seller según el tipado
-  const sellerId = (user as any)?.sellerProfile?.id || user?.seller?.id || "";
+  // Extraemos el id del usuario de manera segura (user.id es el user_id de la base de datos)
+  const userId = user?.id || "";
 
   const { data: res, isLoading, isError, refetch } = useQuery({
-    queryKey: ["seller-campaigns", (user as any)?.sellerProfile?.id || user?.seller?.id],
-    queryFn: () => getSellerCampaigns(sellerId),
-    enabled: !!sellerId,
+    queryKey: ["seller-campaigns", userId],
+    queryFn: () => getSellerCampaigns(userId),
+    enabled: !!userId,
   });
 
   // Desempaquetado seguro del objeto retornado por Hono/Prisma
-  // La respuesta exitosa suele contener 'success: true' y 'data' con 'assignedCampaing'
   const assignedCampaignList = (res as any)?.success && (res as any)?.data?.assignedCampaing
     ? (res as any).data.assignedCampaing
     : (res as any)?.assignedCampaing || [];
 
-  // Mapeamos los elementos extrayendo la campaña interna ('campaing' debido al typo de la base de datos)
+  // Mapeamos los elementos extrayendo la campaña interna
   const campaigns = assignedCampaignList.map((item: any) => {
     return item.campaing || item.campaign || item;
   }).filter(Boolean);

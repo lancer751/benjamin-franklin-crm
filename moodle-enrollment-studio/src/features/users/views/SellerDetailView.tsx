@@ -1,107 +1,197 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useSellerDetail } from "../hooks/useSellerDetail";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getSellerProfileById, getSellerCampaigns } from "../services/userService";
 import { 
-  TrendingUp, DollarSign, Users, Briefcase, ArrowLeft, 
-  Calendar, Mail, Shield, Activity, RefreshCw, Clock, Percent,
-  Target, AlertTriangle, CheckCircle2, XCircle, Loader2
+  ArrowLeft, RefreshCw, Shield, Mail, Target, Loader2,
+  AlertTriangle, DollarSign, Briefcase, CheckCircle2, XCircle,
+  Activity, Clock, TrendingUp, BarChart2
 } from "lucide-react";
 import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
-import { Card, CardContent } from "@/core/components/ui/card";
 
+// ─────────────────────────────────────────
+// Tipos del raw data del backend
+// ─────────────────────────────────────────
+interface RawSeller {
+  id: string;
+  user_id: string;
+  sales_target: number;
+  total_sales: number;
+  total_orders: number;
+  completed_orders: number;
+  canceled_orders: number;
+  return_rate: string;
+  response_time_avg: string;
+  user: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    corporate_email: string;
+    is_active: boolean;
+  };
+  orders?: any[];
+  campaignMembers?: any[];
+}
+
+// ─────────────────────────────────────────
+// Helpers de formato
+// ─────────────────────────────────────────
+const formatSoles = (value: number) =>
+  `S/ ${value.toLocaleString("es-PE", { minimumFractionDigits: 2 })}`;
+
+const parseReturnRate = (rate: string): number => parseFloat(rate) || 0;
+
+// ─────────────────────────────────────────
+// Componente Principal
+// ─────────────────────────────────────────
 export default function SellerDetailView() {
   const navigate = useNavigate();
-  const { seller, isLoading, isError, refetch } = useSellerDetail();
+  const { id } = useParams<{ id: string }>();
 
+  // Query 1: Perfil del vendedor
+  const sellerQuery = useQuery({
+    queryKey: ["seller-detail", id],
+    queryFn: () => getSellerProfileById(id!),
+    enabled: !!id,
+  });
+
+  // Query 2: Campañas asignadas
+  const campaignsQuery = useQuery({
+    queryKey: ["seller-campaigns", id],
+    queryFn: () => getSellerCampaigns(id!),
+    enabled: !!id,
+  });
+
+  const isLoading = sellerQuery.isLoading;
+  const isError = sellerQuery.isError || (!sellerQuery.isLoading && !sellerQuery.data?.data);
+
+  // ── ESTADO DE CARGA ──
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50/50">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
-          <span className="text-sm font-medium text-slate-500">Cargando perfil de asesor comercial...</span>
+          <span className="text-sm font-medium text-slate-500">
+            Cargando perfil del asesor comercial...
+          </span>
         </div>
       </div>
     );
   }
 
-  if (isError || !seller) {
+  // ── ESTADO DE ERROR ──
+  if (isError) {
     return (
-      <div className="p-6 max-w-4xl mx-auto text-center space-y-4 py-20 bg-white border border-slate-150 rounded-xl shadow-sm mt-10">
-        <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center mx-auto text-rose-500">
-          <AlertTriangle className="w-6 h-6" />
+      <div className="p-8 max-w-lg mx-auto mt-16 bg-white border border-rose-100 rounded-2xl shadow-sm text-center space-y-4">
+        <div className="w-14 h-14 rounded-full bg-rose-50 flex items-center justify-center mx-auto">
+          <AlertTriangle className="w-7 h-7 text-rose-500" />
         </div>
-        <h2 className="text-lg font-bold text-slate-800">Error al cargar perfil</h2>
-        <p className="text-slate-500 text-sm max-w-sm mx-auto">No pudimos recuperar la información del asesor solicitado. Por favor verifica el ID o intenta de nuevo.</p>
+        <h2 className="text-lg font-bold text-slate-800">
+          No se pudo cargar el perfil
+        </h2>
+        <p className="text-slate-500 text-sm max-w-xs mx-auto leading-relaxed">
+          El identificador del asesor no fue encontrado en el sistema. Verifica
+          que el enlace sea correcto e intenta de nuevo.
+        </p>
         <div className="flex justify-center gap-3 pt-2">
-          <Button onClick={() => navigate(-1)} variant="outline" className="text-xs">
-            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Volver atrás
+          <Button onClick={() => navigate(-1)} variant="outline" size="sm">
+            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+            Volver atrás
           </Button>
-          <Button onClick={refetch} className="text-xs bg-blue-600 text-white hover:bg-blue-700">
-            <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Reintentar
+          <Button
+            onClick={() => sellerQuery.refetch()}
+            size="sm"
+            className="bg-blue-600 text-white hover:bg-blue-700"
+          >
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+            Reintentar
           </Button>
         </div>
       </div>
     );
   }
 
-  // Parsear la tasa de retorno para determinar alertas
-  const numReturnRate = parseFloat(seller.returnRate) || 0;
+  const seller = sellerQuery.data!.data as unknown as RawSeller;
+  const { user } = seller;
+  const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Asesor";
+  const numReturnRate = parseReturnRate(seller.return_rate);
   const isHighReturnRate = numReturnRate > 10;
+
+  // Campañas del endpoint de campañas
+  const rawCampaigns = (campaignsQuery.data as any)?.assignedCampaing || [];
+  const campaigns = rawCampaigns.map((c: any) => ({
+    id: c.campaign?.id || c.id || "",
+    name: c.campaign?.campaing_name || c.campaign?.name || "Sin nombre",
+    budget: Number(c.campaign?.initial_budget) || 0,
+    status: c.campaign?.status || "INACTIVE",
+  }));
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 fade-in">
-      
-      {/* A) CABECERA CON BOTÓN VOLVER */}
-      <div className="space-y-4">
-        <div>
-          <Link 
-            to="/comercial/seguimiento-equipo" 
-            className="inline-flex items-center text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver al Seguimiento de Equipo
-          </Link>
-        </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {/* ══════════════════════════════════════════════════
+          A) CABECERA CON BOTÓN VOLVER
+      ══════════════════════════════════════════════════ */}
+
+      <div className="space-y-4">
+        {/* Breadcrumb / Back link */}
+        <Link
+          to="/comercial/seguimiento-equipo"
+          className="inline-flex items-center text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1.5" />
+          Volver al Seguimiento de Equipo
+        </Link>
+
+        {/* Hero Card del perfil */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          {/* Avatar + Info */}
           <div className="flex items-center gap-5">
-            <div className="h-16 w-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md">
-              {seller.fullName?.[0]?.toUpperCase() || "V"}
+            <div className="h-16 w-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-md shrink-0">
+              {(user.first_name?.[0] || "V").toUpperCase()}
             </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">{seller.fullName}</h1>
-                <Badge className={`font-bold px-3 py-1 text-xs rounded-full uppercase border shadow-none flex items-center gap-1.5 ${
-                  seller.isActive
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200/50"
-                    : "bg-slate-100 text-slate-600 border-slate-200"
-                }`}>
-                  <Shield className="w-3.5 h-3.5" /> {seller.isActive ? "Asesor Activo" : "Inactivo"}
+            <div className="space-y-1.5">
+              <div className="flex items-center flex-wrap gap-3">
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                  {fullName}
+                </h1>
+                <Badge
+                  className={`font-bold px-3 py-1 text-[11px] rounded-full uppercase border shadow-none flex items-center gap-1.5 ${
+                    user.is_active
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-slate-100 text-slate-500 border-slate-200"
+                  }`}
+                >
+                  <Shield className="w-3 h-3" />
+                  {user.is_active ? "Asesor Activo" : "Inactivo"}
                 </Badge>
               </div>
-              <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-500 font-medium">
-                <span className="flex items-center gap-1">
-                  <Mail className="w-3.5 h-3.5 text-slate-400" /> Correo: {seller.corporateEmail}
+              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  {user.corporate_email || user.email}
                 </span>
-                <span className="text-slate-300">•</span>
-                <span className="flex items-center gap-1">
-                  <Target className="w-3.5 h-3.5 text-slate-400" /> Meta Asignada: S/ {seller.salesTarget.toLocaleString("es-PE")}
+                <span className="hidden sm:inline text-slate-300">•</span>
+                <span className="flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-slate-400" />
+                  Meta Asignada:{" "}
+                  <strong className="text-slate-800 ml-0.5">
+                    {formatSoles(seller.sales_target)}
+                  </strong>
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-6 text-sm text-slate-650 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6 shrink-0">
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Miembro desde</span>
-              <span className="font-semibold text-slate-800 flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-slate-400" />
-                {seller.joinedAt}
-              </span>
-            </div>
-            <button 
-              onClick={refetch}
-              className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors self-center"
+          {/* Acciones rápidas */}
+          <div className="flex items-center gap-3 self-end lg:self-center">
+            <button
+              onClick={() => {
+                sellerQuery.refetch();
+                campaignsQuery.refetch();
+              }}
+              className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
               title="Recargar datos"
             >
               <RefreshCw className="w-4.5 h-4.5" />
@@ -110,110 +200,158 @@ export default function SellerDetailView() {
         </div>
       </div>
 
-      {/* B) TARJETAS DE MÉTRICAS INDIVIDUALES (KPIs en Grid de 4 columnas) */}
+      {/* ══════════════════════════════════════════════════
+          B) FILA DE KPI CARDS REALES
+      ══════════════════════════════════════════════════ */}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* Card 1: Total Ventas Acumuladas */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-2">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-450">Total Ventas Acumuladas</span>
+
+        {/* Card 1: Ventas Totales */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Ventas Totales
+            </span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <DollarSign className="w-4.5 h-4.5 text-emerald-600" />
+              <DollarSign className="w-4 h-4 text-emerald-600" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900">
-            S/ {seller.totalSales.toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+          <div className="text-2xl font-black text-slate-900 leading-none">
+            {formatSoles(seller.total_sales)}
           </div>
-          <p className="text-[11px] text-slate-400">Monto total histórico acumulado</p>
+          <p className="text-[11px] text-slate-400">Monto total acumulado</p>
         </div>
 
-        {/* Card 2: Órdenes Totales */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-2">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-450">Órdenes Totales</span>
+        {/* Card 2: Meta de Ventas */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Meta de Ventas
+            </span>
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Briefcase className="w-4.5 h-4.5 text-blue-600" />
+              <Target className="w-4 h-4 text-blue-600" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900">
-            {seller.metrics.totalOrders}
+          <div className="text-2xl font-black text-slate-900 leading-none">
+            {formatSoles(seller.sales_target)}
           </div>
-          <p className="text-[11px] text-slate-400">Total de transacciones registradas</p>
+          {/* Barra de progreso */}
+          <div className="space-y-1">
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full"
+                style={{
+                  width: `${Math.min(
+                    seller.sales_target > 0
+                      ? (seller.total_sales / seller.sales_target) * 100
+                      : 0,
+                    100
+                  )}%`,
+                }}
+              />
+            </div>
+            <p className="text-[11px] text-slate-400">
+              {seller.sales_target > 0
+                ? `${Math.round((seller.total_sales / seller.sales_target) * 100)}% completado`
+                : "Sin meta asignada"}
+            </p>
+          </div>
         </div>
 
-        {/* Card 3: Órdenes Completadas vs Canceladas */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-2">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-450">Completadas vs Canceladas</span>
-            <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center">
-              <CheckCircle2 className="w-4.5 h-4.5 text-sky-600" />
+        {/* Card 3: Órdenes Completadas */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Órdenes Completadas
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900 flex items-center gap-1.5">
-            <span className="text-emerald-600">{seller.completedOrders}</span>
-            <span className="text-slate-350 font-normal">/</span>
-            <span className="text-rose-600">{seller.canceledOrders}</span>
-          </div>
-          <p className="text-[11px] text-slate-400">Estructura del embudo de cierre</p>
-        </div>
-
-        {/* Card 4: Tasa de Devolución / Rebote */}
-        <div className={`p-5 rounded-xl border shadow-sm space-y-2 ${
-          isHighReturnRate 
-            ? "bg-rose-50/30 border-rose-200" 
-            : "bg-white border-slate-200"
-        }`}>
-          <div className="flex justify-between items-center text-slate-450">
-            <span className="text-xs font-bold uppercase tracking-wider">Tasa de Devolución / Rebote</span>
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-              isHighReturnRate ? "bg-rose-50" : "bg-purple-50"
-            }`}>
-              <Percent className={`w-4.5 h-4.5 ${isHighReturnRate ? "text-rose-600" : "text-purple-650"}`} />
-            </div>
-          </div>
-          <div className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <span className={isHighReturnRate ? "text-rose-700" : ""}>{seller.returnRate}</span>
-            {isHighReturnRate && (
-              <Badge variant="destructive" className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded shadow-none border-none">
-                Alto
-              </Badge>
-            )}
+          <div className="text-2xl font-black text-emerald-600 leading-none">
+            {seller.completed_orders}
           </div>
           <p className="text-[11px] text-slate-400">
-            {isHighReturnRate 
-              ? "Supera el límite recomendado de devolución" 
-              : "Dentro del margen normal esperado"}
+            de {seller.total_orders} órdenes totales
+          </p>
+        </div>
+
+        {/* Card 4: Órdenes Canceladas */}
+        <div className={`p-5 rounded-xl border shadow-sm space-y-3 ${
+          seller.canceled_orders > 0
+            ? "bg-rose-50/20 border-rose-200/70"
+            : "bg-white border-slate-200"
+        }`}>
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Órdenes Canceladas
+            </span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              seller.canceled_orders > 0 ? "bg-rose-50" : "bg-slate-50"
+            }`}>
+              <XCircle className={`w-4 h-4 ${
+                seller.canceled_orders > 0 ? "text-rose-500" : "text-slate-400"
+              }`} />
+            </div>
+          </div>
+          <div className={`text-2xl font-black leading-none ${
+            seller.canceled_orders > 0 ? "text-rose-600" : "text-slate-900"
+          }`}>
+            {seller.canceled_orders}
+          </div>
+          <p className="text-[11px] text-slate-400">
+            {seller.canceled_orders === 0 ? "Sin cancelaciones registradas" : "Órdenes que no se concretaron"}
           </p>
         </div>
 
       </div>
 
-      {/* C) SECCIÓN DE DESEMPEÑO Y CAMPAÑAS (Layout de dos columnas) */}
+      {/* ══════════════════════════════════════════════════
+          C) INFORMACIÓN Y DESEMPEÑO (DOS COLUMNAS)
+      ══════════════════════════════════════════════════ */}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Columna Izquierda: Campañas del Vendedor */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4 lg:col-span-2">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
           <h2 className="font-bold text-slate-900 flex items-center gap-2">
             <Activity className="w-4 h-4 text-blue-600" />
             Campañas Asignadas al Asesor
           </h2>
           <hr className="border-slate-100" />
 
-          {seller.campaigns.length === 0 ? (
-            <p className="text-sm text-slate-400 py-10 text-center">Sin campañas activas vinculadas actualmente.</p>
+          {campaignsQuery.isLoading ? (
+            <div className="flex items-center gap-2 text-slate-400 text-xs py-6 justify-center">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Cargando campañas...</span>
+            </div>
+          ) : campaigns.length === 0 ? (
+            <p className="text-sm text-slate-400 py-10 text-center">
+              Sin campañas activas vinculadas actualmente.
+            </p>
           ) : (
-            <div className="space-y-3">
-              {seller.campaigns.map((c) => (
-                <div key={c.id} className="p-4 bg-slate-50 hover:bg-slate-100/70 rounded-xl transition-colors border border-slate-200/50 flex justify-between items-center">
-                  <div className="space-y-1">
-                    <p className="font-bold text-sm text-slate-800">{c.name}</p>
-                    <span className="text-[11px] text-slate-500 font-medium block">Presupuesto inicial: S/ {c.budget.toLocaleString("es-PE")}</span>
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+              {campaigns.map((c: any) => (
+                <div
+                  key={c.id}
+                  className="p-4 bg-slate-50 hover:bg-slate-100/70 rounded-xl transition-colors border border-slate-200/60 flex justify-between items-center gap-4"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <p className="font-bold text-sm text-slate-800 truncate">
+                      {c.name}
+                    </p>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Presupuesto: S/ {c.budget.toLocaleString("es-PE")}
+                    </span>
                   </div>
-                  <Badge variant="outline" className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase shadow-none border ${
-                    c.status === "ACTIVE" 
-                      ? "bg-green-50 text-green-700 border-green-250/50" 
-                      : "bg-amber-50 text-amber-700 border-amber-250/50"
-                  }`}>
+                  <Badge
+                    variant="outline"
+                    className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase shadow-none border ${
+                      c.status === "ACTIVE"
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}
+                  >
                     {c.status}
                   </Badge>
                 </div>
@@ -222,91 +360,97 @@ export default function SellerDetailView() {
           )}
         </div>
 
-        {/* Columna Derecha: Eficiencia Comercial */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5 lg:col-span-1">
+        {/* Columna Derecha: Eficiencia del Vendedor */}
+        <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
           <h2 className="font-bold text-slate-900 flex items-center gap-2">
-            <TrendingUp className="w-4.5 h-4.5 text-blue-600" />
-            Eficiencia Comercial del Asesor
+            <BarChart2 className="w-4 h-4 text-blue-600" />
+            Eficiencia Comercial
           </h2>
           <hr className="border-slate-100" />
 
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-100/60 rounded-xl p-5 text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto text-blue-600 shadow-sm">
-              <Clock className="w-6 h-6 animate-pulse" />
+          {/* Tiempo de Respuesta Promedio */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-100 rounded-xl p-5 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto">
+              <Clock className="w-6 h-6 text-blue-600" />
             </div>
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tiempo Promedio de Respuesta</span>
-              <div className="text-3xl font-black text-slate-800 tracking-tight">
-                {seller.responseTimeAvg}
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Tiempo Promedio de Respuesta
+              </span>
+              <div className="text-3xl font-black text-slate-800 mt-1 tracking-tight">
+                {seller.response_time_avg || "N/A"}
               </div>
             </div>
-            <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
-              Mide la velocidad con la que el asesor responde y tipifica un nuevo prospecto asignado a su bandeja comercial.
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Velocidad con la que el asesor atiende y tipifica un nuevo lead asignado.
             </p>
           </div>
 
-          <div className="border border-slate-150 rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-2.5 text-xs text-slate-650">
-              <Activity className="w-4 h-4 text-sky-600" />
-              <span className="font-medium text-slate-700">Tasa de Conversión:</span>
-              <span className="font-bold text-slate-900 ml-auto">{seller.metrics.conversionRate}%</span>
+          {/* Tasa de Devolución / Rebote */}
+          <div
+            className={`border rounded-xl p-4 space-y-2 ${
+              isHighReturnRate
+                ? "bg-rose-50/30 border-rose-200"
+                : "bg-slate-50/50 border-slate-200"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-600">
+                Tasa de Devolución / Rebote
+              </span>
+              {isHighReturnRate && (
+                <Badge
+                  variant="destructive"
+                  className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded shadow-none border-none"
+                >
+                  Alto
+                </Badge>
+              )}
             </div>
-            <div className="flex items-center gap-2.5 text-xs text-slate-650">
-              <Users className="w-4 h-4 text-indigo-600" />
-              <span className="font-medium text-slate-700">Leads Asignados:</span>
-              <span className="font-bold text-slate-900 ml-auto">{seller.metrics.totalLeads}</span>
+            <div
+              className={`text-2xl font-black ${
+                isHighReturnRate ? "text-rose-700" : "text-slate-800"
+              }`}
+            >
+              {seller.return_rate}
+            </div>
+            <p className="text-[11px] text-slate-400">
+              {isHighReturnRate
+                ? "Supera el límite recomendado del 10%"
+                : "Dentro del margen normal esperado"}
+            </p>
+          </div>
+
+          {/* Indicador de Conversión rápida */}
+          <div className="border border-slate-200 rounded-xl p-4 space-y-3">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Resumen de Efectividad
+            </span>
+            <div className="flex items-center gap-2 text-xs text-slate-700">
+              <TrendingUp className="w-4 h-4 text-sky-500 shrink-0" />
+              <span className="font-medium">Órdenes Totales</span>
+              <span className="font-black text-slate-900 ml-auto">
+                {seller.total_orders}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-700">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+              <span className="font-medium">Completadas</span>
+              <span className="font-black text-emerald-700 ml-auto">
+                {seller.completed_orders}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-700">
+              <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
+              <span className="font-medium">Canceladas</span>
+              <span className="font-black text-rose-700 ml-auto">
+                {seller.canceled_orders}
+              </span>
             </div>
           </div>
         </div>
 
       </div>
-
-      {/* Historial de Órdenes (Abajo, para mantener compatibilidad) */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-        <h2 className="font-bold text-slate-900 flex items-center gap-2">
-          <Briefcase className="w-4 h-4 text-blue-600" />
-          Historial de Órdenes Cerradas
-        </h2>
-        <hr className="border-slate-100" />
-
-        {seller.orders.length === 0 ? (
-          <p className="text-sm text-slate-450 py-10 text-center">No se registran transacciones concretadas para este asesor.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-500">
-              <thead className="text-xs text-slate-400 uppercase bg-slate-50">
-                <tr>
-                  <th className="py-3 px-4 font-bold">ID de Orden</th>
-                  <th className="py-3 px-4 font-bold">Fecha / Hora de Registro</th>
-                  <th className="py-3 px-4 text-right font-bold">Monto Transacción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {seller.orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 px-4 font-mono text-xs text-slate-650">
-                      #{order.id.substring(0, 8).toUpperCase()}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 font-medium">
-                      {new Date(order.createdAt).toLocaleDateString("es-PE", {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </td>
-                    <td className="py-3 px-4 text-right font-bold text-slate-900">
-                      S/ {order.amount.toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
     </div>
   );
 }

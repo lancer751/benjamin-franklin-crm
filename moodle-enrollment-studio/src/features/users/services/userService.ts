@@ -83,8 +83,29 @@ export const getSellerProfileById = async (id: string): Promise<SellerProfileByI
   return await res.json();
 };
 
-export const getSellerCampaigns = async (id: string): Promise<SellerCampaignsRes> => {
-  const res = await api.users.sellers[":id"]["campaigns"].$get({ param: { id } });
+/**
+ * Obtiene las campañas asignadas a un vendedor dado su `userId` (el ID del usuario,
+ * no el ID del perfil de vendedor). Resuelve internamente la discrepancia de IDs
+ * consultando primero el perfil para extraer el `sellerId` real.
+ */
+export const getSellerCampaigns = async (userId: string): Promise<SellerCampaignsRes> => {
+  // 1. Obtenemos el perfil usando el ID de usuario que viene en la URL
+  const profileRes = await getSellerProfileById(userId);
+
+  if (!profileRes || !(profileRes as any).success || !(profileRes as any).data) {
+    throw new Error(
+      "No se pudo obtener el perfil del vendedor para consultar sus campañas."
+    );
+  }
+
+  // 2. Extraemos el ID real del perfil de vendedor (distinto del user_id)
+  const sellerId: string = (profileRes as any).data.id;
+
+  // 3. Realizamos la petición de campañas con el ID correcto de vendedor
+  const res = await api.users.sellers[":id"]["campaigns"].$get({
+    param: { id: sellerId },
+  });
+
   return await res.json();
 };
 
