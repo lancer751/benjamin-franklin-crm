@@ -1,5 +1,5 @@
 import type { SuccessResponse } from "@/app";
-import { verifyUserRoleAccess } from "@/middlewares/auth.middleware";
+import { verifyUserAccessAuth, verifyUserRoleAccess } from "@/middlewares/auth.middleware";
 import { handleRepoError } from "@/routes/lead/lead.route";
 import { metaService } from "@/services/metaservice";
 import { zValidator } from "@hono/zod-validator";
@@ -10,6 +10,7 @@ import { z } from "zod";
 export const metaRoutes = new Hono()
   .get(
     "/campaigns",
+    verifyUserAccessAuth,
     verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     async (c) => {
       try {
@@ -26,6 +27,7 @@ export const metaRoutes = new Hono()
   // GET /meta/campaigns/:metaCampaignId/forms — step: pick a lead form
   .get(
     "/campaigns/:metaCampaignId/forms",
+    verifyUserAccessAuth,
     verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("param", z.object({ metaCampaignId: z.string() })),
     async (c) => {

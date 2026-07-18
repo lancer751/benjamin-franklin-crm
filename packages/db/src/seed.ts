@@ -2,7 +2,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
 import { CoursesWorkflow } from "./workflows/product-launch/orchestator";
-import { hash } from "bcrypt";
+import { compare, hash } from "bcrypt";
 import { CrmWorkflow } from "./workflows/leads-management/orchestator";
 
 const databaseUrl = `${process.env.DATABASE_URL}`;
@@ -16,10 +16,26 @@ async function main() {
 
   // ── Roles ──────────────────────────────────────────────────────────────────
   const roles = await Promise.all([
-    prisma.role.upsert({ where: { name: "ADMIN" },            update: {}, create: { name: "ADMIN" } }),
-    prisma.role.upsert({ where: { name: "SALES_REP" },        update: {}, create: { name: "SALES_REP" } }),
-    prisma.role.upsert({ where: { name: "MARKETING" },        update: {}, create: { name: "MARKETING" } }),
-    prisma.role.upsert({ where: { name: "SALES_SUPERVISOR" }, update: {}, create: { name: "SALES_SUPERVISOR" } }),
+    prisma.role.upsert({
+      where: { name: "ADMIN" },
+      update: {},
+      create: { name: "ADMIN" },
+    }),
+    prisma.role.upsert({
+      where: { name: "SALES_REP" },
+      update: {},
+      create: { name: "SALES_REP" },
+    }),
+    prisma.role.upsert({
+      where: { name: "MARKETING" },
+      update: {},
+      create: { name: "MARKETING" },
+    }),
+    prisma.role.upsert({
+      where: { name: "SALES_SUPERVISOR" },
+      update: {},
+      create: { name: "SALES_SUPERVISOR" },
+    }),
   ]);
 
   // ── Admin user ─────────────────────────────────────────────────────────────
@@ -27,6 +43,8 @@ async function main() {
     where: { name: "ADMIN" },
     select: { id: true },
   });
+
+  const hashed = await hash("password123#", 10);
 
   await prisma.user.upsert({
     where: { email: "admin@bf.edu.pe" },
@@ -39,17 +57,17 @@ async function main() {
       corporate_email: "admin@bf.edu.pe",
       role_id: adminRole.id,
       is_active: true,
-      password: await hash("password123#", 10),
+      password: hashed,
     },
   });
 
-  // ── Academic workflow (courses → editions → products) ──────────────────────
-  console.log("📚 Running CoursesWorkflow...");
-  const { products } = await CoursesWorkflow();
+  // // ── Academic workflow (courses → editions → products) ──────────────────────
+  // console.log("📚 Running CoursesWorkflow...");
+  // const { products } = await CoursesWorkflow();
 
-  // ── CRM workflow (supervisors → sellers → campaigns → leads) ───────────────
-  console.log("\n📋 Running CrmWorkflow...");
-  await CrmWorkflow(products);
+  // // ── CRM workflow (supervisors → sellers → campaigns → leads) ───────────────
+  // console.log("\n📋 Running CrmWorkflow...");
+  // await CrmWorkflow(products);
 
   console.log("\n🎉 Seeding complete.");
 }

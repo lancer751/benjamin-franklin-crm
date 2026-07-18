@@ -27,7 +27,7 @@ app.use(
     origin: allowedOrigins,
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowHeaders: ["Content-Type", "Authorization", "xxx-csrf-access-token", "x-seller-id"],
+    allowHeaders: ["Content-Type", "Authorization", "xxx-csrf-access-token", "x-seller-id", "x-hub-signature-256"],
   }),
 );
 
