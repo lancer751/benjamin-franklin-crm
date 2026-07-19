@@ -5,7 +5,6 @@ import { toast } from "sonner";
 
 export const useCampaigns = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [campaignToDelete, setCampaignToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const itemsPerPage = 5;
@@ -63,8 +62,6 @@ export const useCampaigns = () => {
     setCurrentPage,
     totalPages,
     itemsPerPage,
-    isCreateModalOpen,
-    setIsCreateModalOpen,
     campaignToDelete,
     setCampaignToDelete,
     deleteMutation,

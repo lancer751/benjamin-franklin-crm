@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/core/components/ui/button";
 import DeleteConfirmModal from "@/core/components/DeleteConfirmModal";
-import CampaignFormModal from "@/features/campaigns/components/CampaignFormModal";
 import { useCampaigns } from "@/features/campaigns/hooks/useCampaigns";
 import { CampaignStatsCards } from "@/features/campaigns/components/CampaignStatsCards";
 import { CampaignsTable } from "@/features/campaigns/components/CampaignsTable";
 
 const CampaignsView = () => {
+  const navigate = useNavigate();
   const {
     campaigns,
     paginatedCampaigns,
@@ -16,8 +16,6 @@ const CampaignsView = () => {
     setCurrentPage,
     totalPages,
     itemsPerPage,
-    isCreateModalOpen,
-    setIsCreateModalOpen,
     campaignToDelete,
     setCampaignToDelete,
     deleteMutation,
@@ -26,8 +24,6 @@ const CampaignsView = () => {
     activeCampaigns,
     spentPercent,
   } = useCampaigns();
-
-  const [campaignToEdit, setCampaignToEdit] = useState<any | null>(null);
 
   return (
     <div className="space-y-6">
@@ -40,7 +36,7 @@ const CampaignsView = () => {
           </p>
         </div>
         <Button
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => navigate("/admin/campanas/nueva")}
           className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-xl text-sm animate-in fade-in zoom-in duration-200"
         >
           + Nueva Campaña
@@ -68,7 +64,7 @@ const CampaignsView = () => {
         itemsPerPage={itemsPerPage}
         onPageChange={setCurrentPage}
         onDeleteClick={setCampaignToDelete}
-        onEditClick={(c) => setCampaignToEdit(c)}
+        onEditClick={(campaign) => navigate(`/admin/campanas/${campaign.id}/editar`)}
       />
 
       {/* Modal de confirmación para eliminar */}
@@ -82,15 +78,6 @@ const CampaignsView = () => {
         }}
         itemName={campaignToDelete?.name || ""}
         itemType="Campaña"
-      />
-
-      <CampaignFormModal
-        open={isCreateModalOpen || !!campaignToEdit}
-        onClose={() => {
-          setIsCreateModalOpen(false);
-          setCampaignToEdit(null);
-        }}
-        initialData={campaignToEdit}
       />
     </div>
   );

@@ -53,6 +53,8 @@ import OverdueView from "@/features/payments/views/OverdueView";
 // Módulo de Campañas
 import MarketingDashboardView from "@/features/campaigns/views/admin-marketing/MarketingDashboardView";
 import CampaignsView from "@/features/campaigns/views/admin-marketing/CampaignsView";
+import CampaignCreateView from "@/features/campaigns/views/admin-marketing/CampaignCreateView";
+import CampaignEditView from "@/features/campaigns/views/admin-marketing/CampaignEditView";
 import CampaignDetailView from "@/features/campaigns/views/CampaignDetailView";
 import LeadSourcesView from "@/features/campaigns/views/admin-marketing/LeadSourcesView";
 import SellerCampaignsView from "@/features/campaigns/views/seller/SellerCampaignsView";
@@ -174,6 +176,8 @@ const App = () => {
               {/* Campañas */}
               <Route path="/marketing" element={<Navigate to="/admin/campanas" replace />} />
               <Route path="/admin/campanas" element={<CampaignsRouteSwitcher />} />
+              <Route path="/admin/campanas/nueva" element={<CampaignCreateView />} />
+              <Route path="/admin/campanas/:id/editar" element={<CampaignEditView />} />
               <Route path="/admin/campanas/:id" element={<CampaignDetailView />} />
               <Route path="/campanas/:id" element={<CampaignDetailView />} />
               <Route path="/origen-leads" element={isSalesRep ? <Navigate to="/admin/campanas" replace /> : <LeadSourcesView />} />

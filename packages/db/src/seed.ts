@@ -62,12 +62,11 @@ async function main() {
   });
 
   // // ── Academic workflow (courses → editions → products) ──────────────────────
-  // console.log("📚 Running CoursesWorkflow...");
-  // const { products } = await CoursesWorkflow();
+  console.log("📚 Running CoursesWorkflow...");
+  const { products } = await CoursesWorkflow();
 
-  // // ── CRM workflow (supervisors → sellers → campaigns → leads) ───────────────
-  // console.log("\n📋 Running CrmWorkflow...");
-  // await CrmWorkflow(products);
+  console.log("\n📋 Running CrmWorkflow...");
+  await CrmWorkflow(products);
 
   console.log("\n🎉 Seeding complete.");
 }

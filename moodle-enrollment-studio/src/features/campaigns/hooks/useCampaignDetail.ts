@@ -14,7 +14,6 @@ import { toast } from "sonner";
 export const useCampaignDetail = (id: string | undefined) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [showConfig, setShowConfig] = useState(false);
   const [showAssignSeller, setShowAssignSeller] = useState(false);
 
   const isMockId = id?.startsWith("camp-mock-");
@@ -152,8 +151,6 @@ export const useCampaignDetail = (id: string | undefined) => {
     campaign,
     isLoading,
     isError,
-    showConfig,
-    setShowConfig,
     showAssignSeller,
     setShowAssignSeller,
     assignSellersMutation,

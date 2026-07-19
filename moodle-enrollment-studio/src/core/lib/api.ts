@@ -1,7 +1,7 @@
 import { hcWithType } from "backend";
 import { useAuthStore } from "@/store/useAuthStore";
 
-const SERVER_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
+const SERVER_URL = (import.meta.env.VITE_API_URL || "https://benjamin-franklin-crm-production-0f6b.up.railway.app/").replace(/\/$/, "");
 
 export const api = hcWithType(SERVER_URL, {
   fetch: async (input: RequestInfo | URL, requestInit?: RequestInit) => {

@@ -5,7 +5,6 @@ import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import CampaignForm from "@/features/campaigns/components/CampaignForm";
 import { getSellers } from "@/features/users/services/userService";
 import { toast } from "sonner";
 import ModalWrapper from "@/core/components/ModalWrapper";
@@ -193,8 +192,6 @@ const CampaignDetailView = () => {
     campaign,
     isLoading,
     isError,
-    showConfig,
-    setShowConfig,
     showAssignSeller,
     setShowAssignSeller,
     assignSellersMutation,
@@ -324,7 +321,7 @@ const CampaignDetailView = () => {
       {/* Header */}
       <CampaignDetailHeader
         campaign={campaign}
-        onConfigClick={() => setShowConfig(true)}
+        onConfigClick={() => navigate(`/admin/campanas/${campaign.id}/editar`)}
         onPublishReportClick={handlePublishReport}
       />
 
@@ -616,13 +613,6 @@ const CampaignDetailView = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Formulario de Configuración de Campaña */}
-      <CampaignForm
-        open={showConfig}
-        onClose={() => setShowConfig(false)}
-        initialData={campaign}
-      />
 
       {/* Modal para Asignar Vendedores */}
       <AssignSellersModal
