@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { getProductById } from "../services/productService";
 import { useProductFormModal } from "../hooks/useProductFormModal";
 import { useProductContentActions } from "../hooks/useProductContentActions";
+import { usePendingProductFiles } from "../hooks/usePendingProductFiles";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PRODUCT_PERMISSIONS, RoleAccess } from "../utils/productPermissions";
 import { getProductRequirements, getStepState, ProductFormStepId } from "../utils/productFormRequirements";
@@ -54,8 +55,6 @@ const ProductFormView = () => {
     isLoadingCategories,
     isCategoriesError,
     selectedEdition,
-    isUploading,
-    handleImageUpload,
     isPending,
     handleLoadDefaultFAQs,
     availableBenefits,
@@ -73,15 +72,16 @@ const ProductFormView = () => {
     initialData,
   );
 
+  const pendingFiles = usePendingProductFiles();
+
   const {
     saveMarketing,
     saveWebContent,
     saveDraftContent,
-    handleBrochureFileChange,
     isSavingMarketing,
     isSavingWeb,
-    isUploadingBrochure,
-  } = useProductContentActions({ productId: id, form, setFieldValue });
+    isUploadingFiles,
+  } = useProductContentActions({ productId: id, form, setFieldValue, validateForm, pendingFiles });
 
   const requirements = useMemo(() => getProductRequirements(form), [form]);
   const visibleSteps = useMemo(() => {
@@ -129,7 +129,6 @@ const ProductFormView = () => {
     } else if (activeStep === "marketing") {
       saved = await saveMarketing();
     } else {
-      if (!validateForm(activeStep === "web" ? "web" : "complete")) return;
       if (form.sales_status === "ON_SALE" && !requirements.canSell) {
         toast.error("No puedes poner este producto en venta todavía");
         setActiveStep("review");
@@ -140,7 +139,7 @@ const ProductFormView = () => {
         setActiveStep("review");
         return;
       }
-      saved = await saveWebContent();
+      saved = await saveWebContent(activeStep === "web" ? "web" : "complete");
     }
 
     if (saved && continueAfterSave && id) {
@@ -161,7 +160,7 @@ const ProductFormView = () => {
     await saveDraftContent();
   };
 
-  const isSaving = isPending || isSavingMarketing || isSavingWeb;
+  const isSaving = isPending || isSavingMarketing || isSavingWeb || isUploadingFiles;
   const finalActionLabel = form.sales_status === "ON_SALE" ? "Poner en venta" : form.sales_status === "PUBLISHED" ? "Publicar producto" : "Guardar cambios";
   const finalActionDisabled = (form.sales_status === "ON_SALE" && !requirements.canSell) || (form.sales_status === "PUBLISHED" && !requirements.canPublish);
 
@@ -186,7 +185,7 @@ const ProductFormView = () => {
       {permissions.readonly && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-800">Modo de lectura activo. Puedes revisar la completitud, pero tu rol no permite guardar cambios.</div>}
 
       {activeStep === "commercial" && <ProductCommercialSection form={form} errors={errors} setFieldValue={setFieldValue} setPriceValue={setPriceValue} editions={editions} categories={categories} isLoadingEditions={isLoadingEditions} isLoadingCategories={isLoadingCategories} isEditionsError={isEditionsError} isCategoriesError={isCategoriesError} selectedEdition={selectedEdition} isEdit={isEdit} disabled={permissions.readonly || !permissions.canEditAll} />}
-      {activeStep === "marketing" && <ProductMarketingSection form={form} errors={errors} setFieldValue={setFieldValue} availableBenefits={availableBenefits} isLoadingBenefits={isLoadingBenefits} isBenefitsError={isBenefitsError} onToggleBenefit={handleToggleBenefit} isUploadingCover={isUploading} onCoverUpload={handleImageUpload} isUploadingBrochure={isUploadingBrochure} onBrochureFileChange={handleBrochureFileChange} onRemoveBrochure={() => setFieldValue("brochure_url", "")} onLoadDefaultFAQs={handleLoadDefaultFAQs} disabled={permissions.readonly} />}
+      {activeStep === "marketing" && <ProductMarketingSection form={form} errors={errors} setFieldValue={setFieldValue} availableBenefits={availableBenefits} isLoadingBenefits={isLoadingBenefits} isBenefitsError={isBenefitsError} onToggleBenefit={handleToggleBenefit} pendingFiles={pendingFiles} isUploadingFiles={isUploadingFiles} onLoadDefaultFAQs={handleLoadDefaultFAQs} disabled={permissions.readonly} />}
       {activeStep === "web" && <ProductWebContentSection form={form} errors={errors} setFieldValue={setFieldValue} requirements={[...requirements.sections.commercial, ...requirements.sections.marketing.filter((item) => item.id === "benefit_ids"), ...requirements.sections.web]} disabled={permissions.readonly} />}
       {activeStep === "review" && <ProductReviewSummary form={form} requirements={requirements} />}
 

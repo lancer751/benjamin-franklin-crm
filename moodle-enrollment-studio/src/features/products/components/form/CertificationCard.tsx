@@ -1,10 +1,8 @@
-import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/core/components/ui/card";
 import { Award, Image as ImageIcon, Upload, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
+import { Badge } from "@/core/components/ui/badge";
 import { cn } from "@/core/lib/utils";
-import { uploadImageToCloudinary } from "@/core/lib/uploadService";
-import { toast } from "sonner";
 
 interface CertificationCardProps {
   form: {
@@ -14,7 +12,7 @@ interface CertificationCardProps {
     certification_issuing_authority?: string | null;
     certification_registry_validity?: string | null;
     certification?: {
-      image_url?: string;
+      image_url?: string | null;
       title?: string;
       description?: string;
       issuing_authority?: string;
@@ -25,30 +23,27 @@ interface CertificationCardProps {
   };
   errors: Record<string, string>;
   setFieldValue: (key: string, value: any) => void;
+  pendingFile: File | null;
+  previewUrl: string | null;
+  isUploading: boolean;
+  isMarkedForRemoval: boolean;
+  onSelectImage: (file: File) => void;
+  onRemoveImage: () => void;
 }
 
 const CertificationCard = ({
   form,
   errors,
   setFieldValue,
+  pendingFile,
+  previewUrl,
+  isUploading,
+  isMarkedForRemoval,
+  onSelectImage,
+  onRemoveImage,
 }: CertificationCardProps) => {
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-
-  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setIsUploadingImage(true);
-      const url = await uploadImageToCloudinary(file);
-      setFieldValue("certification.image_url", url);
-      toast.success("Imagen de certificación subida correctamente");
-    } catch (error) {
-      toast.error("Error al subir la imagen de la certificación");
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
+  const currentImageUrl = !isMarkedForRemoval ? form.certification?.image_url : "";
+  const visibleImageUrl = previewUrl || currentImageUrl;
 
   return (
     <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
@@ -167,11 +162,11 @@ const CertificationCard = ({
                 Imagen de la Certificación
               </label>
               <div className="relative aspect-[4/3] rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden bg-slate-50/60 group hover:border-primary/50 transition-colors">
-                {form.certification?.image_url ? (
+                {visibleImageUrl ? (
                   <>
                     <img
-                      src={form.certification.image_url}
-                      alt="Diploma"
+                      src={visibleImageUrl}
+                      alt={pendingFile ? "Previsualización pendiente del certificado" : "Certificado actual"}
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
@@ -185,14 +180,14 @@ const CertificationCard = ({
                       >
                         <Upload size={14} /> Cambiar Diploma
                       </Button>
-                      <Button type="button" variant="destructive" size="sm" className="gap-2 rounded-xl text-xs" onClick={() => setFieldValue("certification.image_url", "")}><Trash2 size={14} /> Eliminar</Button>
+                      <Button type="button" variant="destructive" size="sm" className="gap-2 rounded-xl text-xs" onClick={onRemoveImage}><Trash2 size={14} /> Eliminar</Button>
                       </div>
                     </div>
                   </>
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-muted-foreground p-3 text-center">
                     <ImageIcon size={28} strokeWidth={1.5} className="text-slate-400" />
-                    <p className="text-[11px] font-semibold text-slate-500">Sin archivo</p>
+                    <p className="text-[11px] font-semibold text-slate-500">{isMarkedForRemoval ? "Se eliminará al guardar" : "Sin archivo"}</p>
                     <Button
                       type="button"
                       variant="outline"
@@ -205,19 +200,20 @@ const CertificationCard = ({
                   </div>
                 )}
 
-                {isUploadingImage && (
+                {isUploading && (
                   <div className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center gap-2 z-20 rounded-2xl">
                     <Loader2 size={20} className="animate-spin text-primary" />
                     <p className="text-[10px] font-bold text-primary animate-pulse">Guardando...</p>
                   </div>
                 )}
               </div>
+              {pendingFile && <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3"><Badge className="mb-1 bg-amber-500">Pendiente de guardar</Badge><p className="truncate text-[11px] font-semibold text-slate-700">{pendingFile.name} · {(pendingFile.size / 1024 / 1024).toFixed(2)} MB</p></div>}
               <input
                 id="certification-image-upload"
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={handleImageFileChange}
+                onChange={(event) => { const file = event.target.files?.[0]; if (file) onSelectImage(file); event.target.value = ""; }}
               />
             </div>
             <p className="text-[10px] text-muted-foreground italic leading-normal pt-2 border-t border-slate-100">

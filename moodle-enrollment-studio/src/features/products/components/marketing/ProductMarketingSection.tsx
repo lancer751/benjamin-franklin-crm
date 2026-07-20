@@ -1,6 +1,6 @@
 import { AlertTriangle, PackageOpen } from "lucide-react";
-import type { ChangeEvent } from "react";
 import type { ProductFormValues } from "../../schemas";
+import type { PendingProductFilesController } from "../../hooks/usePendingProductFiles";
 import BenefitsCard from "../form/BenefitsCard";
 import CertificationCard from "../form/CertificationCard";
 import CoverImageUploader from "../form/CoverImageUploader";
@@ -17,11 +17,8 @@ interface ProductMarketingSectionProps {
   isLoadingBenefits: boolean;
   isBenefitsError: boolean;
   onToggleBenefit: (id: string) => void;
-  isUploadingCover: boolean;
-  onCoverUpload: (file: File) => void;
-  isUploadingBrochure: boolean;
-  onBrochureFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onRemoveBrochure: () => void;
+  pendingFiles: PendingProductFilesController;
+  isUploadingFiles: boolean;
   onLoadDefaultFAQs: () => void;
   disabled?: boolean;
 }
@@ -33,10 +30,12 @@ const ProductMarketingSection = (props: ProductMarketingSectionProps) => (
     </div>
     {props.isBenefitsError && <div className="flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><AlertTriangle size={18} /> No se pudo cargar el catálogo de beneficios. Tus selecciones actuales se conservarán.</div>}
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-      <CoverImageUploader imageUrl={props.form.image_url || undefined} isUploading={props.isUploadingCover} onUpload={props.onCoverUpload} onRemove={() => props.setFieldValue("image_url", "")} />
-      <ProductBrochureUploader url={props.form.brochure_url} isUploading={props.isUploadingBrochure} onFileChange={props.onBrochureFileChange} onRemove={props.onRemoveBrochure} />
+      <CoverImageUploader imageUrl={props.form.image_url || undefined} pendingFile={props.pendingFiles.files.coverImage} previewUrl={props.pendingFiles.previews.coverImage} isUploading={props.isUploadingFiles} isMarkedForRemoval={props.pendingFiles.markedForRemoval.coverImage} onSelect={(file) => props.pendingFiles.selectFile("coverImage", file)} onRemove={() => props.pendingFiles.removeFile("coverImage", Boolean(props.form.image_url))} />
+      <ProductBrochureUploader url={props.form.brochure_url} pendingFile={props.pendingFiles.files.brochure} isUploading={props.isUploadingFiles} isMarkedForRemoval={props.pendingFiles.markedForRemoval.brochure} onSelect={(file) => props.pendingFiles.selectFile("brochure", file)} onRemove={() => props.pendingFiles.removeFile("brochure", Boolean(props.form.brochure_url))} />
     </div>
     <CertificationsSelector selectedIds={props.form.certifications || []} onChange={(ids, selected) => {
+      if (!props.form.certification_id && ids[0]) props.pendingFiles.moveCertificationImage("new", ids[0]);
+      (props.form.certifications || []).filter((id) => !ids.includes(id)).forEach((id) => props.pendingFiles.removeCertificationImage(id, false));
       props.setFieldValue("certifications", ids);
       props.setFieldValue("certification_id", ids[0] || "");
       if (selected) {
@@ -55,7 +54,7 @@ const ProductMarketingSection = (props: ProductMarketingSectionProps) => (
         props.setFieldValue("certification_description", "");
       }
     }} />
-    <CertificationCard form={props.form} errors={props.errors} setFieldValue={props.setFieldValue} />
+    <CertificationCard form={props.form} errors={props.errors} setFieldValue={props.setFieldValue} pendingFile={props.pendingFiles.files.certificationImages[props.form.certification_id || "new"] || null} previewUrl={props.pendingFiles.previews.certificationImages[props.form.certification_id || "new"] || null} isUploading={props.isUploadingFiles} isMarkedForRemoval={Boolean(props.pendingFiles.markedForRemoval.certificationImages[props.form.certification_id || "new"])} onSelectImage={(file) => props.pendingFiles.selectCertificationImage(props.form.certification_id || "new", file)} onRemoveImage={() => props.pendingFiles.removeCertificationImage(props.form.certification_id || "new", Boolean(props.form.certification?.image_url))} />
     <BenefitsCard availableBenefits={props.availableBenefits} isLoadingBenefits={props.isLoadingBenefits} benefitIds={props.form.benefit_ids || []} errors={props.errors} onToggle={props.onToggleBenefit} setFieldValue={props.setFieldValue} />
     <FaqSelector faqs={props.form.faqs || []} onChange={(faqs) => props.setFieldValue("faqs", faqs)} />
     <FAQsSectionCard form={props.form} setFieldValue={props.setFieldValue} handleLoadDefaultFAQs={props.onLoadDefaultFAQs} />

@@ -1,86 +1,36 @@
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/core/components/ui/card";
+import { Image as ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
+import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
-import { Image as ImageIcon, Upload, Loader2, Trash2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/components/ui/card";
 
 interface CoverImageUploaderProps {
-  imageUrl: string | undefined;
+  imageUrl?: string;
+  pendingFile: File | null;
+  previewUrl: string | null;
   isUploading: boolean;
-  onUpload: (file: File) => void;
-  onRemove?: () => void;
+  isMarkedForRemoval: boolean;
+  onSelect: (file: File) => void;
+  onRemove: () => void;
 }
 
-const CoverImageUploader = ({
-  imageUrl,
-  isUploading,
-  onUpload,
-  onRemove,
-}: CoverImageUploaderProps) => {
+const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+
+const CoverImageUploader = ({ imageUrl, pendingFile, previewUrl, isUploading, isMarkedForRemoval, onSelect, onRemove }: CoverImageUploaderProps) => {
+  const visibleImage = previewUrl || (!isMarkedForRemoval ? imageUrl : undefined);
   return (
-    <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
-      <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-            <ImageIcon size={16} className="text-primary" />
-          </div>
-          <div>
-            <CardTitle className="text-sm font-semibold text-slate-900">Portada del Producto</CardTitle>
-            <CardDescription className="text-xs">Imagen que visualizará el alumno en el landing comercial.</CardDescription>
-          </div>
-        </div>
+    <Card className="overflow-hidden rounded-2xl border-slate-200 shadow-sm">
+      <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center gap-3"><div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10"><ImageIcon size={16} className="text-primary" /></div><div><CardTitle className="text-sm">Portada del producto</CardTitle><CardDescription className="text-xs">La selección permanece local hasta guardar.</CardDescription></div></div>
       </CardHeader>
-      <CardContent className="p-6 space-y-4">
-        <div className="relative aspect-video rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden bg-slate-50/60 group hover:border-primary/50 transition-colors">
-          {imageUrl ? (
-            <>
-              <img src={imageUrl} alt="Portada" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
-                <div className="flex gap-2"><Button 
-                  variant="secondary" 
-                  size="sm" 
-                  className="gap-2 rounded-xl"
-                  onClick={() => document.getElementById('image-upload')?.click()}
-                >
-                  <Upload size={14} /> Cambiar Portada
-                </Button>
-                {onRemove && <Button type="button" variant="destructive" size="sm" className="gap-2 rounded-xl" onClick={onRemove}><Trash2 size={14} /> Eliminar</Button>}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-2 text-muted-foreground p-4 text-center">
-              <ImageIcon size={32} strokeWidth={1.5} className="text-slate-400" />
-              <p className="text-xs font-medium">No hay imagen seleccionada</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-2 rounded-xl border-slate-200 hover:bg-slate-100"
-                onClick={() => document.getElementById('image-upload')?.click()}
-              >
-                Subir Imagen
-              </Button>
-            </div>
-          )}
-          
-          {isUploading && (
-            <div className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center gap-2 z-20 rounded-2xl">
-              <Loader2 size={24} className="animate-spin text-primary" />
-              <p className="text-xs font-bold text-primary animate-pulse">Subiendo a Cloudinary...</p>
-            </div>
-          )}
+      <CardContent className="space-y-4 p-6">
+        <div className="group relative flex aspect-video items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60">
+          {visibleImage ? <img src={visibleImage} alt={pendingFile ? "Previsualización pendiente" : "Portada actual"} className="h-full w-full object-cover" /> : <div className="text-center text-slate-400"><ImageIcon size={32} className="mx-auto mb-2" /><p className="text-xs font-medium">{isMarkedForRemoval ? "Se eliminará al guardar" : "Sin portada"}</p></div>}
+          {!isUploading && <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100"><Button type="button" variant="secondary" size="sm" className="rounded-xl" onClick={() => document.getElementById("product-cover-upload")?.click()}><Upload size={14} className="mr-1" /> {pendingFile || imageUrl ? "Reemplazar" : "Subir"}</Button>{(pendingFile || imageUrl) && <Button type="button" variant="destructive" size="sm" className="rounded-xl" onClick={onRemove}><Trash2 size={14} className="mr-1" /> Quitar</Button>}</div>}
+          {isUploading && <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/95"><Loader2 size={24} className="animate-spin text-primary" /><p className="text-xs font-bold text-primary">Subiendo portada...</p></div>}
         </div>
-        <input 
-          id="image-upload" 
-          type="file" 
-          accept="image/*" 
-          className="hidden" 
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onUpload(file);
-          }}
-        />
-        <p className="text-[10px] text-muted-foreground italic text-center leading-normal">
-          * Se autocompleta con la imagen oficial de la cohorte elegida si no subes una personalizada.
-        </p>
+        {pendingFile && <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs"><Badge className="bg-amber-500">Pendiente de guardar</Badge><span className="min-w-0 truncate font-semibold text-slate-700">{pendingFile.name}</span><span className="text-slate-500">{formatSize(pendingFile.size)}</span></div>}
+        {!pendingFile && imageUrl && !isMarkedForRemoval && <p className="text-[11px] text-slate-500">Portada guardada actualmente.</p>}
+        <input id="product-cover-upload" type="file" accept="image/*" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) onSelect(file); event.target.value = ""; }} />
       </CardContent>
     </Card>
   );

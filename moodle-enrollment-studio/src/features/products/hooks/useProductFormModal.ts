@@ -4,9 +4,8 @@ import { getCourseEditions } from "@/features/academic/services/courseService";
 import { getCategories } from "../services/categoryService";
 import { createProduct, updateProduct } from "../services/productService";
 import { getBenefits } from "../services/benefitService";
-import { uploadImageToCloudinary } from "@/core/lib/uploadService";
 import { toast } from "sonner";
-import { ProductFormValues, productCommercialFormSchema, productFormSchema, productWebContentFormSchema } from "../schemas";
+import { ProductFormValues, productCommercialFormSchema, productFormSchema, productMarketingFormSchema, productWebContentFormSchema } from "../schemas";
 import { getCertificationDefaultText, INSTITUTIONAL_FAQS } from "../utils/productTemplates";
 import { adaptProductToUI } from "../adapters/product.adapter";
 import { BackendProductResponse } from "../types/product.types";
@@ -70,8 +69,6 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
   const isEdit = !!initialData;
   const [form, setForm] = useState<ProductFormValues>(emptyData);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isUploading, setIsUploading] = useState(false);
-  const [hasCustomImage, setHasCustomImage] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -123,11 +120,9 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
       };
 
       setForm(nextForm);
-      setHasCustomImage(!!product.image_url);
       setErrors({});
     } else if (open) {
       setForm(emptyData);
-      setHasCustomImage(false);
       setErrors({});
     }
   }, [initialData, open]);
@@ -282,20 +277,6 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     });
   }, [selectedEdition, isEdit]);
 
-  const handleImageUpload = async (file: File) => {
-    try {
-      setIsUploading(true);
-      const url = await uploadImageToCloudinary(file);
-      setFieldValue("image_url", url);
-      setHasCustomImage(true); // Marcamos que el usuario subió una imagen propia
-      toast.success("Imagen subida correctamente");
-    } catch (error) {
-      toast.error("Error al subir la imagen");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleLoadDefaultFAQs = useCallback(() => {
     setFieldValue("faqs", INSTITUTIONAL_FAQS.map(faq => ({
       question: faq.question,
@@ -420,9 +401,11 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     }
   };
 
-  const validateForm = (section: "commercial" | "web" | "complete" = "complete") => {
+  const validateForm = (section: "commercial" | "marketing" | "web" | "complete" = "complete") => {
     const schemaToValidate = section === "commercial"
       ? productCommercialFormSchema
+      : section === "marketing"
+        ? productMarketingFormSchema
       : section === "web"
         ? productWebContentFormSchema
         : productFormSchema;
@@ -465,8 +448,6 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     isLoadingCategories,
     isCategoriesError,
     selectedEdition,
-    isUploading,
-    handleImageUpload,
     isPending: mutation.isPending,
     isEdit,
     handleLoadDefaultFAQs,
