@@ -16,6 +16,28 @@ export type CreateLeadReq = InferRequestType<typeof api.leads.$post>["json"];
 export type UpdateLeadReq = InferRequestType<(typeof api.leads)[typeof UUID_PATH]["$put"]>["json"];
 export type LeadQuerySchemaInput = InferRequestType<typeof api.leads.$get>["query"];
 
+export interface LeadLookupResponse {
+  success: boolean;
+  code?: "LEAD_IDENTITY_CONFLICT";
+  message?: string;
+  data?: {
+    found: boolean;
+    matchedBy: "phone" | "email" | "phone_and_email" | null;
+    campaign_member_id: string | null;
+    lead: {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+      phones: Array<{
+        number: string;
+        type: string;
+        isPrincipal: boolean;
+      }>;
+    } | null;
+  };
+}
+
 // 2. Rutas de Miembros de Campaña (/api/campaigns/:campaignId/members)
 // Para acceder a los métodos anidados del sub-router usamos casting limpio o invocación directa por convención RPC
 export type GetCampaignMembersRes = InferResponseType<typeof api.campaigns[typeof UUID_PATH]["members"]["$get"]>;
@@ -164,4 +186,25 @@ export const deleteMemberTask = async (campaignId: string, memberId: string, tas
     param: { campaignId, memberId, taskId }
   });
   return await res.json();
+};
+
+export const lookupLeadExact = async (query: {
+  phone?: string;
+  email?: string;
+  campaignId: string;
+  sellerId: string;
+}): Promise<LeadLookupResponse> => {
+  const res = await (api.leads as any).lookup.$get({
+    query: {
+      ...(query.phone && { phone: query.phone }),
+      ...(query.email && { email: query.email }),
+      campaign_id: query.campaignId,
+      seller_id: query.sellerId,
+    },
+  });
+  const body = await res.json() as LeadLookupResponse & { error?: string };
+  if (!res.ok && body.code !== "LEAD_IDENTITY_CONFLICT") {
+    throw new Error(body.message || body.error || "No fue posible buscar el prospecto.");
+  }
+  return body;
 };

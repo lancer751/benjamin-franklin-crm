@@ -17,6 +17,83 @@ import type { LeadWhereInput } from "../../../packages/db/dist/generated/prisma/
 export function leadRepository(prisma: PrismaClient) {
   return {
     //  Leads
+    async lookupExact(phone?: string, email?: string, campaignId?: string) {
+      const leadSelect = {
+        id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+        phones: {
+          select: {
+            number: true,
+            type: true,
+            isPrincipal: true,
+          },
+        },
+        campaignsEngaging: {
+          where: { campaing_id: campaignId ?? "" },
+          select: { id: true },
+          take: 1,
+        },
+      } as const;
+
+      const [phoneLead, emailLead] = await Promise.all([
+        phone
+          ? prisma.lead.findFirst({
+              where: {
+                deleted_at: null,
+                phones: { some: { number: phone } },
+              },
+              select: leadSelect,
+            })
+          : null,
+        email
+          ? prisma.lead.findFirst({
+              where: {
+                deleted_at: null,
+                email: { equals: email, mode: "insensitive" },
+              },
+              select: leadSelect,
+            })
+          : null,
+      ]);
+
+      if (phoneLead && emailLead && phoneLead.id !== emailLead.id) {
+        return { conflict: true as const };
+      }
+
+      const lead = phoneLead ?? emailLead;
+      if (!lead) {
+        return {
+          conflict: false as const,
+          found: false as const,
+          matchedBy: null,
+          lead: null,
+          campaignMemberId: null,
+        };
+      }
+
+      const matchedBy = phoneLead && emailLead
+        ? "phone_and_email"
+        : phoneLead
+          ? "phone"
+          : "email";
+
+      return {
+        conflict: false as const,
+        found: true as const,
+        matchedBy,
+        lead: {
+          id: lead.id,
+          first_name: lead.first_name,
+          last_name: lead.last_name,
+          email: lead.email,
+          phones: lead.phones,
+        },
+        campaignMemberId: lead.campaignsEngaging[0]?.id ?? null,
+      };
+    },
+
     async findMany({ page, limit, search, status, assigned_to }: LeadQuery) {
       const skip = (page - 1) * limit;
       const andConditions: any[] = [
@@ -372,24 +449,61 @@ export function leadRepository(prisma: PrismaClient) {
           message: "Seller is not assigned to this campaign",
         };
 
-      return prisma.campaignMember.create({
-        data: {
-          lead_id: data.lead_id,
-          campaing_id: data.campaing_id,
-          assigned_to: data.assigned_to,
-          source: data.source,
-          is_primary: data.is_primary,
-        },
-        include: {
-          lead: { include: { phones: true } },
-          seller: {
-            select: {
-              id: true,
-              user: { select: { first_name: true, last_name: true } },
-            },
+      const existingMember = await prisma.campaignMember.findUnique({
+        where: {
+          lead_id_campaing_id: {
+            lead_id: data.lead_id,
+            campaing_id: data.campaing_id,
           },
         },
+        select: { id: true },
       });
+      if (existingMember) {
+        throw {
+          code: "LEAD_ALREADY_IN_CAMPAIGN",
+          message: "Este prospecto ya está registrado en esta campaña.",
+          campaignMemberId: existingMember.id,
+        };
+      }
+
+      try {
+        return await prisma.campaignMember.create({
+          data: {
+            lead_id: data.lead_id,
+            campaing_id: data.campaing_id,
+            assigned_to: data.assigned_to,
+            source: data.source,
+            is_primary: data.is_primary,
+          },
+          include: {
+            lead: { include: { phones: true } },
+            seller: {
+              select: {
+                id: true,
+                user: { select: { first_name: true, last_name: true } },
+              },
+            },
+          },
+        });
+      } catch (error) {
+        if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+          const member = await prisma.campaignMember.findUnique({
+            where: {
+              lead_id_campaing_id: {
+                lead_id: data.lead_id,
+                campaing_id: data.campaing_id,
+              },
+            },
+            select: { id: true },
+          });
+          throw {
+            code: "LEAD_ALREADY_IN_CAMPAIGN",
+            message: "Este prospecto ya está registrado en esta campaña.",
+            campaignMemberId: member?.id,
+          };
+        }
+        throw error;
+      }
     },
 
     async updateMemberStatus(

@@ -3,7 +3,6 @@ import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
 import { api } from "@/core/lib/api";
-import { getCampaigns } from "@/features/campaigns/services/campaignService";
 import { getSellerCampaigns } from "@/features/users/services/userService";
 import { 
   getCampaignMembers, 
@@ -13,10 +12,10 @@ import {
   getMemberTasks,
   updateMemberTask,
   deleteMemberTask,
-  createLead,
-  addLeadToCampaign
 } from "@/features/leads/services/leadService";
 import { adaptCampaignMembers, unpackLeads } from "@/features/leads/adapters/leadAdapter";
+import { useManualLeadRegistration } from "@/features/leads/hooks/useManualLeadRegistration";
+import type { ManualLeadData } from "@/features/leads/schemas/manualLeadSchema";
 import { Button } from "@/core/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Input } from "@/core/components/ui/input";
@@ -86,7 +85,7 @@ const SellerLeadsView = () => {
   const sellerId = user?.seller?.id;
 
   const { campaignId } = useParams<{ campaignId: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const selectedCampaignId = campaignId || searchParams.get("campaignId") || "";
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -245,57 +244,25 @@ const SellerLeadsView = () => {
 
   const [isOpenNewLeadModal, setIsOpenNewLeadModal] = useState(false);
 
-  // Mutación de registro manual de lead
-  const createManualLeadMutation = useMutation({
-    mutationFn: async (payload: { first_name: string; last_name: string; email: string; cellphone: string }) => {
-      if (!sellerId) {
-        throw new Error("No se identificó el perfil de asesor de ventas.");
-      }
-      if (!selectedCampaignId) {
-        throw new Error("No hay una campaña activa seleccionada.");
-      }
+  const manualLeadRegistration = useManualLeadRegistration(selectedCampaignId, sellerId);
 
-      const leadPayload = {
-        first_name: payload.first_name,
-        last_name: payload.last_name,
-        email: payload.email,
-        phones: [{ number: payload.cellphone, type: "WHATSAPP" as const, isPrincipal: true }],
-        status: "ACTIVE",
-        gender: "NOT_SPECIFIED" as const
-      };
-
-      const leadResponse = (await createLead(leadPayload as any, sellerId)) as any;
-      
-      if (!leadResponse.success || !leadResponse.data?.id) {
-        throw new Error(leadResponse.message || "Error al crear los datos base del prospecto.");
-      }
-      const newLeadId = leadResponse.data.id;
-
-      const memberPayload = {
-        lead_id: newLeadId,
-        campaing_id: selectedCampaignId,
-        assigned_to: sellerId,
-        source: "WHATSAPP",
-        is_primary: true
-      };
-
-      const memberResponse = (await addLeadToCampaign(selectedCampaignId, memberPayload as any, sellerId)) as any;
-      if (!memberResponse.success) {
-        throw new Error(memberResponse.message || "Error al asociar el prospecto a la campaña.");
-      }
-
-      return memberResponse;
-    },
-    onSuccess: () => {
-      toast.success("Prospecto registrado y asignado exitosamente.");
-      queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", selectedCampaignId, sellerId] });
+  const handleManualLeadSubmit = async (data: ManualLeadData) => {
+    try {
+      const result = await manualLeadRegistration.mutateAsync(data);
+      toast.success(
+        result.mode === "linked"
+          ? "Prospecto existente añadido a la campaña."
+          : "Prospecto registrado y asignado exitosamente.",
+      );
       setIsOpenNewLeadModal(false);
-    },
-    onError: (err: any) => {
-      console.error(err);
-      toast.error(err.message || "Ocurrió un error al registrar el prospecto.");
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Ocurrió un error al registrar el prospecto.";
+      toast.error(message);
+      throw error;
     }
-  });
+  };
 
   const handleStatusChange = (memberId: string, newStatus: string) => {
     const backendStatus = KANBAN_STAGE_TO_ENUM[newStatus] || newStatus;
@@ -512,8 +479,10 @@ const SellerLeadsView = () => {
       <NewLeadModal
         isOpen={isOpenNewLeadModal}
         onClose={() => setIsOpenNewLeadModal(false)}
-        onSubmit={createManualLeadMutation.mutateAsync}
-        isSubmitting={createManualLeadMutation.isPending}
+        onSubmit={handleManualLeadSubmit}
+        isSubmitting={manualLeadRegistration.isPending}
+        campaignId={selectedCampaignId}
+        sellerId={sellerId}
       />
     </div>
   );
