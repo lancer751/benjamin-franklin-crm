@@ -3,6 +3,7 @@ export interface BackendProductResponse {
   name: string;
   slug?: string | null;
   sales_status: "DRAFT" | "PUBLISHED" | "ON_SALE" | "COMPLETED" | "CANCELLED";
+  pricing_status?: "VALID" | "INVALID";
   image_url?: string | null;
   short_description?: string | null;
   description?: string | null;
@@ -74,6 +75,7 @@ export interface UIProduct {
   name: string;
   slug: string;
   sales_status: "DRAFT" | "PUBLISHED" | "ON_SALE" | "COMPLETED" | "CANCELLED";
+  pricing_status: "VALID" | "INVALID";
   image_url: string;
   short_description: string;
   description: string;

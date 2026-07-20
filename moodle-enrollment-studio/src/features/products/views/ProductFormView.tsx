@@ -1,104 +1,44 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { 
-  Loader2, 
-  Save, 
-  AlertCircle, 
-  ArrowRight, 
-  FileText, 
-  Upload, 
-  Trash2, 
-  Award, 
-  Sparkles,
-  ShieldAlert,
-  Globe,
-  Settings,
-  Image as ImageIcon
-} from "lucide-react";
-import { getProductById, updateProductCommercialContent } from "../services/productService";
-import { getBenefits } from "../services/benefitService";
-import { createFAQ, updateFAQ } from "../services/faqService";
-import { createCertification, updateCertification } from "../services/certificationService";
-import { uploadImageToCloudinary, uploadPdfToCloudinary } from "@/core/lib/uploadService";
-import { useProductFormModal } from "../hooks/useProductFormModal";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { getProductById } from "../services/productService";
+import { useProductFormModal } from "../hooks/useProductFormModal";
+import { useProductContentActions } from "../hooks/useProductContentActions";
+import { useAuthStore } from "@/store/useAuthStore";
 import { PRODUCT_PERMISSIONS, RoleAccess } from "../utils/productPermissions";
+import { getProductRequirements, getStepState, ProductFormStepId } from "../utils/productFormRequirements";
+import ProductFormStepper, { ProductFormStep } from "../components/form/ProductFormStepper";
+import ProductFormHeader from "../components/form/ProductFormHeader";
+import ProductFormActions from "../components/form/ProductFormActions";
+import ProductReviewSummary from "../components/form/ProductReviewSummary";
+import ProductCommercialSection from "../components/commercial/ProductCommercialSection";
+import ProductMarketingSection from "../components/marketing/ProductMarketingSection";
+import ProductWebContentSection from "../components/web-content/ProductWebContentSection";
 
-import ProductPageHeader from "@/features/products/components/shared/ProductPageHeader";
-import AcademicDetailsCard from "@/features/products/components/form/AcademicDetailsCard";
-import CommercialConfigCard from "@/features/products/components/form/CommercialConfigCard";
-import BenefitsCard from "@/features/products/components/form/BenefitsCard";
-import CertificationCard from "@/features/products/components/form/CertificationCard";
-import FAQsSectionCard from "@/features/products/components/form/FAQsSectionCard";
-import CoverImageUploader from "@/features/products/components/form/CoverImageUploader";
-import PricingCard from "@/features/products/components/form/PricingCard";
-import DiscountSection from "@/features/products/components/form/DiscountSection";
-import { Button } from "@/core/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/core/components/ui/tabs";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/core/components/ui/card";
-import { cn } from "@/core/lib/utils";
-
-const TABS_CONFIG = [
-  {
-    id: "general" as const,
-    label: "1. Configuración y Precios (Gerencia)",
-    icon: <Sparkles size={14} className="mr-2 text-sky-500" />,
-  },
-  {
-    id: "marketing" as const,
-    label: "2. Diseño y Certificados (Marketing)",
-    icon: <Award size={14} className="mr-2 text-amber-500" />,
-  },
-  {
-    id: "commercial" as const,
-    label: "3. Contenido Comercial Web (Plataforma)",
-    icon: <Globe size={14} className="mr-2 text-emerald-500" />,
-  },
+const ALL_STEPS: ProductFormStep[] = [
+  { id: "commercial", label: "Información comercial", description: "Cohorte, categoría y precios" },
+  { id: "marketing", label: "Material comercial", description: "Activos y argumentos" },
+  { id: "web", label: "Publicación web", description: "Contenido y estado" },
+  { id: "review", label: "Revisión", description: "Checklist final" },
 ];
 
 const ProductFormView = () => {
   const { id } = useParams<{ id: string }>();
-  const isEdit = !!id;
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  // Obtener rol del usuario real logueado en el store del CRM y mapear permisos RBAC
+  const isEdit = Boolean(id);
   const authUser = useAuthStore((state) => state.user);
   const role = (authUser?.role?.name || "ADMIN") as RoleAccess;
-  const permissions = PRODUCT_PERMISSIONS[role] || PRODUCT_PERMISSIONS["ADMIN"];
-  const isMarketingRole = role === "MARKETING";
+  const permissions = PRODUCT_PERMISSIONS[role] || PRODUCT_PERMISSIONS.ADMIN;
+  const [activeStep, setActiveStep] = useState<ProductFormStepId>(role === "MARKETING" ? "marketing" : "commercial");
 
-  const [activeTab, setActiveTab] = useState(() => {
-    return role === "MARKETING" ? "marketing" : "general";
-  });
-  const [isSavingTab2, setIsSavingTab2] = useState(false);
-  const [isSavingTab3, setIsSavingTab3] = useState(false);
-  const [isUploadingBrochure, setIsUploadingBrochure] = useState(false);
-
-  useEffect(() => {
-    if (role === "MARKETING") {
-      setActiveTab("marketing");
-    }
-  }, [role]);
-
-  // Obtener data inicial si estamos en modo edición
-  const { data: productRes, isLoading: isLoadingProduct } = useQuery({
+  const { data: productResponse, isLoading: isLoadingProduct } = useQuery({
     queryKey: ["product", id],
     queryFn: () => getProductById(id as string),
-    enabled: !!id,
+    enabled: Boolean(id),
   });
-
-  const initialData = (productRes as any)?.success ? (productRes as any).data : undefined;
-
-  // Obtener beneficios dinámicos de la API
-  const { data: benefitsRes, isLoading: isLoadingBenefits } = useQuery({
-    queryKey: ["benefits"],
-    queryFn: getBenefits,
-  });
-
-  const availableBenefits = (benefitsRes as any)?.data || [];
+  const initialData = (productResponse as any)?.success ? (productResponse as any).data : undefined;
 
   const {
     form,
@@ -106,573 +46,153 @@ const ProductFormView = () => {
     setFieldValue,
     setPriceValue,
     onSubmit,
+    validateForm,
     isLoadingEditions,
+    isEditionsError,
     editions,
     categories,
     isLoadingCategories,
+    isCategoriesError,
     selectedEdition,
     isUploading,
     handleImageUpload,
     isPending,
-    handleLoadDefaultFAQs
+    handleLoadDefaultFAQs,
+    availableBenefits,
+    isLoadingBenefits,
+    isBenefitsError,
   } = useProductFormModal(
-    true, 
-    ((data: any) => {
-      // Si el producto se creó por primera vez y el backend devolvió el id del producto
-      if (!isEdit && data?.success && data?.data?.id) {
-        navigate(`/productos/${data.data.id}/editar`);
-        setActiveTab("marketing");
-        toast.success("Producto base creado. Ahora puedes agregar el diseño y contenido comercial.");
-      } else {
-        navigate("/productos");
+    true,
+    (data: any) => {
+      if (!id && data?.success && data?.data?.id) {
+        toast.success("Producto base creado. Continúa con el material comercial.");
+        navigate(`/productos/${data.data.id}/editar`, { replace: true });
+        setActiveStep("marketing");
       }
-    }) as any, 
-    initialData
+    },
+    initialData,
   );
+
+  const {
+    saveMarketing,
+    saveWebContent,
+    saveDraftContent,
+    handleBrochureFileChange,
+    isSavingMarketing,
+    isSavingWeb,
+    isUploadingBrochure,
+  } = useProductContentActions({ productId: id, form, setFieldValue });
+
+  const requirements = useMemo(() => getProductRequirements(form), [form]);
+  const visibleSteps = useMemo(() => {
+    const allowed = new Set<ProductFormStepId>();
+    if (permissions.allowedTabs.includes("general")) allowed.add("commercial");
+    if (permissions.allowedTabs.includes("marketing")) allowed.add("marketing");
+    if (permissions.allowedTabs.includes("commercial")) allowed.add("web");
+    allowed.add("review");
+    return ALL_STEPS.filter((step) => allowed.has(step.id));
+  }, [permissions.allowedTabs]);
+
+  const stepStates = useMemo(() => ({
+    commercial: getStepState(requirements, "commercial"),
+    marketing: getStepState(requirements, "marketing"),
+    web: getStepState(requirements, "web"),
+    review: getStepState(requirements, "review"),
+  }), [requirements]);
+
+  useEffect(() => {
+    if (!visibleSteps.some((step) => step.id === activeStep)) setActiveStep(visibleSteps[0]?.id || "review");
+  }, [activeStep, visibleSteps]);
+
+  const nextStep = () => {
+    const index = visibleSteps.findIndex((step) => step.id === activeStep);
+    return visibleSteps[index + 1]?.id;
+  };
+
+  const handleStepChange = (step: ProductFormStepId) => {
+    if (!id && step !== "commercial") {
+      toast.info("Guarda primero la información comercial para crear el producto base");
+      return;
+    }
+    setActiveStep(step);
+  };
 
   const handleToggleBenefit = (benefitId: string) => {
     const current = form.benefit_ids || [];
-    if (current.includes(benefitId)) {
-      setFieldValue("benefit_ids", current.filter(bId => bId !== benefitId));
+    setFieldValue("benefit_ids", current.includes(benefitId) ? current.filter((item) => item !== benefitId) : [...current, benefitId]);
+  };
+
+  const saveCurrentStep = async (continueAfterSave = false) => {
+    let saved = false;
+    if (activeStep === "commercial") {
+      saved = onSubmit("commercial");
+    } else if (activeStep === "marketing") {
+      saved = await saveMarketing();
     } else {
-      setFieldValue("benefit_ids", [...current, benefitId]);
-    }
-  };
-
-  const handleBrochureFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setIsUploadingBrochure(true);
-      const url = await uploadPdfToCloudinary(file);
-      setFieldValue("brochure_url", url);
-      toast.success("Folleto PDF subido correctamente");
-    } catch (error) {
-      toast.error("Error al subir el folleto PDF");
-    } finally {
-      setIsUploadingBrochure(false);
-    }
-  };
-
-  const handleRemoveBrochure = () => {
-    setFieldValue("brochure_url", "");
-    toast.success("Folleto PDF removido");
-  };
-
-  // ACCIÓN PESTAÑA 2: Guardar o cambiar de pestaña - Payload Multimedia únicamente (portada y PDF del brochure)
-  const handleSaveMarketing = async (targetTab?: string) => {
-    if (!id) return;
-    try {
-      setIsSavingTab2(true);
-      
-      // 1. Primero sincronizar la certificación de forma asíncrona si hay datos
-      let certificationIds: string[] = [];
-      const hasCertData = form.certification?.title || form.certification?.description;
-      if (hasCertData) {
-        const certData = {
-          title: form.certification?.title || `Certificado de ${form.name}`,
-          description: form.certification?.description || "",
-          image_url: form.certification?.image_url || "",
-          issuing_authority: form.certification?.issuing_authority || "Corporación Educativa Benjamin Franklin",
-          registry_validity: form.certification?.registry_validity || "",
-          has_digital: true,
-          has_physical: true,
-        };
-
-        if (form.certification_id && form.certification_id.length > 10 && !form.certification_id.startsWith("temp-")) {
-          const res = await updateCertification(form.certification_id, certData);
-          if (res?.success && res.data?.id) {
-            certificationIds.push(res.data.id);
-          } else if (form.certification_id) {
-            certificationIds.push(form.certification_id);
-          }
-        } else {
-          const res = await createCertification(certData);
-          if (res?.success && res.data?.id) {
-            certificationIds.push(res.data.id);
-            setFieldValue("certification_id", res.data.id);
-          }
-        }
+      if (!validateForm(activeStep === "web" ? "web" : "complete")) return;
+      if (form.sales_status === "ON_SALE" && !requirements.canSell) {
+        toast.error("No puedes poner este producto en venta todavía");
+        setActiveStep("review");
+        return;
       }
-
-      // 2. Ejecutar la función del servicio con el payload de marketing
-      const res = await updateProductCommercialContent(id, {
-        image_url: (form as any).image_url && typeof (form as any).image_url === "string" && ((form as any).image_url).trim() !== "" ? (form as any).image_url : null,
-        brochure_url: (form as any).brochure_url && typeof (form as any).brochure_url === "string" && ((form as any).brochure_url).trim() !== "" ? (form as any).brochure_url : null,
-        certification_ids: certificationIds.length > 0 ? certificationIds : undefined
-      });
-
-      if (res.success) {
-        toast.success("Contenido de marketing guardado con éxito");
-        queryClient.invalidateQueries({ queryKey: ["product", id] });
-        if (targetTab) {
-          setActiveTab(targetTab);
-        }
-      } else {
-        toast.error(res.message || "Error al actualizar multimedia de marketing");
+      if (form.sales_status === "PUBLISHED" && !requirements.canPublish) {
+        toast.error("Completa los requisitos antes de publicar el producto");
+        setActiveStep("review");
+        return;
       }
-    } catch (error) {
-      console.error(error);
-      toast.error("Error al actualizar el contenido multimedia");
-    } finally {
-      setIsSavingTab2(false);
+      saved = await saveWebContent();
+    }
+
+    if (saved && continueAfterSave && id) {
+      const target = nextStep();
+      if (target) setActiveStep(target);
+    } else if (saved && continueAfterSave && activeStep === "commercial" && isEdit) {
+      const target = nextStep();
+      if (target) setActiveStep(target);
     }
   };
 
-  // ACCIÓN PESTAÑA 3: Guardar Contenido Comercial Web Completo
-  const handleSaveCommercial = async () => {
-    if (!id) return;
-    try {
-      setIsSavingTab3(true);
-
-      // 1. Guardar/Actualizar FAQs individuales en la BD
-      const faq_ids: string[] = [];
-      if (form.faqs && Array.isArray(form.faqs)) {
-        for (let i = 0; i < form.faqs.length; i++) {
-          const faq = form.faqs[i];
-          const faqData = {
-            question: faq.question || "",
-            answer: faq.answer || "",
-            order: i,
-          };
-          
-          if (faq.id && faq.id.length > 10 && !faq.id.startsWith("temp-")) {
-            const res = await updateFAQ(faq.id, faqData);
-            if (res?.success && res.data?.id) {
-              faq_ids.push(res.data.id);
-            } else if (faq.id) {
-              faq_ids.push(faq.id);
-            }
-          } else {
-            const res = await createFAQ(faqData);
-            if (res?.success && res.data?.id) {
-              faq_ids.push(res.data.id);
-            }
-          }
-        }
-      }
-
-      // 2. Ejecutar actualización comercial completa
-      const payload = {
-        slug: form.slug,
-        description: form.description,
-        short_description: form.short_description,
-        sales_status: form.sales_status as any,
-        benefit_ids: form.benefit_ids || [],
-        faq_ids,
-        certification_ids: form.certification_id ? [form.certification_id] : [],
-      };
-
-      const res = await updateProductCommercialContent(id, payload);
-
-      if (res.success) {
-        toast.success("Contenido comercial y catálogo web actualizado correctamente");
-        queryClient.invalidateQueries({ queryKey: ["product", id] });
-      } else {
-        toast.error(res.message || "Error al actualizar el contenido comercial");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Error al guardar el contenido comercial");
-    } finally {
-      setIsSavingTab3(false);
+  const handleSaveDraft = async () => {
+    if (activeStep === "commercial") {
+      onSubmit("commercial");
+      return;
     }
+    setFieldValue("sales_status", "DRAFT");
+    await saveDraftContent();
   };
 
-  const handleHeaderSubmit = () => {
-    if (activeTab === "general") {
-      onSubmit("general");
-    } else if (activeTab === "marketing") {
-      handleSaveMarketing();
-    } else if (activeTab === "commercial") {
-      handleSaveCommercial();
-    }
-  };
+  const isSaving = isPending || isSavingMarketing || isSavingWeb;
+  const finalActionLabel = form.sales_status === "ON_SALE" ? "Poner en venta" : form.sales_status === "PUBLISHED" ? "Publicar producto" : "Guardar cambios";
+  const finalActionDisabled = (form.sales_status === "ON_SALE" && !requirements.canSell) || (form.sales_status === "PUBLISHED" && !requirements.canPublish);
 
   if (isEdit && isLoadingProduct) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center flex-col gap-4">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-sm font-semibold text-slate-500 animate-pulse">Cargando información del producto...</p>
-      </div>
-    );
+    return <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3"><Loader2 className="h-9 w-9 animate-spin text-primary" /><p className="text-sm font-semibold text-slate-500">Cargando producto...</p></div>;
   }
 
-  const isBaseProductCreated = isEdit || !!id;
-
   return (
-    <div className="space-y-6 pb-12 max-w-7xl mx-auto px-4">
-      <ProductPageHeader
-        title={isEdit ? "Editar Producto Comercial" : "Configurar Nuevo Producto"}
-        subtitle={isEdit ? `Modificando detalles para: ${form.name}` : "Asigna cursos académicos, configura precios y añade beneficios comerciales."}
+    <div className="mx-auto max-w-7xl space-y-5 px-3 pb-28 sm:px-4">
+      <ProductFormHeader
+        isEdit={isEdit}
+        name={form.name}
+        status={form.sales_status}
+        progress={requirements.progress}
+        pendingCount={requirements.pendingCount}
         onBack={() => navigate("/productos")}
-        actions={
-          <>
-            <Button 
-              variant="outline" 
-              className="rounded-xl border-slate-200 hover:bg-slate-50"
-              onClick={() => navigate("/productos")}
-              disabled={isPending || isSavingTab2 || isSavingTab3}
-            >
-              Cancelar
-            </Button>
-            {!permissions.readonly && (
-              <Button 
-                className="rounded-xl btn-primary gap-2 shadow-md shadow-primary/20"
-                onClick={handleHeaderSubmit}
-                disabled={isPending || isSavingTab2 || isSavingTab3}
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" /> Guardando...
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} /> {isEdit ? "Actualizar Producto" : "Publicar Producto"}
-                  </>
-                )}
-              </Button>
-            )}
-          </>
-        }
+        actions={<ProductFormActions isSaving={isSaving} readonly={permissions.readonly} isLastStep={activeStep === "review"} primaryLabel={activeStep === "review" ? finalActionLabel : undefined} primaryDisabled={activeStep === "review" && finalActionDisabled} onSaveDraft={handleSaveDraft} onContinue={() => saveCurrentStep(true)} />}
       />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={cn(
-          "bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl grid max-w-3xl border border-slate-200",
-          TABS_CONFIG.filter(t => permissions.allowedTabs.includes(t.id)).length === 1 ? "grid-cols-1" : "grid-cols-1 md:grid-cols-3"
-        )}>
-          {TABS_CONFIG.filter(t => permissions.allowedTabs.includes(t.id)).map((tab) => (
-            <TabsTrigger 
-              key={tab.id}
-              value={tab.id}
-              className="rounded-xl py-2.5 text-xs font-semibold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 transition-all"
-            >
-              {tab.icon} {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <ProductFormStepper steps={visibleSteps} activeStep={activeStep} states={stepStates} onStepChange={handleStepChange} />
 
-        {/* ================= PESTAÑA 1: CONFIGURACIÓN Y PRECIOS (GERENCIA) ================= */}
-        {permissions.allowedTabs.includes("general") && (
-          <TabsContent value="general" className="outline-none space-y-6">
-            {(isMarketingRole || permissions.readonly) && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 shadow-sm animate-fadeIn">
-                <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-amber-900 text-sm">
-                    {permissions.readonly ? "Modo de lectura activo" : "Restricción de acceso de Gerencia"}
-                  </h4>
-                  <p className="text-xs text-amber-800/90 mt-0.5">
-                    {permissions.readonly 
-                      ? "Tu rol solo permite visualizar los precios y detalles comerciales de Gerencia (Solo Lectura)." 
-                      : "Tu rol no permite modificar la estructura de precios ni cohortes académicas de Gerencia."}
-                  </p>
-                </div>
-              </div>
-            )}
+      {permissions.readonly && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-800">Modo de lectura activo. Puedes revisar la completitud, pero tu rol no permite guardar cambios.</div>}
 
-            <fieldset disabled={permissions.readonly || !permissions.canEditAll} className="space-y-6 border-none p-0 m-0 w-full">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Lado Izquierdo: Nombre, Detalles Académicos y Campaña de Descuento */}
-                <div className="lg:col-span-2 space-y-6">
-                  <AcademicDetailsCard
-                    form={form}
-                    errors={errors}
-                    setFieldValue={setFieldValue}
-                    editions={editions}
-                    categories={categories}
-                    isLoadingEditions={isLoadingEditions}
-                    isLoadingCategories={isLoadingCategories}
-                    selectedEdition={selectedEdition}
-                  />
+      {activeStep === "commercial" && <ProductCommercialSection form={form} errors={errors} setFieldValue={setFieldValue} setPriceValue={setPriceValue} editions={editions} categories={categories} isLoadingEditions={isLoadingEditions} isLoadingCategories={isLoadingCategories} isEditionsError={isEditionsError} isCategoriesError={isCategoriesError} selectedEdition={selectedEdition} isEdit={isEdit} disabled={permissions.readonly || !permissions.canEditAll} />}
+      {activeStep === "marketing" && <ProductMarketingSection form={form} errors={errors} setFieldValue={setFieldValue} availableBenefits={availableBenefits} isLoadingBenefits={isLoadingBenefits} isBenefitsError={isBenefitsError} onToggleBenefit={handleToggleBenefit} isUploadingCover={isUploading} onCoverUpload={handleImageUpload} isUploadingBrochure={isUploadingBrochure} onBrochureFileChange={handleBrochureFileChange} onRemoveBrochure={() => setFieldValue("brochure_url", "")} onLoadDefaultFAQs={handleLoadDefaultFAQs} disabled={permissions.readonly} />}
+      {activeStep === "web" && <ProductWebContentSection form={form} errors={errors} setFieldValue={setFieldValue} requirements={[...requirements.sections.commercial, ...requirements.sections.marketing.filter((item) => item.id === "benefit_ids"), ...requirements.sections.web]} disabled={permissions.readonly} />}
+      {activeStep === "review" && <ProductReviewSummary form={form} requirements={requirements} />}
 
-                  {/* Nombre Comercial Card */}
-                  <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                          <Settings size={16} className="text-primary" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-sm font-semibold text-slate-900">Nombre del Producto Comercial</CardTitle>
-                          <CardDescription className="text-xs">Identifica el producto en catálogos y plataformas.</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <label className="form-label text-xs font-bold text-slate-700 mb-2 block">
-                        Nombre Comercial del Producto
-                      </label>
-                      <input 
-                        type="text" 
-                        className={cn("form-input rounded-xl h-11 border-slate-200 text-sm bg-white shadow-sm focus:ring-primary", errors.name && 'border-destructive')} 
-                        placeholder="Ej. Curso de React - Cohorte 1" 
-                        value={form.name} 
-                        onChange={(e) => setFieldValue("name", e.target.value)} 
-                        disabled={permissions.readonly || !permissions.canEditAll}
-                      />
-                      {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
-                    </CardContent>
-                  </Card>
-
-                  <DiscountSection
-                    form={form as any}
-                    errors={errors}
-                    setFieldValue={setFieldValue}
-                  />
-                </div>
-
-                {/* Lado Derecho: Precios y Financiamiento por Modalidades */}
-                <div className="space-y-6">
-                  <PricingCard
-                    form={form as any}
-                    errors={errors}
-                    setFieldValue={setFieldValue}
-                    setPriceValue={setPriceValue}
-                    selectedEdition={selectedEdition}
-                    isEdit={isEdit}
-                  />
-                </div>
-              </div>
-
-              {!isMarketingRole && !permissions.readonly && (
-                <div className="flex justify-end pt-4">
-                  <Button
-                    type="button"
-                    onClick={() => onSubmit("general")}
-                    disabled={isPending}
-                    className="rounded-xl btn-primary bg-sky-600 hover:bg-sky-700 text-white gap-2 font-medium shadow-md shadow-sky-600/10"
-                  >
-                    {isPending ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" /> Guardando...
-                      </>
-                    ) : (
-                      <>
-                        {isEdit ? "Guardar y Continuar" : "Crear Producto Base"} <ArrowRight size={16} />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </fieldset>
-          </TabsContent>
-        )}
-
-        {/* ================= PESTAÑA 2: DISEÑO Y CERTIFICADOS (MARKETING) ================= */}
-        {permissions.allowedTabs.includes("marketing") && (
-          <TabsContent value="marketing" className="outline-none space-y-6">
-            {permissions.readonly && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 shadow-sm animate-fadeIn">
-                <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-amber-900 text-sm">Modo de lectura activo</h4>
-                  <p className="text-xs text-amber-800/90 mt-0.5">
-                    Tu rol solo permite visualizar el contenido de diseño y multimedia (Solo Lectura).
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <fieldset disabled={permissions.readonly} className="space-y-6 border-none p-0 m-0 w-full">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Lado Izquierdo: Certificados y Firmas */}
-                <div className="lg:col-span-2 space-y-6">
-                  <CertificationCard
-                    form={form}
-                    errors={errors}
-                    setFieldValue={setFieldValue}
-                  />
-
-                  {!permissions.readonly && (
-                    <div className="flex justify-end pt-4 gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleSaveMarketing()}
-                        disabled={isSavingTab2}
-                        className="rounded-xl border-slate-200"
-                      >
-                        {isSavingTab2 ? "Guardando..." : "Guardar Multimedia"}
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => handleSaveMarketing("commercial")}
-                        disabled={isSavingTab2}
-                        className="rounded-xl btn-primary bg-sky-600 hover:bg-sky-700 text-white gap-2 font-medium shadow-md shadow-sky-600/10"
-                      >
-                        {isSavingTab2 ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin" /> Guardando...
-                          </>
-                        ) : (
-                          <>
-                            Guardar y Continuar <ArrowRight size={16} />
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Lado Derecho: Portada de Imagen y Brochure PDF */}
-                <div className="space-y-6">
-                  <CoverImageUploader
-                    imageUrl={form.image_url as any}
-                    isUploading={isUploading}
-                    onUpload={handleImageUpload}
-                  />
-
-                  {/* Brochure Informativo PDF Card */}
-                  <Card className="shadow-sm border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-colors">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
-                          <FileText size={16} className="text-emerald-600" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-sm font-semibold text-slate-900">Brochure Informativo (PDF)</CardTitle>
-                          <CardDescription className="text-xs">Sube el documento descargable para la plataforma web.</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-4">
-                      {form.brochure_url ? (
-                        <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/20 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-                              <FileText size={18} className="text-emerald-600" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-slate-800 truncate">Folleto del Producto.pdf</p>
-                              <a 
-                                href={form.brochure_url as string} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-[10px] text-emerald-600 font-semibold hover:underline"
-                              >
-                                Ver Archivo PDF
-                              </a>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-lg text-slate-400 hover:text-red-500 shrink-0"
-                            onClick={handleRemoveBrochure}
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div 
-                          className="relative border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:border-emerald-500/50 hover:bg-slate-50/50 transition-all"
-                          onClick={() => document.getElementById("brochure-upload")?.click()}
-                        >
-                          <FileText size={32} className="text-slate-400 mb-2 strokeWidth={1.5}" />
-                          <p className="text-xs font-semibold text-slate-700">Subir Brochure Comercial</p>
-                          <p className="text-[10px] text-slate-400 mt-1 max-w-[200px] leading-normal">Sube archivos PDF de hasta 10 MB para su descarga.</p>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="mt-3 rounded-xl text-xs border-slate-200 bg-white"
-                          >
-                            Seleccionar Archivo
-                          </Button>
-                        </div>
-                      )}
-
-                      {isUploadingBrochure && (
-                        <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center gap-2">
-                          <Loader2 size={16} className="animate-spin text-emerald-500" />
-                          <span className="text-[11px] font-bold text-emerald-600 animate-pulse">Subiendo PDF...</span>
-                        </div>
-                      )}
-
-                      <input 
-                        id="brochure-upload" 
-                        type="file" 
-                        accept=".pdf" 
-                        className="hidden" 
-                        onChange={handleBrochureFileChange}
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </fieldset>
-          </TabsContent>
-        )}
-
-        {/* ================= PESTAÑA 3: CONTENIDO COMERCIAL WEB (PLATAFORMA) ================= */}
-        {permissions.allowedTabs.includes("commercial") && (
-          <TabsContent value="commercial" className="outline-none">
-            {permissions.readonly && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 shadow-sm animate-fadeIn mb-6">
-                <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-amber-900 text-sm">Modo de lectura activo</h4>
-                  <p className="text-xs text-amber-800/90 mt-0.5">
-                    Tu rol solo permite visualizar el catálogo y contenido comercial de la plataforma (Solo Lectura).
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <fieldset disabled={permissions.readonly} className="flex flex-col space-y-8 w-full max-w-full border-none p-0 m-0">
-              {/* 1. BLOQUE PRINCIPAL - CONFIGURACIÓN DE TEXTOS */}
-              <CommercialConfigCard
-                form={form}
-                errors={errors}
-                setFieldValue={setFieldValue}
-              />
-
-              {/* 2. BLOQUE DE BENEFICIOS DESTACADOS (Rediseño horizontal) */}
-              <BenefitsCard
-                availableBenefits={availableBenefits}
-                isLoadingBenefits={isLoadingBenefits}
-                benefitIds={form.benefit_ids || []}
-                errors={errors}
-                onToggle={handleToggleBenefit}
-                setFieldValue={setFieldValue}
-              />
-
-              {/* 3. BLOQUE DE PREGUNTAS FRECUENTES (FAQs) */}
-              <FAQsSectionCard
-                form={form as any}
-                setFieldValue={setFieldValue}
-                handleLoadDefaultFAQs={handleLoadDefaultFAQs}
-              />
-
-              {/* BOTÓN DE ACCIÓN EXPLICITA DE GUARDADO */}
-              {!permissions.readonly && (
-                <div className="flex justify-end pt-2">
-                  <Button
-                    type="button"
-                    onClick={handleSaveCommercial}
-                    disabled={isSavingTab3}
-                    className="rounded-xl btn-primary bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-medium shadow-md shadow-emerald-600/10 px-8 py-3 h-auto"
-                  >
-                    {isSavingTab3 ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" /> Guardando...
-                      </>
-                    ) : (
-                      <>
-                        <Save size={16} /> Actualizar Contenido Comercial
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </fieldset>
-          </TabsContent>
-        )}
-      </Tabs>
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-7xl justify-end"><ProductFormActions isSaving={isSaving} readonly={permissions.readonly} isLastStep={activeStep === "review"} primaryLabel={activeStep === "review" ? finalActionLabel : undefined} primaryDisabled={activeStep === "review" && finalActionDisabled} onSaveDraft={handleSaveDraft} onContinue={() => saveCurrentStep(true)} /></div>
+      </div>
     </div>
   );
 };

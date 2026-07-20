@@ -11,6 +11,7 @@ interface CommercialConfigCardProps {
     short_description?: string | null;
     description?: string | null;
     sales_status: string;
+    pricing_status?: "VALID" | "INVALID";
   };
   errors: Record<string, string>;
   setFieldValue: (key: string, value: any) => void;
@@ -71,8 +72,9 @@ const CommercialConfigCard = ({
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(ProductSalesStatusMap).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
+                  <SelectItem key={value} value={value} disabled={value === "ON_SALE" && form.pricing_status === "INVALID"}>
                     {label}
+                    {value === "ON_SALE" && form.pricing_status === "INVALID" ? " — corrige precios primero" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

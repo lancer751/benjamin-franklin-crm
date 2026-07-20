@@ -5,7 +5,7 @@ import { cn } from "@/core/lib/utils";
 interface PricingCardProps {
   form: {
     prices: any[];
-    presale_price?: string | null;
+    presale_price?: string | number | null;
     installments_min_number: number;
     installments_max_number: number;
   };

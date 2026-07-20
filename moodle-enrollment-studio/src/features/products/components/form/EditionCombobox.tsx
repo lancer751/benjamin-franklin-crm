@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/core/components/ui/popover";
 import { Button } from "@/core/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/core/components/ui/command";
-import { Search, Check } from "lucide-react";
+import { Search, Check, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/core/lib/utils";
 import { displayFriendlyDate } from "@/core/utils/date-utils";
 import { EditionStatusMap, translateEnum } from "@/core/utils/dictionaries";
@@ -13,6 +13,7 @@ interface EditionComboboxProps {
   setFieldValue: (key: string, value: any) => void;
   editions: any[];
   isLoadingEditions: boolean;
+  isError?: boolean;
 }
 
 const EditionCombobox = ({
@@ -21,6 +22,7 @@ const EditionCombobox = ({
   setFieldValue,
   editions,
   isLoadingEditions,
+  isError,
 }: EditionComboboxProps) => {
   const [openCombobox, setOpenCombobox] = useState(false);
 
@@ -49,12 +51,12 @@ const EditionCombobox = ({
               !editionId && "text-muted-foreground",
               errors.edition_id && "border-destructive ring-1 ring-destructive"
             )}
-            disabled={isLoadingEditions}
+            disabled={isLoadingEditions || isError}
           >
             <span className="truncate">
               {displayLabel}
             </span>
-            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            {isLoadingEditions ? <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin" /> : isError ? <AlertTriangle className="ml-2 h-4 w-4 shrink-0 text-red-500" /> : <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -67,7 +69,7 @@ const EditionCombobox = ({
                   return (
                     <CommandItem
                       key={ed.id}
-                      value={`Edición #${ed.edition_number} ${ed.course?.name || ""}`}
+                      value={`${ed.edition_code || ""} Edición #${ed.edition_number} ${ed.course?.name || ""}`}
                       onSelect={() => {
                         setFieldValue("edition_id", ed.id);
                         const courseName = ed.course?.name || "";

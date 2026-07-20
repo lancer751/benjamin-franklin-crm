@@ -3,7 +3,7 @@ import { cn } from "@/core/lib/utils";
 
 interface DiscountSectionProps {
   form: {
-    discount_price?: string | null;
+    discount_price?: string | number | null;
     discount_expires_at?: string | null;
   };
   errors: Record<string, string>;

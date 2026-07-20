@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/cor
 import { Checkbox } from "@/core/components/ui/checkbox";
 import { Input } from "@/core/components/ui/input";
 import { Button } from "@/core/components/ui/button";
-import { Gift, Info, Plus, Loader2, Trash2 } from "lucide-react";
+import { Gift, Info, Plus, Loader2, Trash2, Search } from "lucide-react";
 import { cn } from "@/core/lib/utils";
 import { createBenefit } from "../../services/benefitService";
 import { toast } from "sonner";
@@ -30,10 +30,12 @@ const BenefitsCard = ({
   const [showAddForm, setShowAddForm] = useState(false);
   const [newBenefitText, setNewBenefitText] = useState("");
   const [hiddenBenefitIds, setHiddenBenefitIds] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const visibleBenefits = availableBenefits.filter(
-    (benefit: any) => !hiddenBenefitIds.includes(benefit.id)
-  );
+  const visibleBenefits = availableBenefits.filter((benefit: any) => {
+    const text = `${benefit.description || ""} ${benefit.name || ""}`.toLowerCase();
+    return !hiddenBenefitIds.includes(benefit.id) && text.includes(searchTerm.toLowerCase());
+  });
 
   const addMutation = useMutation({
     mutationFn: (description: string) => createBenefit({ description }),
@@ -83,6 +85,10 @@ const BenefitsCard = ({
           <p className="text-xs text-muted-foreground italic mb-2">
             * El backend requiere la asignación de al menos un beneficio activo para habilitar la orden de compra.
           </p>
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Buscar beneficios..." className="h-10 rounded-xl border-slate-200 pl-9 text-xs" />
+          </div>
           {isLoadingBenefits ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((n) => (

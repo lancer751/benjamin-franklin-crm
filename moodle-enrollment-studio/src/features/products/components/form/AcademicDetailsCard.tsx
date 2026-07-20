@@ -15,6 +15,7 @@ interface AcademicDetailsCardProps {
   editions: any[];
   categories: any[];
   isLoadingEditions: boolean;
+  isEditionsError?: boolean;
   isLoadingCategories: boolean;
   selectedEdition: any;
 }
@@ -26,6 +27,7 @@ const AcademicDetailsCard = ({
   editions,
   categories,
   isLoadingEditions,
+  isEditionsError,
   isLoadingCategories,
   selectedEdition,
 }: AcademicDetailsCardProps) => {
@@ -49,6 +51,7 @@ const AcademicDetailsCard = ({
           setFieldValue={setFieldValue}
           editions={editions}
           isLoadingEditions={isLoadingEditions}
+          isError={isEditionsError}
         />
 
         <div>

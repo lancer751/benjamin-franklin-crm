@@ -4,12 +4,9 @@ import { getCourseEditions } from "@/features/academic/services/courseService";
 import { getCategories } from "../services/categoryService";
 import { createProduct, updateProduct } from "../services/productService";
 import { getBenefits } from "../services/benefitService";
-import { createFAQ, updateFAQ } from "../services/faqService";
-import { createCertification, updateCertification } from "../services/certificationService";
 import { uploadImageToCloudinary } from "@/core/lib/uploadService";
 import { toast } from "sonner";
-import { ProductFormValues, productFormSchema, baseProductFormSchema, UpdateProductSalesContentSchema } from "../schemas/productFormSchema";
-import { z } from "zod";
+import { ProductFormValues, productCommercialFormSchema, productFormSchema, productWebContentFormSchema } from "../schemas";
 import { getCertificationDefaultText, INSTITUTIONAL_FAQS } from "../utils/productTemplates";
 import { adaptProductToUI } from "../adapters/product.adapter";
 import { BackendProductResponse } from "../types/product.types";
@@ -37,6 +34,7 @@ const emptyData: ProductFormValues = {
   edition_id: "",
   category_id: "",
   sales_status: "DRAFT",
+  pricing_status: "VALID",
   name: "",
   slug: "",
   short_description: "",
@@ -87,6 +85,9 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
       const category_id = product.category?.id || "";
 
       const cert = product.certification;
+      const certificationIds = (product.relatedCertifications || [])
+        .map((item: any) => item.certification?.id || item.certification_id || item.id)
+        .filter(Boolean);
       const certification = {
         title: cert?.title || "",
         description: cert?.description || "",
@@ -100,7 +101,8 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
       const nextForm: ProductFormValues = {
         ...emptyData,
         ...product,
-        edition_id: initialData.edition_id || product.edition?.id || "", // 🌟 Forzamos el UUID real del backend
+        edition_id: initialData.edition_id || product.edition?.id || "", // UUID real del backend
+        pricing_status: product.pricing_status || "VALID",
         slug: product.slug || generateSlug(product.name || ""),
         presale_price: product.presale_price || "",
         discount_price: product.discount_price || "",
@@ -111,7 +113,7 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
         category_id,
         benefit_ids,
         faqs,
-        certifications: cert?.id ? [cert.id] : [],
+        certifications: certificationIds.length ? certificationIds : cert?.id ? [cert.id] : [],
         certification_id: cert?.id || "",
         certification_title: cert?.title || "",
         certification_description: cert?.description || "",
@@ -130,19 +132,19 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     }
   }, [initialData, open]);
 
-  const { data: editionsRes, isLoading: isLoadingEditions } = useQuery({
+  const { data: editionsRes, isLoading: isLoadingEditions, isError: isEditionsError } = useQuery({
     queryKey: ["editions"],
     queryFn: getCourseEditions,
     enabled: open,
   });
 
-  const { data: categoriesRes, isLoading: isLoadingCategories } = useQuery({
+  const { data: categoriesRes, isLoading: isLoadingCategories, isError: isCategoriesError } = useQuery({
     queryKey: ["categories"],
     queryFn: getCategories,
     enabled: open,
   });
 
-  const { data: benefitsRes } = useQuery({
+  const { data: benefitsRes, isLoading: isLoadingBenefits, isError: isBenefitsError } = useQuery({
     queryKey: ["benefits"],
     queryFn: getBenefits,
     enabled: open,
@@ -318,84 +320,13 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
         return isNaN(num) ? null : num;
       };
 
-      // 1. Guardar/Actualizar FAQs individuales en la base de datos
-      const faq_ids: string[] = [];
-      const safeFaqs = payload?.faqs || [];
-      if (Array.isArray(safeFaqs)) {
-        for (let i = 0; i < safeFaqs.length; i++) {
-          const faq = safeFaqs[i];
-          if (!faq) continue;
-          const faqData = {
-            question: faq.question || "",
-            answer: faq.answer || "",
-            order: i,
-          };
-
-          try {
-            if (faq.id && faq.id.length > 10 && !faq.id.startsWith("temp-")) {
-              const res = await updateFAQ(faq.id, faqData);
-              if (res?.success && res.data?.id) {
-                faq_ids.push(res.data.id);
-              } else if (faq.id) {
-                faq_ids.push(faq.id);
-              }
-            } else {
-              const res = await createFAQ(faqData);
-              if (res?.success && res.data?.id) {
-                faq_ids.push(res.data.id);
-              }
-            }
-          } catch (err) {
-            console.error("Error al sincronizar FAQ:", err);
-          }
-        }
-      }
-
-      // 2. Guardar/Actualizar Certificación individual en la base de datos
-      const certification_ids: string[] = [];
-      const hasCertData = payload?.certification?.title || payload?.certification?.description;
-      if (hasCertData) {
-        const certData = {
-          title: payload.certification?.title || `Certificado de ${payload?.name || ""}`,
-          description: payload.certification?.description || "",
-          image_url: payload.certification?.image_url || "",
-          issuing_authority: payload.certification?.issuing_authority || "Corporación Educativa Benjamin Franklin",
-          registry_validity: payload.certification?.registry_validity || "",
-          has_digital: true,
-          has_physical: true,
-        };
-
-        try {
-          if (payload.certification_id && payload.certification_id.length > 10 && !payload.certification_id.startsWith("temp-")) {
-            const res = await updateCertification(payload.certification_id, certData);
-            if (res?.success && res.data?.id) {
-              certification_ids.push(res.data.id);
-            } else if (payload.certification_id) {
-              certification_ids.push(payload.certification_id);
-            }
-          } else {
-            const res = await createCertification(certData);
-            if (res?.success && res.data?.id) {
-              certification_ids.push(res.data.id);
-            }
-          }
-        } catch (err) {
-          console.error("Error al sincronizar Certificación:", err);
-        }
-      }
-
-      // Clean JSON for Backend
+      // Payload exclusivo del contrato de información comercial.
       const parsedPayload = {
         name: payload?.name || "",
         edition_id: payload?.edition_id || "",
         category_id: payload?.category_id || "",
-        sales_status: payload?.sales_status,
         installments_max_number: Number(payload?.installments_max_number || 1),
         installments_min_number: Number(payload?.installments_min_number || 1),
-        slug: payload?.slug || "",
-        description: payload?.description || "",
-        short_description: payload?.short_description || "",
-        image_url: payload?.image_url && payload.image_url.trim() !== "" ? payload.image_url : null,
         presale_price: parseOptionalPrice(payload?.presale_price),
         discount_price: parseOptionalPrice(payload?.discount_price),
         discount_expires_at: payload?.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
@@ -408,9 +339,6 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
             enrollment_fee: Number(p.enrollment_fee || 0),
           };
         }),
-        benefit_ids: payload?.benefit_ids || [],
-        faq_ids,
-        certification_ids,
       };
 
 
@@ -492,14 +420,12 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     }
   };
 
-  const onSubmit = (activeTab: string = "general") => {
-    // Si estamos en la pestaña 1 ('general') o estamos creando el producto por primera vez (no tiene ID aún)
-    let schemaToValidate;
-    if (activeTab === "general") {
-      schemaToValidate = UpdateProductSalesContentSchema;
-    } else {
-      schemaToValidate = productFormSchema;
-    }
+  const validateForm = (section: "commercial" | "web" | "complete" = "complete") => {
+    const schemaToValidate = section === "commercial"
+      ? productCommercialFormSchema
+      : section === "web"
+        ? productWebContentFormSchema
+        : productFormSchema;
 
     const result = schemaToValidate.safeParse(form);
     if (!result.success) {
@@ -512,11 +438,17 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
       
       const firstError = result.error.issues[0];
       toast.error(`Error de validación: ${firstError.message}`);
-      return;
+      return false;
     }
 
     setErrors({});
+    return true;
+  };
+
+  const onSubmit = (section: "commercial" | "general" = "commercial") => {
+    if (!validateForm("commercial")) return false;
     mutation.mutate(form);
+    return true;
   };
 
   return {
@@ -525,15 +457,21 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     setFieldValue,
     setPriceValue,
     onSubmit,
+    validateForm,
     isLoadingEditions,
+    isEditionsError,
     editions,
     categories,
     isLoadingCategories,
+    isCategoriesError,
     selectedEdition,
     isUploading,
     handleImageUpload,
     isPending: mutation.isPending,
     isEdit,
     handleLoadDefaultFAQs,
+    availableBenefits,
+    isLoadingBenefits,
+    isBenefitsError,
   };
 };

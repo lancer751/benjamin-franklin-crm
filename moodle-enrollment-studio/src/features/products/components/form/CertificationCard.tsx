@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/core/components/ui/card";
-import { Award, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
+import { Award, Image as ImageIcon, Upload, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { cn } from "@/core/lib/utils";
 import { uploadImageToCloudinary } from "@/core/lib/uploadService";
@@ -175,6 +175,7 @@ const CertificationCard = ({
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                      <div className="flex gap-2">
                       <Button
                         type="button"
                         variant="secondary"
@@ -184,6 +185,8 @@ const CertificationCard = ({
                       >
                         <Upload size={14} /> Cambiar Diploma
                       </Button>
+                      <Button type="button" variant="destructive" size="sm" className="gap-2 rounded-xl text-xs" onClick={() => setFieldValue("certification.image_url", "")}><Trash2 size={14} /> Eliminar</Button>
+                      </div>
                     </div>
                   </>
                 ) : (
