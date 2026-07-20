@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { getAllLeads } from "../services/leadService";
 import { reassignCampaignMember, reassignBulkCampaignMembers } from "@/features/campaigns/services/campaignService";
 import { api } from "@/core/lib/api";
-import { adaptLeads, unpackLeads } from "../adapters/leadAdapter";
+import { adaptLeads, normalizeAssignedCampaigns, unpackLeads } from "../adapters/leadAdapter";
 import { calculateSupervisorKPIs } from "../utils/leadLogic";
-import { getSellers } from "@/features/users/services/userService";
+import { getSellerCampaigns, getSellers } from "@/features/users/services/userService";
 
 export const useSupervisorFollowUp = () => {
   const queryClient = useQueryClient();
@@ -38,7 +38,11 @@ export const useSupervisorFollowUp = () => {
   }, [leadsRes]);
 
   // 1b. Obtener todos los vendedores reales
-  const { data: realSellersRes } = useQuery({
+  const {
+    data: realSellersRes,
+    isLoading: isLoadingSellers,
+    isError: isErrorSellers,
+  } = useQuery({
     queryKey: ["real-sellers-list"],
     queryFn: getSellers,
     staleTime: 10 * 60 * 1000,
@@ -47,6 +51,28 @@ export const useSupervisorFollowUp = () => {
   const realSellers = useMemo(() => {
     return (realSellersRes as any)?.success ? (realSellersRes as any).data : (realSellersRes || []);
   }, [realSellersRes]);
+
+  const selectedSellerId = activeSellerTab !== "ALL" && activeSellerTab !== "UNASSIGNED"
+    ? activeSellerTab
+    : undefined;
+
+  const {
+    data: assignedCampaignsRes,
+    isLoading: isLoadingAssignedCampaigns,
+    isError: isErrorAssignedCampaigns,
+  } = useQuery({
+    queryKey: ["seller-assigned-campaigns", selectedSellerId],
+    queryFn: () => {
+      if (!selectedSellerId) throw new Error("Seller profile ID is required");
+      return getSellerCampaigns(selectedSellerId);
+    },
+    enabled: Boolean(selectedSellerId),
+  });
+
+  const assignedCampaigns = useMemo(
+    () => normalizeAssignedCampaigns(assignedCampaignsRes),
+    [assignedCampaignsRes],
+  );
 
   // 2. Definir la lista de asesores usando la lista oficial de vendedores
   const sellers = useMemo(() => {
@@ -119,13 +145,30 @@ export const useSupervisorFollowUp = () => {
       }));
     }
 
-    return leads.flatMap((lead) =>
-      (lead.campaignsEngaging || []).map((member) => ({
-        ...member,
-        lead
-      }))
-    );
-  }, [leads, activeSellerTab]);
+    const selectedSeller = realSellers.find((seller: any) => seller.id === activeSellerTab);
+    const selectedFirstName = selectedSeller?.user?.first_name?.trim().toLowerCase() || "";
+    const selectedLastName = selectedSeller?.user?.last_name?.trim().toLowerCase() || "";
+
+    return leads.flatMap((lead) => {
+      const relevantMembers = (lead.campaignsEngaging || []).filter((member) => {
+        if (member.assigned_to === activeSellerTab || member.seller?.id === activeSellerTab) {
+          return true;
+        }
+
+        const memberFirstName = member.seller?.user?.first_name?.trim().toLowerCase() || "";
+        const memberLastName = member.seller?.user?.last_name?.trim().toLowerCase() || "";
+        return Boolean(
+          selectedFirstName
+          && memberFirstName === selectedFirstName
+          && memberLastName === selectedLastName,
+        );
+      });
+
+      return relevantMembers
+        .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+        .map((member) => ({ ...member, lead }));
+    });
+  }, [leads, activeSellerTab, realSellers]);
 
   // Obtener interacciones del prospecto seleccionado para el Sheet lateral
   const { data: interactionsRes, isLoading: isLoadingInteractions } = useQuery({
@@ -215,8 +258,8 @@ export const useSupervisorFollowUp = () => {
 
   // KPIs dinámicos calculados desde la base de datos de leads
   const kpis = useMemo(() => {
-    return calculateSupervisorKPIs(leads, sellers);
-  }, [leads, sellers]);
+    return calculateSupervisorKPIs(realSellers);
+  }, [realSellers]);
 
   return {
     sellers,
@@ -233,5 +276,10 @@ export const useSupervisorFollowUp = () => {
     bulkReassignMutation,
     kpis,
     realSellers,
+    isLoadingSellers,
+    isErrorSellers,
+    assignedCampaigns,
+    isLoadingAssignedCampaigns,
+    isErrorAssignedCampaigns,
   };
 };

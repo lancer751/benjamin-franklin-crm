@@ -17,6 +17,7 @@ export interface NormalizedCampaignMember {
   assigned_to: string;
   source: string;
   created_at: string;
+  is_primary: boolean;
   campaign: NormalizedCampaign;
   campaing: NormalizedCampaign; // compatibility fallback
   seller?: {
@@ -27,6 +28,11 @@ export interface NormalizedCampaignMember {
       email: string;
     };
   };
+}
+
+export interface NormalizedAssignedCampaign {
+  id: string;
+  name: string;
 }
 
 export interface NormalizedLead {
@@ -59,6 +65,27 @@ export const unpackLeads = (serverRes: any): any[] => {
     || serverRes?.leads
     || [];
   return Array.isArray(rawData) ? rawData : [];
+};
+
+export const normalizeAssignedCampaigns = (serverRes: any): NormalizedAssignedCampaign[] => {
+  const assignedCampaing = serverRes?.data?.assignedCampaing
+    || serverRes?.assignedCampaing
+    || [];
+
+  const campaignsById = new Map<string, NormalizedAssignedCampaign>();
+  if (!Array.isArray(assignedCampaing)) return [];
+
+  assignedCampaing.forEach((assignment: any) => {
+    const campaign = assignment?.campaign;
+    if (campaign?.id) {
+      campaignsById.set(campaign.id, {
+        id: campaign.id,
+        name: campaign.name?.trim() || "Sin campaña",
+      });
+    }
+  });
+
+  return Array.from(campaignsById.values());
 };
 
 /**
@@ -101,6 +128,7 @@ export const adaptCampaignMembers = (rawMembers: any[]): NormalizedLead[] => {
       assigned_to: member.assigned_to || "",
       source: member.source || lead.source || "WHATSAPP",
       created_at: member.created_at || lead.created_at || "",
+      is_primary: Boolean(member.is_primary),
       campaign,
       campaing: campaign,
       seller: member.seller
@@ -164,6 +192,7 @@ export const adaptLeads = (rawLeads: any[]): NormalizedLead[] => {
         assigned_to: member.assigned_to || "",
         source: member.source || "WHATSAPP",
         created_at: member.created_at || "",
+        is_primary: Boolean(member.is_primary),
         campaign,
         campaing: campaign,
         seller: member.seller

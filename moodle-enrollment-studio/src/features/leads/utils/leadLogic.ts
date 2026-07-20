@@ -1,4 +1,4 @@
-import { NormalizedLead, NormalizedCampaignMember } from "../adapters/leadAdapter";
+import { NormalizedLead } from "../adapters/leadAdapter";
 
 export interface DateRangeFilter {
   type: "ALL" | "TODAY" | "YESTERDAY" | "LAST_7_DAYS" | "THIS_MONTH" | "CUSTOM";
@@ -8,7 +8,7 @@ export interface DateRangeFilter {
 
 export interface SupervisorKPIs {
   activeSellers: number;
-  conversionRate: number;
+  conversionRate: number | null;
   totalSales: number;
   completedOrders: number;
   cancelledOrders: number;
@@ -149,27 +149,19 @@ export const extractSellers = (leads: NormalizedLead[]): SellerInfo[] => {
 };
 
 /**
- * Calculates Team KPIs based on current leads data and unique sellers list.
+ * Calculates Team KPIs exclusively from the complete sellers response.
  */
-export const calculateSupervisorKPIs = (
-  leads: NormalizedLead[],
-  sellers: SellerInfo[]
-): SupervisorKPIs => {
-  const allMembers = leads.flatMap((lead) => lead.campaignsEngaging || []);
-  const wonCount = allMembers.filter((m) => m.status === "WON").length;
-  const totalCount = allMembers.length;
-  const conversionRate = totalCount > 0 ? Math.round((wonCount / totalCount) * 100) : 0;
-
-  // Average price/value for won leads: S/ 1250
-  const totalSales = wonCount * 1250;
-  const completedOrders = wonCount;
-  const cancelledOrders = allMembers.filter((m) => m.status === "LOST").length;
+export const calculateSupervisorKPIs = (sellers: any[]): SupervisorKPIs => {
+  const toNumber = (value: unknown) => {
+    const parsed = Number(value ?? 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
 
   return {
-    activeSellers: Math.max(0, sellers.length - 1), // exclude UNASSIGNED virtual sheet
-    conversionRate,
-    totalSales,
-    completedOrders,
-    cancelledOrders
+    activeSellers: sellers.filter((seller) => seller.user?.is_active).length,
+    conversionRate: null,
+    totalSales: sellers.reduce((total, seller) => total + toNumber(seller.total_sales), 0),
+    completedOrders: sellers.reduce((total, seller) => total + toNumber(seller.completed_orders), 0),
+    cancelledOrders: sellers.reduce((total, seller) => total + toNumber(seller.canceled_orders), 0),
   };
 };

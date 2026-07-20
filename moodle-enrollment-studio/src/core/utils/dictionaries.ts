@@ -56,6 +56,27 @@ export const CampaignPlatformMap: Record<string, string> = {
     WEBSITE: "Sitio Web",
 };
 
+export const CAMPAIGN_MEMBER_STATUS_OPTIONS = [
+    { value: "NEW", label: "Nuevo" },
+    { value: "ATTEMPTED_CONTACT", label: "Intento de contacto" },
+    { value: "CONTACTED", label: "Contactado" },
+    { value: "QUALIFIED", label: "Calificado" },
+    { value: "FOLLOW_UP", label: "Seguimiento" },
+    { value: "ON_HOLD", label: "En espera" },
+    { value: "WON", label: "Matriculado" },
+    { value: "LOST", label: "Descartado" },
+] as const;
+
+export type CampaignMemberStatus = (typeof CAMPAIGN_MEMBER_STATUS_OPTIONS)[number]["value"];
+
+export const CampaignMemberStatusMap: Record<CampaignMemberStatus, string> =
+    Object.fromEntries(
+        CAMPAIGN_MEMBER_STATUS_OPTIONS.map(({ value, label }) => [value, label])
+    ) as Record<CampaignMemberStatus, string>;
+
+export const getCampaignMemberStatusLabel = (status: string): string =>
+    CampaignMemberStatusMap[status as CampaignMemberStatus] || status || "No especificado";
+
 export const ProductSalesStatusMap: Record<string, string> = {
     DRAFT: "Borrador",
     PUBLISHED: "Publicado",

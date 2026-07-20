@@ -58,35 +58,29 @@ import {
 } from "@/core/components/ui/select";
 import { toast } from "sonner";
 import { useSupervisorFollowUp } from "../hooks/useSupervisorFollowUp";
+import {
+  CAMPAIGN_MEMBER_STATUS_OPTIONS,
+  getCampaignMemberStatusLabel,
+} from "@/core/utils/dictionaries";
 
 // Helper para mapear estados a español
-const mapStatusToSpanish = (status: string): string => {
-  const normalized = status?.toUpperCase() || "";
-  if (normalized === "NEW") return "NUEVO";
-  if (normalized === "CONTACTED" || normalized === "FOLLOW_UP") return "CONTACTADO";
-  if (normalized === "ATTEMPTED_CONTACT") return "NO CONTACTADO";
-  if (normalized === "QUALIFIED" || normalized === "ON_HOLD") return "PREVENTA - CITA";
-  if (normalized === "WON") return "MATRICULADO";
-  if (normalized === "LOST" || normalized === "UNQUALIFIED") return "DESCARTADO";
-  return normalized;
-};
-
 // Helper para badges de Tipificación (CampaignMemberStatus)
 const getTipificacionBadge = (status: string) => {
-  const spanishStage = mapStatusToSpanish(status);
+  const normalized = status?.toUpperCase() || "";
+  const statusLabel = getCampaignMemberStatusLabel(normalized);
   let classes = "font-semibold text-[10px] rounded-full px-2.5 py-0.5 border shadow-none ";
 
-  if (spanishStage === "MATRICULADO") {
+  if (normalized === "WON") {
     classes += "border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-50/50";
-  } else if (spanishStage === "PREVENTA - CITA") {
+  } else if (normalized === "QUALIFIED" || normalized === "ON_HOLD") {
     classes += "border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50/50";
-  } else if (spanishStage === "NO CONTACTADO") {
+  } else if (normalized === "ATTEMPTED_CONTACT") {
     classes += "border-purple-200 text-purple-700 bg-purple-50/50 hover:bg-purple-50/50";
-  } else if (spanishStage === "CONTACTADO") {
+  } else if (normalized === "CONTACTED" || normalized === "FOLLOW_UP") {
     classes += "border-amber-200 text-amber-700 bg-amber-50/50 hover:bg-amber-50/50";
-  } else if (spanishStage === "NUEVO") {
+  } else if (normalized === "NEW") {
     classes += "border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-50/50";
-  } else if (spanishStage === "DESCARTADO") {
+  } else if (normalized === "LOST") {
     classes += "border-rose-200 text-rose-700 bg-rose-50/50 hover:bg-rose-50/50";
   } else {
     classes += "border-slate-200 text-slate-700 bg-slate-50/50 hover:bg-slate-50/50";
@@ -94,7 +88,7 @@ const getTipificacionBadge = (status: string) => {
 
   return (
     <Badge className={classes} variant="outline">
-      {spanishStage}
+      {statusLabel}
     </Badge>
   );
 };
@@ -127,6 +121,11 @@ const SupervisorFollowUpView = () => {
     bulkReassignMutation,
     kpis,
     realSellers,
+    isLoadingSellers,
+    isErrorSellers,
+    assignedCampaigns,
+    isLoadingAssignedCampaigns,
+    isErrorAssignedCampaigns,
   } = useSupervisorFollowUp();
 
   // Inicializar el asesor seleccionado por defecto al cargar los vendedores
@@ -139,6 +138,7 @@ const SupervisorFollowUpView = () => {
   useEffect(() => {
     setSelectedMemberIds([]);
     setTargetSellerId("");
+    setCampaignFilter("ALL_CAMPAIGNS");
   }, [activeSellerTab]);
 
   const handleCopyPhone = (phone: string) => {
@@ -164,6 +164,17 @@ const SupervisorFollowUpView = () => {
   const currentTab = (activeSellerTab === "ALL" || activeSellerTab === "UNASSIGNED") 
     ? activeSellerTab 
     : "SELLER_FILTER";
+
+  const hasSelectedSeller = currentTab === "SELLER_FILTER";
+  const campaignFilterLabel = !hasSelectedSeller
+    ? "Selecciona un asesor"
+    : isLoadingAssignedCampaigns
+      ? "Cargando campañas..."
+      : isErrorAssignedCampaigns
+        ? "No se pudieron cargar"
+        : assignedCampaigns.length === 0
+          ? "Sin campañas asignadas"
+          : "Todas las campañas";
 
   const handleTabChange = (val: string) => {
     if (val === "ALL" || val === "UNASSIGNED") {
@@ -216,29 +227,7 @@ const SupervisorFollowUpView = () => {
   }, [activeMembers, searchQuery, campaignFilter, statusFilter, dateRangeFilter]);
 
   // Campañas únicas deducidas de los datos activos para poblar el dropdown
-  const uniqueCampaigns = useMemo(() => {
-    const map = new Map<string, string>();
-    activeMembers.forEach((member: any) => {
-      const id = member.campaign?.id || member.campaing?.id || member.campaing_id || member.campaign_id;
-      const name = member.campaign?.name || member.campaing?.name || "Sin campaña";
-      if (id) {
-        map.set(id, name);
-      }
-    });
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [activeMembers]);
-
   // Estados únicos deducidos de los datos activos para poblar el dropdown
-  const uniqueStatuses = useMemo(() => {
-    const set = new Set<string>();
-    activeMembers.forEach((member: any) => {
-      if (member.status) {
-        set.add(member.status);
-      }
-    });
-    return Array.from(set);
-  }, [activeMembers]);
-
   // Reasignación masiva robusta
   const handleBulkReassign = async () => {
     if (!targetSellerId) {
@@ -330,15 +319,15 @@ const SupervisorFollowUpView = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoadingLeads ? (
+            {isLoadingSellers ? (
               <div className="h-8 w-24 bg-slate-200 animate-pulse rounded" />
             ) : (
               <div className="text-2xl font-bold">
-                {kpis.activeSellers}
+                {isErrorSellers ? "No disponible" : kpis.activeSellers}
               </div>
             )}
             <p className="text-[11px] text-muted-foreground mt-1">
-              Asesores comerciales identificados
+              Asesores comerciales activos
             </p>
           </CardContent>
         </Card>
@@ -354,15 +343,15 @@ const SupervisorFollowUpView = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoadingLeads ? (
+            {isLoadingSellers ? (
               <div className="h-8 w-24 bg-slate-200 animate-pulse rounded" />
             ) : (
               <div className="text-2xl font-bold">
-                {kpis.conversionRate}%
+                {kpis.conversionRate === null ? "No disponible" : `${kpis.conversionRate}%`}
               </div>
             )}
-            <p className="text-[11px] text-emerald-600 font-semibold mt-1">
-              Tasa calculada por el sistema
+            <p className="text-[11px] text-muted-foreground font-semibold mt-1">
+              Total global de leads no disponible
             </p>
           </CardContent>
         </Card>
@@ -371,22 +360,22 @@ const SupervisorFollowUpView = () => {
         <Card className="shadow-sm border-border/60 hover:shadow-md transition-shadow duration-200 rounded-xl overflow-hidden bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Total Ventas Equipo
+              Ventas realizadas
             </CardTitle>
             <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
               <Layers size={16} className="text-amber-600" />
             </div>
           </CardHeader>
           <CardContent>
-            {isLoadingLeads ? (
+            {isLoadingSellers ? (
               <div className="h-8 w-24 bg-slate-200 animate-pulse rounded" />
             ) : (
               <div className="text-2xl font-bold">
-                S/ {kpis.totalSales.toLocaleString("es-PE")}
+                {isErrorSellers ? "No disponible" : Math.trunc(kpis.totalSales).toLocaleString("es-PE")}
               </div>
             )}
             <p className="text-[11px] text-muted-foreground mt-1">
-              Recaudado en matrículas y cuotas
+              Ventas acumuladas registradas
             </p>
           </CardContent>
         </Card>
@@ -395,7 +384,7 @@ const SupervisorFollowUpView = () => {
         <Card className="shadow-sm border-border/60 hover:shadow-md transition-shadow duration-200 rounded-xl overflow-hidden bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Órdenes del Mes
+              Órdenes acumuladas
             </CardTitle>
             <div className="flex items-center gap-1.5">
               <div className="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center" title="Completadas">
@@ -407,15 +396,15 @@ const SupervisorFollowUpView = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoadingLeads ? (
+            {isLoadingSellers ? (
               <div className="h-8 w-24 bg-slate-200 animate-pulse rounded" />
             ) : (
               <div className="text-2xl font-bold">
-                {kpis.completedOrders} / {kpis.cancelledOrders}
+                {isErrorSellers ? "No disponible" : `${kpis.completedOrders} / ${kpis.cancelledOrders}`}
               </div>
             )}
             <p className="text-[11px] text-muted-foreground mt-1">
-              Completadas vs. Canceladas
+              Completadas / Canceladas
             </p>
           </CardContent>
         </Card>
@@ -510,7 +499,7 @@ const SupervisorFollowUpView = () => {
                 {/* Columna Derecha */}
                 <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end">
                   <Badge className="bg-sky-50 text-sky-700 border-sky-200/80 font-bold px-3 py-1 text-xs">
-                    Total Leads: {filteredMembers.length}
+                    Leads en esta página: {filteredMembers.length}
                   </Badge>
                   {currentTab === "SELLER_FILTER" && activeSellerTab && activeSellerTab !== "ALL" && activeSellerTab !== "UNASSIGNED" && (
                     <Button 
@@ -548,19 +537,26 @@ const SupervisorFollowUpView = () => {
                 {/* Filtro por Campaña */}
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Campaña</label>
-                  <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+                  <Select
+                    value={campaignFilter}
+                    onValueChange={setCampaignFilter}
+                    disabled={!hasSelectedSeller || isLoadingAssignedCampaigns || isErrorAssignedCampaigns || assignedCampaigns.length === 0}
+                  >
                     <SelectTrigger className="w-full border-slate-200 rounded-lg h-8 text-xs bg-white">
                       <SelectValue placeholder="Todas las campañas" />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value="ALL_CAMPAIGNS">Todas las campañas</SelectItem>
-                      {uniqueCampaigns.map((camp) => (
+                      <SelectItem value="ALL_CAMPAIGNS">{campaignFilterLabel}</SelectItem>
+                      {assignedCampaigns.map((camp) => (
                         <SelectItem key={camp.id} value={camp.id}>
                           {camp.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {isErrorAssignedCampaigns && hasSelectedSeller && (
+                    <p className="text-[10px] text-rose-600">No fue posible cargar las campañas asignadas.</p>
+                  )}
                 </div>
 
                 {/* Filtro por Estado / Tipificación */}
@@ -572,9 +568,9 @@ const SupervisorFollowUpView = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-white">
                       <SelectItem value="ALL_STATUS">Todos los estados</SelectItem>
-                      {uniqueStatuses.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {mapStatusToSpanish(status)}
+                      {CAMPAIGN_MEMBER_STATUS_OPTIONS.map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
                         </SelectItem>
                       ))}
                     </SelectContent>
