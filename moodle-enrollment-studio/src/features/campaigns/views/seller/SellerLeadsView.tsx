@@ -83,8 +83,7 @@ const SellerLeadsView = () => {
   const { user } = useAuthStore();
   
   // 🛡️ CORRECCIÓN DE IDs
-  const userId = user?.id; // Usado para consumir nuestro servicio modificado
-  const sellerId = user?.seller?.id; // Usado para las consultas directas de leads que pide el backend
+  const sellerId = user?.seller?.id;
 
   const { campaignId } = useParams<{ campaignId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -97,11 +96,14 @@ const SellerLeadsView = () => {
     return selectedLead?.campaignsEngaging?.[0]?.id || selectedLead?.id || "";
   }, [selectedLead]);
 
-  // 1. Obtener campañas asignadas pasando el USER_ID transparente
+  // 1. Obtener campañas asignadas con el ID del perfil vendedor.
   const { data: sellerCampaignsRes, isLoading: isLoadingCampaigns } = useQuery({
-    queryKey: ["seller-assigned-campaigns", userId],
-    queryFn: () => getSellerCampaigns(userId || ""),
-    enabled: !!userId,
+    queryKey: ["seller-assigned-campaigns", sellerId],
+    queryFn: () => {
+      if (!sellerId) throw new Error("Seller profile ID is required");
+      return getSellerCampaigns(sellerId);
+    },
+    enabled: Boolean(sellerId),
   });
 
   const assignedCampaignList = useMemo(() => {
