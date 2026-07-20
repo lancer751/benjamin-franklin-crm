@@ -9,8 +9,6 @@ import type {
 
 export function campaignRepository(prisma: PrismaClient) {
   return {
-    // ── Read ────────────────────────────────────────────────────────────────
-
     async findMany({ page, limit, status, platform, search }: CampaignQuery) {
       const skip = (page - 1) * limit;
       const where = {
@@ -58,7 +56,6 @@ export function campaignRepository(prisma: PrismaClient) {
 
       return { campaings, total, page, limit };
     },
-
     async findById(id: string) {
       return prisma.campaing.findUnique({
         where: { id },
@@ -173,7 +170,6 @@ export function campaignRepository(prisma: PrismaClient) {
         });
       });
     },
-
     async update(id: string, data: UpdateCampaignInput) {
       const current = await prisma.campaing.findUnique({
         where: { id },
@@ -181,6 +177,7 @@ export function campaignRepository(prisma: PrismaClient) {
           status: true,
           meta_form_id: true,
           leads_last_synced_at: true,
+          click_to_whatsapp: true,
           start_date: true,
         },
       });
@@ -237,6 +234,25 @@ export function campaignRepository(prisma: PrismaClient) {
             code: "CONFLICT",
             message: "Product already has a campaign linked",
           };
+      }
+
+      // dentro de campaignRepository.update, antes del prisma.campaing.update
+
+      const willHaveForm =
+        data.meta_form_id !== undefined
+          ? data.meta_form_id
+          : current.meta_form_id;
+      const willHaveWhatsapp =
+        data.click_to_whatsapp !== undefined
+          ? data.click_to_whatsapp
+          : current.click_to_whatsapp;
+
+      if (willHaveForm && willHaveWhatsapp) {
+        throw {
+          code: "INVALID",
+          message:
+            "A campaign can link a lead form or click-to-WhatsApp, not both",
+        };
       }
 
       // verify if meta_form_id is an existing form from meta

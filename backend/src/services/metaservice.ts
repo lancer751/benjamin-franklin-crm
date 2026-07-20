@@ -115,7 +115,6 @@ async function getPageAccessToken(pageId: string): Promise<string> {
 
   return body.access_token;
 }
-
 export const metaService = {
   async listCampaigns(): Promise<Campaign[]> {
     const url =
@@ -127,7 +126,6 @@ export const metaService = {
 
     return body.data;
   },
-
   async listLeadForms(metaCampaignId: string): Promise<LeadForm[]> {
     const adsUrl =
       `${GRAPH_API_BASE}/${metaCampaignId}/ads` +
@@ -135,17 +133,16 @@ export const metaService = {
       `&access_token=${META_ACCESS_TOKEN}`;
 
     const ads = await graphGet<AdsResponse>(adsUrl);
-
     const pageId =
       ads.data?.[0]?.adcreatives?.data?.[0]?.object_story_spec?.page_id;
 
     if (!pageId) {
       return [];
     }
-    console.log(pageId)
+    console.log(pageId);
     // NEW — intercambiar por el token específico de esta página
     const pageAccessToken = await getPageAccessToken(pageId);
-    console.log("pageAccessToken", pageAccessToken)
+    console.log("pageAccessToken", pageAccessToken);
     const formsUrl =
       `${GRAPH_API_BASE}/${pageId}/leadgen_forms` +
       `?fields=id,name,status` +
@@ -155,14 +152,12 @@ export const metaService = {
 
     return body.data;
   },
-
   async getLeadgenData(leadgenId: string): Promise<LeadgenData> {
     const url =
       `${GRAPH_API_BASE}/${leadgenId}` + `?access_token=${META_ACCESS_TOKEN}`;
 
     return graphGet<LeadgenData>(url);
   },
-
   async listFormLeadsSince(
     formId: string,
     since: Date,
@@ -189,7 +184,6 @@ export const metaService = {
 
     return body.data;
   },
-
   verifyWebhookSignature(rawBody: string, signatureHeader?: string): boolean {
     if (!signatureHeader) {
       return false;
@@ -210,7 +204,6 @@ export const metaService = {
       )
     );
   },
-
   parseFieldData(fieldData: FieldData[]) {
     const get = (key: string): string | undefined =>
       fieldData.find((f) => f.name.toLowerCase() === key)?.values[0];

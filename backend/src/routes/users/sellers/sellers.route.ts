@@ -53,7 +53,7 @@ export const sellersRoutes = new Hono<ContextWithPrisma>()
     },
   )
   // Get seller details by ID
-  .get("/:id", zValidator("param", validateIdParamSchema), async (c) => {
+  .get("/:id", verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "SALES_REP"),zValidator("param", validateIdParamSchema), async (c) => {
     const { id } = c.req.valid("param");
 
     const sellerDetails = await c.get("prisma").sellerProfile.findUnique({

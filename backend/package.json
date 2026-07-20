@@ -16,7 +16,8 @@
     "show-envs": "bun --print process.env",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "detect-cycles": "madge src --circular"
+    "detect-cycles": "madge src --circular",
+    "test-webhook": "bun run --env-file=.env ./src/scripts/simulate-webhook.ts "
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
