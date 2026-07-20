@@ -5,13 +5,15 @@ import { getSellerCampaigns } from "@/features/users/services/userService";
 export const useSellerCampaigns = () => {
   const { user } = useAuthStore();
   
-  // Extraemos el id del usuario de manera segura (user.id es el user_id de la base de datos)
-  const userId = user?.id || "";
+  const sellerId = user?.seller?.id;
 
   const { data: res, isLoading, isError, refetch } = useQuery({
-    queryKey: ["seller-campaigns", userId],
-    queryFn: () => getSellerCampaigns(userId),
-    enabled: !!userId,
+    queryKey: ["seller-campaigns", sellerId],
+    queryFn: () => {
+      if (!sellerId) throw new Error("Seller profile ID is required");
+      return getSellerCampaigns(sellerId);
+    },
+    enabled: Boolean(sellerId),
   });
 
   // Desempaquetado seguro del objeto retornado por Hono/Prisma

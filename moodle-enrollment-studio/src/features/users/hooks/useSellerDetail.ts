@@ -18,13 +18,15 @@ export function useSellerDetail(sellerUserId?: string) {
     enabled: hasSellerId,
   });
 
+  const sellerProfileId = sellerQuery.data?.data?.id;
+
   const campaignsQuery = useQuery({
-    queryKey: ["seller-campaigns", id],
+    queryKey: ["seller-campaigns", sellerProfileId],
     queryFn: () => {
-      if (!id) throw new Error("Seller user ID is required");
-      return getSellerCampaigns(id);
+      if (!sellerProfileId) throw new Error("Seller profile ID is required");
+      return getSellerCampaigns(sellerProfileId);
     },
-    enabled: hasSellerId,
+    enabled: Boolean(sellerProfileId),
   });
 
   const seller = useMemo(() => {
@@ -39,11 +41,15 @@ export function useSellerDetail(sellerUserId?: string) {
     isProfileError:
       hasSellerId &&
       (sellerQuery.isError || (!sellerQuery.isLoading && !sellerQuery.data?.data)),
-    isCampaignsLoading: campaignsQuery.isLoading,
+    isCampaignsLoading: Boolean(sellerProfileId) && campaignsQuery.isLoading,
     isCampaignsError: campaignsQuery.isError,
     refetch: () => {
       if (!id) return;
       void sellerQuery.refetch();
+      if (sellerProfileId) void campaignsQuery.refetch();
+    },
+    refetchCampaigns: () => {
+      if (!sellerProfileId) return;
       void campaignsQuery.refetch();
     },
   };
