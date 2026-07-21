@@ -278,14 +278,32 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
           201,
         );
       } catch (err) {
-        if (err && typeof err === "object" && "code" in err && err.code === "LEAD_ALREADY_IN_CAMPAIGN") {
-          const duplicate = err as { message: string; campaignMemberId?: string };
-          return c.json({
-            success: false as const,
-            code: "LEAD_ALREADY_IN_CAMPAIGN" as const,
-            message: duplicate.message,
-            campaign_member_id: duplicate.campaignMemberId,
-          }, 409);
+        if (
+          err &&
+          typeof err === "object" &&
+          "code" in err &&
+          err.code === "LEAD_ALREADY_IN_CAMPAIGN"
+        ) {
+          const message =
+            "message" in err && typeof err.message === "string"
+              ? err.message
+              : "Este prospecto ya está registrado en esta campaña.";
+
+          const campaignMemberId =
+            "campaignMemberId" in err &&
+            typeof err.campaignMemberId === "string"
+              ? err.campaignMemberId
+              : undefined;
+
+          return c.json(
+            {
+              success: false as const,
+              code: "LEAD_ALREADY_IN_CAMPAIGN" as const,
+              message,
+              campaign_member_id: campaignMemberId,
+            },
+            409,
+          );
         }
         handleRepoError(err);
       }
