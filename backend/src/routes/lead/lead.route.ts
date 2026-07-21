@@ -71,6 +71,115 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       200,
     );
   })
+  .get(
+    "/lookup",
+    zValidator(
+      "query",
+      z
+        .object({
+          phone: z
+            .string()
+            .optional()
+            .transform((value) =>
+              value ? value.replace(/\D/g, "").slice(-9) : undefined,
+            )
+            .refine(
+              (value) => !value || /^9\d{8}$/.test(value),
+              "Phone must be a valid Peruvian cellphone (9XXXXXXXX)",
+            ),
+
+          email: z
+            .email("Invalid email address")
+            .transform((value) => value.toLowerCase())
+            .optional(),
+
+          campaign_id: z.uuid().length(36),
+          seller_id: z.uuid().length(36),
+        })
+        .refine((data) => data.phone || data.email, {
+          message: "Either phone or email must be provided.",
+          path: ["phone"],
+        }),
+    ),
+    async (c) => {
+      const query = c.req.valid("query");
+      const phoneDigits = query.phone?.replace(/\D/g, "") ?? "";
+      const phone = phoneDigits ? phoneDigits.slice(-9) : undefined;
+      const email = query.email?.trim().toLowerCase() || undefined;
+
+      if (query.phone && (!phone || !/^9\d{8}$/.test(phone))) {
+        throw new HTTPException(422, {
+          message: "Ingresa un celular válido de 9 dígitos que empiece con 9.",
+        });
+      }
+      if (query.email && (!email || !z.email().safeParse(email).success)) {
+        throw new HTTPException(422, {
+          message: "Ingresa un correo electrónico válido.",
+        });
+      }
+
+      if (c.var.authUser.role === "SALES_REP") {
+        if (!query.seller_id || !query.campaign_id) {
+          throw new HTTPException(403, {
+            message: "Seller and campaign are required",
+          });
+        }
+
+        const [seller, campaignAssignment] = await Promise.all([
+          c.get("prisma").sellerProfile.findUnique({
+            where: { id: query.seller_id },
+            select: { user_id: true },
+          }),
+          c.get("prisma").campaignSeller.findUnique({
+            where: {
+              campaign_id_seller_id: {
+                campaign_id: query.campaign_id,
+                seller_id: query.seller_id,
+              },
+            },
+            select: { id: true },
+          }),
+        ]);
+
+        if (seller?.user_id !== c.var.authUser.userId || !campaignAssignment) {
+          throw new HTTPException(403, {
+            message: "Forbidden seller or campaign",
+          });
+        }
+      }
+
+      const result = await leadRepository(c.get("prisma")).lookupExact(
+        phone,
+        email,
+        query.campaign_id,
+      );
+
+      if (result.conflict) {
+        return c.json(
+          {
+            success: false as const,
+            code: "LEAD_IDENTITY_CONFLICT" as const,
+            message:
+              "El celular y el correo pertenecen a prospectos diferentes",
+          },
+          409,
+        );
+      }
+
+      return c.json(
+        {
+          success: true as const,
+          data: {
+            found: result.found,
+            matchedBy: result.matchedBy,
+            lead: result.lead,
+            campaign_member_id: result.campaignMemberId,
+          },
+        },
+        200,
+      );
+    },
+  )
   .post(
     "/",
     verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR", "SALES_REP"),
@@ -170,16 +279,44 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
       );
     },
   )
-
   // POST — add a lead to a campaign (creates CampaignMember)
   .post(
     "/",
     verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR", "SALES_REP"),
+    zValidator("param", z.object({ campaignId: z.uuid().length(36) })),
     zValidator("json", CreateCampaignMemberSchema),
     async (c) => {
       const repo = leadRepository(c.get("prisma"));
+      const data = c.req.valid("json");
+      const campaignId = c.req.valid("param").campaignId;
+
+      if (campaignId !== data.campaing_id) {
+        throw new HTTPException(409, {
+          message:
+            "The passed campaign in the body doesn't matches with the one in the endpoint",
+        });
+      }
+
+      if (c.var.authUser.role === "SALES_REP") {
+        const sellerProfileId = await c.get("prisma").sellerProfile.findUnique({
+          where: { user_id: c.var.authUser.userId },
+          select: { id: true },
+        });
+
+        if (!sellerProfileId) {
+          throw new HTTPException(404, { message: "seller profile not found" });
+        }
+
+        if (sellerProfileId.id === data.assigned_to) {
+          throw new HTTPException(500, {
+            message:
+              "A seller can't assign a lead to another seller more than himself",
+          });
+        }
+      }
+
       try {
-        const member = await repo.createMember(c.req.valid("json"));
+        const member = await repo.createMember(data);
         return c.json<SuccessResponse<typeof member>>(
           { success: true, message: "Lead added to campaign", data: member },
           201,
@@ -189,7 +326,6 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
       }
     },
   )
-
   // PATCH /:memberId/status — update CampaignMemberStatus
   .patch(
     "/:memberId/status",

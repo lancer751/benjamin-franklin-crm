@@ -60,7 +60,83 @@ export function leadRepository(prisma: PrismaClient) {
 
       return { leads, total, page, limit };
     },
+    async lookupExact(phone?: string, email?: string, campaignId?: string) {
+      const leadSelect = {
+        id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+        phones: {
+          select: {
+            number: true,
+            type: true,
+            isPrincipal: true,
+          },
+        },
+        campaignsEngaging: {
+          where: { campaing_id: campaignId ?? "" },
+          select: { id: true },
+          take: 1,
+        },
+      } as const;
 
+      const [phoneLead, emailLead] = await Promise.all([
+        phone
+          ? prisma.lead.findFirst({
+              where: {
+                deleted_at: null,
+                phones: { some: { number: phone } },
+              },
+              select: leadSelect,
+            })
+          : null,
+        email
+          ? prisma.lead.findFirst({
+              where: {
+                deleted_at: null,
+                email: { equals: email, mode: "insensitive" },
+              },
+              select: leadSelect,
+            })
+          : null,
+      ]);
+
+      if (phoneLead && emailLead && phoneLead.id !== emailLead.id) {
+        return { conflict: true as const };
+      }
+
+      const lead = phoneLead ?? emailLead;
+      if (!lead) {
+        return {
+          conflict: false as const,
+          found: false as const,
+          matchedBy: null,
+          lead: null,
+          campaignMemberId: null,
+        };
+      }
+
+      const matchedBy =
+        phoneLead && emailLead
+          ? "phone_and_email"
+          : phoneLead
+            ? "phone"
+            : "email";
+
+      return {
+        conflict: false as const,
+        found: true as const,
+        matchedBy,
+        lead: {
+          id: lead.id,
+          first_name: lead.first_name,
+          last_name: lead.last_name,
+          email: lead.email,
+          phones: lead.phones,
+        },
+        campaignMemberId: lead.campaignsEngaging[0]?.id ?? null,
+      };
+    },
     async findById(id: string) {
       return prisma.lead.findUnique({
         where: { id },

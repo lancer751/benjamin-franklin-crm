@@ -27,7 +27,7 @@ export function campaignRepository(prisma: PrismaClient) {
           orderBy: { created_at: "desc" },
           include: {
             relatedProduct: {
-              select: { id: true, name: true, sales_status: true },
+              select: { id: true, name: true, sales_status: true, image_url: true },
             },
             assignedSupervisor: {
               select: {
@@ -65,6 +65,7 @@ export function campaignRepository(prisma: PrismaClient) {
               name: true,
               sales_status: true,
               prices: { select: { attendance_mode: true, cash_price: true } },
+              image_url: true
             },
           },
           assignedSupervisor: {

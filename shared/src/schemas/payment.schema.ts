@@ -1,16 +1,22 @@
-import z from "zod";
+import { z } from "zod";
+import { decimalString } from "../utils/fields-validation";
 
-const paymentMethod = z.enum([
+
+export const PaymentMethodSchema = z.enum([
   "YAPE",
   "ONLINE",
   "POS",
   "CASH",
   "BANK_TRANSFER",
 ]);
-const paymentStatus = z.enum(["CONFIRMED", "REFUNDED", "FAILED"]);
-const paymentType = z.enum(["FULL", "INSTALLMENTS"]);
-const paymentPlanStatus = z.enum(["COMPLETED", "PENDING", "CANCELLED"]);
-const scheduledPaymentStatus = z.enum([
+export const PaymentStatusSchema = z.enum(["CONFIRMED", "REFUNDED", "FAILED"]);
+export const PaymentTypeSchema = z.enum(["FULL", "INSTALLMENTS"]);
+export const PaymentPlanStatusSchema = z.enum([
+  "COMPLETED",
+  "PENDING",
+  "CANCELLED",
+]);
+export const ScheduledPaymentStatusSchema = z.enum([
   "PAID",
   "OVERDUE",
   "PENDING",
@@ -19,62 +25,93 @@ const scheduledPaymentStatus = z.enum([
 const paymentSchema = z.object({
   id: z.uuid().length(36),
   order_id: z.uuid().length(36),
-  scheduled_payment_id: z.uuid().length(36).optional(),
+  scheduled_payment_id: z.uuid().length(36).optional().nullable(),
   payment_date: z.coerce.date(),
-  amount: z.number().positive(),
-  payment_method: paymentMethod,
-  payment_status: paymentStatus,
-  type: paymentType,
-  currency: z.string().length(3).optional(),
-  transaccion_id: z.string().optional(),
-  created_at: z.date().default(new Date()),
-  updated_at: z.date().default(new Date()),
+  amount: decimalString,
+  payment_method: PaymentMethodSchema,
+  payment_status: PaymentStatusSchema,
+  type: PaymentTypeSchema,
+  currency: z.string().length(3).default("PEN"),
+  transaccion_id: z.string().optional().nullable(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
 });
 
 const paymentPlanSchema = z.object({
   id: z.uuid().length(36),
-  total_installments: z.int().positive(),
+  total_installments: z.number().int().positive(),
   order_id: z.uuid().length(36),
-  total_amount: z.int().positive(),
-  start_date: z.date(),
-  status: paymentPlanStatus.default("PENDING"),
+  total_amount: decimalString,
+  start_date: z.coerce.date(),
+  status: PaymentPlanStatusSchema.default("PENDING"),
 });
 
-const scheduledPayment = z.object({
+const scheduledPaymentSchema = z.object({
   id: z.uuid().length(36),
-  due_date: z.date(),
-  due_amount: z.number().positive(),
+  due_date: z.coerce.date(),
+  due_amount: decimalString,
   payment_plan_id: z.uuid().length(36),
-  number: z.number().positive(),
-  status: scheduledPaymentStatus,
-  created_at: z.date().default(new Date()),
-  updated_at: z.date().default(new Date()),
+  number: z.number().int().positive(),
+  status: ScheduledPaymentStatusSchema.default("PENDING"),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
 });
+
+// ── Create ───────────────────────────────────────────────────────────────
+// payment_status stays client-settable at creation time (a payment record
+// represents an already-resolved outcome — confirmed cash-in-hand, or a
+// failed/refunded attempt — not a pending intent). What's no longer allowed
+// is silently flipping that status later; see UpdatePaymentStatusSchema.
 
 export const createPaymentSchema = paymentSchema
   .omit({
     id: true,
     created_at: true,
     updated_at: true,
-    scheduled_payment_id: true
+    scheduled_payment_id: true,
   })
   .extend({
     payment_plan: paymentPlanSchema
-      .omit({ id: true })
+      .omit({ id: true, status: true })
       .extend({
-        scheduled_payments: z.array(
-          scheduledPayment.omit({
-            id: true,
-            created_at: true,
-            updated_at: true,
-            payment_plan_id: true,
-          }),
-        ),
+        scheduled_payments: z
+          .array(
+            scheduledPaymentSchema.omit({
+              id: true,
+              created_at: true,
+              updated_at: true,
+              payment_plan_id: true,
+              status: true,
+            }),
+          )
+          .min(1, "At least one scheduled payment is required"),
       })
       .optional(),
+  })
+  .refine((data) => (data.type === "INSTALLMENTS" ? !!data.payment_plan : true), {
+    message: "payment_plan is required when type is INSTALLMENTS",
+    path: ["payment_plan"],
   });
 
-export const UpdatePaymentSchema = createPaymentSchema.partial().omit({payment_plan: true}).refine(
-  (data) => Object.keys(data).length > 0,
-  { message: "At least one field must be provided" }
-);
+// ── Update ───────────────────────────────────────────────────────────────
+// Deliberately NOT a partial() of createPaymentSchema — that would silently
+// let callers change payment_status, order_id, and amount, which is exactly
+// what we don't want on a generic PUT. Only cosmetic/reference fields here.
+
+export const UpdatePaymentSchema = paymentSchema
+  .pick({ payment_date: true, transaccion_id: true, currency: true })
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided",
+  });
+
+// Status transitions go through their own endpoint/schema so they can carry
+// their own authorization and business rules (e.g. only ADMIN/SUPERVISOR,
+// can't un-refund, can't confirm an already-failed payment, etc.)
+export const UpdatePaymentStatusSchema = z.object({
+  payment_status: PaymentStatusSchema,
+});
+
+export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
+export type UpdatePaymentInput = z.infer<typeof UpdatePaymentSchema>;
+export type UpdatePaymentStatusInput = z.infer<typeof UpdatePaymentStatusSchema>;

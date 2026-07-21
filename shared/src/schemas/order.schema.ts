@@ -1,8 +1,6 @@
 import { z } from "zod";
-
-const decimalString = z
-  .string()
-  .regex(/^\d+(\.\d{1,2})?$/, "Must be a valid decimal with up to 2 decimal places");
+import { AttendanceModeSchema } from "./products/price.schema";
+import { decimalString } from "../utils/fields-validation";
 
 export const OrderStatusSchema = z.enum([
   "PENDING",
@@ -34,28 +32,38 @@ export const OrderSchema = z.object({
   updated_at: z.coerce.date(),
 });
 
-// Create and Update schemas
-export const CreateOrderSchema = OrderSchema.omit({
-  id: true,
-  created_at: true,
-  updated_at: true,
-  order_code: true,
-}).extend({
-  discount: decimalString.optional(),
-  order_items: z.array(
-    OrderDetailSchema.omit({
-      id: true,
-      created_at: true,
-      updated_at: true,
-      order_id: true,
-    })
-  ),
+// ── Create ───────────────────────────────────────────────────────────────
+// The client only says WHAT is being bought (product + attendance mode).
+// Price, sub_total, total_amount, order_status, order_code and generated_by
+// are all resolved server-side — never trust these from the request body.
+
+const CreateOrderItemSchema = z.object({
+  product_id: z.uuid().length(36),
+  attendance_mode: AttendanceModeSchema,
+  discount_code: z.string().optional().nullable(),
 });
 
-export const UpdateOrderSchema = CreateOrderSchema.partial().refine(
-  (data) => Object.keys(data).length > 0,
-  { message: "At least one field must be provided" }
-);
+export const CreateOrderSchema = z.object({
+  lead_id: z.uuid().length(36),
+  discount: decimalString.optional(),
+  order_items: z
+    .array(CreateOrderItemSchema)
+    .min(1, "At least one order item is required"),
+});
+
+// ── Update ───────────────────────────────────────────────────────────────
+// lead_id and generated_by are intentionally not editable after creation.
+// order_items, if provided, are re-priced server-side the same way as create.
+
+export const UpdateOrderSchema = z
+  .object({
+    discount: decimalString.optional(),
+    order_status: OrderStatusSchema.optional(),
+    order_items: z.array(CreateOrderItemSchema).optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided",
+  });
 
 // Params and Query schemas
 export const OrderParamsSchema = z.object({

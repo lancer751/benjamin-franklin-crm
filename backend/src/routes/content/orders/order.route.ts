@@ -8,144 +8,241 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import withPrisma from "@/lib/prisma";
+import type { AttendanceMode, Decimal, PrismaClient } from "@repo/database";
+import {
+  verifyUserAccessAuth,
+  verifyUserRoleAccess,
+} from "@/middlewares/auth.middleware";
+
+async function generateUniqueOrderCode(prisma: PrismaClient) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = faker.string.alpha({ length: 7, casing: "upper" });
+    const exists = await prisma.order.findUnique({
+      where: { order_code: code },
+      select: { id: true },
+    });
+    if (!exists) return code;
+  }
+  throw new HTTPException(500, {
+    message: "Could not generate a unique order code, please retry",
+  });
+}
+
+// Resolves order_items (product_id + attendance_mode) against real
+// ProductPrice rows and returns priced line items + computed totals.
+// Throws 404/422 if a product/price/discount doesn't check out.
+async function priceOrderItems(
+  prisma: PrismaClient,
+  items: {
+    product_id: string;
+    attendance_mode: AttendanceMode;
+    discount_code?: string | null;
+  }[],
+  discount?: string,
+) {
+  const prices = await prisma.productPrice.findMany({
+    where: {
+      OR: items.map((i) => ({
+        product_id: i.product_id,
+        attendance_mode: i.attendance_mode,
+      })),
+    },
+  });
+
+  const priceMap = new Map(
+    prices.map((p) => [`${p.product_id}:${p.attendance_mode}`, p]),
+  );
+
+  const resolvedItems = items.map((item) => {
+    const price = priceMap.get(`${item.product_id}:${item.attendance_mode}`);
+    if (!price) {
+      throw new HTTPException(422, {
+        message: `No price found for product ${item.product_id} with attendance mode ${item.attendance_mode}`,
+      });
+    }
+    return {
+      product_id: item.product_id,
+      price: price.cash_price,
+      discount_code: item.discount_code ?? null,
+    };
+  });
+
+  // NOTE: using Number() on decimal strings here for simplicity, matching
+  // the rest of the codebase's parseFloat usage. For real production-grade
+  // money math, swap this for a fixed-point/decimal library (e.g. decimal.js)
+  // to avoid floating point rounding drift.
+  const subTotal = resolvedItems.reduce((sum, i) => sum + Number(i.price), 0);
+  const discountAmount = discount ? Number(discount) : 0;
+
+  if (discountAmount < 0 || discountAmount > subTotal) {
+    throw new HTTPException(400, {
+      message: "Discount must be between 0 and the order subtotal",
+    });
+  }
+
+  const totalAmount = subTotal - discountAmount;
+
+  return {
+    resolvedItems,
+    subTotal: subTotal.toFixed(2),
+    discountAmount: discountAmount ? discountAmount.toFixed(2) : undefined,
+    totalAmount: totalAmount.toFixed(2),
+  };
+}
+
+const orderInclude = {
+  orderDetails: { include: { product: true } },
+  lead: true,
+  seller: { include: { user: true } },
+} as const;
 
 export const orderRoutes = new Hono<ContextWithPrisma>()
-  // Get all orders
-  .get("/", withPrisma, async (c) => {
+  .use(withPrisma)
+  .use(verifyUserAccessAuth)
+  // NOTE: adjust roles to whatever actually needs order visibility/creation
+  // in your org — I've mirrored the role set used on leads/products.
+  .use(
+    verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR", "MARKETING"),
+  )
+
+  .get("/", async (c) => {
     const orders = await c.get("prisma").order.findMany({
-      include: {
-        orderDetails: {
-          include: {
-            product: true,
-          },
-        },
-        lead: true,
-        seller: {
-          include: {
-            user: true
-          }
-        },
-      },
-      orderBy: {
-        created_at: "desc",
-      },
+      include: orderInclude,
+      orderBy: { created_at: "desc" },
     });
 
-    return c.json(
-      {
-        success: true,
-        data: orders,
-      },
-      200
+    return c.json<SuccessResponse<typeof orders>>(
+      { success: true, message: "Orders retrieved", data: orders },
+      200,
     );
   })
-  // Get order by ID
-  .get(UUID_ROUTE, withPrisma, zValidator("param", z.object({ id: z.string().uuid().length(36) })), async (c) => {
-    const { id } = c.req.valid("param");
 
-    const order = await c.get("prisma").order.findUnique({
-      where: { id },
-      include: {
-        orderDetails: {
-          include: {
-            product: true,
-          },
+  .get(
+    UUID_ROUTE,
+    zValidator("param", z.object({ id: z.string().uuid().length(36) })),
+    async (c) => {
+      const { id } = c.req.valid("param");
+
+      const order = await c.get("prisma").order.findUnique({
+        where: { id },
+        include: {
+          ...orderInclude,
+          paymentPlans: { include: { installments: true } },
+          payments: true,
         },
-        lead: true,
-        seller: {include: {user: true}},
-        paymentPlans: {
-          include: {
-            installments: true,
-          },
+      });
+
+      if (!order) {
+        throw new HTTPException(404, { message: "Order not found" });
+      }
+
+      return c.json<SuccessResponse<typeof order>>(
+        { success: true, data: order, message: "Order retrieved successfully" },
+        200,
+      );
+    },
+  )
+
+  .post(
+    "/",
+    verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"),
+    zValidator("json", CreateOrderSchema),
+    async (c) => {
+      const prisma = c.get("prisma");
+      const { lead_id, order_items, discount } = c.req.valid("json");
+
+      const lead = await prisma.lead.findUnique({
+        where: { id: lead_id },
+        select: { id: true, deleted_at: true },
+      });
+      if (!lead || lead.deleted_at) {
+        throw new HTTPException(404, { message: "Lead not found" });
+      }
+
+      const { resolvedItems, subTotal, discountAmount, totalAmount } =
+        await priceOrderItems(prisma, order_items, discount);
+
+      const orderCode = await generateUniqueOrderCode(prisma);
+
+      const generatedOrder = await prisma.order.create({
+        data: {
+          lead_id,
+          generated_by: c.var.authUser.userId,
+          sub_total: subTotal,
+          total_amount: totalAmount,
+          discount: discountAmount,
+          order_status: "PENDING",
+          order_code: orderCode,
+          orderDetails: { createMany: { data: resolvedItems } },
         },
-        payments: true,
-      },
-    });
+        include: orderInclude,
+      });
 
-    if (!order) {
-      throw new HTTPException(404, { message: "Order not found" });
-    }
-
-    return c.json<SuccessResponse<typeof order>>(
-      {
-        success: true,
-        data: order,
-        message: "Order retrieved successfully",
-      },
-      200
-    );
-  })
-  // Create new order
-  .post("/", withPrisma, zValidator("json", CreateOrderSchema), async (c) => {
-    const orderData = c.req.valid("json");
-    const { order_items, ...newOrderData } = structuredClone(orderData);
-
-    const generatedOrder = await c.get("prisma").order.create({
-      data: {
-        ...newOrderData,
-        order_code: faker.string.alpha({ length: 7, casing: "upper" }),
-        orderDetails: {
-          createMany: { data: order_items },
+      return c.json<SuccessResponse<typeof generatedOrder>>(
+        {
+          success: true,
+          message: "Order created successfully",
+          data: generatedOrder,
         },
-      },
-      include: {
-        orderDetails: {
-          include: {
-            product: true,
-          },
-        },
-        lead: true,
-        seller: true,
-      },
-    });
+        201,
+      );
+    },
+  )
 
-    return c.json<SuccessResponse<typeof generatedOrder>>(
-      {
-        success: true,
-        message: "Order created successfully",
-        data: generatedOrder,
-      },
-      201
-    );
-  })
-  // Update order (careful with status changes)
   .put(
     UUID_ROUTE,
-    withPrisma,
-    zValidator("param", z.object({ id: z.string().uuid().length(36) })),
+    verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"),
+    zValidator("param", z.object({ id: z.string().length(36) })),
     zValidator("json", UpdateOrderSchema),
     async (c) => {
       const { id } = c.req.valid("param");
-      const orderData = c.req.valid("json");
-      const { order_items, ...orderToUpdate } = structuredClone(orderData);
+      const { order_items, discount, order_status } = c.req.valid("json");
+      const prisma = c.get("prisma");
 
-      const existingOrder = await c
-        .get("prisma")
-        .order.findUnique({
-          where: { id },
-          include: {
-            orderDetails: true,
-            payments: true,
-          },
-        });
+      const existingOrder = await prisma.order.findUnique({
+        where: { id },
+        include: { orderDetails: true, payments: true },
+      });
 
       if (!existingOrder) {
         throw new HTTPException(404, { message: "Order not found" });
       }
 
-      // Prevent status change to COMPLETED if there are unpaid installments
+      // Re-price line items first (if provided) so the COMPLETED check below
+      // compares against the order's up-to-date total, not a stale one.
+      let newTotals:
+        | {
+            resolvedItems: {
+              product_id: string;
+              price: Decimal;
+              discount_code: string | null;
+            }[];
+            subTotal: string;
+            discountAmount?: string;
+            totalAmount: string;
+          }
+        | undefined;
+
+      if (order_items) {
+        newTotals = await priceOrderItems(prisma, order_items, discount);
+      }
+
+      const effectiveTotal = newTotals
+        ? Number(newTotals.totalAmount)
+        : parseFloat(existingOrder.total_amount as unknown as string);
+
       if (
-        orderToUpdate.order_status === "COMPLETED" &&
+        order_status === "COMPLETED" &&
         existingOrder.order_status !== "COMPLETED"
       ) {
-        const payments = await c
-          .get("prisma")
-          .payment.findMany({
-            where: { order_id: id },
-          });
-
-        const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount as unknown as string), 0);
-        if (totalPaid < parseFloat(existingOrder.total_amount as unknown as string)) {
+        const payments = await prisma.payment.findMany({
+          where: { order_id: id, payment_status: "CONFIRMED" },
+        });
+        const totalPaid = payments.reduce(
+          (sum, p) => sum + Number(p.amount),
+          0,
+        );
+        if (totalPaid < effectiveTotal) {
           throw new HTTPException(400, {
             message:
               "Cannot complete order with unpaid balance. Create payments first.",
@@ -153,17 +250,11 @@ export const orderRoutes = new Hono<ContextWithPrisma>()
         }
       }
 
-      const updatedOrder = await c.get("prisma").$transaction(async (tx) => {
-        // Handle order items update if provided
-        if (order_items && order_items.length > 0) {
-          // Delete old order details
-          await tx.orderDetail.deleteMany({
-            where: { order_id: id },
-          });
-
-          // Create new order details
+      const updatedOrder = await prisma.$transaction(async (tx) => {
+        if (newTotals) {
+          await tx.orderDetail.deleteMany({ where: { order_id: id } });
           await tx.orderDetail.createMany({
-            data: order_items.map((item) => ({
+            data: newTotals.resolvedItems.map((item) => ({
               ...item,
               order_id: id,
             })),
@@ -172,16 +263,15 @@ export const orderRoutes = new Hono<ContextWithPrisma>()
 
         return tx.order.update({
           where: { id },
-          data: orderToUpdate,
-          include: {
-            orderDetails: {
-              include: {
-                product: true,
-              },
-            },
-            lead: true,
-            seller: true,
+          data: {
+            order_status,
+            ...(newTotals && {
+              sub_total: newTotals.subTotal,
+              total_amount: newTotals.totalAmount,
+              discount: newTotals.discountAmount,
+            }),
           },
+          include: orderInclude,
         });
       });
 
@@ -191,44 +281,36 @@ export const orderRoutes = new Hono<ContextWithPrisma>()
           message: "Order updated successfully",
           data: updatedOrder,
         },
-        200
+        200,
       );
-    }
+    },
   )
-  // Delete order (only if not completed or has payments)
+
   .delete(
     UUID_ROUTE,
-    withPrisma,
+    verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR"),
     zValidator("param", z.object({ id: z.string().uuid().length(36) })),
     async (c) => {
       const { id } = c.req.valid("param");
+      const prisma = c.get("prisma");
 
-      const existingOrder = await c
-        .get("prisma")
-        .order.findUnique({
-          where: { id },
-          include: {
-            orderDetails: true,
-            payments: true,
-            paymentPlans: true,
-          },
-        });
+      const existingOrder = await prisma.order.findUnique({
+        where: { id },
+        include: { orderDetails: true, payments: true, paymentPlans: true },
+      });
 
       if (!existingOrder) {
         throw new HTTPException(404, { message: "Order not found" });
       }
 
-      // Prevent deletion of completed orders
       if (existingOrder.order_status === "COMPLETED") {
         throw new HTTPException(400, {
-          message:
-            "Cannot delete completed orders. Mark as CANCELLED instead.",
+          message: "Cannot delete completed orders. Mark as CANCELLED instead.",
         });
       }
 
-      // Prevent deletion if there are confirmed payments
       const confirmedPayments = existingOrder.payments.filter(
-        (p) => p.payment_status === "CONFIRMED"
+        (p) => p.payment_status === "CONFIRMED",
       );
       if (confirmedPayments.length > 0) {
         throw new HTTPException(400, {
@@ -237,42 +319,23 @@ export const orderRoutes = new Hono<ContextWithPrisma>()
         });
       }
 
-      // Delete the order (cascade will handle orderDetails due to foreign key)
-      await c.get("prisma").$transaction(async (tx) => {
-        // Delete payment plans
+      await prisma.$transaction(async (tx) => {
         if (existingOrder.paymentPlans.length > 0) {
           for (const plan of existingOrder.paymentPlans) {
             await tx.scheduledPayment.deleteMany({
               where: { payment_plan_id: plan.id },
             });
           }
-          await tx.paymentPlan.deleteMany({
-            where: { order_id: id },
-          });
+          await tx.paymentPlan.deleteMany({ where: { order_id: id } });
         }
-
-        // Delete payments
-        await tx.payment.deleteMany({
-          where: { order_id: id },
-        });
-
-        // Delete order details
-        await tx.orderDetail.deleteMany({
-          where: { order_id: id },
-        });
-
-        // Delete order
-        await tx.order.delete({
-          where: { id },
-        });
+        await tx.payment.deleteMany({ where: { order_id: id } });
+        await tx.orderDetail.deleteMany({ where: { order_id: id } });
+        await tx.order.delete({ where: { id } });
       });
 
       return c.json<SuccessResponse>(
-        {
-          success: true,
-          message: "Order deleted successfully",
-        },
-        200
+        { success: true, message: "Order deleted successfully" },
+        200,
       );
-    }
+    },
   );

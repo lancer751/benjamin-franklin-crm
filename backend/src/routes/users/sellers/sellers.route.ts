@@ -9,11 +9,9 @@ import { HTTPException } from "hono/http-exception";
 import { UpdateSellerProfileSchema } from "shared";
 
 export const sellersRoutes = new Hono<ContextWithPrisma>()
-  .use(verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "SALES_REP"))
   .use(withPrisma)
   .get(
     "/",
-    verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "MARKETING"),
     async (c) => {
       const sellers = await c.get("prisma").sellerProfile.findMany({
         include: {
@@ -35,7 +33,6 @@ export const sellersRoutes = new Hono<ContextWithPrisma>()
   )
   .get(
     "/:id/campaigns",
-    verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "MARKETING"),
     zValidator("param", validateIdParamSchema),
     async (c) => {
       const sellerProfileId = c.req.valid("param").id;
@@ -53,33 +50,37 @@ export const sellersRoutes = new Hono<ContextWithPrisma>()
     },
   )
   // Get seller details by ID
-  .get("/:id", verifyUserRoleAccess("ADMIN", "SALES_SUPERVISOR", "SALES_REP"),zValidator("param", validateIdParamSchema), async (c) => {
-    const { id } = c.req.valid("param");
+  .get(
+    "/:id",
+    zValidator("param", validateIdParamSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
 
-    const sellerDetails = await c.get("prisma").sellerProfile.findUnique({
-      where: { user_id: id },
-      include: {
-        user: true,
-        campaignMembers: true,
-        orders: true,
-      },
-    });
-
-    if (!sellerDetails) {
-      throw new HTTPException(404, {
-        message: "Seller profile not found",
+      const sellerDetails = await c.get("prisma").sellerProfile.findUnique({
+        where: { user_id: id },
+        include: {
+          user: true,
+          campaignMembers: true,
+          orders: true,
+        },
       });
-    }
 
-    return c.json<SuccessResponse<typeof sellerDetails>>(
-      {
-        success: true,
-        message: "Seller profile retrieved successfully",
-        data: sellerDetails,
-      },
-      200,
-    );
-  })
+      if (!sellerDetails) {
+        throw new HTTPException(404, {
+          message: "Seller profile not found",
+        });
+      }
+
+      return c.json<SuccessResponse<typeof sellerDetails>>(
+        {
+          success: true,
+          message: "Seller profile retrieved successfully",
+          data: sellerDetails,
+        },
+        200,
+      );
+    },
+  )
   .put(
     "/:id",
     withPrisma,
