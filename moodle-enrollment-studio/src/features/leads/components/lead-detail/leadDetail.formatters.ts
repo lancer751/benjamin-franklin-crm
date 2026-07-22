@@ -8,7 +8,7 @@ const labels: Record<string, string> = {
   LOST: "Descartado", UNQUALIFIED: "Descartado", DISCARDED: "Descartado",
   FACEBOOK: "Facebook", INSTAGRAM: "Instagram", TIKTOK: "TikTok", WEBSITE: "Sitio web",
   WHATSAPP: "WhatsApp", MANUAL: "Registro manual", CALL: "Llamada", MEETING: "Reunión",
-  EMAIL: "Correo", SELL: "Venta", MALE: "Masculino", FEMALE: "Femenino",
+  EMAIL: "Correo", SELL: "Venta", WEBSITE_FORM: "Formulario web", MALE: "Masculino", FEMALE: "Femenino",
 };
 
 export const displayValue = (value?: string | null) => value?.trim() || "No especificado";

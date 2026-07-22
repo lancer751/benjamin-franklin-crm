@@ -93,6 +93,12 @@ export const updateLead = async (id: string, data: UpdateLeadReq): Promise<Infer
   return await res.json();
 };
 
+/** Retira un lead de las vistas activas mediante el soft delete del backend. */
+export const deleteLead = async (id: string): Promise<unknown> => {
+  const res = await api.leads[UUID_PATH].$delete({ param: { id } });
+  return await res.json();
+};
+
 // ==========================================
 // SERVICIOS: CAMPAIGN MEMBERS (Distribución y Seguimiento)
 // ==========================================
@@ -153,7 +159,7 @@ export const getMemberInteractions = async (campaignId: string, memberId: string
 };
 
 /** POST: Registra una nueva interacción o bitácora de llamada para un miembro */
-export const createMemberInteraction = async (campaignId: string, memberId: string, notes: string, type: string, sellerId: string): Promise<any> => {
+export const createMemberInteraction = async (campaignId: string, memberId: string, notes: string, type: string, sellerId: string): Promise<unknown> => {
   const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].interactions.$post({
     param: { campaignId, memberId },
     json: { notes, type },
@@ -173,7 +179,16 @@ export const getMemberTasks = async (campaignId: string, memberId: string): Prom
 };
 
 /** POST: Crea un nuevo recordatorio o tarea para el miembro de campaña */
-export const createMemberTask = async (campaignId: string, memberId: string, taskData: any, sellerId: string): Promise<any> => {
+export interface MemberTaskPayload {
+  title: string;
+  content: string;
+  is_done: boolean;
+  due_date?: string | null;
+}
+
+export type MemberTaskUpdatePayload = Partial<MemberTaskPayload>;
+
+export const createMemberTask = async (campaignId: string, memberId: string, taskData: MemberTaskPayload, sellerId: string): Promise<unknown> => {
   const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks.$post({
     param: { campaignId, memberId },
     json: taskData,
@@ -185,7 +200,7 @@ export const createMemberTask = async (campaignId: string, memberId: string, tas
 };
 
 /** PATCH: Actualiza o marca como completada una tarea específica */
-export const updateMemberTask = async (campaignId: string, memberId: string, taskId: string, taskData: any): Promise<any> => {
+export const updateMemberTask = async (campaignId: string, memberId: string, taskId: string, taskData: MemberTaskUpdatePayload): Promise<unknown> => {
   const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks[":taskId"].$patch({
     param: { campaignId, memberId, taskId },
     json: taskData
@@ -194,7 +209,7 @@ export const updateMemberTask = async (campaignId: string, memberId: string, tas
 };
 
 /** DELETE: Elimina una tarea o recordatorio del sistema */
-export const deleteMemberTask = async (campaignId: string, memberId: string, taskId: string): Promise<any> => {
+export const deleteMemberTask = async (campaignId: string, memberId: string, taskId: string): Promise<unknown> => {
   const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks[":taskId"].$delete({
     param: { campaignId, memberId, taskId }
   });
