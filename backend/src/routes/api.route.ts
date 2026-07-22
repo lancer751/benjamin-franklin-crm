@@ -11,6 +11,7 @@ import { cmsRoutes } from "./content/cms.index";
 import { campaignRoutes } from "./campaing/campaing.route";
 import { metaWebhookRoutes } from "./webhooks";
 import { metaRoutes } from "./integrations/meta/meta.route";
+import { reportRoutes } from "./report.route";
 
 export const apiRoutes = new Hono()
   .route("/auth", authRoutes)
@@ -26,3 +27,4 @@ export const apiRoutes = new Hono()
   .route("/cms", cmsRoutes)
   .route("/webhooks", metaWebhookRoutes)
   .route("/meta", metaRoutes)
+  .route("/reports", reportRoutes)

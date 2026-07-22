@@ -1,129 +1,265 @@
-# Moodle Enrollment Manager
+# Benjamin CRM / Moodle Enrollment Manager
 
 ## Overview
 
-This repository implements a CRM backend and content management API for managing leads, campaigns, course products, orders, payments, and academic editions. It is built with **Bun**, **Hono**, **Prisma**, and **Zod**.
+This monorepo contains a CRM and enrollment platform for managing leads, campaigns, products, orders, payments, academic editions, and storefront content. It combines a backend API with modern web apps for marketing, operations, and student enrollment workflows.
 
-The backend supports:
-- User authentication and role-based access
-- Seller, supervisor, and marketer profile management
-- Campaign creation and seller assignment
-- Lead creation, campaign membership, interactions, and task management
-- Product creation with edition-aware pricing
-- Order creation, update, and lifecycle protection
-- Manual payments and installment plans
-- Academic courses, editions, and professor management
-- CMS content management for benefits, certifications, FAQs, and product marketing content
-- Meta leadgen webhook ingestion
+### Included apps
 
-## Installation
+- Backend API built with Bun, Hono, Prisma, Zod, and TypeScript
+- Commercial website built with Astro for public-facing content and product discovery
+- Management dashboard built with React + Vite for internal operations
+- Moodle enrollment studio built with React + Vite for enrollment workflows and UI orchestration
+- Shared packages for types, schemas, utilities, and the database layer
+
+## Main capabilities
+
+- Authentication and role-aware access for sales, marketing, supervisors, and admins
+- Lead capture, campaign assignment, member tracking, interactions, and tasks
+- Product and pricing management with edition-aware rules
+- Order and payment creation, including installment plans
+- Academic course, edition, schedule, slot, and professor management
+- CMS content management for benefits, certifications, FAQs, and commercial content
+- Meta leadgen webhook ingestion for marketing automation
+
+## Typical project workflow
+
+A common business flow for this platform looks like this:
+
+1. Create or manage an academic course and its editions.
+2. Create a product linked to an edition and define pricing.
+3. Create a campaign and assign sellers or supervisors.
+4. Capture a lead and add it to a campaign.
+5. Log interactions and create tasks for follow-up.
+6. Create an order for a qualified lead.
+7. Register one or more payments, including installment plans when needed.
+8. Publish or expose the product through the storefront and CMS content.
+
+## Tech stack
+
+- Runtime: Bun
+- API framework: Hono
+- Database ORM: Prisma
+- Validation: Zod
+- UI: React, Astro, Vite, Tailwind CSS
+- Monorepo orchestration: Turbo
+
+## Repository structure
+
+```text
+backend/                # Hono API and business logic
+commercial-website/     # Astro storefront and marketing site
+management-dashboard/   # React admin dashboard
+moodle-enrollment-studio/ # React enrollment experience UI
+packages/               # Internal packages such as the database layer
+shared/                 # Shared types, schemas, and utilities
+```
+
+## Getting started
+
+### Prerequisites
+
+- Bun 1.2+
+- Node.js 22+
+- A PostgreSQL-compatible database for the Prisma setup
+
+### Install dependencies
 
 ```bash
 bun install
 ```
 
-## Run
+### Run the full workspace
 
 ```bash
 bun run dev
 ```
 
-## API Base
+This starts the apps through Turbo. You can also run them individually:
 
-The backend exposes the API at `/api`.
+```bash
+bun run dev:server
+bun run dev:client
+```
 
-Health endpoints:
-- `GET /` — status check
-- `GET /health` — database connectivity check
+### Build the workspace
 
-## Authentication
+```bash
+bun run build
+```
 
-### `POST /api/auth/login`
-Request body:
+## Backend API overview
+
+The backend is mounted under `/api`.
+
+### Health checks
+
+- `GET /` — basic status response
+- `GET /health` — health check including database connectivity
+
+### Core route groups
+
+- Authentication: `/api/auth`
+- Users and profiles: `/api/users`
+- Leads and campaign members: `/api/leads` and `/api/campaigns/:campaignId/members`
+- Campaigns: `/api/campaigns`
+- Products and categories: `/api/products`
+- Orders: `/api/orders`
+- Payments: `/api/payments`
+- Academic courses, editions, and professors: `/api/academic`
+- Storefront content: `/api/storefront`
+- CMS content: `/api/cms`
+- Meta webhooks: `/api/webhooks/meta/leadgen`
+
+## Authentication examples
+
+### Login
+
+Endpoint:
+
+```http
+POST /api/auth/login
+```
+
+Body:
+
 ```json
 {
-  "email": "user@example.com",
-  "password": "secret123"
+  "email": "admin@example.com",
+  "password": "SuperSecret1"
 }
 ```
 
-### `GET /api/auth/me`
-Returns the authenticated user and profile IDs according to the user's role.
+### Current user
 
-### `POST /api/auth/refresh-access-token`
-Refreshes the access token using the refresh cookie.
+```http
+GET /api/auth/me
+```
 
-### `POST /api/auth/logout`
-Clears authentication cookies.
+## Lead workflow example
 
-## Users
+### Create a lead
 
-### `GET /api/users`
-List all users.
+Endpoint:
 
-### `GET /api/users/:id`
-Get a single user by ID.
+```http
+POST /api/leads
+```
 
-### `POST /api/users`
-Create a user and role-specific profile.
+Body:
 
-Example payload:
 ```json
 {
-  "first_name": "Lucas",
-  "last_name": "Diaz",
-  "email": "lucas@example.com",
-  "password": "SuperSecret1",
-  "role": "SALES_REP",
-  "role_id": "uuid-role-sales-rep",
-  "seller_profile": {
-    "assigned_supervisor_id": "uuid-supervisor",
-    "sales_target": 10000
-  }
+  "first_name": "María",
+  "last_name": "López",
+  "email": "maria@example.com",
+  "profession": "Diseñadora",
+  "gender": "FEMALE",
+  "lead_status": "ACTIVE",
+  "phones": [
+    {
+      "number": "912345678",
+      "type": "WHATSAPP",
+      "isPrincipal": true
+    }
+  ]
 }
 ```
 
-### `PUT /api/users/:id`
-Update user fields.
+### Create a campaign member
 
-### `DELETE /api/users/:id`
-Delete a user.
+Endpoint:
 
-### `GET /api/users/roles`
-List available roles.
+```http
+POST /api/campaigns/:campaignId/members
+```
 
-### Seller profile routes
-- `GET /api/users/sellers` — list seller profiles
-- `GET /api/users/sellers/:id` — seller details by user ID
-- `GET /api/users/sellers/:id/campaigns` — campaigns assigned to seller
-- `PUT /api/users/sellers/:id` — update seller profile
+Body:
 
-### Supervisor routes
-- `GET /api/users/sales-supervisors`
-- `GET /api/users/sales-supervisors/:id`
-- `PUT /api/users/sales-supervisors/:id`
+```json
+{
+  "lead_id": "11111111-1111-1111-1111-111111111111",
+  "campaing_id": "22222222-2222-2222-2222-222222222222",
+  "assigned_to": "33333333-3333-3333-3333-333333333333",
+  "source": "WHATSAPP",
+  "is_primary": true
+}
+```
 
-### Marketers
-- `GET /api/users/marketers`
-- `GET /api/users/marketers/:id`
+### Add an interaction or task
 
-## Products
+```http
+POST /api/campaigns/:campaignId/members/:memberId/interactions
+```
 
-### `GET /api/products`
-List products with edition metadata, category, pricing, and schedule details.
+Body:
 
-### `GET /api/products/:id`
-Get detailed product information.
+```json
+{
+  "notes": "Prospect responded to the WhatsApp follow-up and requested more information.",
+  "type": "WHATSAPP"
+}
+```
 
-### `POST /api/products`
-Create a product with sales pricing.
+```http
+POST /api/campaigns/:campaignId/members/:memberId/tasks
+```
 
-Example payload:
+Body:
+
+```json
+{
+  "title": "Call lead",
+  "content": "Confirm the course schedule and availability.",
+  "is_done": false,
+  "due_date": "2026-07-25"
+}
+```
+
+## Campaign example
+
+Endpoint:
+
+```http
+POST /api/campaigns
+```
+
+Body:
+
+```json
+{
+  "name": "Summer Funnel",
+  "initial_budget": 1500,
+  "start_date": "2026-07-01",
+  "end_date": "2026-09-30",
+  "platform": "FACEBOOK",
+  "is_organic": false,
+  "status": "INACTIVE",
+  "product_id": "44444444-4444-4444-4444-444444444444",
+  "supervisor_id": "55555555-5555-5555-5555-555555555555",
+  "seller_ids": [
+    "66666666-6666-6666-6666-666666666666",
+    "77777777-7777-7777-7777-777777777777"
+  ],
+  "meta_form_id": "form-123"
+}
+```
+
+## Product example
+
+Endpoint:
+
+```http
+POST /api/products
+```
+
+Body:
+
 ```json
 {
   "name": "Digital Marketing Bootcamp",
-  "edition_id": "uuid-edition",
-  "category_id": "uuid-category",
+  "edition_id": "88888888-8888-8888-8888-888888888888",
+  "category_id": "99999999-9999-9999-9999-999999999999",
   "presale_price": 1200,
   "discount_price": 1000,
   "discount_expires_at": "2026-08-01",
@@ -139,293 +275,133 @@ Example payload:
 }
 ```
 
-### `PUT /api/products/:id`
-Update product sales content and pricing.
+> Note: For hybrid editions, the API expects exactly two prices: one `VIRTUAL` and one `PRESENCIAL`. For non-hybrid editions, it expects a single `HEREDADO` price.
 
-### `DELETE /api/products/:id`
-Delete a product if it is not linked to existing orders.
+## Order example
 
-## Product Categories
+Endpoint:
 
-### `GET /api/products/categories`
-List categories.
+```http
+POST /api/orders
+```
 
-### `GET /api/products/categories/:id`
-Get category details.
+Body:
 
-### `POST /api/products/categories`
-Create a new category.
-
-### `PUT /api/products/categories/:id`
-Update a category.
-
-### `DELETE /api/products/categories/:id`
-Delete a category only when it has no linked products.
-
-## Orders
-
-### `GET /api/orders`
-List all orders.
-
-### `GET /api/orders/:id`
-Get order details including order lines, lead, seller, payments, and payment plans.
-
-### `POST /api/orders`
-Create an order.
-
-Example payload:
 ```json
 {
-  "lead_id": "uuid-lead",
-  "generated_by": "uuid-user",
-  "sub_total": "1200.00",
-  "total_amount": "1200.00",
-  "discount": "0.00",
-  "order_status": "PENDING",
+  "lead_id": "11111111-1111-1111-1111-111111111111",
+  "discount": "50.00",
   "order_items": [
     {
-      "product_id": "uuid-product",
-      "price": "1200.00"
+      "product_id": "44444444-4444-4444-4444-444444444444",
+      "attendance_mode": "HEREDADO"
     }
   ]
 }
 ```
 
-### `PUT /api/orders/:id`
-Update order fields and order items.
+## Payment example
 
-### `DELETE /api/orders/:id`
-Delete an order if it is not completed and contains no confirmed payments.
+Endpoint:
 
-## Payments
+```http
+POST /api/payments
+```
 
-### `GET /api/payments`
-List all payments with related order and schedule detail.
+Body:
 
-### `GET /api/payments/:id`
-Get a payment by ID.
-
-### `POST /api/payments`
-Create a payment.
-
-Example payload:
 ```json
 {
-  "order_id": "uuid-order",
+  "order_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
   "payment_date": "2026-07-18",
   "amount": 300,
   "payment_method": "ONLINE",
-  "payment_status": "PENDING",
+  "payment_status": "CONFIRMED",
   "type": "INSTALLMENTS",
+  "currency": "PEN",
   "payment_plan": {
     "total_installments": 4,
     "total_amount": 1200,
     "start_date": "2026-07-18",
     "scheduled_payments": [
-      { "due_date": "2026-08-18", "due_amount": 300, "status": "PENDING" }
+      {
+        "due_date": "2026-08-18",
+        "due_amount": 300
+      }
     ]
   }
 }
 ```
 
-### `PUT /api/payments/:id`
-Update payment fields.
+## Academic edition example
 
-### `DELETE /api/payments/:id`
-Delete a payment if it is not confirmed.
+Endpoint:
 
-## Leads and Campaign Members
+```http
+POST /api/academic/courses/editions
+```
 
-### `GET /api/leads`
-List leads with pagination and filters.
+Body:
 
-### `GET /api/leads/:id`
-Get lead details.
-
-### `POST /api/leads`
-Create a lead.
-
-Example payload:
 ```json
 {
-  "first_name": "Maria",
-  "last_name": "Lopez",
-  "email": "maria@example.com",
-  "phones": [
-    { "number": "912345678", "type": "WHATSAPP", "isPrincipal": true }
+  "course_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+  "modality": "HIBRIDO",
+  "edition_status": "SCHEDULED",
+  "edition_number": 1,
+  "edition_code": "2026-01",
+  "start_date": "2026-08-01",
+  "end_date": "2026-10-31",
+  "assignOnlyActiveProfessors": true,
+  "assigned_professors": [
+    {
+      "professor_id": "cccccccc-cccc-cccc-cccc-cccccccccccc"
+    }
   ],
-  "lead_status": "ACTIVE"
+  "schedules": [
+    {
+      "day_of_week": "MONDAY",
+      "type": "CLASS",
+      "slots": [
+        {
+          "start_time": "19:00",
+          "end_time": "21:00"
+        }
+      ]
+    }
+  ]
 }
 ```
 
-### `PUT /api/leads/:id`
-Update lead details.
+## Storefront and CMS
 
-### `DELETE /api/leads/:id`
-Soft delete a lead.
+### Storefront products
 
-### `PATCH /api/leads/:id/restore`
-Restore a soft-deleted lead.
-
-### Membership in campaigns
-- `GET /api/campaigns/:campaignId/members`
-- `POST /api/campaigns/:campaignId/members`
-- `PATCH /api/campaigns/:campaignId/members/:memberId/status`
-- `PATCH /api/campaigns/:campaignId/members/:memberId/reassign`
-- `PATCH /api/campaigns/:campaignId/members/reassign-bulk`
-
-### Interactions and tasks
-- `GET /api/campaigns/:campaignId/members/:memberId/interactions`
-- `POST /api/campaigns/:campaignId/members/:memberId/interactions`
-- `GET /api/campaigns/:campaignId/members/:memberId/tasks`
-- `POST /api/campaigns/:campaignId/members/:memberId/tasks`
-- `PATCH /api/campaigns/:campaignId/members/:memberId/tasks/:taskId`
-
-Interaction example:
-```json
-{
-  "notes": "Followed up via WhatsApp, next meeting scheduled.",
-  "type": "WHATSAPP"
-}
+```http
+GET /api/storefront/products
 ```
 
-Task example:
-```json
-{
-  "title": "Call lead",
-  "content": "Confirm availability for the next class.",
-  "is_done": false,
-  "due_date": "2026-07-20"
-}
+### CMS content
+
+Examples:
+
+```http
+GET /api/cms/products/commercial-content
+GET /api/cms/benefits
+GET /api/cms/certifications
+GET /api/cms/faqs
 ```
 
-## Campaigns
+## Environment configuration
 
-### `GET /api/campaigns`
-List campaigns with filters.
+Create the environment file used by the backend before starting it, for example in the backend folder or at the workspace root depending on your local setup. Configure the database connection and any secrets needed for authentication, webhooks, and external integrations.
 
-### `GET /api/campaigns/:id`
-Get campaign details.
+## Development notes
 
-### `POST /api/campaigns`
-Create a campaign.
+- The workspace uses shared packages and a generated database client.
+- The backend and frontends are designed to work together as a unified platform rather than as isolated apps.
+- If you update Prisma models, regenerate and apply migrations from the database package workflow used by the repo.
 
-Example payload:
-```json
-{
-  "name": "Summer Funnel",
-  "initial_budget": 1500,
-  "start_date": "2026-07-01",
-  "end_date": "2026-09-30",
-  "platform": "FACEBOOK",
-  "is_organic": false,
-  "status": "INACTIVE",
-  "product_id": "uuid-product",
-  "supervisor_id": "uuid-supervisor",
-  "seller_ids": ["uuid-seller-1", "uuid-seller-2"],
-  "meta_form_id": "form-123"
-}
-```
+## Status
 
-### `PUT /api/campaigns/:id`
-Update campaign data.
-
-### `DELETE /api/campaigns/:id`
-Delete a campaign.
-
-### Seller assignment
-- `POST /api/campaigns/:id/sellers`
-- `DELETE /api/campaigns/:id/sellers/:sellerId`
-
-### Meta lead sync
-- `POST /api/campaigns/:id/sync-meta-leads`
-
-## Academic Management
-
-### Courses
-- `GET /api/academic/courses`
-- `GET /api/academic/courses/:id`
-- `POST /api/academic/courses`
-- `PUT /api/academic/courses/:id`
-- `DELETE /api/academic/courses/:id`
-
-### Editions
-- `GET /api/academic/courses/editions`
-- `GET /api/academic/courses/editions/:id`
-- `POST /api/academic/courses/editions`
-- `PUT /api/academic/courses/editions/:id`
-- `DELETE /api/academic/courses/editions/:id`
-
-Edition creation supports nested schedules, slots, and assigned professors. It validates course existence and professor activation state.
-
-### Professors
-- `GET /api/academic/professors`
-- `GET /api/academic/professors/:id`
-- `POST /api/academic/professors`
-- `PUT /api/academic/professors/:id`
-- `DELETE /api/academic/professors/:id`
-- `PATCH /api/academic/professors/:id/desactivate`
-- `PATCH /api/academic/professors/:id/restore`
-
-## Storefront
-
-### `GET /api/storefront/products`
-Returns storefront-ready product listings with category, edition, and pricing information.
-
-## CMS Content
-
-### Product marketing content
-- `GET /api/cms/products/commercial-content`
-- `GET /api/cms/products/:id/commercial-content`
-- `PUT /api/cms/products/:id/commercial-content`
-
-### Benefits
-- `GET /api/cms/benefits`
-- `GET /api/cms/benefits/:id`
-- `POST /api/cms/benefits`
-- `PUT /api/cms/benefits/:id`
-- `DELETE /api/cms/benefits/:id`
-
-### Certifications
-- `GET /api/cms/certifications`
-- `GET /api/cms/certifications/:id`
-- `POST /api/cms/certifications`
-- `PUT /api/cms/certifications/:id`
-- `DELETE /api/cms/certifications/:id`
-
-### FAQs
-- `GET /api/cms/faqs`
-- `GET /api/cms/faqs/:id`
-- `POST /api/cms/faqs`
-- `PUT /api/cms/faqs/:id`
-- `DELETE /api/cms/faqs/:id`
-
-## Webhooks
-
-### Meta leadgen webhook
-- `GET /api/webhooks/meta/leadgen` — verification endpoint
-- `POST /api/webhooks/meta/leadgen` — lead event ingestion
-
-The webhook verifies `x-hub-signature-256` and processes leadgen changes from Meta.
-
-## Validation rules
-
-- Leads require at least one phone and exactly one `isPrincipal` phone.
-- `HIBRIDO` edition products require exactly two prices: `VIRTUAL` and `PRESENCIAL`.
-- Non-`HIBRIDO` edition products require exactly one `HEREDADO` price.
-- Discounts require `discount_expires_at`.
-- Orders require `order_items` when created.
-- Installment payments require a `payment_plan` with `scheduled_payments`.
-
-## Missing / incomplete areas
-
-- `backend/src/routes/bulk.route.ts` exists but is not currently mounted in routing.
-- `orders` and `payments` route files do not apply authentication directly in the route definitions, which may leave them exposed depending on route composition.
-- Storefront only includes product list; it lacks `GET /api/storefront/products/:id` and search/filter endpoints.
-- No dedicated payment gateway webhook besides Meta leadgen.
-- No explicit pagination/filter support in orders and payments listings.
-- There are several `TODO` comments in `backend/src/app.ts`, `backend/src/middlewares/auth.middleware.ts`, and academic edition routes.
-
-## Project info
-
-This project was created using `bun init` in Bun v1.2.8. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+The project now includes a multi-app architecture with a CRM backend, marketing website, management dashboard, and enrollment studio, making it suitable for end-to-end course and lead management workflows.
