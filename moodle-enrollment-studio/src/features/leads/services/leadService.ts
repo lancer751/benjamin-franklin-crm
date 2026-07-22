@@ -16,6 +16,19 @@ export type CreateLeadReq = InferRequestType<typeof api.leads.$post>["json"];
 export type UpdateLeadReq = InferRequestType<(typeof api.leads)[typeof UUID_PATH]["$put"]>["json"];
 export type LeadQuerySchemaInput = InferRequestType<typeof api.leads.$get>["query"];
 
+export interface LeadListQuery {
+  page?: string;
+  limit?: string;
+  search?: string;
+  status?: "ACTIVE" | "INACTIVE";
+  lead_status?: "ACTIVE" | "INACTIVE";
+  member_status?: string;
+  assigned_to?: string;
+  campaign_id?: string;
+  created_from?: string;
+  created_to?: string;
+}
+
 export interface LeadLookupResponse {
   success: boolean;
   code?: "LEAD_IDENTITY_CONFLICT";
@@ -49,7 +62,7 @@ export type UpdateMemberStatusReq = InferRequestType<typeof api.campaigns[typeof
 // ==========================================
 
 /** Obtiene la lista unificada y paginada de todos los leads */
-export const getAllLeads = async (query?: LeadQuerySchemaInput): Promise<GetAllLeadsRes> => {
+export const getAllLeads = async (query?: LeadListQuery): Promise<GetAllLeadsRes> => {
   const cleanQuery = (query && !("queryKey" in query)) ? query : undefined;
   const res = await api.leads.$get(cleanQuery ? { query: cleanQuery as any } : undefined);
   return await res.json();

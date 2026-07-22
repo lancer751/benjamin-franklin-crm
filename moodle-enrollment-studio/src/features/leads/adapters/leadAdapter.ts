@@ -53,6 +53,24 @@ export interface NormalizedLead {
   campaignsEngaging: NormalizedCampaignMember[];
 }
 
+export interface LeadPage {
+  leads: any[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+/** Reads the stable GET /api/leads response contract without changing its shape. */
+export const unpackLeadPage = (serverRes: any): LeadPage => {
+  const data = serverRes?.data;
+  return {
+    leads: Array.isArray(data?.leads) ? data.leads : [],
+    total: Number.isFinite(Number(data?.total)) ? Number(data.total) : 0,
+    page: Number.isFinite(Number(data?.page)) ? Number(data.page) : 1,
+    limit: Number.isFinite(Number(data?.limit)) ? Number(data.limit) : 20,
+  };
+};
+
 /**
  * Robustly unpacks leads array from Honos response variations.
  */
@@ -68,7 +86,8 @@ export const unpackLeads = (serverRes: any): any[] => {
 };
 
 export const normalizeAssignedCampaigns = (serverRes: any): NormalizedAssignedCampaign[] => {
-  const assignedCampaing = serverRes?.data?.assignedCampaing
+  const assignedCampaing = serverRes?.data?.data?.assignedCampaing
+    || serverRes?.data?.assignedCampaing
     || serverRes?.assignedCampaing
     || [];
 
@@ -76,7 +95,7 @@ export const normalizeAssignedCampaigns = (serverRes: any): NormalizedAssignedCa
   if (!Array.isArray(assignedCampaing)) return [];
 
   assignedCampaing.forEach((assignment: any) => {
-    const campaign = assignment?.campaign;
+    const campaign = assignment?.campaign || assignment?.campaing || assignment;
     if (campaign?.id) {
       campaignsById.set(campaign.id, {
         id: campaign.id,

@@ -1,0 +1,11 @@
+import { CalendarDays, Megaphone, UserRound, Waypoints } from "lucide-react";
+import { Badge } from "@/core/components/ui/badge";
+import { Button } from "@/core/components/ui/button";
+import { Card } from "@/core/components/ui/card";
+import type { LeadCampaignMember } from "./leadDetail.types";
+import { campaignFor, displayEnum, formatLeadDate, sellerNameFor } from "./leadDetail.formatters";
+
+export function LeadCampaignsTab({ members, selectedMemberId, onViewActivity }: { members: LeadCampaignMember[]; selectedMemberId: string; onViewActivity: (memberId: string) => void }) {
+  if (members.length === 0) return <Card className="p-10 text-center text-muted-foreground">Este prospecto todavía no está asociado a una campaña.</Card>;
+  return <div className="grid gap-4 md:grid-cols-2">{members.map((member) => { const campaign = campaignFor(member); return <Card key={member.id} className={`p-5 transition-colors ${selectedMemberId === member.id ? "border-primary/40" : ""}`}><div className="flex items-start justify-between gap-3"><div className="flex gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10"><Megaphone className="h-5 w-5 text-primary" /></div><div><h3 className="font-semibold">{campaign?.name || "Campaña sin nombre"}</h3><p className="mt-1 text-sm text-muted-foreground">{displayEnum(campaign?.platform)}</p></div></div>{member.is_primary && <Badge variant="secondary">Principal</Badge>}</div><dl className="mt-5 grid gap-4 sm:grid-cols-2"><div><dt className="text-sm text-muted-foreground">Etapa</dt><dd className="mt-1 font-medium">{displayEnum(member.status)}</dd></div><div><dt className="text-sm text-muted-foreground"><UserRound className="mr-1 inline h-4 w-4" />Asesor</dt><dd className="mt-1 font-medium">{sellerNameFor(member)}</dd></div><div><dt className="text-sm text-muted-foreground"><Waypoints className="mr-1 inline h-4 w-4" />Fuente</dt><dd className="mt-1 font-medium">{displayEnum(member.source)}</dd></div><div><dt className="text-sm text-muted-foreground"><CalendarDays className="mr-1 inline h-4 w-4" />Asociación</dt><dd className="mt-1 font-medium">{formatLeadDate(member.created_at)}</dd></div></dl><Button variant="link" className="mt-4 h-auto px-0" onClick={() => onViewActivity(member.id)}>Ver actividad</Button></Card>; })}</div>;
+}

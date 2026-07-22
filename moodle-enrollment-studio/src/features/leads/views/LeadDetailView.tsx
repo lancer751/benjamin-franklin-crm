@@ -1,288 +1,107 @@
-import { useState } from "react";
-import { ArrowLeft, Phone, Mail, MessageCircle, Calendar, User, MapPin, Briefcase, Plus, X, Globe, ShoppingCart, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getLeadById, getMemberInteractions, createMemberInteraction } from "../services/leadService";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/core/components/ui/button";
+import { Card } from "@/core/components/ui/card";
+import { Skeleton } from "@/core/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
+import { useAuthStore } from "@/store/useAuthStore";
+import { getSellerProfileById } from "@/features/users/services/userService";
+import { getLeadById, getMemberInteractions, getMemberTasks } from "../services/leadService";
+import { LeadDetailHeader } from "../components/lead-detail/LeadDetailHeader";
+import { LeadCommercialSummary } from "../components/lead-detail/LeadCommercialSummary";
+import { LeadInformationTab } from "../components/lead-detail/LeadInformationTab";
+import { LeadCampaignsTab } from "../components/lead-detail/LeadCampaignsTab";
+import { LeadInteractionsTab, LeadTasksTab } from "../components/lead-detail/LeadActivityTabs";
+import { principalPhoneFrom } from "../components/lead-detail/leadDetail.formatters";
+import type { LeadCampaignMember, LeadDetail, LeadInteraction, LeadTask } from "../components/lead-detail/leadDetail.types";
 
-const typeIcons: Record<string, { icon: typeof Phone; color: string; bg: string }> = {
-  CALL: { icon: Phone, color: "text-blue-600", bg: "bg-blue-100" },
-  WHATSAPP: { icon: MessageCircle, color: "text-emerald-600", bg: "bg-emerald-100" },
-  EMAIL: { icon: Mail, color: "text-purple-600", bg: "bg-purple-100" },
-  MEETING: { icon: Calendar, color: "text-orange-600", bg: "bg-orange-100" },
-  WEBSITE_FORM: { icon: Globe, color: "text-indigo-600", bg: "bg-indigo-100" },
-  SELL: { icon: ShoppingCart, color: "text-red-600", bg: "bg-red-100" },
+type DetailTab = "information" | "campaigns" | "interactions" | "tasks";
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
+const unwrapLead = (response: unknown): LeadDetail | null => {
+  if (!isRecord(response)) return null;
+  const candidate = isRecord(response.data) ? response.data : response;
+  return typeof candidate.id === "string" ? candidate as unknown as LeadDetail : null;
+};
+const unwrapList = <T,>(response: unknown, key: string): T[] => {
+  if (Array.isArray(response)) return response as T[];
+  if (!isRecord(response)) return [];
+  if (Array.isArray(response.data)) return response.data as T[];
+  if (isRecord(response.data) && Array.isArray(response.data[key])) return response.data[key] as T[];
+  return Array.isArray(response[key]) ? response[key] as T[] : [];
+};
+const profileIdFrom = (response: unknown) => {
+  if (!isRecord(response)) return "";
+  if (isRecord(response.data) && typeof response.data.id === "string") return response.data.id;
+  return typeof response.id === "string" ? response.id : "";
 };
 
-const stageColors: Record<string, string> = {
-  Prospecto: "bg-blue-100 text-blue-700",
-  Interesado: "bg-yellow-100 text-yellow-700",
-  Cliente: "bg-emerald-100 text-emerald-700",
-  PENDING: "bg-blue-100 text-blue-700",
-  CONTACTED: "bg-yellow-100 text-yellow-700",
-  CONVERTED: "bg-emerald-100 text-emerald-700",
-};
+const DetailSkeleton = () => <div className="space-y-5"><Skeleton className="h-9 w-28" /><Skeleton className="h-36 w-full rounded-xl" /><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-24 rounded-xl" />)}</div><div className="grid gap-4 md:grid-cols-3">{Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-64 rounded-xl" />)}</div></div>;
 
-const LeadDetailView = () => {
-  const { id } = useParams<{ id: string }>();
+export default function LeadDetailView() {
+  const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  
-  const [showModal, setShowModal] = useState(false);
-  const [newInteraction, setNewInteraction] = useState({ type: "CALL", notes: "" });
+  const user = useAuthStore((state) => state.user);
+  const isSalesRep = user?.role?.name === "SALES_REP";
+  const [activeTab, setActiveTab] = useState<DetailTab>("information");
+  const [selectedMemberId, setSelectedMemberId] = useState("");
 
-  // 1. Fetch Lead
-  const { data: leadDataRes, isLoading: isLoadingLead } = useQuery({
-    queryKey: ["lead", id],
-    queryFn: () => getLeadById(id!),
-    enabled: !!id,
+  const profileQuery = useQuery({
+    queryKey: ["seller-profile", user?.id],
+    queryFn: () => getSellerProfileById(user!.id),
+    enabled: isSalesRep && Boolean(user?.id) && !user?.seller?.id,
   });
+  const sellerId = user?.seller?.id || profileIdFrom(profileQuery.data);
+  const leadQuery = useQuery({ queryKey: ["lead", id], queryFn: () => getLeadById(id), enabled: Boolean(id) });
+  const lead = unwrapLead(leadQuery.data);
+  const allMembers = useMemo<LeadCampaignMember[]>(() => Array.isArray(lead?.campaignsEngaging) ? lead.campaignsEngaging : [], [lead]);
+  const members = useMemo(() => isSalesRep
+    ? allMembers.filter((member) => member.assigned_to === sellerId || member.seller?.id === sellerId)
+    : allMembers,
+  [allMembers, isSalesRep, sellerId]);
 
-  const lead = (leadDataRes as any)?.data || leadDataRes || null;
-  const activeCampaignMember = lead?.campaignsEngaging?.[0] || null;
-  const campaignId = lead?.primary_campaign_id || activeCampaignMember?.campaing_id;
-  const memberId = activeCampaignMember?.id;
+  useEffect(() => {
+    if (members.some((member) => member.id === selectedMemberId)) return;
+    const preferredMember = members.find((member) => member.is_primary) ?? members[0];
+    setSelectedMemberId(preferredMember?.id ?? "");
+  }, [members, selectedMemberId]);
 
-  // 2. Fetch Interactions
-  const { data: interactionsRes, isLoading: isLoadingInteractions } = useQuery({
-    queryKey: ["leadInteractions", id],
-    queryFn: () => getMemberInteractions(campaignId!, memberId!),
-    enabled: !!campaignId && !!memberId,
+  const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
+  const selectedCampaignId = selectedMember?.campaing?.id ?? selectedMember?.campaign?.id ?? selectedMember?.campaing_id ?? selectedMember?.campaign_id ?? "";
+  const interactionsQuery = useQuery({
+    queryKey: ["lead-interactions", selectedCampaignId, selectedMemberId],
+    queryFn: () => getMemberInteractions(selectedCampaignId, selectedMemberId),
+    enabled: Boolean(selectedCampaignId && selectedMemberId),
   });
-
-  const interactions = interactionsRes?.data || [];
-
-  // 3. Mutación para nueva interacción
-  const interactionMutation = useMutation({
-    mutationFn: (payload: { notes: string; type: string }) => 
-      createMemberInteraction(campaignId!, memberId!, payload.notes, payload.type, "SELLER_ID_TEMPORAL"),
-    onSuccess: () => {
-      toast.success("Interacción registrada correctamente");
-      queryClient.invalidateQueries({ queryKey: ["leadInteractions", id] });
-      setShowModal(false);
-      setNewInteraction({ type: "CALL", notes: "" });
-    },
-    onError: () => {
-      toast.error("Error al registrar la interacción");
-    }
+  const tasksQuery = useQuery({
+    queryKey: ["lead-tasks", selectedCampaignId, selectedMemberId],
+    queryFn: () => getMemberTasks(selectedCampaignId, selectedMemberId),
+    enabled: Boolean(selectedCampaignId && selectedMemberId),
   });
+  const interactions = unwrapList<LeadInteraction>(interactionsQuery.data, "interactions");
+  const tasks = unwrapList<LeadTask>(tasksQuery.data, "tasks");
 
-  const handleCreateInteraction = () => {
-    if (!newInteraction.notes.trim()) {
-      toast.error("Debes agregar una nota descriptiva");
-      return;
-    }
-    
-    if (!campaignId || !memberId) {
-      toast.error("No se encontró una campaña activa asociada para registrar la interacción.");
-      return;
-    }
-    
-    interactionMutation.mutate({
-      type: newInteraction.type,
-      notes: newInteraction.notes,
-    });
-  };
+  if (leadQuery.isLoading || profileQuery.isLoading) return <DetailSkeleton />;
+  if (leadQuery.isError || !lead || (isSalesRep && !sellerId)) return <Card className="p-10 text-center"><p className="font-semibold text-destructive">No fue posible cargar este prospecto.</p><div className="mt-4 flex justify-center gap-2"><Button variant="outline" onClick={() => navigate(-1)}>Volver</Button><Button onClick={() => void leadQuery.refetch()}>Reintentar</Button></div></Card>;
+  if (isSalesRep && allMembers.length > 0 && members.length === 0) return <Card className="p-10 text-center"><p className="font-semibold text-destructive">No tienes acceso a este prospecto.</p><p className="mt-1 text-sm text-muted-foreground">No está asignado a tu perfil de vendedor.</p><Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>Volver</Button></Card>;
 
-  if (isLoadingLead || isLoadingInteractions) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-muted-foreground">
-        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-        <p>Cargando información del prospecto...</p>
-      </div>
-    );
-  }
+  const phones = Array.isArray(lead.phones) ? lead.phones : [];
+  const principalPhone = principalPhoneFrom(phones);
+  const additionalPhones = phones.filter((phone) => phone !== principalPhone);
+  const showActivity = (memberId: string) => { setSelectedMemberId(memberId); setActiveTab("interactions"); };
 
-  if (!lead) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-destructive">
-        <p className="font-bold text-lg">No se pudo cargar el prospecto o no existe.</p>
-        <button onClick={() => navigate("/admin/prospectos")} className="btn-secondary mt-4">Volver a Prospectos</button>
-      </div>
-    );
-  }
-
-  const renderValue = (value: any) => {
-    if (value === null || value === undefined || value === "") {
-      return <span className="text-muted-foreground/50">No especificado</span>;
-    }
-    // Traducir géneros si vienen en ENUM
-    if (value === "MALE") return "Masculino";
-    if (value === "FEMALE") return "Femenino";
-    if (value === "NOT_SPECIFIED") return <span className="text-muted-foreground/50">No especificado</span>;
-    return value;
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Back */}
-      <button onClick={() => navigate("/prospectos")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft size={16} /> Volver a Prospectos
-      </button>
-
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary uppercase">
-            {lead.first_name?.[0] || ""}{lead.last_name?.[0] || ""}
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{lead.first_name} {lead.last_name}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{lead.id} {lead.origin && `• ${lead.origin}`}</p>
-            <span className={`mt-1.5 inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide ${stageColors[lead.lead_status || lead.status || "Prospecto"] || "bg-muted text-muted-foreground"}`}>
-              {lead.lead_status || lead.status || "Prospecto"}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {lead.cellphone && <button className="btn-secondary text-xs px-3 py-2"><Phone size={14} /> Llamar</button>}
-          {lead.cellphone && <button className="btn-secondary text-xs px-3 py-2"><MessageCircle size={14} /> WhatsApp</button>}
-          <button className="btn-primary text-xs px-3 py-2" onClick={() => navigate('/admin/ordenes/nueva')}>Crear Orden</button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-5 gap-6">
-        {/* Left: Profile */}
-        <div className="col-span-2 space-y-6">
-          <div className="rounded-xl bg-card border border-border p-6">
-            <h3 className="font-bold text-foreground mb-4">Información Personal</h3>
-            <div className="space-y-4">
-              {[
-                { icon: Mail, label: "Email", value: lead.email },
-                { icon: User, label: "DNI", value: lead.dni },
-                { icon: User, label: "Género", value: lead.gender },
-                { icon: Briefcase, label: "Profesión", value: lead.profession },
-                { icon: MapPin, label: "Dirección", value: lead.address },
-              ].map((f, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <f.icon size={16} className="text-muted-foreground mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{f.label}</p>
-                    <p className="text-sm text-foreground mt-0.5">{renderValue(f.value)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-card border border-border p-6">
-            <h3 className="font-bold text-foreground mb-4">Interés Comercial</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">ID Campaña</span>
-                <span className="font-medium text-foreground">{renderValue(lead.primary_campaign_id)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Moodle User ID</span>
-                <span className="font-medium text-foreground">{renderValue(lead.moodle_user_id)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Fecha registro</span>
-                <span className="font-medium text-foreground">
-                  {lead.created_at ? new Date(lead.created_at).toLocaleDateString("es-PE", { year: 'numeric', month: 'long', day: 'numeric' }) : renderValue(null)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Timeline */}
-        <div className="col-span-3">
-          <div className="rounded-xl bg-card border border-border p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-foreground">Línea de Tiempo</h3>
-              <button onClick={() => setShowModal(true)} className="btn-primary text-xs px-3 py-2">
-                <Plus size={14} /> Nueva Interacción
-              </button>
-            </div>
-
-            <div className="relative">
-              {/* Vertical line */}
-              {interactions.length > 0 && <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />}
-
-              <div className="space-y-6">
-                {interactions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No hay interacciones registradas.</p>
-                ) : (
-                  interactions.map((event: any, i: number) => {
-                    const typeInfo = typeIcons[event.type] || { icon: MessageCircle, color: "text-gray-600", bg: "bg-gray-100" };
-                    const Icon = typeInfo.icon;
-                    return (
-                      <div key={event.id || i} className="relative flex gap-4 pl-2">
-                        <div className={`relative z-10 h-10 w-10 rounded-full ${typeInfo.bg} flex items-center justify-center shrink-0`}>
-                          <Icon size={16} className={typeInfo.color} />
-                        </div>
-                        <div className="flex-1 pb-2">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide ${typeInfo.bg} ${typeInfo.color}`}>
-                                {event.type}
-                              </span>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">
-                                {event.created_at ? new Date(event.created_at).toLocaleString("es-PE") : "Desconocido"}
-                              </p>
-                            </div>
-                          </div>
-                          <p className="text-sm text-foreground mt-2">{event.notes}</p>
-                          <p className="text-xs text-muted-foreground mt-1 font-medium">Por: {event.created_by || "Sistema"}</p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* New Interaction Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-container max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h2 className="text-lg font-bold text-foreground">Nueva Interacción</h2>
-              <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={interactionMutation.isPending}>
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="form-label">Tipo</label>
-                <select className="form-select" value={newInteraction.type} onChange={(e) => setNewInteraction(p => ({ ...p, type: e.target.value }))} disabled={interactionMutation.isPending}>
-                  <option value="CALL">Llamada Telefónica</option>
-                  <option value="WHATSAPP">Mensaje de WhatsApp</option>
-                  <option value="EMAIL">Correo Electrónico</option>
-                  <option value="MEETING">Reunión / Videollamada</option>
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Notas descriptivas</label>
-                <textarea 
-                  className="form-input min-h-[120px]" 
-                  placeholder="Detalle de la interacción... (Max 255 caracteres)" 
-                  maxLength={255}
-                  value={newInteraction.notes} 
-                  onChange={(e) => setNewInteraction(p => ({ ...p, notes: e.target.value }))} 
-                  disabled={interactionMutation.isPending}
-                />
-                <p className="text-xs text-muted-foreground mt-1 text-right">{newInteraction.notes.length}/255</p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 p-6 border-t border-border bg-muted/30">
-              <button className="btn-secondary" onClick={() => setShowModal(false)} disabled={interactionMutation.isPending}>Cancelar</button>
-              <button className="btn-primary" onClick={handleCreateInteraction} disabled={interactionMutation.isPending}>
-                {interactionMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Registrar Interacción
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default LeadDetailView;
+  return <div className="space-y-5">
+    <Button variant="ghost" className="gap-2 px-0" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" />Volver</Button>
+    <LeadDetailHeader lead={lead} phone={principalPhone?.number} onEdit={() => navigate(`/prospectos/${id}/editar`)} />
+    <LeadCommercialSummary member={selectedMember} />
+    <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as DetailTab)}>
+      <div className="overflow-x-auto pb-1"><TabsList className="inline-flex h-11 min-w-full justify-start sm:grid sm:grid-cols-4"><TabsTrigger className="min-w-32" value="information">Información</TabsTrigger><TabsTrigger className="min-w-32" value="campaigns">Campañas ({members.length})</TabsTrigger><TabsTrigger className="min-w-32" value="interactions">Interacciones</TabsTrigger><TabsTrigger className="min-w-32" value="tasks">Tareas</TabsTrigger></TabsList></div>
+      <TabsContent value="information" className="mt-4"><LeadInformationTab lead={lead} principalPhone={principalPhone} additionalPhones={additionalPhones} /></TabsContent>
+      <TabsContent value="campaigns" className="mt-4"><LeadCampaignsTab members={members} selectedMemberId={selectedMemberId} onViewActivity={showActivity} /></TabsContent>
+      <TabsContent value="interactions" className="mt-4"><LeadInteractionsTab members={members} selectedMemberId={selectedMemberId} onChange={setSelectedMemberId} interactions={interactions} isLoading={interactionsQuery.isLoading} isError={interactionsQuery.isError} onRetry={() => void interactionsQuery.refetch()} /></TabsContent>
+      <TabsContent value="tasks" className="mt-4"><LeadTasksTab members={members} selectedMemberId={selectedMemberId} onChange={setSelectedMemberId} tasks={tasks} isLoading={tasksQuery.isLoading} isError={tasksQuery.isError} onRetry={() => void tasksQuery.refetch()} /></TabsContent>
+    </Tabs>
+  </div>;
+}
