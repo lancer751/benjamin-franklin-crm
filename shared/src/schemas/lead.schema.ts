@@ -147,13 +147,21 @@ export const UpdateTaskSchema = TaskBaseSchema.partial().refine(
 
 // ── Query schemas ─────────────────────────────────────────────────────────────
 
+const LeadQueryDateSchema = z.union([
+  z.iso.date(),
+  z.iso.datetime({ offset: true, local: true }),
+]);
+
 export const LeadQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
   status: LeadStatusSchema.optional(),
   campaign_id: UUIDField.optional(),
-  assigned_to: z.string().optional(),
+  member_status: CampaignMemberStatusSchema.optional(),
+  assigned_to: z.union([UUIDField, z.literal("unassigned")]).optional(),
+  created_from: LeadQueryDateSchema.optional(),
+  created_to: LeadQueryDateSchema.optional(),
 });
 
 export const CampaignMemberQuerySchema = z.object({

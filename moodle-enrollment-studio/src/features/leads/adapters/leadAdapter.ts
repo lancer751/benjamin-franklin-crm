@@ -2,6 +2,7 @@ export interface NormalizedCampaign {
   id: string;
   name: string;
   status: string;
+  platform?: string;
   campaing_name?: string;
   relatedProduct?: {
     name?: string;
@@ -35,6 +36,17 @@ export interface NormalizedAssignedCampaign {
   name: string;
 }
 
+export interface ProspectSellerOption {
+  id: string;
+  name: string;
+}
+
+export interface NormalizedLeadPhone {
+  number: string;
+  type: string;
+  isPrincipal: boolean;
+}
+
 export interface NormalizedLead {
   id: string;
   first_name: string;
@@ -49,8 +61,24 @@ export interface NormalizedLead {
   lead_status: string;
   primary_campaign_id: string;
   courseName: string;
-  phones: { number: string; type: string }[];
+  phones: NormalizedLeadPhone[];
   campaignsEngaging: NormalizedCampaignMember[];
+}
+
+export interface ProspectPresentationRow {
+  id: string;
+  createdAt: string;
+  fullName: string;
+  initials: string;
+  dni: string;
+  email: string;
+  phone: string;
+  campaignName: string;
+  campaignPlatform: string;
+  additionalCampaignCount: number;
+  additionalCampaignNames: string[];
+  memberStatus: string;
+  sellerName: string;
 }
 
 export interface LeadPage {
@@ -59,6 +87,97 @@ export interface LeadPage {
   page: number;
   limit: number;
 }
+
+export const normalizeCampaignOptions = (serverRes: any): NormalizedAssignedCampaign[] => {
+  const campaigns = serverRes?.data?.campaings
+    || serverRes?.campaings
+    || serverRes?.data?.data?.campaings
+    || [];
+
+  const campaignsById = new Map<string, NormalizedAssignedCampaign>();
+  if (!Array.isArray(campaigns)) return [];
+
+  campaigns.forEach((campaign: any) => {
+    if (campaign?.id) {
+      campaignsById.set(campaign.id, {
+        id: campaign.id,
+        name: campaign.name?.trim() || campaign.campaing_name?.trim() || "Sin campaña",
+      });
+    }
+  });
+
+  return Array.from(campaignsById.values());
+};
+
+export const normalizeSellerOptionsFromCampaigns = (serverRes: any): ProspectSellerOption[] => {
+  const campaigns = serverRes?.data?.campaings
+    || serverRes?.campaings
+    || serverRes?.data?.data?.campaings
+    || [];
+  const sellersById = new Map<string, ProspectSellerOption>();
+
+  if (!Array.isArray(campaigns)) return [];
+
+  campaigns.forEach((campaign: any) => {
+    const assignments = Array.isArray(campaign?.sellersOnCampaign)
+      ? campaign.sellersOnCampaign
+      : [];
+    assignments.forEach((assignment: any) => {
+      const id = assignment?.seller_id || assignment?.seller?.id;
+      const user = assignment?.seller?.user;
+      const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim();
+      if (id && name) sellersById.set(id, { id, name });
+    });
+  });
+
+  return Array.from(sellersById.values()).sort((a, b) => a.name.localeCompare(b.name, "es"));
+};
+
+export const resolvePresentationMember = (
+  lead: NormalizedLead,
+  campaignId?: string,
+): NormalizedCampaignMember | undefined => {
+  const members = lead.campaignsEngaging || [];
+  if (campaignId) {
+    return members.find((member) => member.campaign_id === campaignId || member.campaing_id === campaignId);
+  }
+  return members.find((member) => member.is_primary) || members[0];
+};
+
+export const adaptProspectRows = (
+  leads: NormalizedLead[],
+  activeCampaignId?: string,
+): ProspectPresentationRow[] => leads.map((lead) => {
+  const member = resolvePresentationMember(lead, activeCampaignId);
+  const phone = lead.phones.find((item) => item.isPrincipal) || lead.phones[0];
+  const initials = [lead.first_name, lead.last_name]
+    .filter(Boolean)
+    .map((value) => value.charAt(0).toUpperCase())
+    .join("");
+  const additionalCampaignNames = activeCampaignId
+    ? []
+    : lead.campaignsEngaging
+      .filter((item) => item.id !== member?.id)
+      .map((item) => item.campaign.name)
+      .filter(Boolean);
+  const sellerUser = member?.seller?.user;
+
+  return {
+    id: lead.id,
+    createdAt: lead.created_at,
+    fullName: lead.fullName || "Sin nombre",
+    initials: initials || "—",
+    dni: lead.dni || "Sin DNI",
+    email: lead.email || "Sin correo",
+    phone: phone?.number || "Sin celular",
+    campaignName: member?.campaign.name || "Sin campaña",
+    campaignPlatform: member?.campaign.platform || "",
+    additionalCampaignCount: additionalCampaignNames.length,
+    additionalCampaignNames,
+    memberStatus: member?.status || "",
+    sellerName: [sellerUser?.first_name, sellerUser?.last_name].filter(Boolean).join(" ") || "Sin asignar",
+  };
+});
 
 /** Reads the stable GET /api/leads response contract without changing its shape. */
 export const unpackLeadPage = (serverRes: any): LeadPage => {
@@ -110,11 +229,12 @@ export const normalizeAssignedCampaigns = (serverRes: any): NormalizedAssignedCa
 /**
  * Safely sanitizes the phone list.
  */
-export const sanitizePhones = (phones: any[] | null | undefined): { number: string; type: string }[] => {
+export const sanitizePhones = (phones: any[] | null | undefined): NormalizedLeadPhone[] => {
   if (!Array.isArray(phones)) return [];
   return phones.map(p => ({
     number: p?.number || "S/N",
-    type: p?.type || "CELULAR"
+    type: p?.type || "CELULAR",
+    isPrincipal: Boolean(p?.isPrincipal),
   }));
 };
 
@@ -132,6 +252,7 @@ export const adaptCampaignMembers = (rawMembers: any[]): NormalizedLead[] => {
       id: rawC.id || member.campaing_id || lead.primary_campaign_id || "",
       name: cName,
       status: rawC.status || "ACTIVE",
+      platform: rawC.platform,
       campaing_name: rawC.campaing_name || rawC.name,
       relatedProduct: rawC.relatedProduct
     };
@@ -198,6 +319,7 @@ export const adaptLeads = (rawLeads: any[]): NormalizedLead[] => {
         id: rawC.id || member.campaing_id || "",
         name: cName,
         status: rawC.status || "ACTIVE",
+        platform: rawC.platform,
         campaing_name: rawC.campaing_name || rawC.name,
         relatedProduct: rawC.relatedProduct
       };

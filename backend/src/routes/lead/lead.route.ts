@@ -61,15 +61,65 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
     verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
   )
   .get("/", zValidator("query", LeadQuerySchema), async (c) => {
-    const repo = leadRepository(c.get("prisma"));
-    const result = await repo.findMany(c.req.valid("query"));
+    const prisma = c.get("prisma");
+    const query = c.req.valid("query");
+
+    let effectiveQuery = query;
+
+    if (c.var.authUser.role === "SALES_REP") {
+      const sellerProfile = await prisma.sellerProfile.findUnique({
+        where: { user_id: c.var.authUser.userId },
+        select: { id: true },
+      });
+
+      if (!sellerProfile) {
+        throw new HTTPException(403, { message: "Seller profile not found" });
+      }
+
+      if (query.campaign_id) {
+        const campaignAssignment = await prisma.campaignSeller.findUnique({
+          where: {
+            campaign_id_seller_id: {
+              campaign_id: query.campaign_id,
+              seller_id: sellerProfile.id,
+            },
+          },
+          select: { id: true },
+        });
+
+        if (!campaignAssignment) {
+          throw new HTTPException(403, {
+            message: "Seller is not assigned to this campaign",
+          });
+        }
+      }
+
+      effectiveQuery = {
+        ...query,
+        assigned_to: sellerProfile.id,
+      };
+    }
+
+    if (
+      effectiveQuery.assigned_to === "unassigned" &&
+      (effectiveQuery.campaign_id || effectiveQuery.member_status)
+    ) {
+      throw new HTTPException(422, {
+        message: "Unassigned leads cannot have campaign or member status filters",
+      });
+    }
+
+    const repo = leadRepository(prisma);
+    const result = await repo.findMany(effectiveQuery);
     return c.json<SuccessResponse<typeof result>>(
       { success: true, message: "Leads retrieved", data: result },
       200,
     );
   })
 
-  .get("/lookup", zValidator("query", LeadLookupQuery), async (c) => {
+  .get("/lookup", 
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR", "SALES_REP"),
+    zValidator("query", LeadLookupQuery), async (c) => {
     const query = c.req.valid("query");
     const phoneDigits = query.phone?.replace(/\D/g, "") ?? "";
     const phone = phoneDigits ? phoneDigits.slice(-9) : undefined;

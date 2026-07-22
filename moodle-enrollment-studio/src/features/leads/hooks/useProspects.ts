@@ -1,96 +1,170 @@
-import { useDeferredValue, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
+import { getCampaigns } from "@/features/campaigns/services/campaignService";
+import { getSellerCampaigns } from "@/features/users/services/userService";
 import { getAllLeads, type LeadListQuery } from "../services/leadService";
-import { adaptLeads, unpackLeadPage } from "../adapters/leadAdapter";
+import {
+  adaptLeads,
+  adaptProspectRows,
+  normalizeAssignedCampaigns,
+  normalizeCampaignOptions,
+  normalizeSellerOptionsFromCampaigns,
+  unpackLeadPage,
+} from "../adapters/leadAdapter";
 
 const PAGE_SIZE = 20;
-const LEAD_STATUSES = new Set(["ACTIVE", "INACTIVE"]);
+const SEARCH_DEBOUNCE_MS = 350;
 
 export function useProspects() {
   const user = useAuthStore((state) => state.user);
   const role = user?.role?.name ?? "";
   const isSalesRep = role === "SALES_REP";
-  const canSeeAdvisors = role === "ADMIN" || role === "SALES_SUPERVISOR";
+  const canViewSeller = role === "ADMIN" || role === "SALES_SUPERVISOR" || role === "MARKETING";
   const sellerId = user?.seller?.id ?? "";
   const [requestedPage, setRequestedPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("ALL");
-  const [campaignId, setCampaignId] = useState("ALL");
-  const [advisorId, setAdvisorId] = useState("ALL");
-  const [registeredOn, setRegisteredOn] = useState("");
-  const deferredSearch = useDeferredValue(search.trim());
+  const [search, setSearchValue] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [leadStatus, setLeadStatusValue] = useState("ALL");
+  const [memberStatus, setMemberStatusValue] = useState("ALL");
+  const [campaignId, setCampaignIdValue] = useState("ALL");
+  const [advisorId, setAdvisorIdValue] = useState("ALL");
+  const [registeredOn, setRegisteredOnValue] = useState("");
 
-  const query = useMemo<LeadListQuery>(() => ({
+  useEffect(() => {
+    const timeoutId = window.setTimeout(
+      () => setDebouncedSearch(search.trim()),
+      SEARCH_DEBOUNCE_MS,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [search]);
+
+  const createdFrom = registeredOn ? `${registeredOn}T00:00:00.000` : "";
+  const createdTo = registeredOn ? `${registeredOn}T23:59:59.999` : "";
+
+  const leadQuery = useMemo<LeadListQuery>(() => ({
     page: String(requestedPage),
     limit: String(PAGE_SIZE),
-    ...(deferredSearch && { search: deferredSearch }),
-    ...(status !== "ALL" && LEAD_STATUSES.has(status) && { status: status as "ACTIVE" | "INACTIVE" }),
-    ...(status !== "ALL" && !LEAD_STATUSES.has(status) && { member_status: status }),
+    ...(debouncedSearch && { search: debouncedSearch }),
+    ...(leadStatus !== "ALL" && { status: leadStatus as "ACTIVE" | "INACTIVE" }),
+    ...(memberStatus !== "ALL" && { member_status: memberStatus }),
     ...(campaignId !== "ALL" && { campaign_id: campaignId }),
-    ...(registeredOn && {
-      created_from: `${registeredOn}T00:00:00.000`,
-      created_to: `${registeredOn}T23:59:59.999`,
-    }),
-    ...(isSalesRep && sellerId && { assigned_to: sellerId }),
-    ...(!isSalesRep && advisorId !== "ALL" && { assigned_to: advisorId }),
-  }), [advisorId, campaignId, deferredSearch, isSalesRep, registeredOn, requestedPage, sellerId, status]);
+    ...(createdFrom && createdTo && { created_from: createdFrom, created_to: createdTo }),
+    ...(canViewSeller && advisorId !== "ALL" && { assigned_to: advisorId }),
+  }), [advisorId, campaignId, canViewSeller, createdFrom, createdTo, debouncedSearch, leadStatus, memberStatus, requestedPage]);
+
+  const sellerCampaignsQuery = useQuery({
+    queryKey: ["seller-campaigns", sellerId],
+    queryFn: () => getSellerCampaigns(sellerId),
+    enabled: isSalesRep && Boolean(sellerId),
+  });
+
+  const allowedCampaignsQuery = useQuery({
+    queryKey: ["campaigns", "prospects-selector", 1, 100],
+    queryFn: () => getCampaigns({ page: 1, limit: 100 }),
+    enabled: Boolean(user) && !isSalesRep,
+  });
 
   const leadsQuery = useQuery({
-    queryKey: ["leads", "crm", query],
-    queryFn: () => getAllLeads(query),
-    enabled: !isSalesRep || Boolean(sellerId),
+    queryKey: [
+      "leads",
+      "crm",
+      requestedPage,
+      PAGE_SIZE,
+      debouncedSearch,
+      campaignId,
+      memberStatus,
+      leadStatus,
+      createdFrom,
+      createdTo,
+      canViewSeller ? advisorId : "self-or-all",
+    ],
+    queryFn: () => getAllLeads(leadQuery),
+    enabled: Boolean(user),
+    placeholderData: keepPreviousData,
   });
 
   const pageData = useMemo(() => unpackLeadPage(leadsQuery.data), [leadsQuery.data]);
   const leads = useMemo(() => adaptLeads(pageData.leads), [pageData.leads]);
-  const campaigns = useMemo(() => {
-    const values = new Map<string, string>();
-    leads.forEach((lead) => lead.campaignsEngaging.forEach((member) => {
-      if (member.campaign_id) values.set(member.campaign_id, member.campaign.name || "Sin campaña");
-    }));
-    if (campaignId !== "ALL" && !values.has(campaignId)) values.set(campaignId, "Campaña seleccionada");
-    return Array.from(values, ([id, name]) => ({ id, name }));
-  }, [campaignId, leads]);
-  const sellers = useMemo(() => {
-    const values = new Map<string, { id: string; user: { first_name: string; last_name: string } }>();
-    leads.forEach((lead) => lead.campaignsEngaging.forEach((member) => {
-      if (member.seller?.id) values.set(member.seller.id, {
-        id: member.seller.id,
-        user: {
-          first_name: member.seller.user?.first_name || "",
-          last_name: member.seller.user?.last_name || "",
-        },
-      });
-    }));
-    return Array.from(values.values());
-  }, [leads]);
+  const rows = useMemo(
+    () => adaptProspectRows(leads, campaignId === "ALL" ? undefined : campaignId),
+    [campaignId, leads],
+  );
+  const campaigns = useMemo(
+    () => isSalesRep
+      ? normalizeAssignedCampaigns(sellerCampaignsQuery.data)
+      : normalizeCampaignOptions(allowedCampaignsQuery.data),
+    [allowedCampaignsQuery.data, isSalesRep, sellerCampaignsQuery.data],
+  );
+  const sellers = useMemo(
+    () => canViewSeller ? normalizeSellerOptionsFromCampaigns(allowedCampaignsQuery.data) : [],
+    [allowedCampaignsQuery.data, canViewSeller],
+  );
   const totalPages = Math.max(1, Math.ceil(pageData.total / Math.max(1, pageData.limit)));
+  const hasActiveFilters = Boolean(
+    search.trim()
+    || leadStatus !== "ALL"
+    || memberStatus !== "ALL"
+    || campaignId !== "ALL"
+    || registeredOn
+    || (canViewSeller && advisorId !== "ALL"),
+  );
+  const description = isSalesRep
+    ? "Consulta, filtra y da seguimiento a tus prospectos asignados."
+    : role === "ADMIN" || role === "SALES_SUPERVISOR"
+      ? "Consulta, filtra y supervisa los prospectos y su asignación comercial."
+      : "Consulta, filtra y da seguimiento a los prospectos registrados.";
+
+  const resetPage = () => setRequestedPage(1);
+  const clearFilters = () => {
+    setSearchValue("");
+    setDebouncedSearch("");
+    setLeadStatusValue("ALL");
+    setMemberStatusValue("ALL");
+    setCampaignIdValue("ALL");
+    setAdvisorIdValue("ALL");
+    setRegisteredOnValue("");
+    resetPage();
+  };
 
   return {
     role,
     isSalesRep,
-    canSeeAdvisors,
-    sellerId,
+    canViewSeller,
+    description,
     campaigns,
     sellers,
-    leads,
+    rows,
     page: pageData.page || requestedPage,
     total: pageData.total,
     limit: pageData.limit,
     totalPages,
     search,
-    status,
+    leadStatus,
+    memberStatus,
     campaignId,
     advisorId,
     registeredOn,
+    hasActiveFilters,
     setPage: setRequestedPage,
-    setSearch: (value: string) => { setSearch(value); setRequestedPage(1); },
-    setStatus: (value: string) => { setStatus(value); setRequestedPage(1); },
-    setCampaignId: (value: string) => { setCampaignId(value); setRequestedPage(1); },
-    setAdvisorId: (value: string) => { setAdvisorId(value); setRequestedPage(1); },
-    setRegisteredOn: (value: string) => { setRegisteredOn(value); setRequestedPage(1); },
-    isLoading: leadsQuery.isLoading || (isSalesRep && !sellerId),
+    setSearch: (value: string) => {
+      setSearchValue(value);
+      if (!value.trim()) setDebouncedSearch("");
+      resetPage();
+    },
+    setLeadStatus: (value: string) => { setLeadStatusValue(value); resetPage(); },
+    setMemberStatus: (value: string) => { setMemberStatusValue(value); resetPage(); },
+    setCampaignId: (value: string) => { setCampaignIdValue(value); resetPage(); },
+    setAdvisorId: (value: string) => { setAdvisorIdValue(value); resetPage(); },
+    setRegisteredOn: (value: string) => { setRegisteredOnValue(value); resetPage(); },
+    clearFilters,
+    retryLeads: () => leadsQuery.refetch(),
+    isLoading: leadsQuery.isLoading,
+    isFetching: leadsQuery.isFetching,
     isError: leadsQuery.isError,
+    areCampaignsLoading: isSalesRep ? sellerCampaignsQuery.isLoading : allowedCampaignsQuery.isLoading,
+    campaignsError: isSalesRep ? sellerCampaignsQuery.isError : allowedCampaignsQuery.isError,
   };
 }
+
+export type ProspectsController = ReturnType<typeof useProspects>;

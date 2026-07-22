@@ -94,21 +94,64 @@ export function leadRepository(prisma: PrismaClient) {
       };
     },
 
-    async findMany({ page, limit, search, status, assigned_to }: LeadQuery) {
+    async findMany({
+      page,
+      limit,
+      search,
+      status,
+      assigned_to,
+      campaign_id,
+      member_status,
+      created_from,
+      created_to,
+    }: LeadQuery) {
       const skip = (page - 1) * limit;
-      const andConditions: any[] = [
-        { lead_status: status ?? "ACTIVE" }
+      const andConditions: LeadWhereInput[] = [
+        { deleted_at: null },
+        { lead_status: status ?? "ACTIVE" },
       ];
+
+      if (created_from || created_to) {
+        const createdAtFilter: { gte?: Date; lte?: Date } = {};
+
+        if (created_from) {
+          createdAtFilter.gte = /^\d{4}-\d{2}-\d{2}$/.test(created_from)
+            ? new Date(`${created_from}T00:00:00.000`)
+            : new Date(created_from);
+        }
+
+        if (created_to) {
+          createdAtFilter.lte = /^\d{4}-\d{2}-\d{2}$/.test(created_to)
+            ? new Date(`${created_to}T23:59:59.999`)
+            : new Date(created_to);
+        }
+
+        andConditions.push({ created_at: createdAtFilter });
+      }
 
       if (search) {
         andConditions.push({
           OR: [
-            { email: { contains: search, mode: "insensitive" as const } },
             { first_name: { contains: search, mode: "insensitive" as const } },
+            { middle_name: { contains: search, mode: "insensitive" as const } },
             { last_name: { contains: search, mode: "insensitive" as const } },
+            { email: { contains: search, mode: "insensitive" as const } },
+            { secondary_email: { contains: search, mode: "insensitive" as const } },
+            { dni: { contains: search, mode: "insensitive" as const } },
+            {
+              phones: {
+                some: { number: { contains: search, mode: "insensitive" as const } },
+              },
+            },
           ]
         });
       }
+
+      const campaignMemberFilter = {
+        ...(assigned_to && assigned_to !== "unassigned" && { assigned_to }),
+        ...(campaign_id && { campaing_id: campaign_id }),
+        ...(member_status && { status: member_status }),
+      };
 
       if (assigned_to === "unassigned") {
         andConditions.push({
@@ -116,18 +159,22 @@ export function leadRepository(prisma: PrismaClient) {
             none: {}
           }
         });
-      } else if (assigned_to) {
+      } else if (Object.keys(campaignMemberFilter).length > 0) {
         andConditions.push({
           campaignsEngaging: {
-            some: {
-              assigned_to,
-            }
+            some: campaignMemberFilter,
           }
         });
       }
 
       const where: LeadWhereInput = {
         AND: andConditions
+      };
+
+      const includeMemberFilter = {
+        ...(assigned_to && assigned_to !== "unassigned" && { assigned_to }),
+        ...(campaign_id && { campaing_id: campaign_id }),
+        ...(member_status && { status: member_status }),
       };
 
       const [leads, total] = await Promise.all([
@@ -139,13 +186,18 @@ export function leadRepository(prisma: PrismaClient) {
           include: {
             phones: true,
             campaignsEngaging: {
+              ...(Object.keys(includeMemberFilter).length > 0 && {
+                where: includeMemberFilter,
+              }),
               select: {
                 id: true,
                 status: true,
                 is_primary: true,
-                campaing: { select: { id: true, name: true } },
+                source: true,
+                campaing: { select: { id: true, name: true, platform: true } },
                 seller: {
                   select: {
+                    id: true,
                     user: { select: { first_name: true, last_name: true } },
                   },
                 },

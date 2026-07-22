@@ -1,11 +1,11 @@
-import { useAuthStore } from "@/store/useAuthStore";
-import { AdminLeadForm } from "./AdminLeadForm";
-import { SalesManualLeadForm } from "./SalesManualLeadForm";
+import { useParams } from "react-router-dom";
+import { LeadEditForm } from "../components/lead-quick-form/LeadEditForm";
+import { LeadQuickForm } from "../components/lead-quick-form/LeadQuickForm";
 
 export default function LeadFormView() {
-  const { user } = useAuthStore();
-  const isSalesRep = user?.role?.name === "SALES_REP";
+  const { id } = useParams<{ id: string }>();
 
-  return isSalesRep ? <SalesManualLeadForm /> : <AdminLeadForm />;
+  if (!id) return <LeadQuickForm />;
+  return <LeadEditForm id={id} />;
 }
 
