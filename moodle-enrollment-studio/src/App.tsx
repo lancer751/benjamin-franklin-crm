@@ -6,7 +6,7 @@ import { Toaster } from "@/core/components/ui/toaster";
 import { TooltipProvider } from "@/core/components/ui/tooltip";
 
 // Auth & Store
-import { useAuthStore } from "@/store/useAuthStore";
+import { useAuthStore, type User } from "@/store/useAuthStore";
 import { getMe } from "@/features/auth/services/authService";
 
 // Layout y Core
@@ -38,6 +38,8 @@ import LeadFormView from "@/features/leads/views/LeadFormView";
 // Módulo de Ventas (Orders & Products)
 import OrdersView from "@/features/orders/views/OrdersView"; // Nueva Orden
 import OrderDetailView from "@/features/orders/views/OrderDetailView";
+import CreateOrderView from "@/features/orders/views/CreateOrderView";
+import EditOrderView from "@/features/orders/views/EditOrderView";
 import ProductsView from "@/features/products/views/ProductsView";
 import ProductDetailView from "@/features/products/views/ProductDetailView";
 import ProductFormView from "@/features/products/views/ProductFormView";
@@ -47,6 +49,7 @@ import SellerDetailView from "@/features/users/views/SellerDetailView";
 import FinanceDashboardView from "@/features/payments/views/FinanceDashboardView";
 import PaymentsView from "@/features/payments/views/PaymentsView";
 import PaymentDetailView from "@/features/payments/views/PaymentDetailView";
+import CreatePaymentView from "@/features/payments/views/CreatePaymentView";
 import PaymentPlansView from "@/features/payments/views/PaymentPlansView";
 import OverdueView from "@/features/payments/views/OverdueView";
 
@@ -98,7 +101,7 @@ const App = () => {
       try {
         const res = await getMe();
         if (res && typeof res === "object" && "id" in res) {
-          setUser(res as any);
+          setUser(res as User);
         } else {
           setUser(null);
         }
@@ -160,6 +163,16 @@ const App = () => {
               <Route path="/pipeline" element={<PipelineView />} />
               <Route path="/comercial/seguimiento-equipo" element={<SupervisorFollowUpView />} />
               <Route path="/ordenes" element={<OrdersView />} />
+              <Route
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["ADMIN", "SALES_REP", "SALES_SUPERVISOR"]}
+                  />
+                }
+              >
+                <Route path="/ordenes/nueva" element={<CreateOrderView />} />
+                <Route path="/ordenes/:id/editar" element={<EditOrderView />} />
+              </Route>
               <Route path="/ordenes/:id" element={<OrderDetailView />} />
               <Route path="/productos" element={<ProductsView />} />
               <Route path="/productos/nuevo" element={<ProductFormView />} />
@@ -168,8 +181,17 @@ const App = () => {
               
               {/* Finanzas */}
               <Route path="/finanzas" element={<Navigate to="/pagos" replace />} />
-              <Route path="/pagos" element={<PaymentsView />} />
-              <Route path="/pagos/:id" element={<PaymentDetailView />} />
+              <Route
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["ADMIN", "SALES_REP", "SALES_SUPERVISOR"]}
+                  />
+                }
+              >
+                <Route path="/pagos" element={<PaymentsView />} />
+                <Route path="/pagos/nuevo" element={<CreatePaymentView />} />
+                <Route path="/pagos/:id" element={<PaymentDetailView />} />
+              </Route>
               <Route path="/planes-pago" element={<PaymentPlansView />} />
               <Route path="/morosos" element={<OverdueView />} />
               

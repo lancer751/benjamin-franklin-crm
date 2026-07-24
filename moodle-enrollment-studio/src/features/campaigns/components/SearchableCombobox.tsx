@@ -30,6 +30,8 @@ interface SearchableComboboxProps {
   onChange: (value: string) => void;
   onRetry?: () => void;
   className?: string;
+  contentClassName?: string;
+  optionLabelClassName?: string;
 }
 
 export function SearchableCombobox({
@@ -44,6 +46,8 @@ export function SearchableCombobox({
   onChange,
   onRetry,
   className,
+  contentClassName,
+  optionLabelClassName,
 }: SearchableComboboxProps) {
   const selected = options.find((option) => option.value === value);
 
@@ -94,7 +98,13 @@ export function SearchableCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        className={cn(
+          "w-[var(--radix-popover-trigger-width)] p-0",
+          contentClassName,
+        )}
+        align="start"
+      >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
@@ -109,7 +119,14 @@ export function SearchableCombobox({
                 >
                   <Check className={cn("mt-0.5 h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
                   <span className="min-w-0">
-                    <span className="block truncate font-medium">{option.label}</span>
+                    <span
+                      className={cn(
+                        "block truncate font-medium",
+                        optionLabelClassName,
+                      )}
+                    >
+                      {option.label}
+                    </span>
                     {option.description && (
                       <span className="block truncate text-xs text-muted-foreground">{option.description}</span>
                     )}

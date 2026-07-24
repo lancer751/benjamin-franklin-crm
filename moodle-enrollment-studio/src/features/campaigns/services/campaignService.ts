@@ -11,6 +11,24 @@ export type CampaignByIdRes = InferResponseType<typeof api.campaigns[":id"]["$ge
 export type CreateCampaignReq = InferRequestType<typeof api.campaigns.$post>["json"];
 export type UpdateCampaignReq = InferRequestType<typeof api.campaigns[":id"]["$put"]>["json"];
 export type DeleteCampaignRes = InferResponseType<typeof api.campaigns[":id"]["$delete"]>;
+export type SyncMetaLeadsResponse = {
+  success: boolean;
+  message: string;
+  data?: {
+    checked: number;
+    processed: number;
+  };
+};
+
+export class CampaignServiceError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly safeMessage?: string,
+  ) {
+    super(safeMessage || "Campaign service request failed");
+    this.name = "CampaignServiceError";
+  }
+}
 
 // Endpoints para el Supervisor (Matriz Excalidraw)
 export type AssignSellersReq = InferRequestType<typeof api.campaigns[":id"]["sellers"]["$post"]>["json"];
@@ -49,9 +67,9 @@ export const createCampaign = async (data: CreateCampaignReq) => {
  * Actualizar los atributos comerciales de la campaña (Ej: Vincular el product_id)
  */
 export const updateCampaign = async (id: string, data: UpdateCampaignReq) => {
-  const res = await api.campaigns[":id"].$put({ 
+  const res = await api.campaigns[":id"].$put({
     param: { id },
-    json: data 
+    json: data
   });
   return await res.json();
 };
@@ -62,6 +80,26 @@ export const updateCampaign = async (id: string, data: UpdateCampaignReq) => {
 export const deleteCampaign = async (id: string): Promise<DeleteCampaignRes> => {
   const res = await api.campaigns[":id"].$delete({ param: { id } });
   return await res.json();
+};
+
+/**
+ * Solicita al backend la importación manual de leads pendientes del formulario Meta.
+ */
+export const syncMetaLeads = async (
+  campaignId: string,
+): Promise<SyncMetaLeadsResponse> => {
+  const res = await api.campaigns[":id"]["sync-meta-leads"].$post({
+    param: { id: campaignId },
+  });
+  const body = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    const backendMessage =
+      body && typeof body.message === "string" ? body.message : undefined;
+    throw new CampaignServiceError(res.status, backendMessage);
+  }
+
+  return body as SyncMetaLeadsResponse;
 };
 
 // ==========================================
@@ -120,4 +158,4 @@ export const reassignBulkCampaignMembers = async (campaignId: string, data: { me
     json: data
   });
   return await res.json();
-};
+};

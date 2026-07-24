@@ -4,17 +4,20 @@ import { Button } from "@/core/components/ui/button";
 import { Badge } from "@/core/components/ui/badge";
 import { translateEnum, CampaignStatusMap, CampaignPlatformMap } from "@/core/utils/dictionaries";
 import { displayFriendlyDate } from "@/core/utils/date-utils";
+import { MetaSyncAction } from "./MetaSyncAction";
 
 interface CampaignDetailHeaderProps {
   campaign: any;
   onConfigClick: () => void;
   onPublishReportClick?: () => void;
+  canRequestMetaSync: boolean;
 }
 
 export const CampaignDetailHeader = ({
   campaign,
   onConfigClick,
   onPublishReportClick,
+  canRequestMetaSync,
 }: CampaignDetailHeaderProps) => {
   const navigate = useNavigate();
 
@@ -79,7 +82,8 @@ export const CampaignDetailHeader = ({
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2 self-end sm:self-auto">
+      <div className="flex flex-wrap items-start justify-end gap-2 self-end sm:self-auto">
+        {canRequestMetaSync && <MetaSyncAction campaign={campaign} />}
         <Button
           variant="outline"
           className="rounded-xl font-bold bg-white border-slate-200 text-slate-700 shadow-sm"

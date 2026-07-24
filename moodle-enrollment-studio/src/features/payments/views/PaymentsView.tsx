@@ -1,10 +1,21 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import {
+  Banknote,
+  CheckCircle2,
+  CreditCard,
+  Eye,
+  MoreVertical,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Plus, SlidersHorizontal, Download, ChevronLeft, ChevronRight, TrendingUp, CheckCircle2, XCircle, Eye, Loader2, Pencil, Trash2 } from "lucide-react";
-import PaymentForm from "@/features/payments/components/PaymentForm";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPayments, deletePayment } from "@/features/payments/services/paymentService";
-import { toast } from "sonner";
+import { CustomTable } from "@/core/components/CustomTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,325 +26,503 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/core/components/ui/alert-dialog";
-import { getOrders } from "@/features/orders/services/orderService";
-import { getAllLeads } from "@/features/leads/services/leadService";
+import { Button } from "@/core/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/core/components/ui/dropdown-menu";
+import { Input } from "@/core/components/ui/input";
+import { Skeleton } from "@/core/components/ui/skeleton";
+import { PaymentEditDialog } from "../components/PaymentEditDialog";
+import { PaymentStatusDialog } from "../components/PaymentStatusDialog";
+import {
+  PaymentStatusBadge,
+} from "../components/paymentDisplay";
+import {
+  paymentMethods,
+  paymentTypes,
+  useDeletePayment,
+  usePaymentsView,
+} from "../hooks/usePayments";
+import type { PaymentListItem, PaymentMethod, PaymentType } from "../types";
+import {
+  formatPaymentDate,
+  formatPaymentMoney,
+} from "../utils/paymentFormat";
+import {
+  paymentMethodLabels,
+  paymentStatusLabels,
+  paymentTypeLabels,
+  type PaymentFilter,
+  type PaymentMethodFilter,
+  type PaymentTypeFilter,
+} from "../utils/paymentLogic";
 
-const PaymentsView = () => {
-  const [showForm, setShowForm] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<any>(null);
-  const [paymentToDelete, setPaymentToDelete] = useState<any>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+export default function PaymentsView() {
+  const controller = usePaymentsView();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const [editPayment, setEditPayment] = useState<PaymentListItem | null>(null);
+  const [statusPayment, setStatusPayment] =
+    useState<PaymentListItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PaymentListItem | null>(null);
+  const deleteMutation = useDeletePayment(deleteTarget ?? undefined);
 
-  // Paso 1: Múltiple Fetching
-  const { data: paymentsRes, isLoading: isLoadingPayments } = useQuery({
-    queryKey: ["payments"],
-    queryFn: getPayments,
-  });
+  const columns = useMemo<ColumnDef<PaymentListItem>[]>(
+    () => [
+      {
+        accessorKey: "transactionId",
+        header: "Pago / transacción",
+        cell: ({ row }) => (
+          <div className="min-w-40">
+            <p className="font-semibold">
+              {row.original.transactionId ?? "Sin identificador"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Registrado {formatPaymentDate(row.original.createdAt)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "orderCode",
+        header: "Orden",
+        cell: ({ row }) => (
+          <button
+            type="button"
+            className="text-left"
+            onClick={(event) => {
+              event.stopPropagation();
+              navigate(`/ordenes/${row.original.orderId}`);
+            }}
+          >
+            <span className="block font-semibold text-primary">
+              {row.original.orderCode ?? "Código no disponible"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Total {formatPaymentMoney(row.original.orderTotal)}
+            </span>
+          </button>
+        ),
+      },
+      {
+        accessorFn: (payment) => payment.client.fullName,
+        id: "client",
+        header: "Cliente",
+        cell: ({ row }) => (
+          <div className="min-w-44">
+            <p className="font-medium">{row.original.client.fullName}</p>
+            {row.original.client.email && (
+              <p className="truncate text-xs text-muted-foreground">
+                {row.original.client.email}
+              </p>
+            )}
+            {row.original.client.dni && (
+              <p className="text-xs text-muted-foreground">
+                DNI {row.original.client.dni}
+              </p>
+            )}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "method",
+        header: "Método",
+        cell: ({ row }) => paymentMethodLabels[row.original.method],
+      },
+      {
+        accessorKey: "type",
+        header: "Tipo",
+        cell: ({ row }) => paymentTypeLabels[row.original.type],
+      },
+      {
+        accessorKey: "status",
+        header: "Estado",
+        cell: ({ row }) => <PaymentStatusBadge status={row.original.status} />,
+      },
+      {
+        accessorKey: "amount",
+        header: "Monto",
+        cell: ({ row }) => (
+          <span className="font-semibold">
+            {formatPaymentMoney(row.original.amount, row.original.currency)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "paymentDate",
+        header: "Fecha",
+        cell: ({ row }) => (
+          <span>{formatPaymentDate(row.original.paymentDate, true)}</span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Acciones",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const payment = row.original;
+          const canChange =
+            controller.permissions.canChangeStatus &&
+            payment.status === "CONFIRMED";
+          return (
+            <div
+              className="flex justify-end"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Acciones del pago ${
+                      payment.transactionId ?? payment.id
+                    }`}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem
+                    onSelect={() => controller.navigateToDetail(payment)}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Ver detalle
+                  </DropdownMenuItem>
+                  {controller.permissions.canEdit && (
+                    <DropdownMenuItem onSelect={() => setEditPayment(payment)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Editar referencia
+                    </DropdownMenuItem>
+                  )}
+                  {canChange && (
+                    <DropdownMenuItem
+                      onSelect={() => setStatusPayment(payment)}
+                    >
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Cambiar estado
+                    </DropdownMenuItem>
+                  )}
+                  {controller.permissions.canDelete && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        disabled={payment.status === "CONFIRMED"}
+                        onSelect={() => setDeleteTarget(payment)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {payment.status === "CONFIRMED"
+                          ? "No se puede eliminar"
+                          : "Eliminar"}
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
+      },
+    ],
+    [controller, navigate],
+  );
 
-  const { data: ordersRes } = useQuery({
-    queryKey: ["orders"],
-    queryFn: getOrders,
-  });
+  if (controller.isLoading) return <PaymentsLoading />;
 
-  const { data: leadsRes } = useQuery({
-    queryKey: ["leads"],
-    queryFn: getAllLeads,
-  });
+  if (controller.isError) {
+    return (
+      <div className="rounded-xl border bg-card p-10 text-center">
+        <XCircle className="mx-auto h-10 w-10 text-destructive" />
+        <h1 className="mt-4 text-lg font-semibold">
+          No se pudieron cargar los pagos
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Revisa tu conexión e inténtalo nuevamente.
+        </p>
+        <Button className="mt-5" variant="outline" onClick={controller.retry}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
 
-  // Mutación para Eliminar
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deletePayment(id),
-    onSuccess: () => {
-      toast.success("Pago eliminado correctamente");
-      queryClient.invalidateQueries({ queryKey: ["payments"] });
-      setPaymentToDelete(null);
-    },
-    onError: () => {
-      toast.error("No se pudo eliminar el pago. Asegúrate de que no esté CONFIRMADO.");
-    }
-  });
-
-  const paymentsData = Array.isArray(paymentsRes) ? paymentsRes : (paymentsRes as any)?.data || [];
-  const orders = Array.isArray(ordersRes) ? ordersRes : (ordersRes as any)?.data || [];
-  const leads = Array.isArray(leadsRes) ? leadsRes : (leadsRes as any)?.data || [];
-
-  // Paso 2: Matemáticas en Vivo (KPIs)
-  const today = new Date().toISOString().split("T")[0];
-
-  const { totalHoy, pendientesValidacion } = useMemo(() => {
-    let sumHoy = 0;
-    let countPendientes = 0;
-
-    paymentsData.forEach((p: any) => {
-      const dateStr = p.created_at || p.payment_date;
-      const isToday = dateStr && dateStr.startsWith(today);
-      if (isToday) {
-        sumHoy += Number(p.amount) || 0;
-      }
-
-      if (p.payment_status !== "CONFIRMED") {
-        countPendientes++;
-      }
-    });
-
-    return { totalHoy: sumHoy, pendientesValidacion: countPendientes };
-  }, [paymentsData, today]);
-
-  // Paso 3: Paginación Client-Side
-  const totalPages = Math.ceil(paymentsData.length / itemsPerPage);
-  const paginatedPayments = paymentsData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  const getInitials = (firstName: string, lastName: string) => {
-    const first = firstName ? firstName.charAt(0).toUpperCase() : "";
-    const last = lastName ? lastName.charAt(0).toUpperCase() : "";
-    return first + last || "CL";
-  };
-
-  const getStatusLabel = (status: string) => {
-    if (status === "CONFIRMED") return "Confirmado";
-    if (status === "FAILED") return "Fallido";
-    if (status === "REFUNDED") return "Reembolsado";
-    return status;
-  };
+  const hasFilters =
+    controller.search.trim() ||
+    controller.status !== "ALL" ||
+    controller.method !== "ALL" ||
+    controller.type !== "ALL";
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Registro de Pagos</h1>
-          <p className="text-sm text-muted-foreground mt-1">Administra y valida los ingresos provenientes de las inscripciones activas y nuevas matrículas.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Pagos</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Consulta, registra y administra los pagos asociados a órdenes.
+          </p>
         </div>
-        <button 
-          onClick={() => {
-            setSelectedPayment(null);
-            setShowForm(true);
-          }} 
-          className="btn-primary"
-        >
-          <Plus size={18} /> Registrar Pago
-        </button>
-      </div>
+        {controller.permissions.canCreate && (
+          <Button onClick={controller.navigateToCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Registrar pago
+          </Button>
+        )}
+      </header>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl bg-card border border-border p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Hoy</p>
-          <p className="text-2xl font-bold text-foreground mt-2">S/ {totalHoy.toLocaleString("es-PE", { minimumFractionDigits: 2 })}</p>
-          <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1 mt-2"><TrendingUp size={12} /> +12% vs ayer</p>
-        </div>
-        <div className="rounded-xl bg-card border border-border p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pendientes Validación</p>
-          <p className="text-2xl font-bold text-foreground mt-2">{pendientesValidacion.toString().padStart(2, '0')}</p>
-          <p className="text-xs text-muted-foreground mt-2">Última actualización: hace un momento</p>
-        </div>
-        <div className="rounded-xl bg-card border border-border p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Meta Mensual</p>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-bold text-foreground">S/ 48,000</span>
-            <span className="text-sm text-muted-foreground">/ S/ 60,000</span>
-          </div>
-          <div className="h-2.5 rounded-full bg-muted overflow-hidden mt-3">
-            <div className="h-full rounded-full bg-primary" style={{ width: "80%" }} />
-          </div>
-        </div>
-      </div>
+      <section
+        aria-label="Métricas de pagos"
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        <MetricCard
+          label="Total de pagos"
+          value={String(controller.metrics.total)}
+          icon={CreditCard}
+        />
+        <MetricCard
+          label="Pagos confirmados"
+          value={String(controller.metrics.confirmed)}
+          icon={CheckCircle2}
+          className="text-emerald-600"
+        />
+        <MetricCard
+          label="Pagos fallidos"
+          value={String(controller.metrics.failed)}
+          icon={XCircle}
+          className="text-red-600"
+        />
+        <MetricCard
+          label="Monto confirmado"
+          value={formatPaymentMoney(controller.metrics.confirmedAmount)}
+          icon={Banknote}
+          detail="Excluye fallidos y reembolsados"
+        />
+      </section>
 
-      {/* Table */}
-      <div className="rounded-xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="font-bold text-foreground">Pagos Recientes</h2>
-          <div className="flex items-center gap-2">
-            <button className="h-9 w-9 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:bg-muted"><SlidersHorizontal size={16} /></button>
-            <button className="h-9 w-9 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:bg-muted"><Download size={16} /></button>
+      <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        <div className="grid gap-3 border-b p-4 lg:grid-cols-[minmax(220px,1fr)_repeat(3,minmax(150px,auto))]">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              aria-label="Buscar pagos"
+              placeholder="Transacción, orden, cliente o método"
+              value={controller.search}
+              onChange={(event) => controller.setSearch(event.target.value)}
+            />
           </div>
+          <FilterSelect
+            ariaLabel="Filtrar por estado"
+            value={controller.status}
+            onChange={(value) =>
+              controller.setStatus(value as PaymentFilter)
+            }
+            options={[
+              ["ALL", "Todos los estados"],
+              ...(["CONFIRMED", "REFUNDED", "FAILED"] as const).map(
+                (status) => [status, paymentStatusLabels[status]] as const,
+              ),
+            ]}
+          />
+          <FilterSelect
+            ariaLabel="Filtrar por método"
+            value={controller.method}
+            onChange={(value) =>
+              controller.setMethod(value as PaymentMethodFilter)
+            }
+            options={[
+              ["ALL", "Todos los métodos"],
+              ...paymentMethods.map(
+                (method: PaymentMethod) =>
+                  [method, paymentMethodLabels[method]] as const,
+              ),
+            ]}
+          />
+          <FilterSelect
+            ariaLabel="Filtrar por tipo"
+            value={controller.type}
+            onChange={(value) =>
+              controller.setType(value as PaymentTypeFilter)
+            }
+            options={[
+              ["ALL", "Todos los tipos"],
+              ...paymentTypes.map(
+                (type: PaymentType) =>
+                  [type, paymentTypeLabels[type]] as const,
+              ),
+            ]}
+          />
         </div>
-        {isLoadingPayments ? (
-          <div className="py-10">
-            <Loader2 className="animate-spin mx-auto mt-10 h-8 w-8 text-primary" />
+
+        {controller.payments.length === 0 ? (
+          <EmptyPayments
+            canCreate={controller.permissions.canCreate}
+            onCreate={controller.navigateToCreate}
+          />
+        ) : controller.filteredPayments.length === 0 ? (
+          <div className="p-10 text-center">
+            <p className="font-medium">
+              No se encontraron pagos con los filtros aplicados.
+            </p>
+            <Button
+              className="mt-4"
+              variant="outline"
+              onClick={controller.clearFilters}
+            >
+              Limpiar filtros
+            </Button>
           </div>
         ) : (
-          <>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Código Orden</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cliente</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Monto</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Método</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tipo</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Estado</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedPayments.map((p: any, i: number) => {
-                  const order = orders.find((o: any) => o.id === p.order_id);
-                  const lead = leads.find((l: any) => l.id === order?.lead_id);
-                  const code = order?.order_code ? `#${order.order_code}` : "N/D";
-                  const firstName = lead?.first_name || "Cliente";
-                  const lastName = lead?.last_name || "Desconocido";
-                  const initials = getInitials(firstName, lastName);
-                  const email = lead?.email || "N/D";
-                  const confirmed = p.payment_status === "CONFIRMED";
-                  
-                  return (
-                    <tr key={p.id || i} onClick={() => navigate(`/pagos/${p.id}`)} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors cursor-pointer">
-                      <td className="px-6 py-4 text-primary font-semibold cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate(`/pagos/${p.id}`); }}>{code}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">{initials}</div>
-                          <div>
-                            <p className="font-medium text-foreground">{firstName} {lastName}</p>
-                            <p className="text-xs text-muted-foreground">{email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-semibold text-foreground">S/ {Number(p.amount).toLocaleString("es-PE", { minimumFractionDigits: 2 })}</td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-[11px] font-bold tracking-wide text-muted-foreground uppercase">{p.payment_method || "N/D"}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide uppercase ${
-                          p.type === "FULL" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                        }`}>{p.type === "FULL" ? "PAGO ÚNICO" : "CUOTAS"}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`flex items-center gap-1.5 text-sm font-medium ${confirmed ? "text-emerald-600" : "text-destructive"}`}>
-                          {confirmed ? <CheckCircle2 size={16} /> : <XCircle size={16} />} {getStatusLabel(p.payment_status)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setSelectedPayment({
-                                ...p,
-                                clienteOrden: p.order_id,
-                                metodoPago: p.payment_method,
-                                tipoPago: p.type,
-                                monto: String(p.amount),
-                                idTransaccion: p.transaccion_id,
-                                payment_receipt: p.payment_receipt
-                              });
-                              setShowForm(true); 
-                            }}
-                            className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                            title="Editar Pago"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setPaymentToDelete(p);
-                            }}
-                            className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                            title="Eliminar Pago"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/pagos/${p.id}`); }}
-                            className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
-                            title="Ver Detalle"
-                          >
-                            <Eye size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {paginatedPayments.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">
-                      No hay pagos registrados.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            {paymentsData.length > 0 && (
-              <div className="flex items-center justify-between border-t border-border px-6 py-3">
-                <span className="text-sm text-muted-foreground">
-                  Mostrando {paginatedPayments.length} de {paymentsData.length} registros
-                </span>
-                <div className="flex items-center gap-1">
-                  <button 
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(c => Math.max(1, c - 1))}
-                    className="h-8 w-8 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-50"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  {Array.from({ length: totalPages }).map((_, idx) => {
-                    const page = idx + 1;
-                    return (
-                      <button 
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`h-8 w-8 rounded-md flex items-center justify-center text-sm font-medium ${
-                          currentPage === page 
-                            ? "bg-primary text-primary-foreground" 
-                            : "border border-border text-muted-foreground hover:bg-muted"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  })}
-                  <button 
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
-                    className="h-8 w-8 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-50"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
+          <CustomTable
+            columns={columns}
+            data={controller.filteredPayments}
+            enableSorting
+            pageSize={8}
+            onRowClick={controller.navigateToDetail}
+            emptyMessage="No hay pagos registrados."
+          />
         )}
-      </div>
+        {hasFilters && controller.filteredPayments.length > 0 && (
+          <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+            {controller.filteredPayments.length} resultado(s) con los filtros
+            actuales.
+          </p>
+        )}
+      </section>
 
-      <PaymentForm 
-        open={showForm} 
-        onClose={() => {
-          setShowForm(false);
-          setSelectedPayment(null);
-        }} 
-        initialData={selectedPayment}
+      <PaymentEditDialog
+        payment={editPayment}
+        onClose={() => setEditPayment(null)}
       />
-
-      {/* Diálogo de Confirmación de Eliminación */}
-      <AlertDialog open={!!paymentToDelete} onOpenChange={(open) => !open && setPaymentToDelete(null)}>
+      <PaymentStatusDialog
+        payment={statusPayment}
+        onClose={() => setStatusPayment(null)}
+      />
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogTitle>Eliminar pago</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará permanentemente el registro del pago de la base de datos.
-              Esta acción no se puede deshacer.
+              Esta acción es permanente. Los pagos confirmados no pueden
+              eliminarse; deben reembolsarse.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => deleteMutation.mutate(paymentToDelete.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            <AlertDialogAction
+              onClick={() =>
+                deleteMutation.mutate(undefined, {
+                  onSuccess: () => setDeleteTarget(null),
+                })
+              }
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Eliminando..." : "Eliminar Pago"}
+              {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
   );
-};
+}
 
-export default PaymentsView;
+function MetricCard({
+  label,
+  value,
+  detail,
+  icon: Icon,
+  className = "text-primary",
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  icon: typeof CreditCard;
+  className?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border bg-card p-5 shadow-sm">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
+        <p className="mt-2 text-2xl font-bold">{value}</p>
+        {detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}
+      </div>
+      <div className={`rounded-xl bg-muted p-3 ${className}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+    </div>
+  );
+}
+
+function FilterSelect({
+  ariaLabel,
+  value,
+  onChange,
+  options,
+}: {
+  ariaLabel: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: ReadonlyArray<readonly [string, string]>;
+}) {
+  return (
+    <select
+      aria-label={ariaLabel}
+      className="h-10 rounded-md border bg-background px-3 text-sm"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      {options.map(([optionValue, label]) => (
+        <option key={optionValue} value={optionValue}>
+          {label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function EmptyPayments({
+  canCreate,
+  onCreate,
+}: {
+  canCreate: boolean;
+  onCreate: () => void;
+}) {
+  return (
+    <div className="p-12 text-center">
+      <CreditCard className="mx-auto h-10 w-10 text-muted-foreground" />
+      <h2 className="mt-4 font-semibold">No hay pagos registrados.</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Los pagos de las órdenes aparecerán aquí.
+      </p>
+      {canCreate && (
+        <Button className="mt-5" onClick={onCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Registrar pago
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function PaymentsLoading() {
+  return (
+    <div className="space-y-6" aria-label="Cargando pagos">
+      <Skeleton className="h-10 w-52" />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} className="h-28 rounded-xl" />
+        ))}
+      </div>
+      <Skeleton className="h-96 rounded-xl" />
+    </div>
+  );
+}

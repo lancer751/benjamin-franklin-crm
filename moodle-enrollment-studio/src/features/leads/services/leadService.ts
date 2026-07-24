@@ -68,6 +68,18 @@ export const getAllLeads = async (query?: LeadListQuery): Promise<GetAllLeadsRes
   return await res.json();
 };
 
+/** Busca leads con cancelación, para selectores remotos y autocompletados. */
+export const searchLeads = async (
+  query: LeadListQuery,
+  signal?: AbortSignal,
+): Promise<GetAllLeadsRes> => {
+  const res = await api.leads.$get(
+    { query: query as LeadQuerySchemaInput },
+    signal ? { init: { signal } } : undefined,
+  );
+  return await res.json();
+};
+
 /** Obtiene el perfil detallado de un lead por su UUID */
 export const getLeadById = async (id: string): Promise<GetLeadByIdRes> => {
   const res = await (api.leads as any)[UUID_PATH].$get({ param: { id } });
