@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   LogOut,
   ChevronDown,
   Loader2,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { logout } from "@/features/auth/services/authService";
+import { useLogout } from "@/features/auth/hooks/useLogout";
 import { sidebarSections, SidebarSection, canAccess as canAccessGlobal } from "@/core/config/menu";
 import { translateEnum, RoleTranslationsMap } from "@/core/utils/dictionaries";
 
@@ -26,11 +24,9 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
-  const navigate = useNavigate();
   
   // Subscribe precisely to Zustand store properties to ensure reactive re-renders
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
   const isLoading = useAuthStore((state) => state.isLoading);
 
   // Auxiliar function 'canAccess(permission: string)' that validates if the user has access to a group or menu item
@@ -40,17 +36,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     return canAccessGlobal(userRole, permission);
   };
 
-  const logoutMutation = useMutation({
-    mutationFn: logout,
-    onSuccess: () => {
-      toast.success("Sesión cerrada");
-      setUser(null);
-      navigate("/login");
-    },
-    onError: () => {
-      toast.error("Error al cerrar sesión");
-    }
-  });
+  const logoutMutation = useLogout();
 
   // Local state for dynamically filtered sections
   const [filteredSections, setFilteredSections] = useState<SidebarSection[]>([]);

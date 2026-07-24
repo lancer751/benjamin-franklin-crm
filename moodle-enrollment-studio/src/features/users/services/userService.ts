@@ -23,14 +23,46 @@ type SellerCampaignsRes = InferResponseType<
   (typeof api.users.sellers)[":id"]["campaigns"]["$get"]
 >;
 
+export type UserByIdSuccess = Extract<UserByIdRes, { success: true }>;
+export type SupervisorDetailSuccess = Extract<SupervisorDetailRes, { success: true }>;
+
+export class UserServiceError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "UserServiceError";
+  }
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const responseMessage = (body: unknown, fallback: string) => {
+  if (typeof body === "string" && body.trim()) return body;
+  if (isRecord(body)) {
+    if (typeof body.message === "string" && body.message.trim()) return body.message;
+    if (typeof body.error === "string" && body.error.trim()) return body.error;
+  }
+  return fallback;
+};
+
 export const getUsers = async (): Promise<UsersRes> => {
   const res = await api.users.$get();
   return await res.json();
 };
 
-export const getUserById = async (id: string): Promise<UserByIdRes> => {
+export const getUserById = async (id: string): Promise<UserByIdSuccess> => {
   const res = await api.users[UUID_PATH].$get({ param: { id } });
-  return await res.json();
+  const body: UserByIdRes = await res.json();
+  if (!res.ok || !isRecord(body) || body.success !== true) {
+    throw new UserServiceError(
+      res.status,
+      responseMessage(body, "No fue posible obtener la información de la cuenta."),
+    );
+  }
+  return body as UserByIdSuccess;
 };
 
 export const createUser = async (data: CreateUserReq) => {
@@ -84,9 +116,16 @@ export const getSupervisors = async (): Promise<SupervisorsRes> => {
   return await res.json();
 };
 
-export const getSupervisorById = async (id: string): Promise<SupervisorDetailRes> => {
+export const getSupervisorById = async (id: string): Promise<SupervisorDetailSuccess> => {
   const res = await api.users["sales-supervisors"][UUID_PATH].$get({ param: { id } });
-  return await res.json();
+  const body: SupervisorDetailRes = await res.json();
+  if (!res.ok || !isRecord(body) || body.success !== true) {
+    throw new UserServiceError(
+      res.status,
+      responseMessage(body, "No fue posible obtener el perfil de supervisor."),
+    );
+  }
+  return body as SupervisorDetailSuccess;
 };
 
 export const updateSupervisorProfile = async (

@@ -1,16 +1,39 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
-import { Search, Bell, HelpCircle, Users, Menu, ArrowLeft, X } from "lucide-react";
+import { Outlet, useNavigate } from "react-router-dom";
+import { Search, Bell, HelpCircle, Users, Menu, ArrowLeft, X, UserRound, LogOut, Loader2 } from "lucide-react";
 import { useSearchStore } from "@/store/useSearchStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import Sidebar from "./Sidebar";
 import { translateEnum, RoleTranslationsMap } from "@/core/utils/dictionaries";
+import { Avatar, AvatarFallback } from "@/core/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/core/components/ui/dropdown-menu";
+import { useLogout } from "@/features/auth/hooks/useLogout";
+
+const getInitials = (firstName?: string, lastName?: string) =>
+  `${firstName?.charAt(0) ?? ""}${lastName?.charAt(0) ?? ""}`.toUpperCase() || "U";
 
 const MainLayout = () => {
+  const navigate = useNavigate();
   const { searchQuery, setSearchQuery, placeholder } = useSearchStore();
   const user = useAuthStore((state) => state.user);
+  const logoutMutation = useLogout();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const isSalesSupervisor = user?.role.name === "SALES_SUPERVISOR";
+
+  const userAvatar = (
+    <Avatar className="h-8 w-8">
+      <AvatarFallback className="bg-muted text-xs font-semibold text-muted-foreground">
+        {user ? getInitials(user.first_name, user.last_name) : <Users size={14} />}
+      </AvatarFallback>
+    </Avatar>
+  );
 
   return (
     <div className="flex h-screen w-full overflow-hidden relative">
@@ -114,10 +137,40 @@ const MainLayout = () => {
               <HelpCircle size={20} />
             </button>
             <div className="flex items-center gap-2 pl-2 border-l border-border">
-              <span className="text-xs text-muted-foreground">Rol: {translateEnum(user?.role?.name, RoleTranslationsMap)}</span>
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                <Users size={14} className="text-muted-foreground" />
-              </div>
+              <span className="hidden text-xs text-muted-foreground sm:inline">
+                Rol: {translateEnum(user?.role?.name, RoleTranslationsMap)}
+              </span>
+              {isSalesSupervisor ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="rounded-full outline-none ring-offset-background transition-shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label="Abrir menú de usuario"
+                  >
+                    {userAvatar}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onSelect={() => navigate("/mi-perfil")} className="cursor-pointer">
+                      <UserRound className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Mi perfil
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => logoutMutation.mutate()}
+                      disabled={logoutMutation.isPending}
+                      className="cursor-pointer text-destructive focus:text-destructive"
+                    >
+                      {logoutMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
+                      )}
+                      {logoutMutation.isPending ? "Cerrando..." : "Cerrar sesión"}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                userAvatar
+              )}
             </div>
           </div>
         </header>

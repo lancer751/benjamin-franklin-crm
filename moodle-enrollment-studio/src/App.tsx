@@ -12,6 +12,7 @@ import { getMe } from "@/features/auth/services/authService";
 // Layout y Core
 import MainLayout from "@/core/components/MainLayout";
 import NotFound from "@/core/views/NotFound";
+import Unauthorized from "@/core/views/Unauthorized";
 import { ProtectedRoute } from "@/core/components/ProtectedRoute";
 
 // Vistas Generales
@@ -19,6 +20,7 @@ import DashboardView from "@/features/dashboard/views/DashboardView";
 
 // Módulo de Administración (Auth & Académico)
 import LoginView from "@/features/auth/views/LoginView";
+import SalesSupervisorProfileView from "@/features/auth/views/SalesSupervisorProfileView";
 import UsersView from "@/features/users/views/UsersView";
 import CoursesAdminView from "@/features/academic/views/CoursesAdminView";
 import CourseDetailView from "@/features/academic/views/CourseDetailView";
@@ -135,9 +137,13 @@ const App = () => {
           <Route path="/login" element={<Navigate to="/" replace />} />
           
           <Route element={<ProtectedRoute />}>
+            <Route path="/unauthorized" element={<Unauthorized />} />
             <Route element={<MainLayout />}>
               {/* Dashboard General */}
               <Route path="/dashboard" element={<DashboardView />} />
+              <Route element={<ProtectedRoute allowedRoles={["SALES_SUPERVISOR"]} />}>
+                <Route path="/mi-perfil" element={<SalesSupervisorProfileView />} />
+              </Route>
               
               {/* Administración */}
               <Route path="/admin/usuarios" element={<UsersView />} />
