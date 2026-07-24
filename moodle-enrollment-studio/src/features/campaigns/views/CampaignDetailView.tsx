@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import ModalWrapper from "@/core/components/ModalWrapper";
 import { useCampaignDetail } from "@/features/campaigns/hooks/useCampaignDetail";
 import { CampaignDetailHeader } from "@/features/campaigns/components/CampaignDetailHeader";
+import { useAuthStore } from "@/store/useAuthStore";
 import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
 import { ModalityMap, translateEnum } from "@/core/utils/dictionaries";
 import {
@@ -187,6 +188,9 @@ const CampaignDetailView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const userRole = useAuthStore((state) => state.user?.role?.name);
+  const canRequestMetaSync =
+    userRole === "ADMIN" || userRole === "SALES_SUPERVISOR";
 
   const {
     campaign,
@@ -323,6 +327,7 @@ const CampaignDetailView = () => {
         campaign={campaign}
         onConfigClick={() => navigate(`/admin/campanas/${campaign.id}/editar`)}
         onPublishReportClick={handlePublishReport}
+        canRequestMetaSync={canRequestMetaSync}
       />
 
       {/* Grid Principal Asimétrico */}

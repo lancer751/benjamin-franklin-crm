@@ -12,6 +12,7 @@ import PaymentForm from "@/features/payments/components/PaymentForm";
 import { useQuery } from "@tanstack/react-query";
 import { getOrderById } from "@/features/orders/services/orderService";
 import { cn } from "@/core/lib/utils";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const statusStyles: Record<string, string> = {
   COMPLETED: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -31,6 +32,8 @@ const OrderDetailView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [showPayment, setShowPayment] = useState(false);
+  const role = useAuthStore((state) => state.user?.role.name);
+  const canEdit = ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"].includes(role || "");
 
   // 1. Fetching Centralizado de la Orden (Trae todo anidado)
   const { data: orderResponse, isLoading: isLoadingOrder } = useQuery({
@@ -48,7 +51,7 @@ const OrderDetailView = () => {
     );
   }
 
-  const order = orderResponse?.success ? orderResponse.data : (orderResponse as any)?.data || orderResponse;
+  const order = orderResponse?.data;
 
   if (!order) {
     return (
@@ -100,7 +103,15 @@ const OrderDetailView = () => {
         </div>
         
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <Button variant="outline" className="flex-1 md:flex-none gap-2"><Edit size={16} /> Editar</Button>
+          {canEdit && (
+            <Button
+              variant="outline"
+              className="flex-1 md:flex-none gap-2"
+              onClick={() => navigate(`/ordenes/${order.id}/editar`)}
+            >
+              <Edit size={16} /> Editar
+            </Button>
+          )}
           <Button variant="destructive" className="flex-1 md:flex-none gap-2"><Ban size={16} /> Anular</Button>
           <Button onClick={() => setShowPayment(true)} className="flex-1 md:flex-none gap-2 shadow-lg shadow-primary/20">
             <CreditCard size={16} /> Registrar Pago
@@ -175,7 +186,7 @@ const OrderDetailView = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {order.orderDetails?.map((item: any, i: number) => (
+                  {order.orderDetails?.map((item, i) => (
                     <tr key={i} className="border-b border-border last:border-0 hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
@@ -222,7 +233,7 @@ const OrderDetailView = () => {
                 </thead>
                 <tbody>
                   {order.paymentPlans?.[0]?.installments?.length > 0 ? (
-                    order.paymentPlans[0].installments.map((cuota: any, i: number) => (
+                    order.paymentPlans[0].installments.map((cuota, i) => (
                       <tr key={i} className="border-b border-border last:border-0 hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 font-bold text-slate-900">Cuota #{cuota.installment_number}</td>
                         <td className="px-6 py-4 text-muted-foreground flex items-center gap-2">
@@ -296,7 +307,7 @@ const OrderDetailView = () => {
             <CardContent className="p-0">
               <div className="max-h-[300px] overflow-y-auto">
                 {order.payments?.length > 0 ? (
-                  order.payments.map((p: any, i: number) => (
+                  order.payments.map((p, i) => (
                     <div key={i} className="flex items-center justify-between p-4 border-b border-border last:border-0 hover:bg-slate-50">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Eye, Filter, Loader2, Receipt, Edit, Trash2, User, ShoppingBag, ShieldCheck } from "lucide-react";
-import OrderFormModal from "@/features/orders/components/OrderFormModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getOrders, deleteOrder } from "../services/orderService";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/core/components/ui/alert-dialog";
 import { cn } from "@/core/lib/utils";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // Estilos de estados
 const statusStyles: Record<string, string> = {
@@ -28,9 +28,10 @@ const OrdersListView = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [showNewOrder, setShowNewOrder] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  const role = useAuthStore((state) => state.user?.role.name);
+  const canWrite = ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"].includes(role || "");
+  const canDelete = ["ADMIN", "SALES_SUPERVISOR"].includes(role || "");
 
   // 1. Conexión con Hono RPC usando React Query
   const { data: ordersRes, isLoading, isError } = useQuery({
@@ -53,7 +54,7 @@ const OrdersListView = () => {
   const orders = ordersRes?.success ? ordersRes.data : [];
 
   // 3. Lógica de filtrado avanzada
-  const filtered = orders.filter((o: any) => {
+  const filtered = orders.filter((o) => {
     const searchTerm = search.toLowerCase();
     const codeMatch = (o.order_code || "").toLowerCase().includes(searchTerm);
     const clientMatch = `${o.lead?.first_name || ""} ${o.lead?.last_name || ""}`.toLowerCase().includes(searchTerm);
@@ -66,8 +67,8 @@ const OrdersListView = () => {
 
   // 4. Cálculo de KPIs
   const totalRevenue = orders
-    .filter((o: any) => o.order_status === "COMPLETED")
-    .reduce((s: number, o: any) => s + (Number(o.total_amount) || 0), 0);
+    .filter((o) => o.order_status === "COMPLETED")
+    .reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
 
   const formatCurrency = (amount: number | string) => {
     return `S/ ${Number(amount).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -83,17 +84,19 @@ const OrdersListView = () => {
             {isLoading ? "Consultando base de datos..." : `${orders.length} órdenes registradas • Ingresos: ${formatCurrency(totalRevenue)}`}
           </p>
         </div>
-        <button onClick={() => { setSelectedOrder(null); setShowNewOrder(true); }} className="btn-primary">
-          <Plus size={18} /> Nueva Orden
-        </button>
+        {canWrite && (
+          <button onClick={() => navigate("/ordenes/nueva")} className="btn-primary">
+            <Plus size={18} /> Nueva Orden
+          </button>
+        )}
       </div>
 
       {/* --- KPIs DINÁMICOS --- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Órdenes", value: isLoading ? "-" : orders.length, sub: "Histórico" },
-          { label: "Completadas", value: isLoading ? "-" : orders.filter((o: any) => o.order_status === "COMPLETED").length, sub: "Pagadas", color: "text-emerald-600" },
-          { label: "Pendientes", value: isLoading ? "-" : orders.filter((o: any) => o.order_status === "PENDING").length, sub: "En seguimiento", color: "text-amber-600" },
+          { label: "Completadas", value: isLoading ? "-" : orders.filter((o) => o.order_status === "COMPLETED").length, sub: "Pagadas", color: "text-emerald-600" },
+          { label: "Pendientes", value: isLoading ? "-" : orders.filter((o) => o.order_status === "PENDING").length, sub: "En seguimiento", color: "text-amber-600" },
           { label: "Caja (Ingresos)", value: isLoading ? "-" : formatCurrency(totalRevenue), sub: "Confirmado", color: "text-primary" },
         ].map((kpi, i) => (
           <div key={i} className="rounded-xl bg-card border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -151,7 +154,7 @@ const OrdersListView = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((order: any) => (
+                {filtered.map((order) => (
                   <tr
                     key={order.id}
                     onClick={() => navigate(`/ordenes/${order.id}`)}
@@ -226,23 +229,27 @@ const OrdersListView = () => {
                         >
                           <Eye size={16} />
                         </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); setShowNewOrder(true); }}
-                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-slate-200 rounded-lg transition-colors"
-                          title="Editar Orden"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            setOrderToDelete(order.id);
-                          }}
-                          className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                          title="Eliminar Orden"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {canWrite && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/ordenes/${order.id}/editar`); }}
+                            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-slate-200 rounded-lg transition-colors"
+                            title="Editar Orden"
+                          >
+                            <Edit size={16} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOrderToDelete(order.id);
+                            }}
+                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                            title="Eliminar Orden"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -252,9 +259,6 @@ const OrdersListView = () => {
           </div>
         )}
       </div>
-
-      {/* --- MODALES --- */}
-      <OrderFormModal open={showNewOrder} onClose={() => setShowNewOrder(false)} initialData={selectedOrder} />
 
       <AlertDialog open={!!orderToDelete} onOpenChange={(open) => { if (!open) setOrderToDelete(null); }}>
         <AlertDialogContent>
