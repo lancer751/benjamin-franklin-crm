@@ -433,7 +433,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
           throw new HTTPException(404, { message: "seller profile not found" });
         }
 
-        if (sellerProfileId.id === data.assigned_to) {
+        if (sellerProfileId.id !== data.assigned_to) {
           throw new HTTPException(500, {
             message:
               "A seller can't assign a lead to another seller more than himself",
