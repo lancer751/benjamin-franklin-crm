@@ -5,6 +5,7 @@ import type {
   ApiSuccess,
   CreateOrderPayload,
   OrderLeadSummary,
+  OrderListResponse,
   OrderProduct,
   OrderResponse,
   UpdateOrderPayload,
@@ -60,9 +61,9 @@ export function mapOrderApiError(error: unknown): string {
   return "No se pudo guardar la orden. Revisa los datos e inténtalo nuevamente.";
 }
 
-export const getOrders = async (): Promise<ApiSuccess<OrderResponse[]>> => {
+export const getOrders = async (): Promise<OrderListResponse> => {
   const response = await api.orders.$get();
-  return readResponse<ApiSuccess<OrderResponse[]>>(response);
+  return readResponse<OrderListResponse>(response);
 };
 
 export const getOrderById = async (

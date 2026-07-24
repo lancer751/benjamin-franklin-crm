@@ -2,30 +2,45 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  useReactTable,
   getPaginationRowModel,
+  getSortedRowModel,
+  type SortingState,
+  useReactTable,
 } from "@tanstack/react-table";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/core/components/ui/button";
 
 interface CustomTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onRowClick?: (row: TData) => void;
+  enableSorting?: boolean;
+  emptyMessage?: string;
+  pageSize?: number;
 }
 
 export function CustomTable<TData, TValue>({
   columns,
   data,
   onRowClick,
+  enableSorting = false,
+  emptyMessage = "No se encontraron registros.",
+  pageSize = 5,
 }: CustomTableProps<TData, TValue>) {
+  const [sorting, setSorting] = useState<SortingState>([]);
   const table = useReactTable({
     data,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: enableSorting ? getSortedRowModel() : undefined,
+    enableSorting,
     initialState: {
       pagination: {
-        pageSize: 5, // Registros por página cómodos para móvil
+        pageSize,
       },
     },
   });
@@ -45,9 +60,30 @@ export function CustomTable<TData, TValue>({
                     key={header.id}
                     className="md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider"
                   >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 hover:text-slate-800"
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                        {header.column.getIsSorted() === "asc" ? (
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        ) : header.column.getIsSorted() === "desc" ? (
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
+                        )}
+                      </button>
+                    ) : (
+                      flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )
+                    )}
                   </th>
                 ))}
               </tr>
@@ -94,7 +130,7 @@ export function CustomTable<TData, TValue>({
                   colSpan={columns.length}
                   className="block md:table-cell h-24 text-center text-sm text-slate-400 py-8"
                 >
-                  No se encontraron registros.
+                  {emptyMessage}
                 </td>
               </tr>
             )}
