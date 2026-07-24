@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   GraduationCap,
   TrendingUp,
-  Wallet,
   Speaker,
   CalendarDays,
   Award,
@@ -39,7 +38,7 @@ export const canAccess = (userRole: string, permission: string): boolean => {
   const permissions: Record<string, string[]> = {
     ADMIN: [
       "academic:view", "courses:view", "calendar:view", "professors:view",
-      "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view",
+      "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view", "payments:view",
       "catalog:view", "certifications:view", "benefits:view", "faqs:view", "categories:view",
       "admin:view", "users:view", "finance:view", "marketing:view", "settings:view",
       "supervisor:team-view"
@@ -47,13 +46,13 @@ export const canAccess = (userRole: string, permission: string): boolean => {
     // SALES_SUPERVISOR have full access to Academic, Commercial, and Support Catalog views
     SALES_SUPERVISOR: [
       "academic:view", "courses:view", "calendar:view", //"professors:view",
-      "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view",
+      "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view", "payments:view",
       "catalog:view", "certifications:view", "benefits:view", "faqs:view", "categories:view",
       "admin:view", "marketing:view", "finance:view", "supervisor:team-view"
     ],
     SALES_REP: [
       "academic:view", "calendar:view", //"courses:view",  //"professors:view",
-      "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view",
+      "commercial:view", "prospects:view", "pipeline:view", "orders:view", "products:view", "payments:view",
       "marketing:view", "admin:view", "seller:self-view",
     ],
     // MARKETING has access to Prospects/Pipeline and the Marketing dashboard configuration
@@ -79,7 +78,6 @@ export const sidebarSections: SidebarSection[] = [
     permission: "admin:view",
       items: [
         { to: "/admin/usuarios", label: "Usuarios", icon: Users, permission: "users:view" },
-        // { to: "/pagos", label: "Pagos", icon: Wallet, permission: "finance:view" },
       ],
   },
   {
@@ -104,6 +102,7 @@ export const sidebarSections: SidebarSection[] = [
       { to: "/prospectos", label: "Prospectos", icon: Users, permission: "prospects:view" },
       // { to: "/pipeline", label: "Pipeline", icon: Kanban, permission: "pipeline:view" },
       { to: "/ordenes", label: "Órdenes", icon: FileText, permission: "orders:view" },
+      { to: "/pagos", label: "Pagos", icon: CreditCard, permission: "payments:view" },
     ],
   },
 ];

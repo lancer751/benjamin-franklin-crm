@@ -1,65 +1,114 @@
 import { api } from "@/core/lib/api";
-import { InferRequestType, InferResponseType } from "hono/client";
+import type {
+  ApiSuccess,
+  CreatePaymentPayload,
+  PaymentDetailResponse,
+  PaymentResponse,
+  PaymentsResponse,
+  UpdatePaymentPayload,
+  UpdatePaymentStatusPayload,
+} from "../types";
 
-// ==========================================
-// TIPOS INFERIDOS: PAGOS
-// ==========================================
+interface ApiErrorBody {
+  error?: string;
+  message?: string;
+}
 
-// El tipo de respuesta para obtener todos los pagos
-type PaymentsRes = InferResponseType<typeof api.payments.$get>;
+export class PaymentApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly serverMessage: string,
+  ) {
+    super(serverMessage);
+    this.name = "PaymentApiError";
+  }
+}
 
-// El tipo para crear un pago (apunta a la raíz .post("/"))
-type CreatePaymentReq = InferRequestType<typeof api.payments.$post>["json"];
-type CreatePaymentRes = InferResponseType<typeof api.payments.$post>;
+async function readResponse<T>(response: Response): Promise<T> {
+  const body = (await response.json()) as unknown;
+  if (!response.ok) {
+    const error = body as ApiErrorBody;
+    throw new PaymentApiError(
+      response.status,
+      error.error || error.message || "Error inesperado del servidor",
+    );
+  }
+  return body as T;
+}
 
-// El tipo para actualizar un pago
-type UpdatePaymentReq = InferRequestType<typeof api.payments[":id"]["$put"]>["json"];
+export function mapPaymentApiError(error: unknown): string {
+  if (!(error instanceof PaymentApiError)) {
+    return "No se pudo completar la operación. Inténtalo nuevamente.";
+  }
+  const message = error.serverMessage;
+  if (message.includes("Order not found")) {
+    return "La orden seleccionada no existe.";
+  }
+  if (message.includes("Payment not found")) {
+    return "El pago no existe.";
+  }
+  if (message.includes("Payment would exceed")) {
+    return "El pago confirmado supera el saldo pendiente de la orden.";
+  }
+  if (message.includes("Payment is already")) {
+    return "El pago ya tiene ese estado.";
+  }
+  if (message.includes("Cannot change status of a REFUNDED")) {
+    return "No se puede cambiar el estado de un pago reembolsado.";
+  }
+  if (message.includes("Cannot change status of a FAILED")) {
+    return "No se puede cambiar el estado de un pago fallido.";
+  }
+  if (message.includes("Cannot delete confirmed")) {
+    return "Los pagos confirmados no pueden eliminarse. Debes registrar un reembolso.";
+  }
+  return "No se pudo completar la operación. Revisa los datos e inténtalo nuevamente.";
+}
 
-// ==========================================
-// SERVICIOS: PAGOS
-// ==========================================
+export async function getPayments(): Promise<PaymentsResponse> {
+  const response = await api.payments.$get();
+  return readResponse<PaymentsResponse>(response);
+}
 
-/**
- * Obtiene la lista de todos los pagos registrados
- */
-export const getPayments = async (): Promise<PaymentsRes> => {
-  const res = await api.payments.$get();
-  return await res.json();
-};
+export async function getPaymentById(
+  id: string,
+): Promise<PaymentDetailResponse> {
+  const response = await api.payments[":id"].$get({ param: { id } });
+  return readResponse<PaymentDetailResponse>(response);
+}
 
-/**
- * Crea un nuevo pago (Manual o de Cuotas)
- * Se eliminó el subfijo .manual porque el backend espera la ruta raíz "/"
- */
-export const createPayment = async (data: CreatePaymentReq): Promise<CreatePaymentRes> => {
-  // Cambiado de api.payments.manual.$post a api.payments.$post
-  const res = await api.payments.$post({ json: data });
-  return await res.json();
-};
+export async function createPayment(
+  payload: CreatePaymentPayload,
+): Promise<ApiSuccess<PaymentResponse>> {
+  const response = await api.payments.$post({ json: payload });
+  return readResponse<ApiSuccess<PaymentResponse>>(response);
+}
 
-/**
- * Obtiene el detalle de un pago específico por UUID
- */
-export const getPaymentById = async (id: string) => {
-  const res = await api.payments[":id"].$get({ param: { id } });
-  return await res.json();
-};
-
-/**
- * Actualiza la información de un pago
- */
-export const updatePayment = async (id: string, data: UpdatePaymentReq) => {
-  const res = await api.payments[":id"].$put({ 
+export async function updatePayment(
+  id: string,
+  payload: UpdatePaymentPayload,
+): Promise<ApiSuccess<PaymentResponse>> {
+  const response = await api.payments[":id"].$put({
     param: { id },
-    json: data 
+    json: payload,
   });
-  return await res.json();
-};
+  return readResponse<ApiSuccess<PaymentResponse>>(response);
+}
 
-/**
- * Elimina un pago (solo si no está CONFIRMADO)
- */
-export const deletePayment = async (id: string) => {
-  const res = await api.payments[":id"].$delete({ param: { id } });
-  return await res.json();
-};
+export async function updatePaymentStatus(
+  id: string,
+  payload: UpdatePaymentStatusPayload,
+): Promise<ApiSuccess<PaymentResponse>> {
+  const response = await api.payments[":id"].status.$patch({
+    param: { id },
+    json: payload,
+  });
+  return readResponse<ApiSuccess<PaymentResponse>>(response);
+}
+
+export async function deletePayment(
+  id: string,
+): Promise<{ success: true; message: string }> {
+  const response = await api.payments[":id"].$delete({ param: { id } });
+  return readResponse<{ success: true; message: string }>(response);
+}

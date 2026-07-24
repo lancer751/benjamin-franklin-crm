@@ -133,7 +133,7 @@ export function useOrdersView(): OrdersViewController {
     navigateToDetail: (order) => navigate(`/ordenes/${order.id}`),
     navigateToEdit: (order) => navigate(`/ordenes/${order.id}/editar`),
     navigateToPayment: (order) =>
-      navigate(`/ordenes/${order.id}?action=payment`),
+      navigate(`/pagos/nuevo?orderId=${order.id}`),
     confirmPendingAction,
   };
 }

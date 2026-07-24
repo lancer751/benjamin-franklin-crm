@@ -1,494 +1,456 @@
-import { useState, useRef, useMemo, DragEvent } from "react";
-import { Users, ChevronDown, DollarSign, Info, Upload, FileImage, X, CalendarIcon, Search, Loader2 } from "lucide-react";
-import { format, addMonths } from "date-fns";
-import { es } from "date-fns/locale";
-import { cn } from "@/core/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/core/components/ui/popover";
-import { Calendar } from "@/core/components/ui/calendar";
-import ModalWrapper from "@/core/components/ModalWrapper";
-
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { toast } from "sonner";
-
-import { getOrders } from "@/features/orders/services/orderService";
-import { getAllLeads } from "@/features/leads/services/leadService";
-import { createPayment } from "@/features/payments/services/paymentService";
-import { uploadImageToCloudinary } from "@/core/lib/uploadService";
-
-const paymentSchema = z.object({
-  clienteOrden: z.string().min(1, "Seleccione una orden o cliente"),
-  metodoPago: z.string().min(1, "Seleccione un método de pago"),
-  tipoPago: z.enum(["FULL", "INSTALLMENTS"]),
-  numeroCuotas: z.string().optional(),
-  monto: z.string().min(1, "Ingrese un monto válido"),
-  idTransaccion: z.string().optional(),
-  dueDate: z.date().optional(),
-  payment_receipt: z.string().optional(),
-});
-
-type PaymentFormValues = z.infer<typeof paymentSchema>;
+import { AlertCircle, CalendarDays, CreditCard, RefreshCw } from "lucide-react";
+import { Button } from "@/core/components/ui/button";
+import { Input } from "@/core/components/ui/input";
+import { Label } from "@/core/components/ui/label";
+import { Separator } from "@/core/components/ui/separator";
+import { usePaymentForm } from "../hooks/usePaymentForm";
+import { paymentMethods, paymentStatuses } from "../hooks/usePayments";
+import type { PaymentMethod, PaymentStatus, PaymentType } from "../types";
+import {
+  paymentMethodLabels,
+  paymentStatusLabels,
+  paymentTypeLabels,
+} from "../utils/paymentLogic";
+import { formatPaymentMoney } from "../utils/paymentFormat";
 
 interface PaymentFormProps {
-  open: boolean;
-  onClose: () => void;
-  initialData?: any;
+  preselectedOrderId?: string | null;
 }
 
-const PaymentForm = ({ open, onClose, initialData }: PaymentFormProps) => {
-  const isEdit = !!initialData;
-  const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const queryClient = useQueryClient();
-
-  const { data: ordersRes } = useQuery({
-    queryKey: ["orders"],
-    queryFn: getOrders,
-    enabled: open,
-  });
-
-  const { data: leadsRes } = useQuery({
-    queryKey: ["leads"],
-    queryFn: getAllLeads,
-    enabled: open,
-  });
-
-  const ordersData = Array.isArray(ordersRes) ? ordersRes : (ordersRes as any)?.data || [];
-  const leadsData = Array.isArray(leadsRes) ? leadsRes : (leadsRes as any)?.data || [];
-
-  // Filtrar solo las que no son completadas
-  const activeOrders = useMemo(() => {
-    return ordersData.filter((o: any) => o.order_status !== "COMPLETED");
-  }, [ordersData]);
-
-  // Enriquecer con nombre del prospecto para el buscador
-  const enrichedOrders = useMemo(() => {
-    return activeOrders.map((o: any) => {
-      const lead = leadsData.find((l: any) => l.id === o.lead_id);
-      return {
-        id: o.id,
-        order_code: o.order_code ? `#${o.order_code}` : "N/D",
-        client: lead ? `${lead.first_name} ${lead.last_name}` : "Cliente Desconocido",
-        email: lead?.email || "Sin email",
-        total: o.total_amount || 0,
-      };
-    });
-  }, [activeOrders, leadsData]);
-
-  const filteredOrders = useMemo(() => {
-    if (!searchQuery) return enrichedOrders;
-    const q = searchQuery.toLowerCase();
-    return enrichedOrders.filter((o: any) =>
-      o.order_code.toLowerCase().includes(q) ||
-      o.client.toLowerCase().includes(q)
-    );
-  }, [searchQuery, enrichedOrders]);
-
-  const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<PaymentFormValues>({
-    resolver: zodResolver(paymentSchema),
-    defaultValues: {
-      clienteOrden: initialData?.clienteOrden || "",
-      metodoPago: initialData?.metodoPago || "",
-      tipoPago: initialData?.tipoPago || "FULL",
-      numeroCuotas: initialData?.numeroCuotas || "",
-      monto: initialData?.monto || "0.00",
-      idTransaccion: initialData?.idTransaccion || "",
-      dueDate: initialData?.dueDate || undefined,
-      payment_receipt: initialData?.payment_receipt || "",
-    }
-  });
-
-  const clienteOrdenWatch = watch("clienteOrden");
-  const tipoPagoWatch = watch("tipoPago");
-  const dueDateWatch = watch("dueDate");
-
-  const selectedOrderEnriched = useMemo(() => {
-    return enrichedOrders.find((o: any) => o.id === clienteOrdenWatch);
-  }, [enrichedOrders, clienteOrdenWatch]);
-
-  const selectOrder = (order: any) => {
-    setValue("clienteOrden", order.id, { shouldValidate: true });
-    setValue("monto", String(order.total), { shouldValidate: true });
-    setSearchOpen(false);
-    setSearchQuery("");
-  };
-
-  const handleFile = async (f: File) => {
-    const valid = ["image/png", "image/jpeg", "application/pdf"];
-    if (valid.includes(f.type) && f.size <= 5 * 1024 * 1024) {
-      setFile(f);
-      try {
-        setIsUploading(true);
-        const url = await uploadImageToCloudinary(f);
-        setValue("payment_receipt", url, { shouldValidate: true });
-        toast.success("Comprobante subido correctamente");
-      } catch (error) {
-        toast.error("Error al subir el comprobante a la nube");
-        setFile(null);
-      } finally {
-        setIsUploading(false);
-      }
-    } else {
-      toast.error("Formato no válido o archivo demasiado grande (máx 5MB)");
-    }
-  };
-
-  const onDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-  };
-
-  // Mutación
-  const mutation = useMutation({
-    mutationFn: (payload: any) => createPayment(payload),
-    onSuccess: () => {
-      toast.success("Pago registrado correctamente");
-      queryClient.invalidateQueries({ queryKey: ["payments"] });
-      onClose();
-      reset();
-      setFile(null);
-    },
-    onError: (error) => {
-      console.error(error);
-      toast.error("Error al registrar el pago");
-    }
-  });
-
-  const onSubmitForm = (data: PaymentFormValues) => {
-    const payload: any = {
-      order_id: data.clienteOrden,
-      amount: Number(data.monto),
-      payment_method: data.metodoPago,
-      type: data.tipoPago,
-      payment_status: "CONFIRMED",
-      payment_date: new Date().toISOString(),
-      payment_receipt: data.payment_receipt || null,
-      transaccion_id: data.idTransaccion || null,
-    };
-
-    if (data.tipoPago === "INSTALLMENTS") {
-      const baseDate = data.dueDate || new Date();
-      const numCuotas = Number(data.numeroCuotas) || 1;
-      const cuotaAmount = Number(data.monto) / numCuotas;
-
-      const scheduled_payments = Array.from({ length: numCuotas }).map((_, i) => ({
-        due_date: addMonths(baseDate, i).toISOString(),
-        due_amount: cuotaAmount,
-        number: i + 1,
-        status: "PENDING"
-      }));
-
-      payload.payment_plan = {
-        total_installments: numCuotas,
-        order_id: data.clienteOrden,
-        total_amount: Number(data.monto),
-        start_date: baseDate.toISOString(),
-        status: "PENDING",
-        scheduled_payments
-      };
-    }
-
-    mutation.mutate(payload);
-  };
+export default function PaymentForm({
+  preselectedOrderId,
+}: PaymentFormProps) {
+  const form = usePaymentForm(preselectedOrderId);
+  const { values, selectedOrder } = form;
+  const isInstallments = values.type === "INSTALLMENTS";
+  const amount = Number(values.amount) || 0;
+  const resultingBalance = Math.max(
+    (selectedOrder?.remainingBalance ?? 0) -
+      (values.paymentStatus === "CONFIRMED" ? amount : 0),
+    0,
+  );
+  const fullIsPartial =
+    values.type === "FULL" &&
+    Boolean(selectedOrder) &&
+    amount > 0 &&
+    amount < (selectedOrder?.remainingBalance ?? 0);
 
   return (
-    <ModalWrapper
-      open={open}
-      onClose={onClose}
-      title={isEdit ? "Editar Pago" : "Nuevo Pago"}
-      subtitle="Registre el ingreso de fondos para una inscripción activa."
-      maxWidth="max-w-lg"
-      footer={
-        <>
-          <button className="btn-secondary" onClick={onClose} disabled={mutation.isPending || isUploading}>Cancelar</button>
-          <button className="btn-primary" onClick={handleSubmit(onSubmitForm)} disabled={mutation.isPending || isUploading}>
-            {(mutation.isPending || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isUploading ? "Subiendo Comprobante..." : (isEdit ? "Actualizar" : "Registrar Pago")}
-          </button>
-        </>
-      }
+    <form
+      className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]"
+      onSubmit={(event) => {
+        event.preventDefault();
+        form.submit();
+      }}
     >
-      <div className="space-y-5 pb-2">
-        {/* Selector de Orden / Cliente */}
-        <div>
-          <label className="form-label">Buscar Orden o Cliente</label>
-          <div className="relative">
-            <div
-              onClick={() => setSearchOpen(!searchOpen)}
-              className={cn("form-input pl-10 cursor-pointer flex items-center min-h-[40px]", errors.clienteOrden && "border-destructive")}
-            >
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"><Search size={16} /></span>
-              {selectedOrderEnriched ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-primary font-semibold text-sm">{selectedOrderEnriched.order_code}</span>
-                  <span className="text-foreground text-sm">— {selectedOrderEnriched.client}</span>
-                </div>
-              ) : (
-                <span className="text-muted-foreground text-sm">Ej: #ORD-2931 o Mariana Velásquez</span>
-              )}
+      <div className="space-y-6">
+        <section className="rounded-xl border bg-card p-5 shadow-sm">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="rounded-lg bg-primary/10 p-2 text-primary">
+              <CreditCard className="h-5 w-5" />
             </div>
-            {errors.clienteOrden && <p className="text-xs text-destructive mt-1">{errors.clienteOrden.message}</p>}
-
-            {searchOpen && (
-              <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-lg bg-card border border-border shadow-lg overflow-hidden">
-                <div className="p-2 border-b border-border">
-                  <input
-                    autoFocus
-                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none px-2 py-1.5"
-                    placeholder="Buscar por orden o cliente..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                <div className="max-h-48 overflow-y-auto">
-                  {filteredOrders.map((o: any) => (
-                    <button
-                      key={o.id}
-                      onClick={() => selectOrder(o)}
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors text-left"
-                    >
-                      <div>
-                        <span className="text-primary font-semibold text-sm">{o.order_code}</span>
-                        <p className="text-xs text-foreground">{o.client}</p>
-                        <p className="text-[10px] text-muted-foreground">{o.email}</p>
-                      </div>
-                      <span className="text-sm font-bold text-foreground">S/ {o.total}</span>
-                    </button>
-                  ))}
-                  {filteredOrders.length === 0 && (
-                    <p className="px-4 py-3 text-sm text-muted-foreground text-center">Sin resultados</p>
-                  )}
-                </div>
-              </div>
-            )}
+            <div>
+              <h2 className="font-semibold">Orden asociada</h2>
+              <p className="text-sm text-muted-foreground">
+                Busca por código, cliente o correo.
+              </p>
+            </div>
           </div>
-          {selectedOrderEnriched && (
-            <div className="mt-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users size={14} className="text-primary" />
-                  <span className="text-sm font-medium text-foreground">{selectedOrderEnriched.client}</span>
-                </div>
-                <span className="text-sm font-bold text-primary">S/ {selectedOrderEnriched.total}</span>
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-1">{selectedOrderEnriched.email}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Método de Pago */}
-        <div>
-          <label className="form-label">Método de Pago</label>
-          <div className="relative">
-            <Controller
-              control={control}
-              name="metodoPago"
-              render={({ field }) => (
-                <select className={cn("form-select pr-10", errors.metodoPago && "border-destructive")} {...field}>
-                  <option value="">Seleccione una opción</option>
-                  <option value="YAPE">Yape</option>
-                  <option value="BANK_TRANSFER">Transferencia</option>
-                  <option value="POS">POS</option>
-                  <option value="CASH">Efectivo</option>
-                  <option value="ONLINE">Online</option>
-                </select>
-              )}
+          <div className="grid gap-3">
+            <Label htmlFor="order-search">Buscar orden</Label>
+            <Input
+              id="order-search"
+              placeholder="Ej. REFTGEL o correo del cliente"
+              value={form.orderSearch}
+              onChange={(event) => form.setOrderSearch(event.target.value)}
             />
-            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          </div>
-          {errors.metodoPago && <p className="text-xs text-destructive mt-1">{errors.metodoPago.message}</p>}
-        </div>
-
-        {/* Tipo de Pago */}
-        <div>
-          <label className="form-label">Tipo de Pago</label>
-          <div className="grid grid-cols-2 gap-3 mt-1.5">
-            <button
-              type="button"
-              onClick={() => setValue("tipoPago", "FULL", { shouldValidate: true })}
-              className={`py-4 rounded-lg text-left px-4 transition-all ${tipoPagoWatch === "FULL"
-                  ? "border-2 border-primary bg-primary/5"
-                  : "border-2 border-transparent bg-muted"
-                }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${tipoPagoWatch === "FULL" ? "border-primary" : "border-muted-foreground"}`}>
-                  {tipoPagoWatch === "FULL" && <div className="w-2 h-2 rounded-full bg-primary" />}
-                </div>
-                <span className="font-semibold text-sm text-foreground">Pago Total</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1 ml-6">Un solo desembolso</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setValue("tipoPago", "INSTALLMENTS", { shouldValidate: true })}
-              className={`py-4 rounded-lg text-left px-4 transition-all ${tipoPagoWatch === "INSTALLMENTS"
-                  ? "border-2 border-primary bg-primary/5"
-                  : "border-2 border-transparent bg-muted"
-                }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${tipoPagoWatch === "INSTALLMENTS" ? "border-primary" : "border-muted-foreground"}`}>
-                  {tipoPagoWatch === "INSTALLMENTS" && <div className="w-2 h-2 rounded-full bg-primary" />}
-                </div>
-                <span className="font-semibold text-sm text-foreground">Pago en Cuotas</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1 ml-6">Plan de financiamiento</p>
-            </button>
-          </div>
-        </div>
-
-        {/* Cuotas + DatePicker condicional */}
-        {tipoPagoWatch === "INSTALLMENTS" && (
-          <div className="space-y-4">
-            <div>
-              <label className="form-label">Número de Cuotas</label>
-              <div className="grid grid-cols-2 gap-4">
-                <Controller
-                  control={control}
-                  name="numeroCuotas"
-                  render={({ field }) => (
-                    <input className="form-input" placeholder="Ej: 3" type="number" min="1" {...field} />
-                  )}
-                />
-                <p className="flex items-center text-xs text-muted-foreground">Se generarán comprobantes mensuales automáticos.</p>
-              </div>
+            <div className="max-h-56 overflow-y-auto rounded-lg border">
+              {form.isLoadingOrders ? (
+                <p className="p-4 text-sm text-muted-foreground">
+                  Cargando órdenes...
+                </p>
+              ) : form.orders.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">
+                  No se encontraron órdenes.
+                </p>
+              ) : (
+                form.orders.map((order) => (
+                  <button
+                    key={order.id}
+                    type="button"
+                    className={`flex w-full items-center justify-between gap-4 border-b p-3 text-left text-sm last:border-0 hover:bg-muted/50 ${
+                      values.orderId === order.id ? "bg-primary/5" : ""
+                    }`}
+                    onClick={() => form.selectOrder(order)}
+                  >
+                    <span>
+                      <span className="block font-semibold">{order.code}</span>
+                      <span className="block text-muted-foreground">
+                        {order.clientName}
+                        {order.clientEmail ? ` · ${order.clientEmail}` : ""}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className="block font-medium">
+                        {formatPaymentMoney(order.remainingBalance)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {order.status}
+                      </span>
+                    </span>
+                  </button>
+                ))
+              )}
             </div>
-            <div>
-              <label className="form-label">Fecha Límite de Pago (due_date)</label>
-              <Controller
-                control={control}
-                name="dueDate"
-                render={({ field }) => (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className={cn(
-                          "form-input flex items-center gap-2 w-full text-left",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon size={16} className="text-muted-foreground shrink-0" />
-                        {field.value ? format(field.value, "PPP", { locale: es }) : "Seleccionar fecha límite"}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={(date) => field.onChange(date)}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
+            {selectedOrder &&
+              (selectedOrder.status === "CANCELLED" ||
+                selectedOrder.status === "REFUNDED") && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  La orden está {selectedOrder.status.toLowerCase()}. El backend
+                  decidirá si admite el pago.
+                </p>
+              )}
+          </div>
+        </section>
+
+        <section className="rounded-xl border bg-card p-5 shadow-sm">
+          <h2 className="mb-5 font-semibold">Datos del pago</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Fecha de pago" htmlFor="payment-date">
+              <Input
+                id="payment-date"
+                type="datetime-local"
+                value={values.paymentDate}
+                onChange={(event) =>
+                  form.updateValue("paymentDate", event.target.value)
+                }
               />
+            </Field>
+            <Field label="Monto" htmlFor="payment-amount">
+              <Input
+                id="payment-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={values.amount}
+                onChange={(event) =>
+                  form.updateValue("amount", event.target.value)
+                }
+              />
+            </Field>
+            <Field label="Método de pago" htmlFor="payment-method">
+              <select
+                id="payment-method"
+                className="h-10 rounded-md border bg-background px-3 text-sm"
+                value={values.paymentMethod}
+                onChange={(event) =>
+                  form.updateValue(
+                    "paymentMethod",
+                    event.target.value as PaymentMethod,
+                  )
+                }
+              >
+                {paymentMethods.map((method) => (
+                  <option key={method} value={method}>
+                    {paymentMethodLabels[method]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Estado" htmlFor="payment-status">
+              <select
+                id="payment-status"
+                className="h-10 rounded-md border bg-background px-3 text-sm"
+                value={values.paymentStatus}
+                onChange={(event) =>
+                  form.updateValue(
+                    "paymentStatus",
+                    event.target.value as PaymentStatus,
+                  )
+                }
+              >
+                {paymentStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {paymentStatusLabels[status]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Tipo de pago" htmlFor="payment-type">
+              <select
+                id="payment-type"
+                className="h-10 rounded-md border bg-background px-3 text-sm"
+                value={values.type}
+                onChange={(event) =>
+                  form.setPaymentType(event.target.value as PaymentType)
+                }
+              >
+                {(["FULL", "INSTALLMENTS"] as PaymentType[]).map((type) => (
+                  <option key={type} value={type}>
+                    {paymentTypeLabels[type]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Moneda" htmlFor="payment-currency">
+              <Input
+                id="payment-currency"
+                maxLength={3}
+                value={values.currency}
+                onChange={(event) =>
+                  form.updateValue(
+                    "currency",
+                    event.target.value.toUpperCase(),
+                  )
+                }
+              />
+            </Field>
+            <div className="sm:col-span-2">
+              <Field
+                label="Número de operación / transacción"
+                htmlFor="transaction-id"
+              >
+                <Input
+                  id="transaction-id"
+                  value={values.transactionId}
+                  onChange={(event) =>
+                    form.updateValue("transactionId", event.target.value)
+                  }
+                />
+              </Field>
             </div>
           </div>
+          {fullIsPartial && (
+            <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              El pago no cubrirá el saldo completo de la orden.
+            </p>
+          )}
+        </section>
+
+        {isInstallments && (
+          <section className="rounded-xl border bg-card p-5 shadow-sm">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">Plan de pagos</h2>
+                <p className="text-sm text-muted-foreground">
+                  La primera cuota debe coincidir con el pago inicial.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => form.regenerateInstallments()}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Regenerar
+              </Button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Número de cuotas" htmlFor="installments-count">
+                <Input
+                  id="installments-count"
+                  type="number"
+                  min="1"
+                  value={values.paymentPlan.totalInstallments}
+                  onChange={(event) =>
+                    form.regenerateInstallments(
+                      values.paymentPlan.totalAmount,
+                      event.target.value,
+                      values.paymentPlan.startDate,
+                    )
+                  }
+                />
+              </Field>
+              <Field label="Total del plan" htmlFor="plan-total">
+                <Input
+                  id="plan-total"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={values.paymentPlan.totalAmount}
+                  onChange={(event) =>
+                    form.regenerateInstallments(
+                      event.target.value,
+                      values.paymentPlan.totalInstallments,
+                      values.paymentPlan.startDate,
+                    )
+                  }
+                />
+              </Field>
+              <Field label="Fecha de inicio" htmlFor="plan-start-date">
+                <Input
+                  id="plan-start-date"
+                  type="date"
+                  value={values.paymentPlan.startDate}
+                  onChange={(event) =>
+                    form.regenerateInstallments(
+                      values.paymentPlan.totalAmount,
+                      values.paymentPlan.totalInstallments,
+                      event.target.value,
+                    )
+                  }
+                />
+              </Field>
+            </div>
+            <Separator className="my-5" />
+            <div className="space-y-3">
+              {values.paymentPlan.scheduledPayments.map(
+                (installment, index) => (
+                  <div
+                    key={installment.number}
+                    className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[70px_1fr_1fr] sm:items-end"
+                  >
+                    <div>
+                      <p className="text-xs text-muted-foreground">Cuota</p>
+                      <p className="font-semibold">#{installment.number}</p>
+                    </div>
+                    <Field
+                      label="Vencimiento"
+                      htmlFor={`due-date-${installment.number}`}
+                    >
+                      <Input
+                        id={`due-date-${installment.number}`}
+                        type="date"
+                        value={installment.dueDate}
+                        onChange={(event) =>
+                          form.updateInstallment(index, {
+                            dueDate: event.target.value,
+                          })
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="Monto"
+                      htmlFor={`due-amount-${installment.number}`}
+                    >
+                      <Input
+                        id={`due-amount-${installment.number}`}
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={installment.dueAmount}
+                        onChange={(event) =>
+                          form.updateInstallment(index, {
+                            dueAmount: event.target.value,
+                          })
+                        }
+                      />
+                    </Field>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
         )}
 
-        {/* Monto + ID */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="form-label">Monto a Pagar</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm"><DollarSign size={14} /></span>
-              <Controller
-                control={control}
-                name="monto"
-                render={({ field }) => (
-                  <input className={cn("form-input pl-8", errors.monto && "border-destructive")} placeholder="0.00" {...field} />
-                )}
+        {form.errors.length > 0 && (
+          <div
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          >
+            <div className="mb-2 flex items-center gap-2 font-semibold">
+              <AlertCircle className="h-4 w-4" />
+              Revisa los siguientes datos
+            </div>
+            <ul className="list-disc space-y-1 pl-5">
+              {form.errors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      <aside className="xl:sticky xl:top-6 xl:self-start">
+        <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Resumen financiero</h2>
+          </div>
+          {selectedOrder ? (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Orden</p>
+                <p className="font-semibold">{selectedOrder.code}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedOrder.clientName}
+                </p>
+              </div>
+              <Separator />
+              <SummaryRow
+                label="Total de la orden"
+                value={formatPaymentMoney(selectedOrder.totalAmount)}
+              />
+              <SummaryRow
+                label="Total confirmado"
+                value={formatPaymentMoney(selectedOrder.confirmedPaid)}
+              />
+              <SummaryRow
+                label="Saldo disponible"
+                value={formatPaymentMoney(selectedOrder.remainingBalance)}
+              />
+              <SummaryRow
+                label="Monto del pago"
+                value={formatPaymentMoney(amount, values.currency)}
+              />
+              <Separator />
+              <SummaryRow
+                label="Saldo resultante"
+                value={formatPaymentMoney(resultingBalance)}
+                emphasized
               />
             </div>
-            {errors.monto && <p className="text-xs text-destructive mt-1">{errors.monto.message}</p>}
-          </div>
-          <div>
-            <label className="form-label">ID de Transacción</label>
-            <Controller
-              control={control}
-              name="idTransaccion"
-              render={({ field }) => (
-                <input className="form-input" placeholder="Ref. de pago" {...field} />
-              )}
-            />
-          </div>
-        </div>
-
-        {/* Comprobante Upload */}
-        <div>
-          <label className="form-label">Comprobante de Pago (Voucher)</label>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".png,.jpg,.jpeg,.pdf"
-            className="hidden"
-            onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }}
-          />
-          {file ? (
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3">
-              <div className="flex items-center gap-3 min-w-0">
-                {isUploading ? (
-                  <Loader2 size={20} className="text-primary animate-spin shrink-0" />
-                ) : (
-                  <FileImage size={20} className="text-primary shrink-0" />
-                )}
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {isUploading ? "Subiendo a la nube..." : `${(file.size / 1024).toFixed(0)} KB`}
-                  </p>
-                </div>
-              </div>
-              {!isUploading && (
-                <button 
-                  type="button" 
-                  onClick={() => { 
-                    setFile(null); 
-                    setValue("payment_receipt", "");
-                    if (fileInputRef.current) fileInputRef.current.value = ""; 
-                  }} 
-                  className="p-1 rounded hover:bg-muted text-muted-foreground"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
           ) : (
-            <div
-              onClick={() => !isUploading && fileInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); !isUploading && setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={onDrop}
-              className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-8 cursor-pointer transition-colors ${
-                isDragging ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-              } ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              <Upload size={24} className="text-muted-foreground" />
-              <p className="text-sm text-foreground font-medium">Haz clic o arrastra el comprobante de pago (Voucher)</p>
-              <p className="text-xs text-muted-foreground">PNG, JPG o PDF. Máx 5MB</p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Selecciona una orden para consultar su saldo.
+            </p>
           )}
+          <Button
+            className="mt-6 w-full"
+            type="submit"
+            disabled={form.isSubmitting || !selectedOrder}
+          >
+            {form.isSubmitting ? "Registrando..." : "Registrar pago"}
+          </Button>
         </div>
-
-        {/* Info */}
-        <div className="flex items-start gap-2.5 p-4 bg-muted rounded-lg text-sm text-muted-foreground">
-          <Info size={16} className="text-primary mt-0.5 shrink-0" />
-          <p>Al confirmar el pago y adjuntar el comprobante, el sistema emitirá automáticamente la factura correspondiente.</p>
-        </div>
-      </div>
-    </ModalWrapper>
+      </aside>
+    </form>
   );
-};
+}
 
-export default PaymentForm;
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  emphasized = false,
+}: {
+  label: string;
+  value: string;
+  emphasized?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className={emphasized ? "text-lg font-bold" : "font-medium"}>
+        {value}
+      </span>
+    </div>
+  );
+}

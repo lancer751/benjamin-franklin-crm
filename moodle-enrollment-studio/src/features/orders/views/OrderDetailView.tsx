@@ -1,17 +1,10 @@
-import { useState } from "react";
 import { AlertCircle, ArrowLeft } from "lucide-react";
-import {
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/core/components/ui/alert";
 import { Button } from "@/core/components/ui/button";
 import { Skeleton } from "@/core/components/ui/skeleton";
-import PaymentForm from "@/features/payments/components/PaymentForm";
 import { useAuthStore } from "@/store/useAuthStore";
 import { OrderDetailContent } from "../components/detail/OrderDetailContent";
-import { orderBalance } from "../components/detail/orderDetailUtils";
 import { useOrder } from "../hooks/useOrder";
 
 function OrderDetailSkeleton() {
@@ -36,10 +29,6 @@ function OrderDetailSkeleton() {
 export default function OrderDetailView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [showPayment, setShowPayment] = useState(
-    () => searchParams.get("action") === "payment",
-  );
   const role = useAuthStore((state) => state.user?.role.name);
   const orderQuery = useOrder(id);
 
@@ -77,32 +66,14 @@ export default function OrderDetailView() {
   }
 
   return (
-    <>
-      <OrderDetailContent
-        order={order}
-        role={role}
-        onBack={() => navigate("/ordenes")}
-        onEdit={() => navigate(`/ordenes/${order.id}/editar`)}
-        onRegisterPayment={() => setShowPayment(true)}
-      />
-
-      {showPayment && (
-        <PaymentForm
-          open
-          onClose={() => {
-            setShowPayment(false);
-            if (searchParams.has("action")) {
-              const nextParams = new URLSearchParams(searchParams);
-              nextParams.delete("action");
-              setSearchParams(nextParams, { replace: true });
-            }
-          }}
-          initialData={{
-            clienteOrden: order.id,
-            monto: String(orderBalance(order)),
-          }}
-        />
-      )}
-    </>
+    <OrderDetailContent
+      order={order}
+      role={role}
+      onBack={() => navigate("/ordenes")}
+      onEdit={() => navigate(`/ordenes/${order.id}/editar`)}
+      onRegisterPayment={() =>
+        navigate(`/pagos/nuevo?orderId=${order.id}`)
+      }
+    />
   );
 }

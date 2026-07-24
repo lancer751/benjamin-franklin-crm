@@ -49,6 +49,7 @@ import SellerDetailView from "@/features/users/views/SellerDetailView";
 import FinanceDashboardView from "@/features/payments/views/FinanceDashboardView";
 import PaymentsView from "@/features/payments/views/PaymentsView";
 import PaymentDetailView from "@/features/payments/views/PaymentDetailView";
+import CreatePaymentView from "@/features/payments/views/CreatePaymentView";
 import PaymentPlansView from "@/features/payments/views/PaymentPlansView";
 import OverdueView from "@/features/payments/views/OverdueView";
 
@@ -180,8 +181,17 @@ const App = () => {
               
               {/* Finanzas */}
               <Route path="/finanzas" element={<Navigate to="/pagos" replace />} />
-              <Route path="/pagos" element={<PaymentsView />} />
-              <Route path="/pagos/:id" element={<PaymentDetailView />} />
+              <Route
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["ADMIN", "SALES_REP", "SALES_SUPERVISOR"]}
+                  />
+                }
+              >
+                <Route path="/pagos" element={<PaymentsView />} />
+                <Route path="/pagos/nuevo" element={<CreatePaymentView />} />
+                <Route path="/pagos/:id" element={<PaymentDetailView />} />
+              </Route>
               <Route path="/planes-pago" element={<PaymentPlansView />} />
               <Route path="/morosos" element={<OverdueView />} />
               
