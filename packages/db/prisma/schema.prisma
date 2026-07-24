@@ -218,10 +218,11 @@ model User {
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
 
-  role            Role                    @relation(fields: [role_id], references: [id])
-  marketing       MarketingProfile?
-  seller          SellerProfile?
-  salesSupervisor SalesSupervisorProfile?
+  role                 Role                    @relation(fields: [role_id], references: [id])
+  marketing            MarketingProfile?
+  seller               SellerProfile?
+  salesSupervisor      SalesSupervisorProfile?
+  createdDiscountCodes DiscountCode[]          @relation("DISCOUNT_CODE_CREATOR")
 }
 
 enum PhoneType {
@@ -432,12 +433,12 @@ model Campaing {
   end_date             DateTime?
   platform             CampaingPlatform
   is_organic           Boolean
-  meta_campaign_id     String?          // NEW — Meta's own campaign ID
-  meta_form_id         String?          // existing — lead form ID
+  meta_campaign_id     String? // NEW — Meta's own campaign ID
+  meta_form_id         String? // existing — lead form ID
   click_to_whatsapp    Boolean          @default(false) // NEW
-  whatsapp_number      String?          // NEW — required if click_to_whatsapp
+  whatsapp_number      String? // NEW — required if click_to_whatsapp
   next_seller_cursor   Int              @default(0) // NEW — round-robin pointer
-  leads_last_synced_at DateTime?        // NEW — catch-up bookmark
+  leads_last_synced_at DateTime? // NEW — catch-up bookmark
   created_at           DateTime         @default(now())
   updated_at           DateTime         @updatedAt
   product_id           String           @unique
@@ -588,6 +589,7 @@ model Product {
   campaing              Campaing?
   frequentQuestions     FAQsOnProduct[]
   relatedCertifications CertificationsOnProduct[]
+  discountCodes         DiscountCode[]
 }
 
 // TODO: make FAQ 
@@ -645,12 +647,40 @@ model ProductPrice {
   product_id        String
   attendance_mode   AttendanceMode // select between virtual or presencial when the edition has a HIBRID modalitity in frontend if not take the attendance mode from the edition modality and set it to the price
   cash_price        Decimal        @db.Decimal(10, 2)
-  installment_price Decimal        @db.Decimal(10, 2)
-  enrollment_fee    Decimal        @db.Decimal(10, 2) // amount to pay if the lead wants to enroll to an edition and pay later the full price
+  installment_price Decimal?       @db.Decimal(10, 2) // null if the edition is ASINCRONICO
+  enrollment_fee    Decimal?       @db.Decimal(10, 2) // amount to pay if the lead wants to enroll to an edition and pay later the full price, however if the edition is of type ASINCRONICO it has to be null
 
   product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
 
   @@unique([product_id, attendance_mode])
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+model DiscountCode {
+  id          String       @id @default(uuid()) @db.Char(36)
+  code        String       @unique @db.Char(7)
+  type        DiscountType
+  value       Decimal      @db.Decimal(10, 2) // 0–100 if PERCENTAGE, soles amount if FIXED
+  product_id  String? // null = usable on any product
+  is_active   Boolean      @default(true)
+  valid_from  DateTime?
+  valid_until DateTime?
+  max_uses    Int? // null = unlimited
+  times_used  Int          @default(0)
+  created_by  String // User.id — who issued the code
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+
+  product    Product?      @relation(fields: [product_id], references: [id])
+  creator    User          @relation("DISCOUNT_CODE_CREATOR", fields: [created_by], references: [id])
+  orderItems OrderDetail[]
+
+  @@index([product_id])
+  @@index([is_active])
 }
 
 model Order {
@@ -673,7 +703,6 @@ model Order {
   seller SellerProfile? @relation("SELLER_ORDERS", fields: [generated_by], references: [user_id])
 
   orderDetails OrderDetail[]
-  paymentPlans PaymentPlan[]
   payments     Payment[]
 
   // indexes
@@ -682,16 +711,24 @@ model Order {
 }
 
 model OrderDetail {
-  id            String  @id @default(uuid()) @db.Char(36)
-  product_id    String
-  price         Decimal @db.Decimal(10, 2)
-  order_id      String
-  discount_code String? @db.Char(7)
+  id               String         @id @default(uuid()) @db.Char(36)
+  product_id       String
+  order_id         String
+  attendance_mode  AttendanceMode
+  payment_modality PaymentType
+  base_price       Decimal        @db.Decimal(10, 2) // resolved cash_price or installment_price
+  enrollment_fee   Decimal        @default(0) @db.Decimal(10, 2) // 0 for ASINCRONICO; a PORTION of price, not additive
+  discount_code_id String?
+  discount_amount  Decimal        @default(0) @db.Decimal(10, 2) // resolved soles amount, frozen at order time even for % codes
+  price            Decimal        @db.Decimal(10, 2) // base_price − discount_amount (the item's real total; enrollment_fee is part of this)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  product    Product  @relation(fields: [product_id], references: [id])
-  order      Order    @relation(fields: [order_id], references: [id])
+
+  product      Product       @relation(fields: [product_id], references: [id])
+  order        Order         @relation(fields: [order_id], references: [id])
+  discountCode DiscountCode? @relation(fields: [discount_code_id], references: [id])
+  paymentPlan  PaymentPlan?
 }
 
 enum PaymentType {
@@ -699,7 +736,6 @@ enum PaymentType {
   INSTALLMENTS
 }
 
-//regiter payment transactions
 model Payment {
   id                   String        @id @default(uuid()) @db.Char(36)
   order_id             String
@@ -730,15 +766,14 @@ enum PaymentPlanStatus {
 model PaymentPlan {
   id                 String            @id @default(uuid()) @db.Char(36)
   total_installments Int
-  order_id           String
+  order_detail_id    String            @unique
   total_amount       Decimal           @db.Decimal(10, 2)
   start_date         DateTime
   status             PaymentPlanStatus @default(PENDING)
-
-  order        Order              @relation(fields: [order_id], references: [id])
+  order        OrderDetail        @relation(fields: [order_detail_id], references: [id])
   installments ScheduledPayment[]
 
-  @@index([order_id])
+  @@index([order_detail_id])
 }
 
 enum InstallmentStatus {
