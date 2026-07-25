@@ -12,6 +12,7 @@ import { campaignRoutes } from "./campaing/campaing.route";
 import { metaWebhookRoutes } from "./webhooks";
 import { metaRoutes } from "./integrations/meta/meta.route";
 import { reportRoutes } from "./report.route";
+import { discountCodeRoutes } from "./products/discount-codes/discounts.routes";
 
 export const apiRoutes = new Hono()
   .route("/auth", authRoutes)
@@ -22,6 +23,7 @@ export const apiRoutes = new Hono()
   .route("/campaigns/:campaignId/members", campaignMemberRoutes)
   .route("/payments", paymentRoutes)
   .route("/orders", orderRoutes)
+  .route("/discount-codes", discountCodeRoutes)
   .route("/academic", academicRoutes)
   .route("/storefront", storefrontRoute)
   .route("/cms", cmsRoutes)
