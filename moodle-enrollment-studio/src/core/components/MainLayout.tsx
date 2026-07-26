@@ -25,7 +25,9 @@ const MainLayout = () => {
   const logoutMutation = useLogout();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const isSalesSupervisor = user?.role.name === "SALES_SUPERVISOR";
+  const canAccessMyProfile = ["ADMIN", "SALES_SUPERVISOR", "SALES_REP"].includes(
+    user?.role.name ?? "",
+  );
 
   const userAvatar = (
     <Avatar className="h-8 w-8">
@@ -140,7 +142,7 @@ const MainLayout = () => {
               <span className="hidden text-xs text-muted-foreground sm:inline">
                 Rol: {translateEnum(user?.role?.name, RoleTranslationsMap)}
               </span>
-              {isSalesSupervisor ? (
+              {canAccessMyProfile ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     className="rounded-full outline-none ring-offset-background transition-shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"

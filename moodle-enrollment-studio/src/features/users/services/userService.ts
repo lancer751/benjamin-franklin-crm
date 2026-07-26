@@ -25,6 +25,7 @@ type SellerCampaignsRes = InferResponseType<
 
 export type UserByIdSuccess = Extract<UserByIdRes, { success: true }>;
 export type SupervisorDetailSuccess = Extract<SupervisorDetailRes, { success: true }>;
+export type SellerProfileByIdSuccess = Extract<SellerProfileByIdRes, { success: true }>;
 
 export class UserServiceError extends Error {
   constructor(
@@ -91,10 +92,19 @@ export const getSellers = async (): Promise<SellersRes> => {
 };
 
 // Este endpoint recibe el user_id del vendedor.
-export const getSellerProfileById = async (id: string): Promise<SellerProfileByIdRes> => {
+export const getSellerById = async (id: string): Promise<SellerProfileByIdSuccess> => {
   const res = await api.users.sellers[":id"].$get({ param: { id } });
-  return await res.json();
+  const body: SellerProfileByIdRes = await res.json();
+  if (!res.ok || !isRecord(body) || body.success !== true) {
+    throw new UserServiceError(
+      res.status,
+      responseMessage(body, "No fue posible obtener el perfil de vendedor."),
+    );
+  }
+  return body as SellerProfileByIdSuccess;
 };
+
+export const getSellerProfileById = getSellerById;
 
 // Este endpoint recibe el ID del perfil vendedor, no el user_id.
 export const getSellerCampaigns = async (
@@ -116,7 +126,9 @@ export const getSupervisors = async (): Promise<SupervisorsRes> => {
   return await res.json();
 };
 
-export const getSupervisorById = async (id: string): Promise<SupervisorDetailSuccess> => {
+export const getSalesSupervisorByUserId = async (
+  id: string,
+): Promise<SupervisorDetailSuccess> => {
   const res = await api.users["sales-supervisors"][UUID_PATH].$get({ param: { id } });
   const body: SupervisorDetailRes = await res.json();
   if (!res.ok || !isRecord(body) || body.success !== true) {
@@ -127,6 +139,8 @@ export const getSupervisorById = async (id: string): Promise<SupervisorDetailSuc
   }
   return body as SupervisorDetailSuccess;
 };
+
+export const getSupervisorById = getSalesSupervisorByUserId;
 
 export const updateSupervisorProfile = async (
   id: string,

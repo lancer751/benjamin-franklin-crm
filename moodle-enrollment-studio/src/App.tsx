@@ -20,7 +20,7 @@ import DashboardView from "@/features/dashboard/views/DashboardView";
 
 // Módulo de Administración (Auth & Académico)
 import LoginView from "@/features/auth/views/LoginView";
-import SalesSupervisorProfileView from "@/features/auth/views/SalesSupervisorProfileView";
+import MyProfileView from "@/features/profile/views/MyProfileView";
 import UsersView from "@/features/users/views/UsersView";
 import CoursesAdminView from "@/features/academic/views/CoursesAdminView";
 import CourseDetailView from "@/features/academic/views/CourseDetailView";
@@ -141,8 +141,14 @@ const App = () => {
             <Route element={<MainLayout />}>
               {/* Dashboard General */}
               <Route path="/dashboard" element={<DashboardView />} />
-              <Route element={<ProtectedRoute allowedRoles={["SALES_SUPERVISOR"]} />}>
-                <Route path="/mi-perfil" element={<SalesSupervisorProfileView />} />
+              <Route
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["ADMIN", "SALES_SUPERVISOR", "SALES_REP"]}
+                  />
+                }
+              >
+                <Route path="/mi-perfil" element={<MyProfileView />} />
               </Route>
               
               {/* Administración */}
