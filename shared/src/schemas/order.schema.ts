@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AttendanceModeSchema } from "./products/price.schema";
 import { decimalString } from "../utils/fields-validation";
+import { PaymentTypeSchema } from "./payment.schema";
 
 export const OrderStatusSchema = z.enum([
   "PENDING",
@@ -9,46 +10,17 @@ export const OrderStatusSchema = z.enum([
   "REFUNDED",
 ]);
 
-export const OrderDetailSchema = z.object({
-  id: z.uuid().length(36),
-  product_id: z.uuid().length(36),
-  price: decimalString,
-  order_id: z.uuid().length(36),
-  discount_code: z.string().optional().nullable(),
-  created_at: z.coerce.date(),
-  updated_at: z.coerce.date(),
-});
-
-export const OrderSchema = z.object({
-  id: z.uuid().length(36),
-  lead_id: z.uuid().length(36),
-  generated_by: z.uuid().length(36).optional().nullable(),
-  sub_total: decimalString,
-  total_amount: decimalString,
-  discount: decimalString.optional(),
-  order_status: OrderStatusSchema,
-  order_code: z.string().length(7),
-  created_at: z.coerce.date(),
-  updated_at: z.coerce.date(),
-});
-
-// ── Create ───────────────────────────────────────────────────────────────
-// The client only says WHAT is being bought (product + attendance mode).
-// Price, sub_total, total_amount, order_status, order_code and generated_by
-// are all resolved server-side — never trust these from the request body.
-
 const CreateOrderItemSchema = z.object({
   product_id: z.uuid().length(36),
-  attendance_mode: AttendanceModeSchema,
-  discount_code: z.string().optional().nullable(),
+  attendance_mode: AttendanceModeSchema, // only meaningful for HIBRIDO editions — see route
+  payment_modality: PaymentTypeSchema,
+  discount_code: z.string().length(7).optional(),
 });
 
 export const CreateOrderSchema = z.object({
   lead_id: z.uuid().length(36),
-  discount: decimalString.optional(),
-  order_items: z
-    .array(CreateOrderItemSchema)
-    .min(1, "At least one order item is required"),
+  seller_id: z.uuid().length(36).optional(), // non-SALES_REP creators attributing to a seller
+  order_items: z.array(CreateOrderItemSchema).min(1),
 });
 
 // ── Update ───────────────────────────────────────────────────────────────
@@ -76,6 +48,7 @@ export const OrderQuerySchema = z.object({
   order_status: OrderStatusSchema.optional(),
   lead_id: z.uuid().optional(),
   generated_by: z.uuid().optional(),
+  creation_order: z.enum(["asc", "desc"])
 });
 
 export const OrderDetailParamsSchema = z.object({
@@ -84,8 +57,7 @@ export const OrderDetailParamsSchema = z.object({
 
 // ---- Inferred types ----
 export type OrderStatus = z.infer<typeof OrderStatusSchema>;
-export type OrderDetail = z.infer<typeof OrderDetailSchema>;
-export type Order = z.infer<typeof OrderSchema>;
+export type OrderDetail = z.infer<typeof CreateOrderItemSchema>;
 export type CreateOrderInput = z.infer<typeof CreateOrderSchema>;
 export type UpdateOrderInput = z.infer<typeof UpdateOrderSchema>;
 export type OrderParams = z.infer<typeof OrderParamsSchema>;

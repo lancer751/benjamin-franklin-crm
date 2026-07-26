@@ -1,5 +1,5 @@
 import { syncMetaLeadsForCampaign } from "@/services/leadgenProcessor";
-import type { PrismaClient } from "@repo/database";
+import type { CampaingWhereInput, PrismaClient } from "@repo/database";
 import type {
   CreateCampaignInput,
   UpdateCampaignInput,
@@ -11,11 +11,11 @@ export function campaignRepository(prisma: PrismaClient) {
   return {
     async findMany({ page, limit, status, platform, search }: CampaignQuery) {
       const skip = (page - 1) * limit;
-      const where = {
+      const where: CampaingWhereInput = {
         ...(status && { status }),
         ...(platform && { platform }),
         ...(search && {
-          campaing_name: { contains: search, mode: "insensitive" as const },
+          name: { contains: search, mode: "insensitive" as const },
         }),
       };
 
@@ -283,7 +283,6 @@ export function campaignRepository(prisma: PrismaClient) {
 
       return updated;
     },
-
     async delete(id: string) {
       // Block deletion if campaign has members (leads have been assigned)
       const campaign = await prisma.campaing.findUnique({
@@ -307,9 +306,7 @@ export function campaignRepository(prisma: PrismaClient) {
 
       return prisma.campaing.delete({ where: { id } });
     },
-
     // ── Seller assignment
-
     async assignSellers(
       campaignId: string,
       { seller_ids }: AssignSellersInput,
@@ -368,7 +365,6 @@ export function campaignRepository(prisma: PrismaClient) {
         },
       });
     },
-
     async removeSeller(campaignId: string, sellerId: string) {
       return prisma.campaignSeller.delete({
         where: {
