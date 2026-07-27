@@ -21,7 +21,6 @@ import ProductDetailSkeleton from "../components/detail/ProductDetailSkeleton";
 import ProductEssentialInfo from "../components/detail/ProductEssentialInfo";
 import ProductFaqAccordion from "../components/detail/ProductFaqAccordion";
 import ProductPricingGrid from "../components/detail/ProductPricingGrid";
-import ProductPricingSummary from "../components/detail/ProductPricingSummary";
 import ProductQuickActions from "../components/detail/ProductQuickActions";
 import ProductTechnicalInfo from "../components/detail/ProductTechnicalInfo";
 import { getModalityLabel } from "../utils/productDetailPresentation.utils";
@@ -107,7 +106,7 @@ const ProductDetailView = () => {
           <ProductEssentialInfo product={product} formatDate={formatDate} />
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
             <div className="space-y-5">
-              <ProductPricingSummary product={product} />
+              <ProductPricingGrid product={product} formatDate={formatDate} showDetails={false} />
               <ProductAcademicMetrics product={product} formatDate={formatDate} />
             </div>
             <aside className="space-y-4">
