@@ -5,7 +5,6 @@
   "packageManager": "bun@1.2.4",
   "workspaces": [
     "./backend",
-    "./management-dashboard",
     "./shared",
     "./commercial-website",
     "./packages/**",
