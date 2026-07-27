@@ -1,4 +1,4 @@
-import { PhoneType, type PrismaClient } from "@repo/database";
+import { type LeadWhereInput, type PrismaClient } from "@repo/database";
 import type {
   CreateLeadInput,
   UpdateLeadInput,
@@ -12,12 +12,11 @@ import type {
   CampaignMemberQuery,
   ReassignMultipleCampaignMembersInput,
 } from "shared";
-import type { LeadWhereInput } from "../../../packages/db/dist/generated/prisma/models";
 
 export function leadRepository(prisma: PrismaClient) {
   return {
     //  Leads
-    async findMany({ page, limit, search, status }: LeadQuery) {
+    async findMany({ page, limit, search, status, assigned_to, tipification_status }: LeadQuery) {
       const skip = (page - 1) * limit;
       const where: LeadWhereInput = search
         ? {
@@ -27,6 +26,14 @@ export function leadRepository(prisma: PrismaClient) {
                 first_name: { contains: search, mode: "insensitive" as const },
               },
               { last_name: { contains: search, mode: "insensitive" as const } },
+              {
+              campaignsEngaging: {
+                every: {
+                  assigned_to,
+                  status: tipification_status
+                },
+              },
+              }
             ],
             AND: [{ lead_status: status ?? "ACTIVE" }],
           }
@@ -46,9 +53,10 @@ export function leadRepository(prisma: PrismaClient) {
                 status: true,
                 is_primary: true,
                 campaing: { select: { id: true, name: true } },
-                seller: {
+                assignedUser: {
                   select: {
-                    user: { select: { first_name: true, last_name: true } },
+                    first_name: true,
+                    last_name: true,
                   },
                 },
               },
@@ -147,18 +155,21 @@ export function leadRepository(prisma: PrismaClient) {
               campaing: {
                 select: { id: true, name: true, platform: true },
               },
-              seller: {
+              assignedUser: {
                 select: {
                   id: true,
-                  user: { select: { first_name: true, last_name: true } },
+                  first_name: true,
+                  last_name: true,
                 },
               },
               leadInteractions: {
                 orderBy: { id: "desc" },
                 include: {
-                  seller: {
+                  userCreator: {
                     select: {
-                      user: { select: { first_name: true, last_name: true } },
+                      id: true,
+                      first_name: true,
+                      last_name: true,
                     },
                   },
                 },
@@ -371,10 +382,11 @@ export function leadRepository(prisma: PrismaClient) {
           orderBy: { created_at: "desc" },
           include: {
             lead: { include: { phones: true } },
-            seller: {
+            assignedUser: {
               select: {
                 id: true,
-                user: { select: { first_name: true, last_name: true } },
+                first_name: true,
+                last_name: true,
               },
             },
             _count: { select: { leadInteractions: true } },
@@ -437,10 +449,12 @@ export function leadRepository(prisma: PrismaClient) {
         },
         include: {
           lead: { include: { phones: true } },
-          seller: {
+          assignedUser: {
             select: {
               id: true,
-              user: { select: { first_name: true, last_name: true } },
+
+              first_name: true,
+              last_name: true,
             },
           },
         },
@@ -521,10 +535,11 @@ export function leadRepository(prisma: PrismaClient) {
         where: { id: { in: member_ids } },
         include: {
           lead: { include: { phones: true } },
-          seller: {
+          assignedUser: {
             select: {
               id: true,
-              user: { select: { first_name: true, last_name: true } },
+              first_name: true,
+              last_name: true,
             },
           },
         },
@@ -593,9 +608,10 @@ export function leadRepository(prisma: PrismaClient) {
         where: { campaing_id: memberId },
         orderBy: { id: "desc" },
         include: {
-          seller: {
+          userCreator: {
             select: {
-              user: { select: { first_name: true, last_name: true } },
+              first_name: true,
+              last_name: true,
             },
           },
         },

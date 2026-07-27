@@ -1,26 +1,14 @@
 import type { SuccessResponse } from "@/app";
-import { UUID_ROUTE } from "@/helpers/constants";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
-import { CreateOrderSchema, OrderQuerySchema, UpdateOrderSchema } from "shared";
+import { CreateOrderSchema, OrderQuerySchema } from "shared";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { HTTPException } from "hono/http-exception";
-import { z } from "zod";
 import withPrisma from "@/lib/prisma";
-import {
-  verifyUserAccessAuth,
-  verifyUserRoleAccess,
-} from "@/middlewares/auth.middleware";
 import { orderRepository } from "@/repositories/order.repository";
-
-
+import { HTTPException } from "hono/http-exception";
 
 export const orderRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
-  .use(verifyUserAccessAuth)
-  .use(
-    verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR", "MARKETING"),
-  )
   .get("/", zValidator("query", OrderQuerySchema), async (c) => {
     const repo = orderRepository(c.get("prisma"));
     const query = c.req.valid("query");
@@ -32,5 +20,40 @@ export const orderRoutes = new Hono<ContextWithPrisma>()
     );
   })
   .post("/", zValidator("json", CreateOrderSchema), async (c) => {
-    
-  })
+    const {assigned_to, order_items, generated_by, lead_id, related_campaign} = c.req.valid("json");
+    const prisma = c.get("prisma");
+    const authUser = c.var.authUser
+
+    // validate if campaign member has passed the selling pipeline
+    const selectedCampaignMember = await prisma.campaignMember.findUniqueOrThrow({
+      where: {
+        lead_id_campaing_id: {
+          lead_id,
+          campaing_id: related_campaign,
+        },
+      },
+      select: {
+        status: true,
+        id: true,
+        assigned_to: true,
+      }
+    });
+
+    if(authUser.role === "SALES_REP" && authUser.userId !== selectedCampaignMember.assigned_to) {
+      throw new HTTPException(403, {message: "No puedes generar una orden para este vendedor"})
+    }
+
+    if(selectedCampaignMember.status !== "MATRICULADO") {
+      throw new HTTPException(409, {message: "Estado de tipificación inválido para generar una orden"})
+    }
+
+
+
+    // await prisma.order.create({
+    //   data: {
+    //     lead_id,
+    //     assigned_to,
+    //     generated_by,
+    //   }
+    // })
+  });

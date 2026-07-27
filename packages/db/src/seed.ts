@@ -1,9 +1,7 @@
 // src/seed.ts  — updated to include CRM workflow
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
-import { CoursesWorkflow } from "./workflows/product-launch/orchestator";
 import { compare, hash } from "bcrypt";
-import { CrmWorkflow } from "./workflows/leads-management/orchestator";
 
 const databaseUrl = `${process.env.DATABASE_URL}`;
 if (!databaseUrl) throw new Error("DATABASE_URL is not set");

@@ -60,17 +60,6 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       200,
     );
   })
-
-  .get("/:id", zValidator("param", UUIDParam), async (c) => {
-    const { id } = c.req.valid("param");
-    const repo = leadRepository(c.get("prisma"));
-    const lead = await repo.findById(id);
-    if (!lead) throw new HTTPException(404, { message: "Lead not found" });
-    return c.json<SuccessResponse<typeof lead>>(
-      { success: true, message: "Lead retrieved", data: lead },
-      200,
-    );
-  })
   .get(
     "/lookup",
     zValidator(
@@ -180,6 +169,16 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       );
     },
   )
+  .get("/:id", zValidator("param", UUIDParam), async (c) => {
+    const { id } = c.req.valid("param");
+    const repo = leadRepository(c.get("prisma"));
+    const lead = await repo.findById(id);
+    if (!lead) throw new HTTPException(404, { message: "Lead not found" });
+    return c.json<SuccessResponse<typeof lead>>(
+      { success: true, message: "Lead retrieved", data: lead },
+      200,
+    );
+  })
   .post(
     "/",
     verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR", "SALES_REP"),

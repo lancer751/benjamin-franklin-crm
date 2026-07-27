@@ -80,7 +80,7 @@ export const productGeneralRoutes = new Hono<ContextWithPrisma>()
         image_url: true,
         updated_at: true,
         pricing_status: true,
-        presale_price: true,
+        enrollment_fee: true,
         prices: {
           omit: { id: true, product_id: true },
         },

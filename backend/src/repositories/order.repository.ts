@@ -35,7 +35,6 @@ export function orderRepository(prisma: PrismaClient) {
               },
             },
             lead: true,
-            seller: { include: { user: true } },
           },
         }),
         prisma.order.count({ where }),
@@ -47,17 +46,14 @@ export function orderRepository(prisma: PrismaClient) {
       const orderInclude: OrderInclude = {
         orderDetails: { include: { product: true } },
         lead: true,
-        seller: { include: { user: true } },
       };
       return prisma.order.findUnique({
         where: { id },
         include: {
           ...orderInclude,
-          paymentPlans: { include: { installments: true } },
           payments: true,
           _count: {
             select: {
-                paymentPlans: true,
                 payments: true,
                 orderDetails: true
             }
