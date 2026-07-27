@@ -1,8 +1,15 @@
+export type ProductSalesStatus =
+  | "DRAFT"
+  | "PUBLISHED"
+  | "ON_SALE"
+  | "COMPLETED"
+  | "CANCELLED";
+
 export interface BackendProductResponse {
   id: string;
   name: string;
   slug?: string | null;
-  sales_status: "DRAFT" | "PUBLISHED" | "ON_SALE" | "COMPLETED" | "CANCELLED";
+  sales_status: ProductSalesStatus;
   pricing_status?: "VALID" | "INVALID";
   image_url?: string | null;
   short_description?: string | null;
@@ -74,7 +81,7 @@ export interface UIProduct {
   id: string;
   name: string;
   slug: string;
-  sales_status: "DRAFT" | "PUBLISHED" | "ON_SALE" | "COMPLETED" | "CANCELLED";
+  sales_status: ProductSalesStatus;
   pricing_status: "VALID" | "INVALID";
   image_url: string;
   short_description: string;

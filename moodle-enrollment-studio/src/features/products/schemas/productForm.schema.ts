@@ -2,6 +2,7 @@ import { z } from "zod";
 import { productCommercialFormSchema } from "./productCommercialForm.schema";
 import { productMarketingFormSchema } from "./productMarketingForm.schema";
 import { productWebContentFormSchema } from "./productWebContentForm.schema";
+import type { ProductSalesStatus } from "../types/product.types";
 
 export const productFormSchema = productCommercialFormSchema
   .and(productMarketingFormSchema)
@@ -24,4 +25,8 @@ export const productFormSchema = productCommercialFormSchema
     }
   });
 
-export type ProductFormValues = z.input<typeof productFormSchema>;
+type InferredProductFormValues = z.input<typeof productFormSchema>;
+
+export type ProductFormValues = Omit<InferredProductFormValues, "sales_status"> & {
+  sales_status: ProductSalesStatus;
+};

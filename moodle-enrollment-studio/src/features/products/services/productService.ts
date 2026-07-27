@@ -30,6 +30,7 @@ export const getProductById = async (id: string): Promise<ProductByIdRes> => {
   if (commRes && commRes.success && commRes.data) {
     const mergedData = {
       ...baseRes.data,
+      sales_status: commRes.data.sales_status ?? baseRes.data.sales_status,
       brochure_url: commRes.data.brochure_url ?? baseRes.data.brochure_url,
       description: commRes.data.description ?? baseRes.data.description,
       short_description: commRes.data.short_description ?? baseRes.data.short_description,

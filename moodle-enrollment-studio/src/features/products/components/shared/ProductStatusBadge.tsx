@@ -1,39 +1,22 @@
 import { Badge } from "@/core/components/ui/badge";
-import { ProductSalesStatusMap, translateEnum } from "@/core/utils/dictionaries";
+import type { ProductSalesStatus } from "../../types/product.types";
+import { getProductSalesStatusConfig } from "../../utils/productSalesStatus.utils";
 
 interface ProductStatusBadgeProps {
-  status: string;
+  status: ProductSalesStatus | null | undefined;
 }
 
 const ProductStatusBadge = ({ status }: ProductStatusBadgeProps) => {
-  const label = translateEnum(status, ProductSalesStatusMap);
+  const statusConfig = getProductSalesStatusConfig(status);
 
-  switch (status) {
-    case "ON_SALE":
-      return (
-        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-          {label}
-        </Badge>
-      );
-    case "DRAFT":
-      return <Badge variant="secondary">{label}</Badge>;
-    case "PUBLISHED":
-      return (
-        <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-          {label}
-        </Badge>
-      );
-    case "COMPLETED":
-      return (
-        <Badge className="bg-purple-100 text-purple-800 border-purple-200">
-          {label}
-        </Badge>
-      );
-    case "CANCELLED":
-      return <Badge variant="destructive">{label}</Badge>;
-    default:
-      return <Badge variant="outline">{label}</Badge>;
-  }
+  return (
+    <Badge
+      variant={statusConfig.badgeVariant}
+      className={statusConfig.badgeClassName}
+    >
+      {statusConfig.label}
+    </Badge>
+  );
 };
 
 export default ProductStatusBadge;
