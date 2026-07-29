@@ -1,4 +1,4 @@
-import { PhoneType, type PrismaClient } from "@repo/database";
+import { type LeadWhereInput, type PrismaClient } from "@repo/database";
 import type {
   CreateLeadInput,
   UpdateLeadInput,
@@ -12,11 +12,62 @@ import type {
   CampaignMemberQuery,
   ReassignMultipleCampaignMembersInput,
 } from "shared";
-import type { LeadWhereInput } from "../../../packages/db/dist/generated/prisma/models";
 
 export function leadRepository(prisma: PrismaClient) {
   return {
     //  Leads
+    async findMany({ page, limit, search, status, assigned_to, tipification_status }: LeadQuery) {
+      const skip = (page - 1) * limit;
+      const where: LeadWhereInput = search
+        ? {
+            OR: [
+              { email: { contains: search, mode: "insensitive" as const } },
+              {
+                first_name: { contains: search, mode: "insensitive" as const },
+              },
+              { last_name: { contains: search, mode: "insensitive" as const } },
+              {
+              campaignsEngaging: {
+                every: {
+                  assigned_to,
+                  status: tipification_status
+                },
+              },
+              }
+            ],
+            AND: [{ lead_status: status ?? "ACTIVE" }],
+          }
+        : {};
+
+      const [leads, total] = await Promise.all([
+        prisma.lead.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { created_at: "desc" },
+          include: {
+            phones: true,
+            campaignsEngaging: {
+              select: {
+                id: true,
+                status: true,
+                is_primary: true,
+                campaing: { select: { id: true, name: true } },
+                assignedUser: {
+                  select: {
+                    first_name: true,
+                    last_name: true,
+                  },
+                },
+              },
+            },
+          },
+        }),
+        prisma.lead.count({ where }),
+      ]);
+
+      return { leads, total, page, limit };
+    },
     async lookupExact(phone?: string, email?: string, campaignId?: string) {
       const leadSelect = {
         id: true,
@@ -73,11 +124,12 @@ export function leadRepository(prisma: PrismaClient) {
         };
       }
 
-      const matchedBy = phoneLead && emailLead
-        ? "phone_and_email"
-        : phoneLead
-          ? "phone"
-          : "email";
+      const matchedBy =
+        phoneLead && emailLead
+          ? "phone_and_email"
+          : phoneLead
+            ? "phone"
+            : "email";
 
       return {
         conflict: false as const,
@@ -93,123 +145,6 @@ export function leadRepository(prisma: PrismaClient) {
         campaignMemberId: lead.campaignsEngaging[0]?.id ?? null,
       };
     },
-
-    async findMany({
-      page,
-      limit,
-      search,
-      status,
-      assigned_to,
-      campaign_id,
-      member_status,
-      created_from,
-      created_to,
-    }: LeadQuery) {
-      const skip = (page - 1) * limit;
-      const andConditions: LeadWhereInput[] = [
-        { deleted_at: null },
-        { lead_status: status ?? "ACTIVE" },
-      ];
-
-      if (created_from || created_to) {
-        const createdAtFilter: { gte?: Date; lte?: Date } = {};
-
-        if (created_from) {
-          createdAtFilter.gte = /^\d{4}-\d{2}-\d{2}$/.test(created_from)
-            ? new Date(`${created_from}T00:00:00.000`)
-            : new Date(created_from);
-        }
-
-        if (created_to) {
-          createdAtFilter.lte = /^\d{4}-\d{2}-\d{2}$/.test(created_to)
-            ? new Date(`${created_to}T23:59:59.999`)
-            : new Date(created_to);
-        }
-
-        andConditions.push({ created_at: createdAtFilter });
-      }
-
-      if (search) {
-        andConditions.push({
-          OR: [
-            { first_name: { contains: search, mode: "insensitive" as const } },
-            { middle_name: { contains: search, mode: "insensitive" as const } },
-            { last_name: { contains: search, mode: "insensitive" as const } },
-            { email: { contains: search, mode: "insensitive" as const } },
-            { secondary_email: { contains: search, mode: "insensitive" as const } },
-            { dni: { contains: search, mode: "insensitive" as const } },
-            {
-              phones: {
-                some: { number: { contains: search, mode: "insensitive" as const } },
-              },
-            },
-          ]
-        });
-      }
-
-      const campaignMemberFilter = {
-        ...(assigned_to && assigned_to !== "unassigned" && { assigned_to }),
-        ...(campaign_id && { campaing_id: campaign_id }),
-        ...(member_status && { status: member_status }),
-      };
-
-      if (assigned_to === "unassigned") {
-        andConditions.push({
-          campaignsEngaging: {
-            none: {}
-          }
-        });
-      } else if (Object.keys(campaignMemberFilter).length > 0) {
-        andConditions.push({
-          campaignsEngaging: {
-            some: campaignMemberFilter,
-          }
-        });
-      }
-
-      const where: LeadWhereInput = {
-        AND: andConditions
-      };
-
-      const includeMemberFilter = {
-        ...(assigned_to && assigned_to !== "unassigned" && { assigned_to }),
-        ...(campaign_id && { campaing_id: campaign_id }),
-        ...(member_status && { status: member_status }),
-      };
-
-      const [leads, total] = await Promise.all([
-        prisma.lead.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: { created_at: "desc" },
-          include: {
-            phones: true,
-            campaignsEngaging: {
-              ...(Object.keys(includeMemberFilter).length > 0 && {
-                where: includeMemberFilter,
-              }),
-              select: {
-                id: true,
-                status: true,
-                is_primary: true,
-                source: true,
-                campaing: { select: { id: true, name: true, platform: true } },
-                seller: {
-                  select: {
-                    id: true,
-                    user: { select: { first_name: true, last_name: true } },
-                  },
-                },
-              },
-            },
-          },
-        }),
-        prisma.lead.count({ where }),
-      ]);
-
-      return { leads, total, page, limit };
-    },
     async findById(id: string) {
       return prisma.lead.findUnique({
         where: { id },
@@ -220,18 +155,21 @@ export function leadRepository(prisma: PrismaClient) {
               campaing: {
                 select: { id: true, name: true, platform: true },
               },
-              seller: {
+              assignedUser: {
                 select: {
                   id: true,
-                  user: { select: { first_name: true, last_name: true } },
+                  first_name: true,
+                  last_name: true,
                 },
               },
               leadInteractions: {
                 orderBy: { id: "desc" },
                 include: {
-                  seller: {
+                  userCreator: {
                     select: {
-                      user: { select: { first_name: true, last_name: true } },
+                      id: true,
+                      first_name: true,
+                      last_name: true,
                     },
                   },
                 },
@@ -444,10 +382,11 @@ export function leadRepository(prisma: PrismaClient) {
           orderBy: { created_at: "desc" },
           include: {
             lead: { include: { phones: true } },
-            seller: {
+            assignedUser: {
               select: {
                 id: true,
-                user: { select: { first_name: true, last_name: true } },
+                first_name: true,
+                last_name: true,
               },
             },
             _count: { select: { leadInteractions: true } },
@@ -500,61 +439,26 @@ export function leadRepository(prisma: PrismaClient) {
           message: "Seller is not assigned to this campaign",
         };
 
-      const existingMember = await prisma.campaignMember.findUnique({
-        where: {
-          lead_id_campaing_id: {
-            lead_id: data.lead_id,
-            campaing_id: data.campaing_id,
+      return prisma.campaignMember.create({
+        data: {
+          lead_id: data.lead_id,
+          campaing_id: data.campaing_id,
+          assigned_to: data.assigned_to,
+          source: data.source,
+          is_primary: data.is_primary,
+        },
+        include: {
+          lead: { include: { phones: true } },
+          assignedUser: {
+            select: {
+              id: true,
+
+              first_name: true,
+              last_name: true,
+            },
           },
         },
-        select: { id: true },
       });
-      if (existingMember) {
-        throw {
-          code: "LEAD_ALREADY_IN_CAMPAIGN",
-          message: "Este prospecto ya está registrado en esta campaña.",
-          campaignMemberId: existingMember.id,
-        };
-      }
-
-      try {
-        return await prisma.campaignMember.create({
-          data: {
-            lead_id: data.lead_id,
-            campaing_id: data.campaing_id,
-            assigned_to: data.assigned_to,
-            source: data.source,
-            is_primary: data.is_primary,
-          },
-          include: {
-            lead: { include: { phones: true } },
-            seller: {
-              select: {
-                id: true,
-                user: { select: { first_name: true, last_name: true } },
-              },
-            },
-          },
-        });
-      } catch (error) {
-        if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
-          const member = await prisma.campaignMember.findUnique({
-            where: {
-              lead_id_campaing_id: {
-                lead_id: data.lead_id,
-                campaing_id: data.campaing_id,
-              },
-            },
-            select: { id: true },
-          });
-          throw {
-            code: "LEAD_ALREADY_IN_CAMPAIGN",
-            message: "Este prospecto ya está registrado en esta campaña.",
-            campaignMemberId: member?.id,
-          };
-        }
-        throw error;
-      }
     },
 
     async updateMemberStatus(
@@ -631,10 +535,11 @@ export function leadRepository(prisma: PrismaClient) {
         where: { id: { in: member_ids } },
         include: {
           lead: { include: { phones: true } },
-          seller: {
+          assignedUser: {
             select: {
               id: true,
-              user: { select: { first_name: true, last_name: true } },
+              first_name: true,
+              last_name: true,
             },
           },
         },
@@ -703,9 +608,10 @@ export function leadRepository(prisma: PrismaClient) {
         where: { campaing_id: memberId },
         orderBy: { id: "desc" },
         include: {
-          seller: {
+          userCreator: {
             select: {
-              user: { select: { first_name: true, last_name: true } },
+              first_name: true,
+              last_name: true,
             },
           },
         },

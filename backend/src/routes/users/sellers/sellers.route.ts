@@ -10,27 +10,24 @@ import { UpdateSellerProfileSchema } from "shared";
 
 export const sellersRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
-  .get(
-    "/",
-    async (c) => {
-      const sellers = await c.get("prisma").sellerProfile.findMany({
-        include: {
-          user: true,
-        },
-        orderBy: {
-          total_sales: "desc",
-        },
-      });
+  .get("/", async (c) => {
+    const sellers = await c.get("prisma").sellerProfile.findMany({
+      include: {
+        user: true,
+      },
+      orderBy: {
+        total_sales: "desc",
+      },
+    });
 
-      return c.json(
-        {
-          success: true,
-          data: sellers,
-        },
-        200,
-      );
-    },
-  )
+    return c.json(
+      {
+        success: true,
+        data: sellers,
+      },
+      200,
+    );
+  })
   .get(
     "/:id/campaigns",
     zValidator("param", validateIdParamSchema),
@@ -50,37 +47,36 @@ export const sellersRoutes = new Hono<ContextWithPrisma>()
     },
   )
   // Get seller details by ID
-  .get(
-    "/:id",
-    zValidator("param", validateIdParamSchema),
-    async (c) => {
-      const { id } = c.req.valid("param");
+  .get("/:id", zValidator("param", validateIdParamSchema), async (c) => {
+    const { id: userID } = c.req.valid("param");
 
-      const sellerDetails = await c.get("prisma").sellerProfile.findUnique({
-        where: { user_id: id },
-        include: {
-          user: true,
-          campaignMembers: true,
-          orders: true,
+    const sellerDetails = await c.get("prisma").sellerProfile.findUnique({
+      where: { user_id: userID },
+      include: {
+        user: {
+          include: {
+            assignedOrders: true,
+            campaignMembers: true,
+          },
         },
+      },
+    });
+
+    if (!sellerDetails) {
+      throw new HTTPException(404, {
+        message: "Seller profile not found",
       });
+    }
 
-      if (!sellerDetails) {
-        throw new HTTPException(404, {
-          message: "Seller profile not found",
-        });
-      }
-
-      return c.json<SuccessResponse<typeof sellerDetails>>(
-        {
-          success: true,
-          message: "Seller profile retrieved successfully",
-          data: sellerDetails,
-        },
-        200,
-      );
-    },
-  )
+    return c.json<SuccessResponse<typeof sellerDetails>>(
+      {
+        success: true,
+        message: "Seller profile retrieved successfully",
+        data: sellerDetails,
+      },
+      200,
+    );
+  })
   .put(
     "/:id",
     withPrisma,

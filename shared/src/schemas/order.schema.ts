@@ -19,8 +19,10 @@ const CreateOrderItemSchema = z.object({
 
 export const CreateOrderSchema = z.object({
   lead_id: z.uuid().length(36),
-  seller_id: z.uuid().length(36).optional(), // non-SALES_REP creators attributing to a seller
   order_items: z.array(CreateOrderItemSchema).min(1),
+  related_campaign: z.uuid().length(36),
+  generated_by: z.uuid().length(36),
+  assigned_to: z.uuid().length(36)
 });
 
 // ── Update ───────────────────────────────────────────────────────────────

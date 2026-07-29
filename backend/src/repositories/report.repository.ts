@@ -59,7 +59,7 @@ export function reportRepository(prisma: PrismaClient) {
       });
       const campaignMap = new Map(campaigns.map((c) => [c.id, c]));
 
-      const wonCount = byStatus.find((s) => s.status === "WON")?._count._all ?? 0;
+      const wonCount = byStatus.find((s) => s.status === "MATRICULADO")?._count._all ?? 0;
 
       return {
         total_leads: totalLeads,

@@ -116,87 +116,6 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       200,
     );
   })
-
-  .get("/lookup", 
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR", "SALES_REP"),
-    zValidator("query", LeadLookupQuery), async (c) => {
-    const query = c.req.valid("query");
-    const phoneDigits = query.phone?.replace(/\D/g, "") ?? "";
-    const phone = phoneDigits ? phoneDigits.slice(-9) : undefined;
-    const email = query.email?.trim().toLowerCase() || undefined;
-
-    if (query.phone && (!phone || !/^9\d{8}$/.test(phone))) {
-      throw new HTTPException(422, {
-        message: "Ingresa un celular válido de 9 dígitos que empiece con 9.",
-      });
-    }
-    if (query.email && (!email || !z.email().safeParse(email).success)) {
-      throw new HTTPException(422, {
-        message: "Ingresa un correo electrónico válido.",
-      });
-    }
-
-    if (c.var.authUser.role === "SALES_REP") {
-      if (!query.seller_id || !query.campaign_id) {
-        throw new HTTPException(403, { message: "Seller and campaign are required" });
-      }
-
-      const [seller, campaignAssignment] = await Promise.all([
-        c.get("prisma").sellerProfile.findUnique({
-          where: { id: query.seller_id },
-          select: { user_id: true },
-        }),
-        c.get("prisma").campaignSeller.findUnique({
-          where: {
-            campaign_id_seller_id: {
-              campaign_id: query.campaign_id,
-              seller_id: query.seller_id,
-            },
-          },
-          select: { id: true },
-        }),
-      ]);
-
-      if (seller?.user_id !== c.var.authUser.userId || !campaignAssignment) {
-        throw new HTTPException(403, { message: "Forbidden seller or campaign" });
-      }
-    }
-
-    const result = await leadRepository(c.get("prisma")).lookupExact(
-      phone,
-      email,
-      query.campaign_id,
-    );
-
-    if (result.conflict) {
-      return c.json({
-        success: false as const,
-        code: "LEAD_IDENTITY_CONFLICT" as const,
-        message: "El celular y el correo pertenecen a prospectos diferentes",
-      }, 409);
-    }
-
-    return c.json({
-      success: true as const,
-      data: {
-        found: result.found,
-        matchedBy: result.matchedBy,
-        lead: result.lead,
-        campaign_member_id: result.campaignMemberId,
-      },
-    }, 200);
-  })
-
-  .get("/:id", zValidator("param", UUIDParam), async (c) => {
-    const { id } = c.req.valid("param");
-    const repo = leadRepository(c.get("prisma"));
-    const lead = await repo.findById(id);
-    if (!lead) throw new HTTPException(404, { message: "Lead not found" });
-    return c.json<SuccessResponse<typeof lead>>(
-      { success: true, message: "Lead retrieved", data: lead },
-      200,
-    );
-  })
   .get(
     "/lookup",
     zValidator(
@@ -306,6 +225,16 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       );
     },
   )
+  .get("/:id", zValidator("param", UUIDParam), async (c) => {
+    const { id } = c.req.valid("param");
+    const repo = leadRepository(c.get("prisma"));
+    const lead = await repo.findById(id);
+    if (!lead) throw new HTTPException(404, { message: "Lead not found" });
+    return c.json<SuccessResponse<typeof lead>>(
+      { success: true, message: "Lead retrieved", data: lead },
+      200,
+    );
+  })
   .post(
     "/",
     verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR", "SALES_REP"),

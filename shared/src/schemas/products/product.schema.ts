@@ -36,7 +36,7 @@ export const ProductSchema = z.object({
     .optional()
     .nullable(),
   image_url: OptionalUrl,
-  presale_price: DecimalField.optional().nullable(),
+  enrollment_fee: DecimalField.optional().nullable(),
   discount_price: DecimalField.optional().nullable().default(0),
   discount_expires_at: z.coerce.date().optional().nullable(),
   brochure_url: OptionalUrl,
@@ -105,7 +105,7 @@ export const CreateProductSalesContentSchema = ProductSchema.pick({
   name: true,
   edition_id: true,
   category_id: true,
-  presale_price: true,
+  enrollment_fee: true,
   discount_price: true,
   discount_expires_at: true,
   installments_max_number: true,

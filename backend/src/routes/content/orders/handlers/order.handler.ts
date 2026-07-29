@@ -1,5 +1,6 @@
 import type { DiscountCode, PrismaClient } from "@repo/database";
 import { HTTPException } from "hono/http-exception";
+import type { OrderDetail } from "shared";
 
 const acceptableDiscountCode = (
   code: DiscountCode | null,
@@ -72,12 +73,36 @@ async function resolveDiscount(
       ? basePrice * (Number(code.value) / 100)
       : Number(code.value);
 
-  if (discountAmountRaw > maxDeductible) {
-    throw new HTTPException(500, {
-      message:
-        "the discount amount can't be greater than the product deductible price",
-    });
-  }
+  // if (discountAmountRaw > maxDeductible) {
+  //   throw new HTTPException(500, {
+  //     message:
+  //       "the discount amount can't be greater than the product deductible price",
+  //   });
+  // }
 
-  return { id: code.id, amount: discountAmountRaw };
+  return { id: code.id, amount: Math.min(discountAmountRaw, maxDeductible) };
+}
+
+
+async function orderItemsRecordData (prisma: PrismaClient, items: OrderDetail[]) {
+
+  const selectedProducts = await prisma.product.findMany({
+    where:{
+      id: {
+        in: items.map(i => i.product_id)
+      }
+    },
+    select: {
+      edition: {
+        select: {
+          modality: true,
+        }
+      },
+      enrollment_fee: true,
+      prices: true
+    }
+  })
+
+  const finalOrderItemsRaw : OrderDetail[] = []
+  const discountCodes: string[] = []
 }

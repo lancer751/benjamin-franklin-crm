@@ -15,15 +15,14 @@ export const PhoneTypeSchema = z.enum(["WHATSAPP", "TELEPHONE"]);
 export const LeadStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 
 export const CampaignMemberStatusSchema = z.enum([
-  "NEW",
-  "CONTACTED",
-  "QUALIFIED",
-  "UNQUALIFIED",
-  "ATTEMPTED_CONTACT",
-  "FOLLOW_UP",
-  "ON_HOLD",
-  "WON",
-  "LOST",
+  "NUEVO",
+  "CONTACTADO",
+  "NO_CONTACTADO",
+  "NEGOCIACION",
+  "SEGUIMIENTO",
+  "EN_ESPERA",
+  "MATRICULADO",
+  "PERDIDO",
 ]);
 
 export const InteractionTypeSchema = z.enum([
@@ -35,7 +34,6 @@ export const InteractionTypeSchema = z.enum([
   "CALL",
 ]);
 
-// ── Lead ─────────────────────────────────────────────────────────────────────
 
 const LeadPhoneSchema = z.object({
   id: UUIDField.optional(),
@@ -158,10 +156,8 @@ export const LeadQuerySchema = z.object({
   search: z.string().optional(),
   status: LeadStatusSchema.optional(),
   campaign_id: UUIDField.optional(),
-  member_status: CampaignMemberStatusSchema.optional(),
-  assigned_to: z.union([UUIDField, z.literal("unassigned")]).optional(),
-  created_from: LeadQueryDateSchema.optional(),
-  created_to: LeadQueryDateSchema.optional(),
+  assigned_to: z.string().optional(),
+  tipification_status: CampaignMemberStatusSchema.optional()
 });
 
 export const CampaignMemberQuerySchema = z.object({
