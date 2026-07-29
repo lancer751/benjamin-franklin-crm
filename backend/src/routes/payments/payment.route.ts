@@ -129,7 +129,7 @@ export const paymentRoutes = new Hono<ContextWithPrisma>()
 
       const result = await prisma.$transaction(async (tx) => {
         const plan = await tx.paymentPlan.create({
-          data: { ...paymentPlanData, order_id: newPaymentData.order_id },
+          data: { ...paymentPlanData, order_detail_id: newPaymentData.order_id },
         });
 
         await tx.scheduledPayment.createMany({
