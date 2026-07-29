@@ -22,6 +22,12 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
         duration_unit: data.edition.duration_unit || "",
         classes_number: data.edition.classes_number != null ? Number(data.edition.classes_number) : null,
         hours_amount: data.edition.hours_amount != null ? Number(data.edition.hours_amount) : null,
+        course: data.edition.course
+          ? {
+              id: data.edition.course.id || "",
+              name: data.edition.course.name || "",
+            }
+          : null,
       }
     : null;
 
@@ -65,6 +71,7 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
   return {
     id: data.id || "",
     name: data.name || "",
+    updated_at: data.updated_at || "",
     slug: data.slug || "",
     sales_status: data.sales_status || "DRAFT",
     pricing_status: data.pricing_status || "VALID",

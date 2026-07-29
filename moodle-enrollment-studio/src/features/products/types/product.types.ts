@@ -1,8 +1,16 @@
+export type ProductSalesStatus =
+  | "DRAFT"
+  | "PUBLISHED"
+  | "ON_SALE"
+  | "COMPLETED"
+  | "CANCELLED";
+
 export interface BackendProductResponse {
   id: string;
   name: string;
+  updated_at?: string | null;
   slug?: string | null;
-  sales_status: "DRAFT" | "PUBLISHED" | "ON_SALE" | "COMPLETED" | "CANCELLED";
+  sales_status: ProductSalesStatus;
   pricing_status?: "VALID" | "INVALID";
   image_url?: string | null;
   short_description?: string | null;
@@ -30,6 +38,10 @@ export interface BackendProductResponse {
     duration_unit?: string | null;
     classes_number?: number | null;
     hours_amount?: number | null;
+    course?: {
+      id: string;
+      name: string;
+    } | null;
   } | null;
   prices?: {
     attendance_mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO";
@@ -73,8 +85,9 @@ export interface BackendProductResponse {
 export interface UIProduct {
   id: string;
   name: string;
+  updated_at: string;
   slug: string;
-  sales_status: "DRAFT" | "PUBLISHED" | "ON_SALE" | "COMPLETED" | "CANCELLED";
+  sales_status: ProductSalesStatus;
   pricing_status: "VALID" | "INVALID";
   image_url: string;
   short_description: string;
@@ -102,6 +115,10 @@ export interface UIProduct {
     duration_unit: string;
     classes_number: number | null;
     hours_amount: number | null;
+    course: {
+      id: string;
+      name: string;
+    } | null;
   } | null;
   prices: {
     attendance_mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO";

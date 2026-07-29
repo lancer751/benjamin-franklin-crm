@@ -1,269 +1,199 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useProductDetail } from "../hooks/useProductDetail";
-import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
-import { 
-  Edit, 
-  Loader2, 
-  Info, 
-  HelpCircle, 
-  GraduationCap, 
-  Sparkles, 
-  Award, 
-  FileText,
-  Download,
-  Pencil
-} from "lucide-react";
-import { Card } from "@/core/components/ui/card";
+import { BookOpen, FileText, Info, LayoutDashboard, Pencil, ReceiptText, Sparkles } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/core/components/ui/tabs";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/core/components/ui/accordion";
+import { Card } from "@/core/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
 import { useAuthStore } from "@/store/useAuthStore";
-import { PRODUCT_PERMISSIONS, RoleAccess } from "../utils/productPermissions";
+import { useProductDetail } from "../hooks/useProductDetail";
+import ProductStatusBadge from "../components/shared/ProductStatusBadge";
+import ProductPageHeader from "../components/shared/ProductPageHeader";
+import LinkEditionModal from "../components/detail/LinkEditionModal";
+import ProductAcademicMetrics from "../components/detail/ProductAcademicMetrics";
+import ProductAcademicSummary from "../components/detail/ProductAcademicSummary";
+import ProductBenefitsList from "../components/detail/ProductBenefitsList";
+import ProductCertificationList, {
+  getProductCertificateResources,
+  hasProductCertification,
+} from "../components/detail/ProductCertificationList";
+import ProductCoverCard from "../components/detail/ProductCoverCard";
+import ProductDetailSkeleton from "../components/detail/ProductDetailSkeleton";
+import ProductEssentialInfo from "../components/detail/ProductEssentialInfo";
+import ProductFaqAccordion from "../components/detail/ProductFaqAccordion";
+import ProductPricingGrid from "../components/detail/ProductPricingGrid";
+import ProductQuickActions from "../components/detail/ProductQuickActions";
+import ProductTechnicalInfo from "../components/detail/ProductTechnicalInfo";
+import { getModalityLabel } from "../utils/productDetailPresentation.utils";
 
-import ProductPageHeader from "@/features/products/components/shared/ProductPageHeader";
-import CommercialSection from "@/features/products/components/detail/CommercialSection";
-import AcademicSection from "@/features/products/components/detail/AcademicSection";
-import PricingCardList from "@/features/products/components/detail/PricingCardList";
-import LinkEditionModal from "@/features/products/components/detail/LinkEditionModal";
-import DetailSection from "@/features/products/components/shared/DetailSection";
-import CertificationSection from "@/features/products/components/detail/CertificationSection";
-import BenefitsSection from "@/features/products/components/detail/BenefitsSection";
+type ProductDetailTab = "summary" | "academic" | "pricing" | "commercial";
 
 const ProductDetailView = () => {
   const navigate = useNavigate();
-  const user = useAuthStore((state) => state.user);
-  const currentRole = user?.role?.name;
-  const userRole = user?.role?.name || "";
-  const permissions = currentRole ? PRODUCT_PERMISSIONS[currentRole as RoleAccess] : undefined;
-
+  const userRole = useAuthStore((state) => state.user?.role?.name || "");
+  const [activeTab, setActiveTab] = useState<ProductDetailTab>("summary");
   const { product, isLoading, isError, actions } = useProductDetail();
-  const { 
-    formatCurrency, 
-    formatDate, 
-    formatAttendanceMode, 
-    modalMode, 
-    setModalMode,
-    linkEdition,
-    isLinking
-  } = actions;
+  const { formatDate, modalMode, setModalMode, linkEdition, isLinking } = actions;
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground w-full">
-        <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
-        <p className="text-sm font-semibold text-slate-500 animate-pulse">Cargando detalles del producto...</p>
-      </div>
-    );
-  }
+  if (isLoading) return <ProductDetailSkeleton />;
 
   if (isError || !product) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-destructive w-full max-w-md mx-auto text-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
-          <Info size={24} />
-        </div>
+      <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-20 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
+          <Info size={22} />
+        </span>
         <div>
-          <p className="text-base font-bold text-slate-900">Error al cargar la información</p>
-          <p className="text-xs text-slate-500 mt-1">El producto comercial solicitado no pudo ser encontrado o el servidor no respondió correctamente.</p>
+          <h1 className="text-base font-bold text-slate-900">No pudimos cargar el producto</h1>
+          <p className="mt-1 text-sm text-slate-500">Intenta volver al catálogo y abrir el producto nuevamente.</p>
         </div>
-        <Button variant="outline" className="rounded-xl mt-2" onClick={() => navigate(-1)}>Volver</Button>
+        <Button variant="outline" className="rounded-xl" onClick={() => navigate("/productos")}>Volver al catálogo</Button>
       </div>
     );
   }
 
-  const handleEditRedirect = () => {
-    navigate(`/productos/${product.id}/editar`);
-  };
+  const canEdit = userRole === "ADMIN" || userRole === "MARKETING";
+  const hasCertification = hasProductCertification(product);
+  const certificateResources = getProductCertificateResources(product);
 
-  const handleLinkEdition = (editionId: string) => {
-    linkEdition(editionId);
-  };
-
-  // Preparación defensiva de las preguntas frecuentes (FAQs) ordenadas por faq.order
-  const sortedFaqs = product.frequentQuestions && product.frequentQuestions.length > 0
-    ? [...product.frequentQuestions].sort((a, b) => (a.faq?.order ?? 0) - (b.faq?.order ?? 0))
-    : (product.faqs || []).map((f) => ({
-        faq: {
-          id: f.id,
-          question: f.question,
-          answer: f.answer,
-          order: 0
-        }
-      }));
-
+  const subtitleItems = [
+    product.category?.name,
+    product.edition?.modality ? getModalityLabel(product.edition.modality) : null,
+    product.edition?.start_date ? `Inicia el ${formatDate(product.edition.start_date, "PPP")}` : null,
+  ].filter(Boolean);
 
   return (
-    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
-      
-      {/* HEADER SUPERIOR */}
+    <div className="mx-auto max-w-7xl space-y-6 pb-12">
       <ProductPageHeader
-        title={<>{product.name} <ProductStatusBadge status={product.sales_status} /></>}
-        subtitle={
-          <span>
-            ID Comercial: <span className="font-mono text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-bold">{product.id}</span>
-            {product.category?.name && (
-              <> • Categoría: <span className="font-bold text-slate-700">{product.category.name}</span></>
-            )}
+        title={
+          <span className="flex flex-wrap items-center gap-2">
+            <span>{product.name}</span>
+            <ProductStatusBadge status={product.sales_status} />
           </span>
         }
+        subtitle={<span>{subtitleItems.join(" · ") || "Producto comercial"}</span>}
         onBack={() => navigate("/productos")}
         actions={
-          <>
-            <Button 
-              variant="outline" 
-              className="rounded-xl border-slate-200 hover:bg-slate-50 shadow-sm"
-              onClick={() => navigate("/productos")}
-            >
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="outline" className="rounded-xl" onClick={() => navigate("/productos")}>
               Volver al catálogo
             </Button>
-            {(userRole === "ADMIN" || userRole === "MARKETING") && (
-              <Button
-                className="bg-blue-600 text-white hover:bg-blue-700 shadow-sm rounded-xl flex items-center gap-2"
-                onClick={() => navigate(`/productos/${product.id}/editar`)}
-              >
-                <Pencil size={14} />
-                Editar Producto
+            {canEdit && (
+              <Button className="rounded-xl bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate(`/productos/${product.id}/editar`)}>
+                <Pencil size={14} /> Editar producto
               </Button>
             )}
-          </>
+          </div>
         }
       />
 
-      {/* ARQUITECTURA DE PESTAÑAS (TABS) */}
-      <Tabs defaultValue="ficha-tecnica" className="w-full space-y-6">
-        <TabsList className="bg-slate-100 p-1.5 rounded-2xl grid grid-cols-2 max-w-xl border border-slate-200">
-          <TabsTrigger 
-            value="ficha-tecnica" 
-            className="rounded-xl font-bold text-xs flex items-center justify-center gap-2 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all text-slate-600 data-[state=active]:text-slate-900"
-          >
-            <GraduationCap size={15} /> Ficha Técnica Académica y Precios
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ProductDetailTab)} className="space-y-6">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1.5 lg:grid-cols-4">
+          <TabsTrigger value="summary" className="gap-2 rounded-xl py-2.5 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <LayoutDashboard size={14} /> Resumen
           </TabsTrigger>
-          <TabsTrigger 
-            value="marketing-cliente" 
-            className="rounded-xl font-bold text-xs flex items-center justify-center gap-2 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all text-slate-600 data-[state=active]:text-slate-900"
-          >
-            <Sparkles size={15} /> Contenido Comercial y Marketing
+          <TabsTrigger value="academic" className="gap-2 rounded-xl py-2.5 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <BookOpen size={14} /> Información académica
+          </TabsTrigger>
+          <TabsTrigger value="pricing" className="gap-2 rounded-xl py-2.5 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <ReceiptText size={14} /> Precios y financiamiento
+          </TabsTrigger>
+          <TabsTrigger value="commercial" className="gap-2 rounded-xl py-2.5 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <Sparkles size={14} /> Contenido comercial
           </TabsTrigger>
         </TabsList>
 
-        {/* TAB 1: FICHA TÉCNICA ACADÉMICA Y PRECIOS */}
-        <TabsContent value="ficha-tecnica" className="outline-none focus:outline-none animate-in fade-in duration-300">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* LADO IZQUIERDO (2/3) */}
-            <div className="lg:col-span-2 space-y-6">
-              <AcademicSection 
-                edition={product.edition} 
-                formatAttendanceMode={formatAttendanceMode} 
-                formatDate={formatDate}
-                onAssignClick={() => setModalMode('LINK')} 
-                readonly={permissions?.readonly}
-              />
-
-              {/* SECCIÓN DE CERTIFICACIÓN */}
-              <CertificationSection product={product} />
+        <TabsContent value="summary" className="space-y-6 outline-none">
+          <ProductEssentialInfo product={product} formatDate={formatDate} />
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="space-y-5">
+              <ProductPricingGrid product={product} formatDate={formatDate} showDetails={false} />
+              <ProductAcademicMetrics product={product} formatDate={formatDate} />
             </div>
-
-            {/* LADO DERECHO (1/3) */}
-            <div className="space-y-6">
-              {/* PORTADA COMERCIAL */}
-              {product.image_url && (
-                <Card className="shadow-sm border border-slate-200/80 rounded-2xl overflow-hidden hover:border-slate-350 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 bg-white">
-                  <div className="bg-slate-50/50 border-b border-slate-100 p-4">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Portada Comercial</span>
-                  </div>
-                  <div className="p-4">
-                    <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center group shadow-inner">
-                      <img 
-                        src={product.image_url} 
-                        alt={product.name} 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                      />
-                    </div>
-                  </div>
-                </Card>
-              )}
-
-              {/* CARD DE PRECIOS */}
-              <div className="lg:sticky lg:top-6 self-start space-y-4">
-                <PricingCardList 
-                  product={product} 
-                  formatCurrency={formatCurrency} 
-                  formatAttendanceMode={formatAttendanceMode}
-                  formatDate={formatDate}
+            <aside className="space-y-4">
+              <ProductCoverCard imageUrl={product.image_url} productName={product.name} />
+              <Card className="rounded-2xl border-slate-200 p-4 shadow-sm">
+                <h2 className="mb-3 text-sm font-semibold text-slate-900">Recursos del producto</h2>
+                <ProductQuickActions
+                  brochureUrl={product.brochure_url}
+                  hasCertification={hasCertification}
+                  certificateResources={certificateResources}
+                  canEdit={false}
+                  onEdit={() => undefined}
                 />
-
-                {/* BOTÓN DE ACCIÓN DIRECTA AL BROCHURE */}
-                {product.brochure_url && (
-                  <Button 
-                    className="w-full rounded-2xl py-6 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/10 transition-all duration-200 flex items-center justify-center gap-2 font-bold text-xs"
-                    onClick={() => window.open(product.brochure_url, "_blank")}
-                  >
-                    <Download size={15} /> Descargar Brochure Informativo
-                  </Button>
-                )}
-              </div>
-            </div>
-
+              </Card>
+            </aside>
           </div>
         </TabsContent>
 
-        {/* TAB 2: CONTENIDO COMERCIAL Y MARKETING */}
-        <TabsContent value="marketing-cliente" className="outline-none focus:outline-none space-y-6 animate-in fade-in duration-300">
-          
-          {/* INFORMACIÓN Y DESCRIPCIÓN COMERCIAL */}
-          <CommercialSection product={product} />
+        <TabsContent value="academic" className="space-y-6 outline-none">
+          <ProductAcademicSummary product={product} formatDate={formatDate} />
+          {!product.edition && (
+            <Card className="rounded-2xl border-dashed p-6 text-center">
+              <p className="text-sm font-medium text-slate-600">Este producto todavía no tiene una edición académica vinculada.</p>
+              {canEdit && (
+                <Button variant="outline" className="mt-3 rounded-xl" onClick={() => setModalMode("LINK")}>Asignar edición</Button>
+              )}
+            </Card>
+          )}
+        </TabsContent>
 
-          {/* SECCIÓN DE BENEFICIOS */}
-          <BenefitsSection product={product} />
+        <TabsContent value="pricing" className="outline-none">
+          <ProductPricingGrid product={product} formatDate={formatDate} />
+        </TabsContent>
 
-          {/* ACORDEÓN DE PREGUNTAS FRECUENTES (FAQs) */}
-          <DetailSection 
-            title="Preguntas Frecuentes" 
-            description="Preguntas y respuestas comerciales para resolver dudas del alumno."
-            icon={HelpCircle}
-            iconBg="bg-blue-50"
-            iconColor="text-blue-600"
-          >
-            {sortedFaqs.length > 0 ? (
-              <Accordion type="single" collapsible className="w-full space-y-3 border-none">
-                {sortedFaqs.map((item, idx) => {
-                  const faq = item.faq;
-                  if (!faq) return null;
-                  return (
-                    <AccordionItem 
-                      key={faq.id || idx} 
-                      value={`faq-${faq.id || idx}`}
-                      className="p-1 px-4 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:border-slate-350 hover:bg-slate-50/50 transition-all duration-200 border-none"
-                    >
-                      <AccordionTrigger className="text-xs font-bold text-slate-800 leading-normal flex items-center justify-between hover:no-underline [&[data-state=open]]:text-primary transition-colors py-3">
-                        <span className="flex items-center gap-2.5 text-left">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                          {faq.question}
-                        </span>
-                      </AccordionTrigger>
-                      <AccordionContent className="text-[11px] text-slate-500 leading-relaxed pl-4 border-l border-slate-200 pb-3 pt-1">
-                        {faq.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
-            ) : (
-              <p className="text-xs font-medium text-slate-400 italic text-center py-4 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                No hay preguntas frecuentes registradas
-              </p>
-            )}
-          </DetailSection>
+        <TabsContent value="commercial" className="space-y-6 outline-none">
+          <Card className="rounded-2xl border-slate-200 p-5 shadow-sm">
+            <h2 className="text-base font-bold text-slate-900">Contenido que se publicará en la web</h2>
+            <div className="mt-5 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+              <ProductCoverCard imageUrl={product.image_url} productName={product.name} />
+              <div className="space-y-5">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Descripción corta</p>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-700">{product.short_description || "No registrada"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Descripción detallada</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">{product.description || "No registrada"}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800"><FileText size={15} /> Brochure</p>
+                  <ProductQuickActions
+                    brochureUrl={product.brochure_url}
+                    hasCertification={false}
+                    certificateResources={[]}
+                    canEdit={false}
+                    onEdit={() => undefined}
+                    showCertification={false}
+                    showEdit={false}
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
 
+          <Card className="rounded-2xl border-slate-200 p-5 shadow-sm">
+            <h2 className="mb-4 text-base font-bold text-slate-900">Beneficios incluidos</h2>
+            <ProductBenefitsList benefits={product.benefits} />
+          </Card>
+
+          <Card id="product-certifications" className="scroll-mt-6 rounded-2xl border-slate-200 p-5 shadow-sm">
+            <h2 className="mb-4 text-base font-bold text-slate-900">Certificaciones</h2>
+            <ProductCertificationList product={product} />
+          </Card>
+
+          <Card className="rounded-2xl border-slate-200 p-5 shadow-sm">
+            <h2 className="mb-4 text-base font-bold text-slate-900">Preguntas frecuentes</h2>
+            <ProductFaqAccordion product={product} />
+          </Card>
         </TabsContent>
       </Tabs>
 
-      {/* MODAL DE VINCULACIÓN ACADÉMICA */}
-      <LinkEditionModal 
-        isOpen={modalMode === 'LINK'}
+      <ProductTechnicalInfo product={product} formatDate={formatDate} />
+
+      <LinkEditionModal
+        isOpen={modalMode === "LINK"}
         onClose={() => setModalMode(null)}
-        onLink={handleLinkEdition}
+        onLink={linkEdition}
         isPending={isLinking}
       />
     </div>

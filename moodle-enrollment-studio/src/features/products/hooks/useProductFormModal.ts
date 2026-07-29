@@ -98,6 +98,7 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
       const nextForm: ProductFormValues = {
         ...emptyData,
         ...product,
+        sales_status: product.sales_status ?? "DRAFT",
         edition_id: initialData.edition_id || product.edition?.id || "", // UUID real del backend
         pricing_status: product.pricing_status || "VALID",
         slug: product.slug || generateSlug(product.name || ""),

@@ -2,7 +2,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/cor
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Settings, Link as LinkIcon, Globe } from "lucide-react";
 import { cn } from "@/core/lib/utils";
-import { ProductSalesStatusMap } from "@/core/utils/dictionaries";
+import { PRODUCT_SALES_STATUS_OPTIONS } from "../../constants/productSalesStatus.constants";
+import type { ProductSalesStatus } from "../../types/product.types";
 
 interface CommercialConfigCardProps {
   form: {
@@ -10,7 +11,7 @@ interface CommercialConfigCardProps {
     slug: string;
     short_description?: string | null;
     description?: string | null;
-    sales_status: string;
+    sales_status: ProductSalesStatus;
     pricing_status?: "VALID" | "INVALID";
   };
   errors: Record<string, string>;
@@ -65,16 +66,16 @@ const CommercialConfigCard = ({
             </label>
             <Select 
               value={form.sales_status} 
-              onValueChange={(value) => setFieldValue("sales_status", value as any)}
+              onValueChange={(value) => setFieldValue("sales_status", value as ProductSalesStatus)}
             >
               <SelectTrigger className="h-11 border-slate-200 shadow-sm rounded-xl">
                 <SelectValue placeholder="Selecciona el estado" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(ProductSalesStatusMap).map(([value, label]) => (
-                  <SelectItem key={value} value={value} disabled={value === "ON_SALE" && form.pricing_status === "INVALID"}>
-                    {label}
-                    {value === "ON_SALE" && form.pricing_status === "INVALID" ? " — corrige precios primero" : ""}
+                {PRODUCT_SALES_STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value} disabled={option.value === "ON_SALE" && form.pricing_status === "INVALID"}>
+                    {option.label}
+                    {option.value === "ON_SALE" && form.pricing_status === "INVALID" ? " — corrige precios primero" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
