@@ -6,22 +6,22 @@ const EditionInfoPanel = ({ selectedEdition }: EditionInfoPanelProps) => {
   if (!selectedEdition) return null;
 
   return (
-    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:grid-cols-3">
       <div>
-        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Modalidad Base</label>
-        <div className="text-sm font-semibold text-slate-700 truncate">
+        <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-wider text-slate-400">Modalidad base</label>
+        <div className="truncate text-xs font-semibold text-slate-700">
           {selectedEdition?.modality?.name || selectedEdition?.modality || "No definida"}
         </div>
       </div>
       <div>
-        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Profesor Principal</label>
-        <div className="text-sm font-semibold text-slate-700 truncate">
+        <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-wider text-slate-400">Profesor principal</label>
+        <div className="truncate text-xs font-semibold text-slate-700">
           {selectedEdition?.teacher_fullname || "Por asignar"}
         </div>
       </div>
       <div>
-        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Código Cohorte</label>
-        <div className="text-sm font-mono font-bold text-slate-900 truncate">
+        <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-wider text-slate-400">Código de cohorte</label>
+        <div className="truncate font-mono text-xs font-bold text-slate-900">
           {selectedEdition?.edition_code || "Sin código"}
         </div>
       </div>

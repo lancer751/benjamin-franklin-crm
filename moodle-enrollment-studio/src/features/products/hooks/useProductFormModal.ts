@@ -38,11 +38,10 @@ const emptyData: ProductFormValues = {
   slug: "",
   short_description: "",
   description: "",
-  presale_price: "",
   installments_min_number: 1,
   installments_max_number: 1,
-  discount_price: "",
-  discount_expires_at: "",
+  discount_price: null,
+  discount_expires_at: null,
   image_url: "",
   brochure_url: "",
   prices: [], // Will be filled dynamically
@@ -102,9 +101,8 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
         edition_id: initialData.edition_id || product.edition?.id || "", // UUID real del backend
         pricing_status: product.pricing_status || "VALID",
         slug: product.slug || generateSlug(product.name || ""),
-        presale_price: product.presale_price || "",
-        discount_price: product.discount_price || "",
-        discount_expires_at: product.discount_expires_at || "",
+        discount_price: product.discount_price === "" ? null : Number(product.discount_price),
+        discount_expires_at: product.discount_expires_at || null,
         image_url: product.image_url || "",
         brochure_url: product.brochure_url || "",
         prices: product.prices || [],
@@ -309,7 +307,6 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
         category_id: payload?.category_id || "",
         installments_max_number: Number(payload?.installments_max_number || 1),
         installments_min_number: Number(payload?.installments_min_number || 1),
-        presale_price: parseOptionalPrice(payload?.presale_price),
         discount_price: parseOptionalPrice(payload?.discount_price),
         discount_expires_at: payload?.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
         prices: (payload?.prices || []).map((p: any) => {

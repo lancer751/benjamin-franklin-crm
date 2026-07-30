@@ -26,14 +26,6 @@ import {
 } from "@/middlewares/auth.middleware";
 
 const UUIDParam = z.object({ id: z.string().uuid().length(36) });
-const LeadLookupQuery = z.object({
-  phone: z.string().optional(),
-  email: z.string().optional(),
-  campaign_id: z.string().uuid().optional(),
-  seller_id: z.string().uuid().optional(),
-}).refine((value) => Boolean(value.phone || value.email), {
-  message: "Phone or email is required",
-});
 const MemberParam = z.object({ memberId: z.string().uuid().length(36) });
 const TaskParam = z.object({
   memberId: z.uuid().length(36),
@@ -61,56 +53,8 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
     verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
   )
   .get("/", zValidator("query", LeadQuerySchema), async (c) => {
-    const prisma = c.get("prisma");
-    const query = c.req.valid("query");
-
-    let effectiveQuery = query;
-
-    if (c.var.authUser.role === "SALES_REP") {
-      const sellerProfile = await prisma.sellerProfile.findUnique({
-        where: { user_id: c.var.authUser.userId },
-        select: { id: true },
-      });
-
-      if (!sellerProfile) {
-        throw new HTTPException(403, { message: "Seller profile not found" });
-      }
-
-      if (query.campaign_id) {
-        const campaignAssignment = await prisma.campaignSeller.findUnique({
-          where: {
-            campaign_id_seller_id: {
-              campaign_id: query.campaign_id,
-              seller_id: sellerProfile.id,
-            },
-          },
-          select: { id: true },
-        });
-
-        if (!campaignAssignment) {
-          throw new HTTPException(403, {
-            message: "Seller is not assigned to this campaign",
-          });
-        }
-      }
-
-      effectiveQuery = {
-        ...query,
-        assigned_to: sellerProfile.id,
-      };
-    }
-
-    if (
-      effectiveQuery.assigned_to === "unassigned" &&
-      (effectiveQuery.campaign_id || effectiveQuery.member_status)
-    ) {
-      throw new HTTPException(422, {
-        message: "Unassigned leads cannot have campaign or member status filters",
-      });
-    }
-
-    const repo = leadRepository(prisma);
-    const result = await repo.findMany(effectiveQuery);
+    const repo = leadRepository(c.get("prisma"));
+    const result = await repo.findMany(c.req.valid("query"));
     return c.json<SuccessResponse<typeof result>>(
       { success: true, message: "Leads retrieved", data: result },
       200,
@@ -362,7 +306,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
           throw new HTTPException(404, { message: "seller profile not found" });
         }
 
-        if (sellerProfileId.id !== data.assigned_to) {
+        if (sellerProfileId.id === data.assigned_to) {
           throw new HTTPException(500, {
             message:
               "A seller can't assign a lead to another seller more than himself",
@@ -377,33 +321,6 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
           201,
         );
       } catch (err) {
-        if (
-          err &&
-          typeof err === "object" &&
-          "code" in err &&
-          err.code === "LEAD_ALREADY_IN_CAMPAIGN"
-        ) {
-          const message =
-            "message" in err && typeof err.message === "string"
-              ? err.message
-              : "Este prospecto ya está registrado en esta campaña.";
-
-          const campaignMemberId =
-            "campaignMemberId" in err &&
-            typeof err.campaignMemberId === "string"
-              ? err.campaignMemberId
-              : undefined;
-
-          return c.json(
-            {
-              success: false as const,
-              code: "LEAD_ALREADY_IN_CAMPAIGN" as const,
-              message,
-              campaign_member_id: campaignMemberId,
-            },
-            409,
-          );
-        }
         handleRepoError(err);
       }
     },
@@ -411,7 +328,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // PATCH /:memberId/status — update CampaignMemberStatus
   .patch(
     "/:memberId/status",
-    verifyUserRoleAccess("ADMIN", "SALES_REP", "MARKETING", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
     zValidator("param", MemberParam),
     zValidator("json", UpdateCampaignMemberStatusSchema),
     async (c) => {

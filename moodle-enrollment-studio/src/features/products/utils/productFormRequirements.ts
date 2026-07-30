@@ -31,8 +31,8 @@ export const getProductRequirements = (form: ProductFormValues) => {
     },
     {
       id: "discount_expires_at",
-      label: "Vencimiento del descuento",
-      state: Number(form.discount_price || 0) <= 0 ? "optional" : form.discount_expires_at ? "complete" : "error",
+      label: "Vencimiento de la promoción",
+      state: form.discount_expires_at ? "complete" : "optional",
     },
   ];
 
