@@ -1,5 +1,6 @@
 import { Calendar, MapPin, Monitor, Users, X, BarChart3 } from "lucide-react";
 import ModalWrapper from "@/core/components/ModalWrapper";
+import { formatCampaignCurrency, parseCampaignCurrency } from "../utils/campaignCurrency";
 
 interface Campaign {
   name: string;
@@ -56,8 +57,8 @@ const CampaignDetailModal = ({ open, onClose, campaign }: CampaignDetailModalPro
   const edition = editionData[campaign.id] || editionData["CAMP-9231"];
   const sellers = sellersData[campaign.id] || sellersData["CAMP-9231"];
 
-  const budgetNum = parseFloat(campaign.budget.replace(/[$,]/g, ""));
-  const spentNum = parseFloat(campaign.spent.replace(/[$,]/g, ""));
+  const budgetNum = parseCampaignCurrency(campaign.budget);
+  const spentNum = parseCampaignCurrency(campaign.spent);
   const spentPct = budgetNum > 0 ? Math.round((spentNum / budgetNum) * 100) : 0;
 
   return (
@@ -79,11 +80,11 @@ const CampaignDetailModal = ({ open, onClose, campaign }: CampaignDetailModalPro
         </div>
         <div className="rounded-lg bg-muted p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Presupuesto</p>
-          <p className="text-lg font-bold text-foreground mt-1">{campaign.budget}</p>
+          <p className="text-lg font-bold text-foreground mt-1">{formatCampaignCurrency(budgetNum)}</p>
         </div>
         <div className="rounded-lg bg-muted p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gastado</p>
-          <p className="text-lg font-bold text-foreground mt-1">{campaign.spent}</p>
+          <p className="text-lg font-bold text-foreground mt-1">{formatCampaignCurrency(spentNum)}</p>
           <div className="h-1.5 rounded-full bg-background overflow-hidden mt-1">
             <div className="h-full rounded-full bg-primary" style={{ width: `${spentPct}%` }} />
           </div>

@@ -1,5 +1,6 @@
 import { BarChart3, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/core/components/ui/skeleton";
+import { formatCampaignCurrency } from "../utils/campaignCurrency";
 
 interface CampaignStatsCardsProps {
   isLoading: boolean;
@@ -9,10 +10,6 @@ interface CampaignStatsCardsProps {
   spentPercent: number;
   totalCampaignsCount: number;
 }
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString("en-US", { style: "currency", currency: "USD" });
-};
 
 export const CampaignStatsCards = ({
   isLoading,
@@ -36,7 +33,7 @@ export const CampaignStatsCards = ({
           <Skeleton className="h-8 w-28 mt-2" />
         ) : (
           <p className="text-2xl font-bold text-foreground mt-2">
-            {formatCurrency(totalBudget)}
+            {formatCampaignCurrency(totalBudget)}
           </p>
         )}
         <span className="inline-flex mt-2 rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
@@ -57,7 +54,7 @@ export const CampaignStatsCards = ({
         ) : (
           <div className="flex items-baseline gap-3 mt-2">
             <span className="text-2xl font-bold text-foreground">
-              {formatCurrency(totalSpent)}
+              {formatCampaignCurrency(totalSpent)}
             </span>
             <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
               <div

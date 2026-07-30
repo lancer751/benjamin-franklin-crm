@@ -7,15 +7,33 @@ import { getBenefits } from "../services/benefitService";
 import { toast } from "sonner";
 import { ProductFormValues, productCommercialFormSchema, productFormSchema, productMarketingFormSchema, productWebContentFormSchema } from "../schemas";
 import { getCertificationDefaultText, INSTITUTIONAL_FAQS } from "../utils/productTemplates";
-import { adaptProductToUI } from "../adapters/product.adapter";
+import { adaptProductToUI, mapProductFormToPayload } from "../adapters/product.adapter";
 import { BackendProductResponse } from "../types/product.types";
 
 const createEmptyPrice = (mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO" = "HEREDADO") => ({
   attendance_mode: mode,
   cash_price: "0.00",
   installment_price: "0.00",
-  enrollment_fee: "0.00",
 });
+
+const getPricesForModality = (
+  prices: ProductFormValues["prices"],
+  modality?: string,
+): ProductFormValues["prices"] => {
+  if (modality === "HIBRIDO") {
+    return [
+      prices.find((price) => price.attendance_mode === "PRESENCIAL") || createEmptyPrice("PRESENCIAL"),
+      prices.find((price) => price.attendance_mode === "VIRTUAL") || createEmptyPrice("VIRTUAL"),
+    ];
+  }
+
+  const inheritedPrice =
+    prices.find((price) => price.attendance_mode === "HEREDADO") ||
+    prices[0] ||
+    createEmptyPrice();
+
+  return [{ ...inheritedPrice, attendance_mode: "HEREDADO" }];
+};
 
 const generateSlug = (text: string) => {
   return text
@@ -38,6 +56,7 @@ const emptyData: ProductFormValues = {
   slug: "",
   short_description: "",
   description: "",
+  enrollment_fee: "0.00",
   installments_min_number: 1,
   installments_max_number: 1,
   discount_price: null,
@@ -255,22 +274,8 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
         nextForm.brochure_url = "";
       }
 
-      // 4. Manejo de modalidad y precios (Incluso en edición si cambiamos la edición vinculada)
-      if (!(isEdit && prev.prices && prev.prices.length > 0)) {
-        let newPrices = [...prev.prices];
-
-        if (editionModality === "HIBRIDO") {
-          const presencial = newPrices.find(p => p.attendance_mode === "PRESENCIAL") || createEmptyPrice("PRESENCIAL");
-          const virtual = newPrices.find(p => p.attendance_mode === "VIRTUAL") || createEmptyPrice("VIRTUAL");
-          newPrices = [presencial, virtual];
-        } else if (editionModality === "VIRTUAL" || editionModality === "PRESENCIAL") {
-          const existing = newPrices.find(p => p.attendance_mode === editionModality) || createEmptyPrice(editionModality);
-          newPrices = [existing];
-        } else {
-          if (newPrices.length === 0) newPrices = [createEmptyPrice("HEREDADO")];
-        }
-        nextForm.prices = newPrices;
-      }
+      // 4. La modalidad define una sola estructura de precios para creación y edición.
+      nextForm.prices = getPricesForModality(prev.prices, editionModality);
 
       return nextForm;
     });
@@ -285,48 +290,20 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
   }, []);
 
   const mutation = useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: ProductFormValues) => {
       // Obtener la modalidad de la edición seleccionada
       const targetEdition = editions.find((e: any) => e.id === payload?.edition_id);
       const modalityRaw = targetEdition?.modality;
       const modality = typeof modalityRaw === 'object' ? modalityRaw.name : modalityRaw;
 
-      // Conversión y sanitización segura de precios opcionales
-      const parseOptionalPrice = (val: any) => {
-        if (val === undefined || val === null) return null;
-        const strVal = String(val).trim();
-        if (strVal === "") return null;
-        const num = Number(strVal);
-        return isNaN(num) ? null : num;
-      };
-
-      // Payload exclusivo del contrato de información comercial.
-      const parsedPayload = {
-        name: payload?.name || "",
-        edition_id: payload?.edition_id || "",
-        category_id: payload?.category_id || "",
-        installments_max_number: Number(payload?.installments_max_number || 1),
-        installments_min_number: Number(payload?.installments_min_number || 1),
-        discount_price: parseOptionalPrice(payload?.discount_price),
-        discount_expires_at: payload?.discount_expires_at ? new Date(payload.discount_expires_at).toISOString() : null,
-        prices: (payload?.prices || []).map((p: any) => {
-          const attendance_mode = modality === "HIBRIDO" ? p.attendance_mode : "HEREDADO";
-          return {
-            attendance_mode,
-            cash_price: Number(p.cash_price || 0),
-            installment_price: Number(p.installment_price || 0),
-            enrollment_fee: Number(p.enrollment_fee || 0),
-          };
-        }),
-      };
-
+      const parsedPayload = mapProductFormToPayload(payload, modality);
 
       try {
         let res;
         if (isEdit && initialData?.id) {
-          res = await updateProduct(initialData.id, parsedPayload as any);
+          res = await updateProduct(initialData.id, parsedPayload);
         } else {
-          res = await createProduct(parsedPayload as any);
+          res = await createProduct(parsedPayload);
         }
         console.log("RESPUESTA COMPLETA DEL BACKEND:", res);
         return res;
@@ -380,7 +357,11 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     }
   };
 
-  const setPriceValue = (index: number, field: string, value: string) => {
+  const setPriceValue = (
+    index: number,
+    field: "cash_price" | "installment_price",
+    value: string,
+  ) => {
     const cleanValue = value.replace(/[^0-9.]/g, '');
 
     setForm(prev => {

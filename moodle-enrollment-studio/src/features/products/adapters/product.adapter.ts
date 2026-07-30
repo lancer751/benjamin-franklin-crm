@@ -1,3 +1,5 @@
+import type { CreateProductInput } from "../services/productService";
+import type { ProductFormValues } from "../schemas";
 import { BackendProductResponse, UIProduct } from "../types/product.types";
 
 export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
@@ -35,7 +37,6 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
     attendance_mode: p.attendance_mode,
     cash_price: String(p.cash_price || "0.00"),
     installment_price: String(p.installment_price || "0.00"),
-    enrollment_fee: String(p.enrollment_fee || "0.00"),
   }));
 
   // ✅ CORREGIDO: Mapeo directo y defensivo compatible con Prisma anidado
@@ -79,6 +80,7 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
     short_description: data.short_description || "",
     description: data.description || "",
     presale_price: data.presale_price != null ? String(data.presale_price) : "",
+    enrollment_fee: data.enrollment_fee != null ? String(data.enrollment_fee) : "0.00",
     discount_price: data.discount_price != null ? String(data.discount_price) : "",
     discount_expires_at: data.discount_expires_at ? data.discount_expires_at.slice(0, 10) : "",
     brochure_url: data.brochure_url || "",
@@ -95,3 +97,30 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
     relatedCertifications: data.relatedCertifications,
   };
 };
+
+const parseOptionalAmount = (value: string | number | null | undefined) => {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : null;
+};
+
+export const mapProductFormToPayload = (
+  form: ProductFormValues,
+  editionModality?: string,
+): CreateProductInput => ({
+  name: form.name,
+  edition_id: form.edition_id,
+  category_id: form.category_id,
+  enrollment_fee: Number(form.enrollment_fee),
+  installments_min_number: Number(form.installments_min_number),
+  installments_max_number: Number(form.installments_max_number),
+  discount_price: parseOptionalAmount(form.discount_price),
+  discount_expires_at: form.discount_expires_at
+    ? new Date(`${form.discount_expires_at}T00:00:00`).toISOString()
+    : null,
+  prices: form.prices.map((price) => ({
+    attendance_mode: editionModality === "HIBRIDO" ? price.attendance_mode : "HEREDADO",
+    cash_price: Number(price.cash_price),
+    installment_price: Number(price.installment_price),
+  })),
+}) as CreateProductInput;

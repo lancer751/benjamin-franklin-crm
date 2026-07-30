@@ -10,7 +10,11 @@ interface ProductCommercialSectionProps {
   form: ProductFormValues;
   errors: Record<string, string>;
   setFieldValue: (key: string, value: any) => void;
-  setPriceValue: (index: number, key: string, value: string) => void;
+  setPriceValue: (
+    index: number,
+    key: "cash_price" | "installment_price",
+    value: string,
+  ) => void;
   editions: any[];
   categories: any[];
   isLoadingEditions: boolean;

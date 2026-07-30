@@ -153,6 +153,7 @@ const ProductsView = () => {
         cell: ({ row }) => {
           const p = row.original;
           const prices = p.prices || [];
+          const enrollmentFee = Number(p.enrollment_fee || 0).toFixed(2);
 
           if (prices.length === 0) {
             return <span className="text-xs text-muted-foreground font-semibold">Sin precios</span>;
@@ -162,8 +163,6 @@ const ProductsView = () => {
             const firstPrice = prices[0];
             const cashPrice = Number(firstPrice.cash_price || 0).toFixed(2);
             const installmentPrice = Number(firstPrice.installment_price || 0).toFixed(2);
-            const enrollmentFee = Number(firstPrice.enrollment_fee || 0).toFixed(2);
-
             return (
               <div className="flex flex-col text-left">
                 <span className="font-bold text-sm text-emerald-600">
@@ -182,11 +181,8 @@ const ProductsView = () => {
 
             const vCash = Number(virtualPrice.cash_price || 0).toFixed(2);
             const vInstallment = Number(virtualPrice.installment_price || 0).toFixed(2);
-            const vEnrollment = Number(virtualPrice.enrollment_fee || 0).toFixed(2);
-
             const pCash = Number(presencialPrice.cash_price || 0).toFixed(2);
             const pInstallment = Number(presencialPrice.installment_price || 0).toFixed(2);
-            const pEnrollment = Number(presencialPrice.enrollment_fee || 0).toFixed(2);
 
             return (
               <div className="flex flex-col gap-2 text-left">
@@ -199,7 +195,7 @@ const ProductsView = () => {
                     <span className="text-[10px] text-slate-500 font-medium">(Virtual)</span>
                   </div>
                   <span className="text-[10px] text-muted-foreground mt-0.5">
-                    Cuotas: S/ {vInstallment} • Matrícula: S/ {vEnrollment}
+                    Cuotas: S/ {vInstallment} • Matrícula: S/ {enrollmentFee}
                   </span>
                 </div>
 
@@ -212,7 +208,7 @@ const ProductsView = () => {
                     <span className="text-[10px] text-slate-500 font-medium">(Presencial)</span>
                   </div>
                   <span className="text-[10px] text-muted-foreground mt-0.5">
-                    Cuotas: S/ {pInstallment} • Matrícula: S/ {pEnrollment}
+                    Cuotas: S/ {pInstallment} • Matrícula: S/ {enrollmentFee}
                   </span>
                 </div>
               </div>

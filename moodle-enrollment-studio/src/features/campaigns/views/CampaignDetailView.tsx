@@ -13,6 +13,7 @@ import { CampaignDetailHeader } from "@/features/campaigns/components/CampaignDe
 import { useAuthStore } from "@/store/useAuthStore";
 import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
 import { ModalityMap, translateEnum } from "@/core/utils/dictionaries";
+import { formatCampaignCurrency } from "@/features/campaigns/utils/campaignCurrency";
 import {
   Dialog,
   DialogContent,
@@ -378,7 +379,7 @@ const CampaignDetailView = () => {
                             {translatedMode}:
                           </span>
                           <span className="text-slate-900 font-bold text-sm">
-                            S/ {Number(price.cash_price).toFixed(2)} Contado
+                            {formatCampaignCurrency(price.cash_price)} Contado
                           </span>
                         </div>
                       );
@@ -518,13 +519,13 @@ const CampaignDetailView = () => {
               </p>
               <div className="flex flex-col">
                 <span className="text-2xl font-bold text-slate-900">
-                  S/ {campaignMetrics.totalRevenue.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                  {formatCampaignCurrency(campaignMetrics.totalRevenue)}
                 </span>
                 <span className="text-[10px] font-semibold text-slate-400 mt-1">
                   {campaign.is_organic ? (
                     "Tráfico Orgánico"
                   ) : (
-                    `Inversión: S/ ${parseFloat(campaign.initial_budget || "0").toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
+                    `Inversión: ${formatCampaignCurrency(campaign.initial_budget)}`
                   )}
                 </span>
               </div>

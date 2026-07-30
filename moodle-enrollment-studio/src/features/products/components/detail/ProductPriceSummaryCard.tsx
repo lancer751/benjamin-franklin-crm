@@ -13,6 +13,7 @@ interface ProductPriceSummaryCardProps {
   editionModality?: string | null;
   priceCount: number;
   installmentRange: string;
+  enrollmentFee: string;
 }
 
 const ProductPriceSummaryCard = ({
@@ -20,6 +21,7 @@ const ProductPriceSummaryCard = ({
   editionModality,
   priceCount,
   installmentRange,
+  enrollmentFee,
 }: ProductPriceSummaryCardProps) => {
   const modalityLabel = getAttendanceModeLabel(price.attendance_mode, editionModality, priceCount);
   const visual = getAttendanceModeVisualConfig(price.attendance_mode, editionModality);
@@ -55,7 +57,7 @@ const ProductPriceSummaryCard = ({
               <Landmark size={13} /> Matrícula
             </p>
             <p className="mt-2 text-base font-bold text-slate-900">
-              {formatProductCurrency(price.enrollment_fee)}
+              {formatProductCurrency(enrollmentFee)}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">

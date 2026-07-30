@@ -9,20 +9,18 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { cn } from "@/core/lib/utils";
+import type { ProductFormValues } from "../../schemas";
 import DiscountSection from "./DiscountSection";
 
 interface PricingCardProps {
-  form: {
-    prices: any[];
-    discount_price: number | null;
-    discount_expires_at: string | null;
-    installments_min_number: number;
-    installments_max_number: number;
-    pricing_status: "VALID" | "INVALID";
-  };
+  form: ProductFormValues;
   errors: Record<string, string>;
   setFieldValue: (key: string, value: any) => void;
-  setPriceValue: (index: number, key: string, value: string) => void;
+  setPriceValue: (
+    index: number,
+    key: "cash_price" | "installment_price",
+    value: string,
+  ) => void;
   selectedEdition: any;
   isEdit: boolean;
 }
@@ -30,7 +28,6 @@ interface PricingCardProps {
 const priceFields = [
   { key: "cash_price", label: "Precio contado" },
   { key: "installment_price", label: "Precio en cuotas" },
-  { key: "enrollment_fee", label: "Matrícula" },
 ] as const;
 
 const getModalityPresentation = (mode: string) => {
@@ -60,20 +57,21 @@ const getModalityPresentation = (mode: string) => {
   };
 };
 
-const isModalityConfigured = (price: any, index: number, errors: Record<string, string>) => {
+const isModalityConfigured = (
+  price: ProductFormValues["prices"][number],
+  index: number,
+  errors: Record<string, string>,
+) => {
   const cashPrice = Number(price.cash_price);
   const installmentPrice = Number(price.installment_price);
-  const enrollmentFee = Number(price.enrollment_fee);
   const hasFieldErrors = priceFields.some(({ key }) => errors[`prices.${index}.${key}`]);
 
   return (
     !hasFieldErrors &&
     Number.isFinite(cashPrice) &&
-    cashPrice > 0 &&
+    cashPrice >= 0 &&
     Number.isFinite(installmentPrice) &&
-    installmentPrice > 0 &&
-    Number.isFinite(enrollmentFee) &&
-    enrollmentFee >= 0
+    installmentPrice > cashPrice
   );
 };
 
@@ -243,7 +241,7 @@ const PricingCard = ({
                       {configured ? "Completa" : "Pendiente"}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {priceFields.map(({ key, label }) => (
                       <div key={key}>
                         <label className="mb-1 block text-[9px] font-medium text-slate-500">{label}</label>
@@ -259,16 +257,37 @@ const PricingCard = ({
               );
             })
           )}
+          {errors.prices && (
+            <p className="mt-2 text-[9px] leading-tight text-destructive">{errors.prices}</p>
+          )}
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-          <h5 className="mb-2 text-xs font-semibold text-slate-800">Financiamiento</h5>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="mb-2">
+            <h5 className="text-xs font-semibold text-slate-800">Matrícula y financiamiento</h5>
+            <p className="mt-0.5 text-[10px] text-slate-500">
+              Condiciones únicas para todas las modalidades.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-[9px] font-medium text-slate-500">
+                Matrícula (S/)
+              </label>
+              <PriceInput
+                error={errors.enrollment_fee}
+                value={form.enrollment_fee}
+                onChange={(value) =>
+                  setFieldValue("enrollment_fee", value.replace(/[^0-9.]/g, ""))
+                }
+              />
+            </div>
             <div>
               <label className="mb-1 block text-[9px] font-medium text-slate-500">Mínimo cuotas</label>
               <input
                 type="number"
                 min="1"
+                max="24"
                 className={cn(
                   "form-input h-9 rounded-lg border-slate-200 bg-white text-xs",
                   errors.installments_min_number && "border-destructive",
@@ -285,6 +304,7 @@ const PricingCard = ({
               <input
                 type="number"
                 min="1"
+                max="24"
                 className={cn(
                   "form-input h-9 rounded-lg border-slate-200 bg-white text-xs",
                   errors.installments_max_number && "border-destructive",

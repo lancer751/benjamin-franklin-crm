@@ -10,12 +10,21 @@ export interface ProductRequirement {
 }
 
 const filled = (value: unknown) => typeof value === "string" && value.trim().length > 0;
+const validAmount = (value: string | number) => {
+  const normalized = String(value).trim();
+  return (
+    normalized !== "" &&
+    /^(?:\d+|\d*\.\d{1,2})$/.test(normalized) &&
+    Number.isFinite(Number(normalized)) &&
+    Number(normalized) >= 0
+  );
+};
 const validPrices = (form: ProductFormValues) =>
   form.prices.length > 0 &&
   form.prices.every((price) =>
-    Number(price.cash_price) >= 0 &&
-    Number(price.installment_price) >= Number(price.cash_price) &&
-    Number(price.enrollment_fee) >= 0,
+    validAmount(price.cash_price) &&
+    validAmount(price.installment_price) &&
+    Number(price.installment_price) > Number(price.cash_price),
   );
 
 export const getProductRequirements = (form: ProductFormValues) => {
@@ -25,6 +34,11 @@ export const getProductRequirements = (form: ProductFormValues) => {
     { id: "name", label: "Nombre comercial", state: filled(form.name) ? "complete" : "pending" },
     { id: "prices", label: "Precios válidos", state: validPrices(form) ? "complete" : "error" },
     {
+      id: "enrollment_fee",
+      label: "Matrícula global válida",
+      state: validAmount(form.enrollment_fee) ? "complete" : "error",
+    },
+    {
       id: "installments",
       label: "Rango de cuotas válido",
       state: form.installments_max_number >= form.installments_min_number ? "complete" : "error",
@@ -32,7 +46,9 @@ export const getProductRequirements = (form: ProductFormValues) => {
     {
       id: "discount_expires_at",
       label: "Vencimiento de la promoción",
-      state: form.discount_expires_at ? "complete" : "optional",
+      state: form.discount_price != null && form.discount_price > 0
+        ? form.discount_expires_at ? "complete" : "error"
+        : "optional",
     },
   ];
 

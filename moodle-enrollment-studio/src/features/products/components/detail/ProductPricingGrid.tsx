@@ -66,6 +66,7 @@ const ProductPricingGrid = ({
               editionModality={product.edition?.modality}
               priceCount={product.prices.length}
               installmentRange={installmentRange}
+              enrollmentFee={product.enrollment_fee}
             />
           ))}
         </div>

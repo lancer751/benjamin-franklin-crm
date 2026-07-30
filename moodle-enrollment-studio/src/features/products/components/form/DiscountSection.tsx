@@ -52,7 +52,7 @@ const DiscountSection = ({ form, errors, setFieldValue }: DiscountSectionProps) 
 
         <div>
           <label className="mb-1 block text-[9px] font-medium text-slate-500">
-            Fecha de vencimiento
+            Fecha de vencimiento de la promoción
           </label>
           <input
             type="date"
@@ -72,10 +72,7 @@ const DiscountSection = ({ form, errors, setFieldValue }: DiscountSectionProps) 
       </div>
 
       <p className="mt-2 text-[9px] leading-tight text-slate-500">
-        El precio promocional es opcional y se aplicará hasta la fecha indicada.
-        {!form.discount_expires_at && (
-          <> Sin fecha, permanecerá vigente hasta que sea actualizado manualmente.</>
-        )}
+        La promoción es opcional. Si ingresas un precio promocional, indica también su fecha de vencimiento.
       </p>
     </section>
   );

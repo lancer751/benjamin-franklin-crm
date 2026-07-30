@@ -3,32 +3,31 @@ import { ProductSchema } from "shared";
 
 const sharedProductPriceSchema = ProductSchema.shape.prices.element;
 
-const inputAmount = z.union([z.string(), z.number()]).refine(
-  (value) => value !== "" && Number.isFinite(Number(value)) && Number(value) >= 0,
-  "Ingresa un monto válido mayor o igual a 0",
+export const productAmountFormSchema = z.union([z.string(), z.number()]).refine(
+  (value) => {
+    const normalized = String(value).trim();
+    return (
+      normalized !== "" &&
+      /^(?:\d+|\d*\.\d{1,2})$/.test(normalized) &&
+      Number.isFinite(Number(normalized)) &&
+      Number(normalized) >= 0
+    );
+  },
+  "Ingresa un monto válido con máximo 2 decimales",
 );
 
 export const productPriceFormSchema = z
   .object({
     attendance_mode: sharedProductPriceSchema.shape.attendance_mode,
-    cash_price: inputAmount,
-    installment_price: inputAmount,
-    enrollment_fee: inputAmount,
+    cash_price: productAmountFormSchema,
+    installment_price: productAmountFormSchema,
   })
   .superRefine((price, context) => {
-    const backendPrice = {
-      attendance_mode: price.attendance_mode,
-      cash_price: Number(price.cash_price),
-      installment_price: Number(price.installment_price),
-      enrollment_fee: Number(price.enrollment_fee),
-    };
-
-    const result = sharedProductPriceSchema.safeParse(backendPrice);
-    if (!result.success) {
+    if (Number(price.installment_price) <= Number(price.cash_price)) {
       context.addIssue({
         code: "custom",
         path: ["installment_price"],
-        message: "El precio en cuotas debe ser mayor o igual al precio al contado",
+        message: "El precio en cuotas debe ser mayor al precio al contado",
       });
     }
   });

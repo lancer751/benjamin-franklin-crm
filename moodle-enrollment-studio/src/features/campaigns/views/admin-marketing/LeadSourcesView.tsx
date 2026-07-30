@@ -1,5 +1,6 @@
 import { Target, TrendingUp, ArrowUpRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { formatCampaignCurrency } from "../../utils/campaignCurrency";
 
 const sources = [
   { name: "Facebook Ads", leads: 342, converted: 68, cac: 45, spend: 15390, color: "hsl(224, 76%, 48%)" },
@@ -97,8 +98,8 @@ const LeadSourcesView = () => {
                 <td className="px-6 py-4">
                   <span className="text-emerald-600 font-semibold">{((s.converted / s.leads) * 100).toFixed(1)}%</span>
                 </td>
-                <td className="px-6 py-4 text-foreground">{s.cac > 0 ? `S/ ${s.cac}` : "Orgánico"}</td>
-                <td className="px-6 py-4 text-foreground">{s.spend > 0 ? `S/ ${s.spend.toLocaleString()}` : "-"}</td>
+                <td className="px-6 py-4 text-foreground">{s.cac > 0 ? formatCampaignCurrency(s.cac) : "Orgánico"}</td>
+                <td className="px-6 py-4 text-foreground">{s.spend > 0 ? formatCampaignCurrency(s.spend) : "-"}</td>
               </tr>
             ))}
           </tbody>

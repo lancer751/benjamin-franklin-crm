@@ -16,6 +16,7 @@ export interface BackendProductResponse {
   short_description?: string | null;
   description?: string | null;
   presale_price?: number | string | null;
+  enrollment_fee?: number | string | null;
   discount_price?: number | string | null;
   discount_expires_at?: string | null;
   brochure_url?: string | null;
@@ -47,7 +48,6 @@ export interface BackendProductResponse {
     attendance_mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO";
     cash_price: number | string;
     installment_price: number | string;
-    enrollment_fee: number | string;
   }[];
   relatedBenefits?: {
     benefit_id: string;
@@ -93,6 +93,7 @@ export interface UIProduct {
   short_description: string;
   description: string;
   presale_price: string;
+  enrollment_fee: string;
   discount_price: string;
   discount_expires_at: string;
   brochure_url: string;
@@ -124,7 +125,6 @@ export interface UIProduct {
     attendance_mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO";
     cash_price: string;
     installment_price: string;
-    enrollment_fee: string;
   }[];
   benefits: {
     id: string;

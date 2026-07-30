@@ -1,6 +1,7 @@
-import { DollarSign, BarChart3, TrendingUp, Calendar } from "lucide-react";
+import { Banknote, BarChart3, TrendingUp, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/core/components/ui/card";
 import { translateEnum, CampaignStatusMap, CampaignPlatformMap } from "@/core/utils/dictionaries";
+import { formatCampaignCurrency } from "../utils/campaignCurrency";
 
 interface CampaignDetailStatsProps {
   campaign: any;
@@ -23,13 +24,13 @@ export const CampaignDetailStats = ({ campaign }: CampaignDetailStatsProps) => {
   const kpis = [
     {
       label: "Presupuesto",
-      value: `$${initialBudget.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-      icon: DollarSign,
+      value: formatCampaignCurrency(initialBudget),
+      icon: Banknote,
       sub: "Total asignado",
     },
     {
       label: "Gastado",
-      value: `$${totalSpent.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+      value: formatCampaignCurrency(totalSpent),
       icon: BarChart3,
       sub: `${spentPercent}% utilizado`,
     },

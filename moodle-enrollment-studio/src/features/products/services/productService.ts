@@ -8,8 +8,8 @@ import {UUID_PATH} from '@/core/lib/constants'
 
 type ProductsRes = InferResponseType<typeof api.products.$get>;
 type ProductByIdRes = InferResponseType<(typeof api.products)[typeof UUID_PATH]["$get"]>;
-type CreateProductReq = InferRequestType<typeof api.products.$post>["json"];
-type UpdateProductReq = InferRequestType<(typeof api.products)[typeof UUID_PATH]["$put"]>["json"];
+export type CreateProductInput = InferRequestType<typeof api.products.$post>["json"];
+export type UpdateProductInput = InferRequestType<(typeof api.products)[typeof UUID_PATH]["$put"]>["json"];
 type DeleteProductRes = InferResponseType<(typeof api.products)[typeof UUID_PATH]["$delete"]>;
 
 export const getProducts = async (): Promise<ProductsRes> => {
@@ -82,12 +82,12 @@ export const getProductById = async (id: string): Promise<ProductByIdRes> => {
   return baseRes;
 };
 
-export const createProduct = async (data: CreateProductReq) => {
+export const createProduct = async (data: CreateProductInput) => {
   const res = await api.products.$post({ json: data });
   return await res.json();
 };
 
-export const updateProduct = async (id: string, data: UpdateProductReq) => {
+export const updateProduct = async (id: string, data: UpdateProductInput) => {
   const res = await api.products[":id"].$put({ 
     param: { id },
     json: data 

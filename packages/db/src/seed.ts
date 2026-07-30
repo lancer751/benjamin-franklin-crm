@@ -2,8 +2,8 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
 import { compare, hash } from "bcrypt";
-import { CrmWorkflow } from "./workflows/leads-management/orchestator";
-import { CoursesWorkflow } from "./workflows/product-launch/orchestator";
+// import { CrmWorkflow } from "./workflows/leads-management/orchestator";
+// import { CoursesWorkflow } from "./workflows/product-launch/orchestator";
 
 const databaseUrl = `${process.env.DATABASE_URL}`;
 if (!databaseUrl) throw new Error("DATABASE_URL is not set");
@@ -61,15 +61,15 @@ async function main() {
     },
   });
 
-  // ── Academic workflow (courses → editions → products) ──────────────────────
-  console.log("📚 Running CoursesWorkflow...");
-  const { products } = await CoursesWorkflow();
+  // // ── Academic workflow (courses → editions → products) ──────────────────────
+  // console.log("📚 Running CoursesWorkflow...");
+  // const { products } = await CoursesWorkflow();
 
-  // ── CRM workflow (supervisors → sellers → campaigns → leads) ───────────────
-  console.log("\n📋 Running CrmWorkflow...");
-  await CrmWorkflow(products);
+  // // ── CRM workflow (supervisors → sellers → campaigns → leads) ───────────────
+  // console.log("\n📋 Running CrmWorkflow...");
+  // await CrmWorkflow(products);
 
-  console.log("\n🎉 Seeding complete.");
+  // console.log("\n🎉 Seeding complete.");
 }
 
 main()

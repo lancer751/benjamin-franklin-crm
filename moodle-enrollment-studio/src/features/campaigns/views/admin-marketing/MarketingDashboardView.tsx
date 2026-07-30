@@ -1,5 +1,6 @@
-import { Megaphone, Users, TrendingUp, DollarSign, ArrowUpRight } from "lucide-react";
+import { Megaphone, Users, TrendingUp, Banknote, ArrowUpRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import { formatCampaignCurrency } from "../../utils/campaignCurrency";
 
 const leadsByMonth = [
   { month: "Ene", leads: 120, converted: 22 },
@@ -45,7 +46,7 @@ const MarketingDashboardView = () => {
       <div className="grid grid-cols-4 gap-4">
         {[
           { label: "Leads este Mes", value: "245", icon: Users, change: "+16.7%" },
-          { label: "CAC Promedio", value: "S/ 55", icon: DollarSign, change: "-11.3%" },
+          { label: "CAC Promedio", value: formatCampaignCurrency(55), icon: Banknote, change: "-11.3%" },
           { label: "Conversión Mkt", value: "22.0%", icon: TrendingUp, change: "+4.8%" },
           { label: "Campañas Activas", value: "12", icon: Megaphone, change: "+3" },
         ].map((k, i) => (

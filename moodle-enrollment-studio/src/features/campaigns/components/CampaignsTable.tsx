@@ -28,6 +28,7 @@ import {
 } from "@/core/components/ui/dropdown-menu";
 import { cn } from "@/core/lib/utils";
 import { toast } from "sonner";
+import { formatCampaignCurrency } from "../utils/campaignCurrency";
 
 interface CampaignsTableProps {
   isLoading: boolean;
@@ -47,10 +48,6 @@ const platformColors: Record<string, string> = {
   INSTAGRAM: "bg-pink-500 text-white hover:bg-pink-650 border-transparent",
   TIKTOK: "bg-foreground text-background hover:bg-foreground/90 border-transparent",
   WEBSITE: "bg-emerald-500 text-white hover:bg-emerald-650 border-transparent",
-};
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString("en-US", { style: "currency", currency: "USD" });
 };
 
 const formatDate = (dateString: string | Date | null | undefined) => {
@@ -246,10 +243,10 @@ export const CampaignsTable = ({
                     </TableCell>
 
                     <TableCell className="text-foreground font-semibold">
-                      {formatCurrency(Number(c.initial_budget) || 0)}
+                      {formatCampaignCurrency(c.initial_budget)}
                     </TableCell>
                     <TableCell className="text-foreground font-semibold">
-                      {formatCurrency(Number(c.total_spent) || 0)}
+                      {formatCampaignCurrency(c.total_spent)}
                     </TableCell>
 
                     {/* Columna LEADS - CORREGIDA de c._count?.members a c._count?.leadsOnCampaign */}

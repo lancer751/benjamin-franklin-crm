@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CalendarDays, DollarSign, Info, Loader2, Megaphone, Users } from "lucide-react";
+import { AlertCircle, CalendarDays, Info, Loader2, Megaphone, Users } from "lucide-react";
 import { toast } from "sonner";
 import { CreateCampaignSchema, type CreateCampaignInput } from "shared";
 import { assignSellersToCampaign, createCampaign, updateCampaign } from "../services/campaignService";
@@ -30,6 +30,7 @@ import {
 } from "./CampaignAcquisitionChannel";
 import { MultiSellerSelect, type SellerOption } from "./MultiSellerSelect";
 import { SearchableCombobox, type ComboboxOption } from "./SearchableCombobox";
+import { formatCampaignCurrency } from "../utils/campaignCurrency";
 
 interface CampaignFormProps {
   onCancel: () => void;
@@ -183,7 +184,7 @@ export default function CampaignForm({ onCancel, onSuccess, initialData }: Campa
           product.edition?.modality,
           product.edition?.edition_number ? `Edición ${product.edition.edition_number}` : null,
           "En venta",
-          minimumPrice !== null ? `Desde $ ${minimumPrice.toFixed(2)}` : null,
+          minimumPrice !== null ? `Desde ${formatCampaignCurrency(minimumPrice)}` : null,
         ].filter(Boolean);
 
         return {
@@ -483,9 +484,11 @@ export default function CampaignForm({ onCancel, onSuccess, initialData }: Campa
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="initial-budget">Presupuesto inicial (USD) <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="initial-budget">Presupuesto inicial (S/) <span className="text-destructive">*</span></Label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                        S/
+                      </span>
                       <Input
                         id="initial-budget"
                         type="number"
@@ -494,7 +497,7 @@ export default function CampaignForm({ onCancel, onSuccess, initialData }: Campa
                         inputMode="decimal"
                         placeholder="0.00"
                         disabled={mutation.isPending}
-                        className={cn("pl-9", errors.initial_budget && "border-destructive")}
+                        className={cn("pl-10", errors.initial_budget && "border-destructive")}
                         {...register("initial_budget", { setValueAs: (value) => (value === "" ? 0 : Number(value)) })}
                       />
                     </div>
@@ -669,7 +672,7 @@ export default function CampaignForm({ onCancel, onSuccess, initialData }: Campa
                   <dd className="text-right font-semibold">{selectedSellers.length || "Sin seleccionar"}</dd>
                 </div>
                 <div className="flex items-start justify-between gap-4"><dt className="text-muted-foreground">Plataforma</dt><dd className="text-right font-semibold">{platformLabel}</dd></div>
-                <div className="flex items-start justify-between gap-4"><dt className="text-muted-foreground">Presupuesto</dt><dd className="text-right font-semibold">$ {Number(values.initial_budget || 0).toFixed(2)}</dd></div>
+                <div className="flex items-start justify-between gap-4"><dt className="text-muted-foreground">Presupuesto</dt><dd className="text-right font-semibold">{formatCampaignCurrency(values.initial_budget)}</dd></div>
                 <div className="flex items-start justify-between gap-4">
                   <dt className="flex items-center gap-1.5 text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Fechas</dt>
                   <dd className="max-w-[60%] text-right font-semibold">{values.start_date || "Sin inicio"}{values.end_date ? ` → ${values.end_date}` : ""}</dd>
