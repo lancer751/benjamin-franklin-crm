@@ -112,7 +112,7 @@ export const useSupervisorFollowUp = () => {
             {
               id: `unassigned-${lead.id}`,
               created_at: lead.created_at,
-              status: "NEW",
+              status: "NUEVO",
               assigned_to: "UNASSIGNED",
               source: lead.phones?.[0]?.type || "WHATSAPP",
               campaing_id: lead.primary_campaign_id || "",
@@ -134,7 +134,7 @@ export const useSupervisorFollowUp = () => {
       return leads.map((lead) => ({
         id: `unassigned-${lead.id}`,
         created_at: lead.created_at,
-        status: "NEW",
+        status: "NUEVO",
         assigned_to: "UNASSIGNED",
         source: lead.phones?.[0]?.type || "WHATSAPP",
         campaing_id: lead.primary_campaign_id || "",

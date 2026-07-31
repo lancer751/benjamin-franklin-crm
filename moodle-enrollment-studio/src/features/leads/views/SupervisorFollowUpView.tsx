@@ -60,12 +60,11 @@ import {
 import { toast } from "sonner";
 import { useSupervisorFollowUp } from "../hooks/useSupervisorFollowUp";
 import {
+  CAMPAIGN_MEMBER_STATUS_CONFIG,
   CAMPAIGN_MEMBER_STATUS_OPTIONS,
   getCampaignMemberStatusLabel,
-} from "@/core/utils/dictionaries";
-import {
-  CAMPAIGN_MEMBER_STATUS_BY_VALUE,
   isCampaignMemberStatus,
+  type CampaignMemberStatus,
 } from "@/core/constants/campaignMemberStatus";
 
 // Helper para mapear estados a español
@@ -74,7 +73,7 @@ const getTipificacionBadge = (status: string) => {
   const normalized = status?.toUpperCase() || "";
   const statusLabel = getCampaignMemberStatusLabel(normalized);
   const colorClasses = isCampaignMemberStatus(normalized)
-    ? CAMPAIGN_MEMBER_STATUS_BY_VALUE[normalized].badgeClassName
+    ? CAMPAIGN_MEMBER_STATUS_CONFIG[normalized].badgeClassName
     : "border-slate-200 bg-slate-50 text-slate-700";
 
   return (
@@ -94,7 +93,7 @@ const SupervisorFollowUpView = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("ALL_CAMPAIGNS");
-  const [statusFilter, setStatusFilter] = useState("ALL_STATUS");
+  const [statusFilter, setStatusFilter] = useState<CampaignMemberStatus | "ALL_STATUS">("ALL_STATUS");
   const [dateRangeFilter, setDateRangeFilter] = useState("30_DAYS");
 
   const {
@@ -559,7 +558,12 @@ const SupervisorFollowUpView = () => {
                 {/* Filtro por Estado / Tipificación */}
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Estado / Tipificación</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) => {
+                      if (value === "ALL_STATUS" || isCampaignMemberStatus(value)) setStatusFilter(value);
+                    }}
+                  >
                     <SelectTrigger className="w-full border-slate-200 rounded-lg h-8 text-xs bg-white">
                       <SelectValue placeholder="Todos los estados" />
                     </SelectTrigger>

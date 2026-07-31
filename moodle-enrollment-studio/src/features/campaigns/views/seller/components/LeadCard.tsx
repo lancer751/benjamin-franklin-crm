@@ -9,8 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/core/components/ui/dropdown-menu";
 import {
-  CAMPAIGN_MEMBER_STATUS_BY_VALUE,
   CAMPAIGN_MEMBER_STATUS_CONFIG,
+  CAMPAIGN_MEMBER_STATUS_OPTIONS,
+  getCampaignMemberStatusLabel,
   isCampaignMemberStatus,
   type CampaignMemberStatus,
 } from "@/core/constants/campaignMemberStatus";
@@ -37,8 +38,8 @@ export default function LeadCard({ lead, onSelect, onStatusChange, isPending, dr
   const formattedPhone = phone ? phone.replace(/\D/g, "") : "";
   const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}` : "";
   const memberId = lead.campaignsEngaging?.[0]?.id || "";
-  const currentStatus = isCampaignMemberStatus(lead.lead_status) ? lead.lead_status : "NUEVO";
-  const statusConfig = CAMPAIGN_MEMBER_STATUS_BY_VALUE[currentStatus];
+  const currentStatus = isCampaignMemberStatus(lead.lead_status) ? lead.lead_status : null;
+  const statusConfig = currentStatus ? CAMPAIGN_MEMBER_STATUS_CONFIG[currentStatus] : null;
 
   return (
     <div
@@ -64,8 +65,8 @@ export default function LeadCard({ lead, onSelect, onStatusChange, isPending, dr
         <h4 className="text-sm font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
           {lead.fullName || `${lead.first_name} ${lead.last_name}`.trim() || "Prospecto sin nombre"}
         </h4>
-        <Badge variant="outline" className={cn("w-fit rounded-full px-2 py-0 text-[10px] font-semibold", statusConfig.badgeClassName)}>
-          {statusConfig.label}
+        <Badge variant="outline" className={cn("w-fit rounded-full px-2 py-0 text-[10px] font-semibold", statusConfig?.badgeClassName || "border-slate-200 bg-slate-50 text-slate-700")}>
+          {getCampaignMemberStatusLabel(lead.lead_status)}
         </Badge>
       </div>
 
@@ -87,7 +88,7 @@ export default function LeadCard({ lead, onSelect, onStatusChange, isPending, dr
         <div className="w-full">
           <select
             {...nonDraggableControlProps}
-            value={currentStatus}
+            value={currentStatus || ""}
             onChange={(event) => {
               if (isCampaignMemberStatus(event.target.value)) {
                 onStatusChange(memberId, event.target.value);
@@ -96,7 +97,8 @@ export default function LeadCard({ lead, onSelect, onStatusChange, isPending, dr
             className="w-full h-7 px-1.5 rounded-lg border border-border bg-slate-50 dark:bg-slate-900 text-[10px] font-bold text-slate-700 dark:text-slate-350 focus:outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer shadow-sm"
             disabled={isPending || !memberId}
           >
-            {CAMPAIGN_MEMBER_STATUS_CONFIG.map((status) => (
+            {!currentStatus && <option value="" disabled>Estado desconocido</option>}
+            {CAMPAIGN_MEMBER_STATUS_OPTIONS.map((status) => (
               <option key={status.value} value={status.value}>
                 Mover a: {status.label}
               </option>

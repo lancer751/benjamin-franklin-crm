@@ -6,6 +6,10 @@ import { es } from "date-fns/locale";
 import { cn } from "@/core/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/core/components/ui/popover";
 import { Calendar } from "@/core/components/ui/calendar";
+import {
+  CAMPAIGN_MEMBER_STATUS_LIST,
+  type CampaignMemberStatus,
+} from "@/core/constants/campaignMemberStatus";
 
 interface Lead {
   id: string;
@@ -20,15 +24,6 @@ interface Lead {
   createdAt?: Date;
 }
 
-const pipelineColumns = [
-  { id: "NEW", label: "Nuevo", color: "bg-blue-500" },
-  { id: "CONTACTED", label: "Contactado", color: "bg-yellow-500" },
-  { id: "QUALIFIED", label: "Calificado", color: "bg-purple-500" },
-  { id: "NEGOTIATION", label: "Negociación", color: "bg-orange-500" },
-  { id: "WON", label: "Ganado", color: "bg-emerald-500" },
-  { id: "LOST", label: "Perdido", color: "bg-red-500" },
-];
-
 const campaignOptions = ["Summer Enrollment 2024", "B2B Awareness Program", "Gen Z Skills Push", "Remarketing Core", "Influencer Collab"];
 const sellerOptions = ["Juan Pérez", "María García", "Carlos Ruiz", "Ana Torres"];
 
@@ -41,28 +36,30 @@ const datePresets = [
   { label: "Personalizado", value: "custom" },
 ];
 
-const initialLeads: Record<string, Lead[]> = {
-  NEW: [
+const initialLeads: Record<CampaignMemberStatus, Lead[]> = {
+  NUEVO: [
     { id: "L001", name: "Carlos Mendoza", email: "cmendoza@mail.com", phone: "987654321", course: "Data Science", value: 1250, daysInStage: 1, campaign: "Summer Enrollment 2024", seller: "Juan Pérez", createdAt: new Date() },
     { id: "L002", name: "María López", email: "mlopez@mail.com", phone: "912345678", course: "Marketing Digital", value: 890, daysInStage: 3, campaign: "Influencer Collab", seller: "María García", createdAt: subDays(new Date(), 3) },
     { id: "L003", name: "Pedro Ruiz", email: "pruiz@mail.com", phone: "945678123", course: "Python Avanzado", value: 650, daysInStage: 0, campaign: "Gen Z Skills Push", seller: "Carlos Ruiz", createdAt: new Date() },
   ],
-  CONTACTED: [
+  CONTACTADO: [
     { id: "L004", name: "Ana García", email: "agarcia@mail.com", phone: "956789012", course: "UI/UX Bootcamp", value: 1800, daysInStage: 5, campaign: "Remarketing Core", seller: "Ana Torres", createdAt: subDays(new Date(), 5) },
     { id: "L005", name: "Luis Torres", email: "ltorres@mail.com", phone: "967890123", course: "Liderazgo", value: 450, daysInStage: 2, campaign: "B2B Awareness Program", seller: "Juan Pérez", createdAt: subDays(new Date(), 2) },
   ],
-  QUALIFIED: [
+  NO_CONTACTADO: [],
+  NEGOCIACION: [
     { id: "L006", name: "Rosa Díaz", email: "rdiaz@mail.com", phone: "978901234", course: "Ciberseguridad", value: 2100, daysInStage: 4, campaign: "Summer Enrollment 2024", seller: "María García", createdAt: subDays(new Date(), 4) },
     { id: "L007", name: "Jorge Paredes", email: "jparedes@mail.com", phone: "989012345", course: "Data Science", value: 1250, daysInStage: 7, campaign: "Remarketing Core", seller: "Carlos Ruiz", createdAt: subDays(new Date(), 7) },
   ],
-  NEGOTIATION: [
+  SEGUIMIENTO: [
     { id: "L008", name: "Elena Vargas", email: "evargas@mail.com", phone: "990123456", course: "Marketing Digital", value: 890, daysInStage: 3, campaign: "Influencer Collab", seller: "Ana Torres", createdAt: subDays(new Date(), 3) },
   ],
-  WON: [
+  EN_ESPERA: [],
+  MATRICULADO: [
     { id: "L009", name: "Roberto Sánchez", email: "rsanchez@mail.com", phone: "901234567", course: "Data Science", value: 1250, daysInStage: 0, campaign: "Summer Enrollment 2024", seller: "Juan Pérez", createdAt: new Date() },
     { id: "L010", name: "Lucía Herrera", email: "lherrera@mail.com", phone: "912345670", course: "Liderazgo", value: 450, daysInStage: 1, campaign: "B2B Awareness Program", seller: "María García", createdAt: subDays(new Date(), 1) },
   ],
-  LOST: [
+  PERDIDO: [
     { id: "L011", name: "Fernando Castro", email: "fcastro@mail.com", phone: "923456701", course: "Python Avanzado", value: 650, daysInStage: 10, campaign: "Gen Z Skills Push", seller: "Carlos Ruiz", createdAt: subDays(new Date(), 10) },
   ],
 };
@@ -70,7 +67,7 @@ const initialLeads: Record<string, Lead[]> = {
 const PipelineView = () => {
   const navigate = useNavigate();
   const [leads] = useState(initialLeads);
-  const [draggedLead, setDraggedLead] = useState<{ lead: Lead; fromCol: string } | null>(null);
+  const [draggedLead, setDraggedLead] = useState<{ lead: Lead; fromCol: CampaignMemberStatus } | null>(null);
 
   // Filters
   const [datePreset, setDatePreset] = useState("all");
@@ -96,13 +93,15 @@ const PipelineView = () => {
 
   const filteredLeads = useMemo(() => {
     const [from, to] = getDateRange();
-    const result: Record<string, Lead[]> = {};
-    for (const col of pipelineColumns) {
-      result[col.id] = (leads[col.id] || []).filter((l) => {
-        if (filterCampaign && l.campaign !== filterCampaign) return false;
-        if (filterSeller && l.seller !== filterSeller) return false;
-        if (from && l.createdAt && isBefore(l.createdAt, from)) return false;
-        if (to && l.createdAt && isAfter(l.createdAt, to)) return false;
+    const result = Object.fromEntries(
+      CAMPAIGN_MEMBER_STATUS_LIST.map(({ value }) => [value, [] as Lead[]]),
+    ) as Record<CampaignMemberStatus, Lead[]>;
+    for (const column of CAMPAIGN_MEMBER_STATUS_LIST) {
+      result[column.value] = (leads[column.value] || []).filter((lead) => {
+        if (filterCampaign && lead.campaign !== filterCampaign) return false;
+        if (filterSeller && lead.seller !== filterSeller) return false;
+        if (from && lead.createdAt && isBefore(lead.createdAt, from)) return false;
+        if (to && lead.createdAt && isAfter(lead.createdAt, to)) return false;
         return true;
       });
     }
@@ -121,11 +120,11 @@ const PipelineView = () => {
     setFilterSeller("");
   };
 
-  const handleDragStart = (lead: Lead, fromCol: string) => {
+  const handleDragStart = (lead: Lead, fromCol: CampaignMemberStatus) => {
     setDraggedLead({ lead, fromCol });
   };
 
-  const handleDrop = (toCol: string) => {
+  const handleDrop = (toCol: CampaignMemberStatus) => {
     if (!draggedLead || draggedLead.fromCol === toCol) {
       setDraggedLead(null);
       return;
@@ -227,19 +226,19 @@ const PipelineView = () => {
 
       {/* Kanban */}
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {pipelineColumns.map((col) => {
-          const colLeads = filteredLeads[col.id] || [];
+        {CAMPAIGN_MEMBER_STATUS_LIST.map((col) => {
+          const colLeads = filteredLeads[col.value] || [];
           const colValue = colLeads.reduce((s, l) => s + l.value, 0);
           return (
             <div
-              key={col.id}
+              key={col.value}
               className="flex-shrink-0 w-[260px] rounded-xl bg-muted/50 border border-border"
               onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleDrop(col.id)}
+              onDrop={() => handleDrop(col.value)}
             >
               <div className="flex items-center justify-between p-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <div className={`h-2.5 w-2.5 rounded-full ${col.color}`} />
+                  <div className={`h-2.5 w-2.5 rounded-full ${col.dotClassName}`} />
                   <span className="text-sm font-bold text-foreground">{col.label}</span>
                   <span className="bg-muted rounded-full px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{colLeads.length}</span>
                 </div>
@@ -251,7 +250,7 @@ const PipelineView = () => {
                   <div
                     key={lead.id}
                     draggable
-                    onDragStart={() => handleDragStart(lead, col.id)}
+                    onDragStart={() => handleDragStart(lead, col.value)}
                     onClick={() => navigate(`/prospectos/${lead.id}`)}
                     className="rounded-lg bg-card border border-border p-4 cursor-pointer hover:shadow-md hover:border-primary/30 transition-all"
                   >

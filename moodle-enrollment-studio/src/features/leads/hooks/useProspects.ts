@@ -4,6 +4,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { getCampaigns } from "@/features/campaigns/services/campaignService";
 import { getSellerCampaigns } from "@/features/users/services/userService";
 import { getAllLeads, type LeadListQuery } from "../services/leadService";
+import type { CampaignMemberStatus } from "@/core/constants/campaignMemberStatus";
 import {
   adaptLeads,
   adaptProspectRows,
@@ -26,7 +27,7 @@ export function useProspects() {
   const [search, setSearchValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [leadStatus, setLeadStatusValue] = useState("ALL");
-  const [memberStatus, setMemberStatusValue] = useState("ALL");
+  const [memberStatus, setMemberStatusValue] = useState<CampaignMemberStatus | "ALL">("ALL");
   const [campaignId, setCampaignIdValue] = useState("ALL");
   const [advisorId, setAdvisorIdValue] = useState("ALL");
   const [registeredOn, setRegisteredOnValue] = useState("");
@@ -153,7 +154,7 @@ export function useProspects() {
       resetPage();
     },
     setLeadStatus: (value: string) => { setLeadStatusValue(value); resetPage(); },
-    setMemberStatus: (value: string) => { setMemberStatusValue(value); resetPage(); },
+    setMemberStatus: (value: CampaignMemberStatus | "ALL") => { setMemberStatusValue(value); resetPage(); },
     setCampaignId: (value: string) => { setCampaignIdValue(value); resetPage(); },
     setAdvisorId: (value: string) => { setAdvisorIdValue(value); resetPage(); },
     setRegisteredOn: (value: string) => { setRegisteredOnValue(value); resetPage(); },

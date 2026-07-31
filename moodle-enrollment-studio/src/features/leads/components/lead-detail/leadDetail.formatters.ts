@@ -4,10 +4,6 @@ import { INTERACTION_TYPE_LABELS } from "../../utils/interactionType.constants";
 const labels: Record<string, string> = {
   ...INTERACTION_TYPE_LABELS,
   ACTIVE: "Activo", INACTIVE: "Inactivo", NOT_SPECIFIED: "No especificado",
-  NEW: "Nuevo", ATTEMPTED_CONTACT: "No contactado", CONTACTED: "Contactado",
-  QUALIFIED: "Preventa - Cita", APPOINTMENT: "Preventa - Cita", FOLLOW_UP: "Seguimiento",
-  ON_HOLD: "En espera", WON: "Matriculado", ENROLLED: "Matriculado",
-  LOST: "Descartado", UNQUALIFIED: "Descartado", DISCARDED: "Descartado",
   FACEBOOK: "Facebook", INSTAGRAM: "Instagram", TIKTOK: "TikTok", WEBSITE: "Sitio web",
   MANUAL: "Registro manual", MALE: "Masculino", FEMALE: "Femenino",
 };

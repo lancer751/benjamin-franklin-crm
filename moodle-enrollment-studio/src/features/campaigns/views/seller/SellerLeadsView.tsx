@@ -27,7 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/core/components/ui/po
 import { toast } from "sonner";
 import { cn } from "@/core/lib/utils";
 import {
-  CAMPAIGN_MEMBER_STATUS_CONFIG,
+  CAMPAIGN_MEMBER_STATUS_LIST,
   CAMPAIGN_MEMBER_STATUS_GROUPS,
   isCampaignMemberStatus,
   type CampaignMemberStatus,
@@ -82,7 +82,9 @@ const normalizeAssignedCampaigns = (response: unknown): AssignedCampaign[] => {
 
 const getPhone = (lead: NormalizedLead) => lead.phones?.[0]?.number || null;
 
-const STATUS_GROUP_ORDER: CampaignMemberStatusGroup[] = ["CAPTACION", "GESTION_COMERCIAL", "RESULTADO"];
+const STATUS_GROUP_ORDER = Array.from(
+  new Set(CAMPAIGN_MEMBER_STATUS_LIST.map((status) => status.group)),
+) as CampaignMemberStatusGroup[];
 
 const SellerLeadsView = () => {
   const navigate = useNavigate();
@@ -323,7 +325,7 @@ const SellerLeadsView = () => {
 
   const leadsByStage = useMemo(() => {
     const groups = Object.fromEntries(
-      CAMPAIGN_MEMBER_STATUS_CONFIG.map(({ value }) => [value, [] as NormalizedLead[]]),
+      CAMPAIGN_MEMBER_STATUS_LIST.map(({ value }) => [value, [] as NormalizedLead[]]),
     ) as Record<CampaignMemberStatus, NormalizedLead[]>;
 
     filteredLeads.forEach((lead) => {
@@ -475,7 +477,7 @@ const SellerLeadsView = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL">Todos los estados</SelectItem>
-                    {CAMPAIGN_MEMBER_STATUS_CONFIG.map((status) => (
+                    {CAMPAIGN_MEMBER_STATUS_LIST.map((status) => (
                       <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -499,7 +501,7 @@ const SellerLeadsView = () => {
               <span className="px-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
                 {CAMPAIGN_MEMBER_STATUS_GROUPS[group]}
               </span>
-              {CAMPAIGN_MEMBER_STATUS_CONFIG.filter((status) => status.group === group).map((status) => (
+              {CAMPAIGN_MEMBER_STATUS_LIST.filter((status) => status.group === group).map((status) => (
                 <button
                   key={status.value}
                   type="button"
@@ -527,7 +529,7 @@ const SellerLeadsView = () => {
 
       {isLoadingLeads ? (
         <div className="grid animate-pulse grid-cols-1 gap-3 overflow-hidden md:grid-flow-col md:auto-cols-[minmax(285px,315px)] md:grid-cols-none">
-          {CAMPAIGN_MEMBER_STATUS_CONFIG.slice(0, 4).map((stage) => (
+          {CAMPAIGN_MEMBER_STATUS_LIST.slice(0, 4).map((stage) => (
             <div key={stage.value} className="h-[68vh] min-h-[480px] space-y-4 rounded-2xl border border-border bg-slate-50/20 p-4">
               <Skeleton className="h-6 w-2/3 mb-4 animate-none" />
               <Skeleton className="h-24 w-full rounded-xl animate-none" />
@@ -551,9 +553,10 @@ const SellerLeadsView = () => {
               className="max-w-full overflow-x-auto overscroll-x-contain pb-3 [scrollbar-gutter:stable] md:pr-10"
             >
               <div className="block md:grid md:w-max md:min-w-full md:grid-flow-col md:auto-cols-[minmax(285px,315px)] md:items-start md:gap-3">
-                {CAMPAIGN_MEMBER_STATUS_CONFIG.map((stage) => {
+                {CAMPAIGN_MEMBER_STATUS_LIST.map((stage, stageIndex) => {
                   const laneLeads = leadsByStage[stage.value];
-                  const startsGroup = stage.value === "NEGOCIACION" || stage.value === "MATRICULADO";
+                  const previousStage = CAMPAIGN_MEMBER_STATUS_LIST[stageIndex - 1];
+                  const startsGroup = Boolean(previousStage && previousStage.group !== stage.group);
                   return (
                     <div
                       key={stage.value}

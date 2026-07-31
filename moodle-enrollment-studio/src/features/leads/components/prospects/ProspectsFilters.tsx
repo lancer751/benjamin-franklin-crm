@@ -8,9 +8,12 @@ import { cn } from "@/core/lib/utils";
 import type { ProspectsController } from "../../hooks/useProspects";
 import {
   LEAD_STATUS_OPTIONS,
-  MEMBER_STATUS_OPTIONS,
-  getMemberStatusLabel,
 } from "../../utils/prospectDisplay";
+import {
+  CAMPAIGN_MEMBER_STATUS_OPTIONS,
+  getCampaignMemberStatusLabel,
+  isCampaignMemberStatus,
+} from "@/core/constants/campaignMemberStatus";
 
 const selectClassName = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -93,11 +96,15 @@ export function ProspectsFilters({ controller }: ProspectsFiltersProps) {
             id="prospect-stage"
             className={selectClassName}
             value={controller.memberStatus}
-            onChange={(event) => controller.setMemberStatus(event.target.value)}
+            onChange={(event) => {
+              if (event.target.value === "ALL" || isCampaignMemberStatus(event.target.value)) {
+                controller.setMemberStatus(event.target.value);
+              }
+            }}
           >
             <option value="ALL">Todas las etapas</option>
-            {MEMBER_STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status}>{getMemberStatusLabel(status)}</option>
+            {CAMPAIGN_MEMBER_STATUS_OPTIONS.map((status) => (
+              <option key={status.value} value={status.value}>{status.label}</option>
             ))}
           </select>
         </div>
@@ -165,7 +172,7 @@ export function ProspectsFilters({ controller }: ProspectsFiltersProps) {
           <span className="text-xs font-medium text-muted-foreground">Filtros activos:</span>
           {controller.search.trim() && <FilterChip label={`Búsqueda: ${controller.search.trim()}`} onRemove={() => controller.setSearch("")} />}
           {selectedCampaign && <FilterChip label={`Campaña: ${selectedCampaign.name}`} onRemove={() => controller.setCampaignId("ALL")} />}
-          {controller.memberStatus !== "ALL" && <FilterChip label={`Etapa: ${getMemberStatusLabel(controller.memberStatus)}`} onRemove={() => controller.setMemberStatus("ALL")} />}
+          {controller.memberStatus !== "ALL" && <FilterChip label={`Etapa: ${getCampaignMemberStatusLabel(controller.memberStatus)}`} onRemove={() => controller.setMemberStatus("ALL")} />}
           {selectedLeadStatus && <FilterChip label={`Estado: ${selectedLeadStatus.label}`} onRemove={() => controller.setLeadStatus("ALL")} />}
           {controller.registeredOn && <FilterChip label={`Fecha: ${controller.registeredOn}`} onRemove={() => controller.setRegisteredOn("")} />}
           {selectedSeller && <FilterChip label={`Asesor: ${selectedSeller.name}`} onRemove={() => controller.setAdvisorId("ALL")} />}

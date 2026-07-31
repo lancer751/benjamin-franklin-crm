@@ -35,7 +35,7 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateLead } from "@/features/leads/services/leadService";
 import {
-  CAMPAIGN_MEMBER_STATUS_CONFIG,
+  CAMPAIGN_MEMBER_STATUS_OPTIONS,
   isCampaignMemberStatus,
   type CampaignMemberStatus,
 } from "@/core/constants/campaignMemberStatus";
@@ -397,7 +397,7 @@ export default function LeadDetailsSheet({
                 <div className="space-y-1">
                   <Label className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Estado</Label>
                   <select
-                    value={isCampaignMemberStatus(selectedLead.lead_status) ? selectedLead.lead_status : "NUEVO"}
+                    value={isCampaignMemberStatus(selectedLead.lead_status) ? selectedLead.lead_status : ""}
                     onChange={(event) => {
                       if (!isCampaignMemberStatus(event.target.value)) return;
                       const newStatus = event.target.value;
@@ -407,7 +407,8 @@ export default function LeadDetailsSheet({
                     className="w-full h-8 px-2 rounded-lg border border-border bg-slate-50 dark:bg-slate-900 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer shadow-sm"
                     disabled={isStatusPending}
                   >
-                    {CAMPAIGN_MEMBER_STATUS_CONFIG.map((status) => (
+                    {!isCampaignMemberStatus(selectedLead.lead_status) && <option value="" disabled>Estado desconocido</option>}
+                    {CAMPAIGN_MEMBER_STATUS_OPTIONS.map((status) => (
                       <option key={status.value} value={status.value}>
                         {status.label}
                       </option>

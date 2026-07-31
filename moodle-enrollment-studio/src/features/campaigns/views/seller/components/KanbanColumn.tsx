@@ -6,11 +6,11 @@ import type { NormalizedLead } from "@/features/leads/adapters/leadAdapter";
 import {
   CAMPAIGN_MEMBER_STATUS_GROUPS,
   type CampaignMemberStatus,
-  type CampaignMemberStatusConfig,
+  type CampaignMemberStatusListItem,
 } from "@/core/constants/campaignMemberStatus";
 
 interface KanbanColumnProps {
-  stage: CampaignMemberStatusConfig;
+  stage: CampaignMemberStatusListItem;
   leads: NormalizedLead[];
   onSelect: (lead: NormalizedLead) => void;
   onStatusChange: (memberId: string, newStatus: CampaignMemberStatus) => void;
@@ -28,16 +28,14 @@ export default function KanbanColumn({
     <div
       className={cn(
         "flex h-[68vh] min-h-[480px] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow duration-200 hover:shadow-md",
-        stage.value === "MATRICULADO"
-          ? "border-emerald-350 dark:border-emerald-500/30 ring-1 ring-emerald-500/10 shadow-[0_0_8px_rgba(16,185,129,0.05)]"
-          : "border-border"
+        "border-border",
       )}
     >
       {/* Lane Header */}
       <div
         className={cn(
           "px-4 py-3.5 border-b flex items-center justify-between font-bold text-xs tracking-wider uppercase",
-          stage.laneClassName
+          stage.columnClassName
         )}
       >
         <div className="flex items-center gap-2">

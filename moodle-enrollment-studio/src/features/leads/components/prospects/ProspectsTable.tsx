@@ -15,10 +15,12 @@ import { cn } from "@/core/lib/utils";
 import type { ProspectPresentationRow } from "../../adapters/leadAdapter";
 import {
   formatProspectDate,
-  getMemberStatusLabel,
-  getMemberStatusTone,
   getPlatformLabel,
 } from "../../utils/prospectDisplay";
+import {
+  getCampaignMemberStatusConfig,
+  getCampaignMemberStatusLabel,
+} from "@/core/constants/campaignMemberStatus";
 import { ProspectRowActions } from "./ProspectRowActions";
 
 interface ProspectsTableProps {
@@ -173,8 +175,15 @@ export function ProspectsTable({
               </TableCell>
               <TableCell className="whitespace-nowrap font-medium">{row.phone}</TableCell>
               <TableCell>
-                <Badge variant="outline" className={cn("whitespace-nowrap", getMemberStatusTone(row.memberStatus))}>
-                  {getMemberStatusLabel(row.memberStatus)}
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "whitespace-nowrap",
+                    getCampaignMemberStatusConfig(row.memberStatus)?.badgeClassName
+                      || "border-slate-200 bg-slate-50 text-slate-700",
+                  )}
+                >
+                  {getCampaignMemberStatusLabel(row.memberStatus, "Sin etapa")}
                 </Badge>
               </TableCell>
               {showSeller && (
