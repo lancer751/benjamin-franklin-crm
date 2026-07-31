@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { 
   Sheet, 
@@ -26,12 +28,33 @@ import {
   ClipboardList,
   Pencil,
   Check,
-  X
+  X,
+  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateLead } from "@/features/leads/services/leadService";
 import { FUNNEL_COLUMNS, KANBAN_STAGE_TO_ENUM, ENUM_TO_KANBAN_STAGE } from "../SellerLeadsView";
+import { interactionFormSchema, type InteractionFormValues } from "@/features/leads/schemas/interactionFormSchema";
+import { taskFormSchema, type TaskFormInput, type TaskFormValues } from "@/features/leads/schemas/taskFormSchema";
+import { INTERACTION_TYPE_OPTIONS, interactionTypeLabel } from "@/features/leads/utils/interactionType.constants";
+import { mapInteractionFormToPayload, mapTaskFormToPayload } from "@/features/leads/utils/leadActionPayloadMappers";
+import type { LeadInteraction, LeadTask } from "@/features/leads/components/lead-detail/leadDetail.types";
+
+type InteractionPayload = ReturnType<typeof mapInteractionFormToPayload>;
+type TaskPayload = ReturnType<typeof mapTaskFormToPayload>;
+type PanelInteraction = LeadInteraction & { id: string; type: string };
+type PanelTask = LeadTask & { id: string; is_done: boolean };
+
+interface CreateMutation<TVariables> {
+  isPending: boolean;
+  mutateAsync: (variables: TVariables) => Promise<unknown>;
+}
+
+interface ActionMutation<TVariables> {
+  isPending: boolean;
+  mutate: (variables: TVariables) => void;
+}
 
 interface LeadPhone {
   id?: string;
@@ -40,11 +63,13 @@ interface LeadPhone {
   isPrincipal?: boolean;
 }
 
-const typeIcons: Record<string, { icon: any; color: string; bg: string }> = {
+const typeIcons: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
   CALL: { icon: Phone, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/20" },
   WHATSAPP: { icon: MessageSquare, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/20" },
   EMAIL: { icon: Mail, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/20" },
   MEETING: { icon: Users, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-950/20" },
+  SELL: { icon: CheckCircle2, color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50 dark:bg-sky-950/20" },
+  WEBSITE_FORM: { icon: ClipboardList, color: "text-slate-600 dark:text-slate-400", bg: "bg-slate-50 dark:bg-slate-950/20" },
 };
 
 interface LeadDetailsSheetProps {
@@ -54,15 +79,15 @@ interface LeadDetailsSheetProps {
   isStatusPending: boolean;
   setSelectedLead: React.Dispatch<React.SetStateAction<any>>;
   // Interactions
-  interactions: any[];
+  interactions: PanelInteraction[];
   isLoadingInteractions: boolean;
-  createInteractionMutation: any;
+  createInteractionMutation: CreateMutation<InteractionPayload>;
   // Tasks
-  tasks: any[];
+  tasks: PanelTask[];
   isLoadingTasks: boolean;
-  createTaskMutation: any;
-  updateTaskMutation: any;
-  deleteTaskMutation: any;
+  createTaskMutation: CreateMutation<TaskPayload>;
+  updateTaskMutation: ActionMutation<{ taskId: string; is_done: boolean }>;
+  deleteTaskMutation: ActionMutation<{ campaignId: string; memberId: string; taskId: string }>;
   selectedCampaignId: string;
 }
 
@@ -103,14 +128,20 @@ export default function LeadDetailsSheet({
     }
   }, [selectedLead]);
 
-  // Interaction Form State
-  const [newInteractionNotes, setNewInteractionNotes] = useState("");
-  const [interactionType, setInteractionType] = useState<"CALL" | "WHATSAPP" | "MEETING" | "EMAIL" | "SELL">("CALL");
-
-  // Task Form State
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskContent, setNewTaskContent] = useState("");
-  const [newTaskDueDate, setNewTaskDueDate] = useState("");
+  const interactionForm = useForm<InteractionFormValues>({
+    resolver: zodResolver(interactionFormSchema),
+    defaultValues: { type: "CALL", notes: "" },
+    mode: "onTouched",
+  });
+  const taskForm = useForm<TaskFormInput, unknown, TaskFormValues>({
+    resolver: zodResolver(taskFormSchema),
+    defaultValues: { title: "", content: "", due_date: "", is_done: false },
+    mode: "onTouched",
+  });
+  const interactionType = interactionForm.watch("type");
+  const interactionNotes = interactionForm.watch("notes") || "";
+  const taskTitle = taskForm.watch("title") || "";
+  const taskContent = taskForm.watch("content") || "";
 
   const selectedMemberId = useMemo(() => {
     return selectedLead?.campaignsEngaging?.[0]?.id || selectedLead?.id || "";
@@ -133,43 +164,23 @@ export default function LeadDetailsSheet({
     }
   };
 
-  const handleCreateInteraction = async () => {
-    if (!newInteractionNotes.trim()) {
-      toast.error("Debes agregar una nota descriptiva");
-      return;
-    }
+  const handleCreateInteraction = interactionForm.handleSubmit(async (values) => {
     try {
-      await createInteractionMutation.mutateAsync({
-        notes: newInteractionNotes,
-        type: interactionType
-      });
-      setNewInteractionNotes("");
-      setInteractionType("CALL");
-    } catch (err) {
+      await createInteractionMutation.mutateAsync(mapInteractionFormToPayload(values));
+      interactionForm.reset({ type: "CALL", notes: "" });
+    } catch {
       // Error handled by mutation
     }
-  };
+  });
 
-  const handleCreateTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim()) {
-      toast.error("Debes especificar un título para la tarea");
-      return;
-    }
-    const dueDate = newTaskDueDate || new Date(Date.now() + 86400000).toISOString().split("T")[0];
+  const handleCreateTask = taskForm.handleSubmit(async (values) => {
     try {
-      await createTaskMutation.mutateAsync({
-        title: newTaskTitle,
-        content: newTaskContent,
-        due_date: dueDate
-      });
-      setNewTaskTitle("");
-      setNewTaskContent("");
-      setNewTaskDueDate("");
-    } catch (err) {
+      await createTaskMutation.mutateAsync(mapTaskFormToPayload(values));
+      taskForm.reset({ title: "", content: "", due_date: "", is_done: false });
+    } catch {
       // Error handled by mutation
     }
-  };
+  });
 
   const handleToggleTask = (taskId: string, currentDone: boolean) => {
     updateTaskMutation.mutate({
@@ -447,9 +458,9 @@ export default function LeadDetailsSheet({
                 >
                   <ClipboardList size={13} />
                   Tareas
-                  {tasks.filter((t: any) => !t.is_done).length > 0 && (
+                  {tasks.filter((task) => !task.is_done).length > 0 && (
                     <span className="bg-primary text-primary-foreground text-[9px] h-4 min-w-4 px-1 rounded-full flex items-center justify-center font-extrabold shrink-0">
-                      {tasks.filter((t: any) => !t.is_done).length}
+                      {tasks.filter((task) => !task.is_done).length}
                     </span>
                   )}
                 </button>
@@ -461,26 +472,22 @@ export default function LeadDetailsSheet({
               {activeTab === "interactions" ? (
                 <div className="space-y-6">
                   {/* Form to log interaction */}
-                  <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
+                  <form onSubmit={handleCreateInteraction} className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm" noValidate>
                     <Label className="text-xs font-bold text-foreground flex items-center gap-1">
                       <MessageSquare size={13} className="text-primary" /> Registrar Gestión Comercial
                     </Label>
                     <div className="space-y-1.5 pt-1">
                       <Label className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Canal de Gestión</Label>
                       <div className="grid grid-cols-4 gap-1.5">
-                        {[
-                          { value: "CALL", label: "Llamada", icon: Phone },
-                          { value: "WHATSAPP", label: "WhatsApp", icon: MessageCircle },
-                          { value: "MEETING", label: "Reunión", icon: Users },
-                          { value: "EMAIL", label: "Correo", icon: Mail }
-                        ].map((chan) => {
-                          const Icon = chan.icon;
+                        <input type="hidden" {...interactionForm.register("type")} />
+                        {INTERACTION_TYPE_OPTIONS.map((chan) => {
+                          const Icon = typeIcons[chan.value]?.icon || MessageSquare;
                           const isActive = interactionType === chan.value;
                           return (
                             <button
                               key={chan.value}
                               type="button"
-                              onClick={() => setInteractionType(chan.value as any)}
+                              onClick={() => interactionForm.setValue("type", chan.value, { shouldTouch: true, shouldValidate: true })}
                               className={cn(
                                 "flex flex-col items-center justify-center py-2 px-1 rounded-xl border text-[9px] font-bold gap-1 transition-all shadow-sm",
                                 isActive
@@ -494,22 +501,26 @@ export default function LeadDetailsSheet({
                           );
                         })}
                       </div>
+                      {interactionForm.formState.errors.type && <p role="alert" className="text-[10px] text-destructive">{interactionForm.formState.errors.type.message}</p>}
                     </div>
 
                     <Textarea
+                      id="panel-interaction-notes"
                       placeholder="Escribe el resultado de la llamada o WhatsApp con el prospecto..."
-                      value={newInteractionNotes}
-                      onChange={(e) => setNewInteractionNotes(e.target.value)}
                       maxLength={255}
+                      aria-invalid={Boolean(interactionForm.formState.errors.notes)}
+                      aria-describedby={interactionForm.formState.errors.notes ? "panel-interaction-notes-error" : undefined}
                       className="min-h-[80px] bg-slate-50/20 text-xs focus:bg-card border-border rounded-xl"
                       disabled={createInteractionMutation.isPending}
+                      {...interactionForm.register("notes")}
                     />
+                    {interactionForm.formState.errors.notes && <p id="panel-interaction-notes-error" role="alert" className="text-[10px] text-destructive">{interactionForm.formState.errors.notes.message}</p>}
                     <div className="flex items-center justify-between gap-2 pt-1">
                       <span className="text-[10px] text-muted-foreground font-semibold">
-                        {newInteractionNotes.length}/255 caracteres
+                        {interactionNotes.length}/255 caracteres
                       </span>
                       <Button
-                        onClick={handleCreateInteraction}
+                        type="submit"
                         size="sm"
                         className="btn-primary font-bold text-xs h-8 px-4 rounded-lg shadow-sm flex items-center gap-1.5"
                         disabled={createInteractionMutation.isPending}
@@ -519,10 +530,10 @@ export default function LeadDetailsSheet({
                         ) : (
                           <Plus size={12} />
                         )}
-                        Registrar Bitácora
+                        {createInteractionMutation.isPending ? "Registrando..." : "Registrar Bitácora"}
                       </Button>
                     </div>
-                  </div>
+                  </form>
 
                   {/* Timeline List */}
                   <div className="space-y-4">
@@ -540,7 +551,7 @@ export default function LeadDetailsSheet({
                       </div>
                     ) : (
                       <div className="relative pl-4 space-y-4 border-l border-border/80 ml-2 pt-1">
-                        {interactions.map((item: any) => {
+                        {interactions.map((item) => {
                           const config = typeIcons[item.type] || { icon: MessageSquare, color: "text-slate-500", bg: "bg-slate-100" };
                           const Icon = config.icon;
                           return (
@@ -552,11 +563,7 @@ export default function LeadDetailsSheet({
                               <div className="bg-card border border-border rounded-xl p-3.5 space-y-2 shadow-sm group-hover:border-primary/30 transition-colors">
                                 <div className="flex items-center justify-between text-[10px] text-muted-foreground font-semibold">
                                   <span className={cn("px-1.5 py-0.5 rounded font-extrabold text-[9px] uppercase tracking-wider", config.bg, config.color)}>
-                                    {item.type === "CALL" ? "Llamada" : 
-                                     item.type === "WHATSAPP" ? "WhatsApp" : 
-                                     item.type === "MEETING" ? "Reunión" : 
-                                     item.type === "EMAIL" ? "Correo" : 
-                                     item.type === "SELL" ? "Venta" : item.type}
+                                    {interactionTypeLabel(item.type)}
                                   </span>
                                   <span>{formatSafeDate(item.created_at)}</span>
                                 </div>
@@ -578,35 +585,52 @@ export default function LeadDetailsSheet({
               ) : (
                 <div className="space-y-6">
                   {/* Form to create task */}
-                  <form onSubmit={handleCreateTask} className="rounded-xl border border-border bg-card p-4 space-y-3.5 shadow-sm">
+                  <form onSubmit={handleCreateTask} className="rounded-xl border border-border bg-card p-4 space-y-3.5 shadow-sm" noValidate>
                     <Label className="text-xs font-bold text-foreground flex items-center gap-1">
                       <Plus size={13} className="text-primary" /> Crear Recordatorio / Tarea
                     </Label>
                     <div className="space-y-2">
                       <Input
+                        id="panel-task-title"
                         placeholder="¿Qué necesitas recordar? (ej. Volver a llamar)"
-                        value={newTaskTitle}
-                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                        maxLength={100}
+                        aria-invalid={Boolean(taskForm.formState.errors.title)}
+                        aria-describedby={taskForm.formState.errors.title ? "panel-task-title-error" : undefined}
                         className="h-8 bg-slate-50/20 text-xs border-border rounded-xl focus:bg-card"
                         disabled={createTaskMutation.isPending}
-                        required
+                        {...taskForm.register("title")}
                       />
+                      <div className="flex items-start justify-between gap-2">
+                        {taskForm.formState.errors.title ? <p id="panel-task-title-error" role="alert" className="text-[10px] text-destructive">{taskForm.formState.errors.title.message}</p> : <span />}
+                        <span className="shrink-0 text-[10px] text-muted-foreground">{taskTitle.length}/100</span>
+                      </div>
                       <Textarea
-                        placeholder="Detalle o descripción de la tarea (opcional)..."
-                        value={newTaskContent}
-                        onChange={(e) => setNewTaskContent(e.target.value)}
+                        id="panel-task-content"
+                        placeholder="Detalle o descripción de la tarea..."
+                        maxLength={500}
+                        aria-invalid={Boolean(taskForm.formState.errors.content)}
+                        aria-describedby={taskForm.formState.errors.content ? "panel-task-content-error" : undefined}
                         className="min-h-[60px] bg-slate-50/20 text-xs border-border rounded-xl focus:bg-card"
                         disabled={createTaskMutation.isPending}
+                        {...taskForm.register("content")}
                       />
+                      <div className="flex items-start justify-between gap-2">
+                        {taskForm.formState.errors.content ? <p id="panel-task-content-error" role="alert" className="text-[10px] text-destructive">{taskForm.formState.errors.content.message}</p> : <span />}
+                        <span className="shrink-0 text-[10px] text-muted-foreground">{taskContent.length}/500</span>
+                      </div>
                       <div className="space-y-1">
-                        <Label className="text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground">Fecha de vencimiento</Label>
+                        <Label className="text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground">Fecha de vencimiento (opcional)</Label>
                         <Input
+                          id="panel-task-due-date"
                           type="date"
-                          value={newTaskDueDate}
-                          onChange={(e) => setNewTaskDueDate(e.target.value)}
+                          aria-invalid={Boolean(taskForm.formState.errors.due_date)}
+                          aria-describedby={taskForm.formState.errors.due_date ? "panel-task-due-date-help panel-task-due-date-error" : "panel-task-due-date-help"}
                           className="h-8 bg-slate-50/20 text-xs border-border rounded-xl focus:bg-card"
                           disabled={createTaskMutation.isPending}
+                          {...taskForm.register("due_date")}
                         />
+                        <p id="panel-task-due-date-help" className="text-[10px] text-muted-foreground">Puedes crear la tarea sin una fecha definida.</p>
+                        {taskForm.formState.errors.due_date && <p id="panel-task-due-date-error" role="alert" className="text-[10px] text-destructive">{taskForm.formState.errors.due_date.message}</p>}
                       </div>
                     </div>
                     <div className="flex justify-end pt-1">
@@ -621,7 +645,7 @@ export default function LeadDetailsSheet({
                         ) : (
                           <Plus size={12} className="mr-1.5" />
                         )}
-                        Crear Tarea
+                        {createTaskMutation.isPending ? "Creando..." : "Crear Tarea"}
                       </Button>
                     </div>
                   </form>
@@ -642,7 +666,7 @@ export default function LeadDetailsSheet({
                       </div>
                     ) : (
                       <div className="space-y-2.5">
-                        {tasks.map((item: any) => (
+                        {tasks.map((item) => (
                           <div
                             key={item.id}
                             className={cn(
@@ -684,9 +708,9 @@ export default function LeadDetailsSheet({
                                 <span>Vence:</span>
                                 <span className={cn(
                                   "text-foreground",
-                                  !item.is_done && new Date(item.due_date) < new Date() && "text-rose-500 font-extrabold"
+                                   !item.is_done && item.due_date && new Date(item.due_date) < new Date() && "text-rose-500 font-extrabold"
                                 )}>
-                                  {formatSafeDate(item.due_date, "dd/MM/yyyy")}
+                                  {item.due_date ? formatSafeDate(item.due_date, "dd/MM/yyyy") : "Sin fecha definida"}
                                 </span>
                               </div>
                             </div>

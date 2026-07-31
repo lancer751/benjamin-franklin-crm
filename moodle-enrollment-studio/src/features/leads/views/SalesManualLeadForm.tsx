@@ -23,6 +23,7 @@ export function SalesManualLeadForm() {
   } = useSalesForm();
 
   const isEdit = mode === "edit";
+  const interactionNotes = form.watch("interaction_notes") || "";
 
   if (isEdit && isLoadingLead) {
     return (
@@ -433,10 +434,12 @@ export function SalesManualLeadForm() {
                             <Textarea 
                               placeholder="Escribe aquí el contexto de la llamada, necesidades del alumno o detalles clave del primer contacto..." 
                               className="rounded-xl min-h-[120px] focus-visible:ring-[#005088] resize-none" 
+                              maxLength={255}
+                              aria-invalid={Boolean(form.formState.errors.interaction_notes)}
                               {...field} 
                             />
                           </FormControl>
-                          <FormMessage className="text-red-500 text-xs mt-1" />
+                          <div className="flex items-start justify-between gap-3"><FormMessage className="text-red-500 text-xs mt-1" /><span className="shrink-0 text-xs text-muted-foreground">{interactionNotes.length}/255 caracteres</span></div>
                         </FormItem>
                       )}
                     />

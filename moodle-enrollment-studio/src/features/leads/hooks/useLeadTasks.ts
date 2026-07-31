@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { requireSuccess, unwrapDetailList } from "../adapters/leadDetailAdapter";
+import { requireSuccess, taskDateInput, unwrapDetailList } from "../adapters/leadDetailAdapter";
 import type { LeadTask } from "../components/lead-detail/leadDetail.types";
-import type { TaskFormData } from "../schemas/leadDetailActionSchemas";
+import type { TaskFormValues } from "../schemas/taskFormSchema";
 import { createMemberTask, deleteMemberTask, getMemberTasks, updateMemberTask, type MemberTaskUpdatePayload } from "../services/leadService";
-
-const dueDatePayload = (value: string) => value ? new Date(`${value}T12:00:00`).toISOString() : null;
+import { mapTaskFormToPayload } from "../utils/leadActionPayloadMappers";
 
 export function useLeadTasks(campaignId: string, memberId: string, creatorUserId: string) {
   const queryClient = useQueryClient();
@@ -13,10 +12,11 @@ export function useLeadTasks(campaignId: string, memberId: string, creatorUserId
   const query = useQuery({ queryKey, queryFn: () => getMemberTasks(campaignId, memberId), enabled: Boolean(campaignId && memberId) });
   const refresh = () => queryClient.invalidateQueries({ queryKey });
   const createMutation = useMutation({
-    mutationFn: async (data: TaskFormData) => {
+    mutationFn: async (data: TaskFormValues) => {
       if (!creatorUserId) throw new Error("No se encontró el identificador del usuario autenticado.");
-      const response = await createMemberTask(campaignId, memberId, { ...data, due_date: dueDatePayload(data.due_date), is_done: false }, creatorUserId);
-      requireSuccess(response, "No fue posible crear la tarea.");
+      const payload = mapTaskFormToPayload(data);
+      const response = await createMemberTask(campaignId, memberId, payload, creatorUserId);
+      requireSuccess(response, "No se pudo crear la tarea. Inténtalo nuevamente.");
     },
     onSuccess: async () => { await refresh(); toast.success("Tarea creada correctamente."); },
   });
@@ -34,12 +34,13 @@ export function useLeadTasks(campaignId: string, memberId: string, creatorUserId
     },
     onSuccess: async () => { await refresh(); toast.success("Tarea eliminada correctamente."); },
   });
-  const updateFromForm = (task: LeadTask, data: TaskFormData, done: () => void) => {
+  const updateFromForm = (task: LeadTask, data: TaskFormValues, done: () => void) => {
+    const mapped = mapTaskFormToPayload(data);
     const payload: MemberTaskUpdatePayload = {};
-    if ((task.title || "") !== data.title) payload.title = data.title;
-    if ((task.content || "") !== data.content) payload.content = data.content;
-    const currentDate = task.due_date ? new Date(task.due_date).toISOString().slice(0, 10) : "";
-    if (currentDate !== data.due_date) payload.due_date = dueDatePayload(data.due_date);
+    if ((task.title || "") !== mapped.title) payload.title = mapped.title;
+    if ((task.content || "") !== mapped.content) payload.content = mapped.content;
+    const currentDate = taskDateInput(task.due_date);
+    if (currentDate !== data.due_date) payload.due_date = mapped.due_date;
     if (task.id && Object.keys(payload).length > 0) updateMutation.mutate({ taskId: task.id, payload }, { onSuccess: done });
     else done();
   };

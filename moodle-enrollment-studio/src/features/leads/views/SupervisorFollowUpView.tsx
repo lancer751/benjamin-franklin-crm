@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/core/lib/api";
+import { interactionTypeLabel } from "../utils/interactionType.constants";
 import { 
   Users, 
   TrendingUp, 
@@ -825,7 +826,7 @@ const SupervisorFollowUpView = () => {
                                 {interaction.notes}
                               </div>
                               <span className="text-[10px] text-slate-400 mt-1 block">
-                                Por: {interaction.seller?.user?.first_name ? `${interaction.seller.user.first_name} ${interaction.seller.user.last_name || ""}`.trim() : "Sistema"} • Canal: {interaction.type || "N/A"}
+                                Por: {interaction.seller?.user?.first_name ? `${interaction.seller.user.first_name} ${interaction.seller.user.last_name || ""}`.trim() : "Sistema"} • Canal: {interactionTypeLabel(interaction.type)}
                               </span>
                             </div>
                           );

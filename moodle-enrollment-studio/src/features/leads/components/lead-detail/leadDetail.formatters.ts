@@ -1,14 +1,15 @@
 import type { LeadCampaignMember, LeadPhone, PersonName } from "./leadDetail.types";
+import { INTERACTION_TYPE_LABELS } from "../../utils/interactionType.constants";
 
 const labels: Record<string, string> = {
+  ...INTERACTION_TYPE_LABELS,
   ACTIVE: "Activo", INACTIVE: "Inactivo", NOT_SPECIFIED: "No especificado",
   NEW: "Nuevo", ATTEMPTED_CONTACT: "No contactado", CONTACTED: "Contactado",
   QUALIFIED: "Preventa - Cita", APPOINTMENT: "Preventa - Cita", FOLLOW_UP: "Seguimiento",
   ON_HOLD: "En espera", WON: "Matriculado", ENROLLED: "Matriculado",
   LOST: "Descartado", UNQUALIFIED: "Descartado", DISCARDED: "Descartado",
   FACEBOOK: "Facebook", INSTAGRAM: "Instagram", TIKTOK: "TikTok", WEBSITE: "Sitio web",
-  WHATSAPP: "WhatsApp", MANUAL: "Registro manual", CALL: "Llamada", MEETING: "Reunión",
-  EMAIL: "Correo", SELL: "Venta", WEBSITE_FORM: "Formulario web", MALE: "Masculino", FEMALE: "Femenino",
+  MANUAL: "Registro manual", MALE: "Masculino", FEMALE: "Femenino",
 };
 
 export const displayValue = (value?: string | null) => value?.trim() || "No especificado";

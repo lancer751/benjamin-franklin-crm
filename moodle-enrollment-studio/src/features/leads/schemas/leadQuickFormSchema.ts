@@ -1,15 +1,13 @@
 import { z } from "zod";
 import { defaultLeadFieldValues, leadFieldsSchema } from "./leadFieldsSchema";
+import { interactionFormSchema, interactionTypeSchema } from "./interactionFormSchema";
 
 export const leadQuickFormSchema = leadFieldsSchema.extend({
   campaignId: z.string().uuid("Selecciona una campaña."),
   sellerId: z.string().optional(),
   source: z.enum(["FACEBOOK", "INSTAGRAM", "TIKTOK", "WHATSAPP", "WEBSITE"]),
-  interactionType: z.enum(["WEBSITE_FORM", "SELL", "WHATSAPP", "EMAIL", "MEETING", "CALL"]),
-  notes: z.string().transform((value) => value.trim()).refine(
-    (value) => value.length >= 4,
-    "Registra una nota de al menos 4 caracteres.",
-  ),
+  interactionType: interactionTypeSchema,
+  notes: interactionFormSchema.shape.notes,
 });
 
 export type LeadQuickFormInput = z.input<typeof leadQuickFormSchema>;

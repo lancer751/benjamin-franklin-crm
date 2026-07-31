@@ -1,4 +1,5 @@
 import type { LeadCampaignMember, LeadDetail, LeadInteraction, LeadTask } from "../components/lead-detail/leadDetail.types";
+import { getApiErrorMessage } from "../utils/getApiErrorMessage";
 
 export interface CampaignDialogSeller { userId: string; sellerProfileId: string; name: string }
 export interface CampaignDialogOption { id: string; name: string; platform: string; sellers: CampaignDialogSeller[] }
@@ -7,10 +8,7 @@ type UnknownRecord = Record<string, unknown>;
 const isRecord = (value: unknown): value is UnknownRecord => typeof value === "object" && value !== null;
 const stringValue = (value: unknown) => typeof value === "string" ? value : "";
 
-export const apiMessage = (response: unknown, fallback: string) => {
-  if (!isRecord(response)) return fallback;
-  return stringValue(response.message) || stringValue(response.error) || fallback;
-};
+export const apiMessage = (response: unknown, fallback: string) => getApiErrorMessage(response, fallback);
 
 export const requireSuccess = (response: unknown, fallback: string): UnknownRecord => {
   if (!isRecord(response) || response.success !== true) throw new Error(apiMessage(response, fallback));

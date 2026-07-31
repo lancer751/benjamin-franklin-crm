@@ -14,8 +14,11 @@ import {
   deleteMemberTask,
 } from "@/features/leads/services/leadService";
 import { adaptCampaignMembers, unpackLeads } from "@/features/leads/adapters/leadAdapter";
+import { requireSuccess } from "@/features/leads/adapters/leadDetailAdapter";
 import { useManualLeadRegistration } from "@/features/leads/hooks/useManualLeadRegistration";
 import type { ManualLeadData } from "@/features/leads/schemas/manualLeadSchema";
+import { getApiErrorMessage } from "@/features/leads/utils/getApiErrorMessage";
+import { mapInteractionFormToPayload, mapTaskFormToPayload } from "@/features/leads/utils/leadActionPayloadMappers";
 import { Button } from "@/core/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Input } from "@/core/components/ui/input";
@@ -156,48 +159,52 @@ const SellerLeadsView = () => {
 
   // Mutación para registrar interacciones
   const createInteractionMutation = useMutation({
-    mutationFn: (payload: { notes: string; type: "CALL" | "WHATSAPP" | "MEETING" | "EMAIL" | "SELL" }) =>
-      createMemberInteraction(
+    mutationFn: async (payload: ReturnType<typeof mapInteractionFormToPayload>) => {
+      const response = await createMemberInteraction(
         selectedCampaignId,
         selectedMemberId,
         payload.notes,
         payload.type,
         creatorUserId || ""
-      ),
+      );
+      requireSuccess(response, "No se pudo registrar la gestión. Inténtalo nuevamente.");
+      return response;
+    },
     onSuccess: () => {
       toast.success("Interacción registrada correctamente");
       queryClient.invalidateQueries({ queryKey: ["member-interactions", selectedMemberId] });
     },
-    onError: () => {
-      toast.error("Error al registrar la interacción");
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "No se pudo registrar la gestión. Inténtalo nuevamente."));
     }
   });
 
   // Mutación para crear tareas
   const createTaskMutation = useMutation({
-    mutationFn: async (payload: { title: string; content: string; due_date: string }) => {
+    mutationFn: async (payload: ReturnType<typeof mapTaskFormToPayload>) => {
       if (!creatorUserId) {
         throw new Error("Error: No se identificó al usuario autenticado.");
       }
-      return createMemberTask(
+      const response = await createMemberTask(
         selectedCampaignId,
         selectedMemberId,
         {
           title: payload.title,
           content: payload.content,
-          is_done: false,
+          is_done: payload.is_done,
           due_date: payload.due_date,
         },
         creatorUserId,
       );
+      requireSuccess(response, "No se pudo crear la tarea. Inténtalo nuevamente.");
+      return response;
     },
     onSuccess: () => {
       toast.success("Tarea registrada correctamente");
       queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedMemberId] });
     },
-    onError: (err) => {
-      console.error(err);
-      toast.error("Error al registrar la tarea");
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "No se pudo crear la tarea. Inténtalo nuevamente."));
     }
   });
 

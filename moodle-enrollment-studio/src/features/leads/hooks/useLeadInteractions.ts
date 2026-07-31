@@ -2,8 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { requireSuccess, unwrapDetailList } from "../adapters/leadDetailAdapter";
 import type { LeadInteraction } from "../components/lead-detail/leadDetail.types";
-import type { InteractionFormData } from "../schemas/leadDetailActionSchemas";
+import type { InteractionFormValues } from "../schemas/interactionFormSchema";
 import { createMemberInteraction, getMemberInteractions } from "../services/leadService";
+import { mapInteractionFormToPayload } from "../utils/leadActionPayloadMappers";
 
 export function useLeadInteractions(campaignId: string, memberId: string, creatorUserId: string) {
   const queryClient = useQueryClient();
@@ -14,10 +15,11 @@ export function useLeadInteractions(campaignId: string, memberId: string, creato
     enabled: Boolean(campaignId && memberId),
   });
   const createMutation = useMutation({
-    mutationFn: async (data: InteractionFormData) => {
+    mutationFn: async (data: InteractionFormValues) => {
       if (!creatorUserId) throw new Error("No se encontró el identificador del usuario autenticado.");
-      const response = await createMemberInteraction(campaignId, memberId, data.notes, data.type, creatorUserId);
-      requireSuccess(response, "No fue posible registrar la interacción.");
+      const payload = mapInteractionFormToPayload(data);
+      const response = await createMemberInteraction(campaignId, memberId, payload.notes, payload.type, creatorUserId);
+      requireSuccess(response, "No se pudo registrar la gestión. Inténtalo nuevamente.");
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });

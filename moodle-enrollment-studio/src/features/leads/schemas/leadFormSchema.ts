@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { interactionFormSchema } from "./interactionFormSchema";
 
 // 1. Mapeo nativo de errores en español compatible con React Hook Form
 const spanishErrorMap: z.ZodErrorMap = (issue, ctx) => {
@@ -56,7 +57,7 @@ export const leadFormSchema = z.object({
     z.string().uuid().optional()
   ),
   source: z.string().default("MANUAL"),
-  interaction_notes: z.string().optional().nullable().or(z.literal("")),
+  interaction_notes: interactionFormSchema.shape.notes.optional().nullable().or(z.literal("")),
   gender: z.preprocess(
     (val) => (val === "MALE" || val === "FEMALE" || val === "NOT_SPECIFIED" ? val : "NOT_SPECIFIED"),
     z.enum(["MALE", "FEMALE", "NOT_SPECIFIED"]).default("NOT_SPECIFIED")

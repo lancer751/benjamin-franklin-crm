@@ -13,6 +13,7 @@ interface OriginCardProps {
 
 export default function OriginCard({ form, isLoadingCampaigns, activeCampaigns }: OriginCardProps) {
   const watchSource = form.watch("source");
+  const interactionNotes = form.watch("interaction_notes") || "";
 
   return (
     <div className="bg-card border border-border/80 rounded-2xl p-6 shadow-sm space-y-6">
@@ -126,9 +127,9 @@ export default function OriginCard({ form, isLoadingCampaigns, activeCampaigns }
               <FormItem className="col-span-1 md:col-span-2 bg-muted/30 p-4 rounded-xl border border-border/80 mt-2">
                 <FormLabel>Notas del Registro Externo</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ej: Lead ingresó pidiendo información del curso..." className="rounded-xl" {...field} />
+                  <Input placeholder="Ej: Lead ingresó pidiendo información del curso..." className="rounded-xl" maxLength={255} aria-invalid={Boolean(form.formState.errors.interaction_notes)} {...field} />
                 </FormControl>
-                <FormMessage className="text-red-500 text-xs mt-1" />
+                <div className="flex items-start justify-between gap-3"><FormMessage className="text-red-500 text-xs mt-1" /><span className="shrink-0 text-xs text-muted-foreground">{interactionNotes.length}/255 caracteres</span></div>
               </FormItem>
             )}
           />

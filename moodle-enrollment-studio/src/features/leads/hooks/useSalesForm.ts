@@ -16,6 +16,7 @@ import {
   type UpdateLeadReq
 } from "../services/leadService";
 import { leadFormSchema, type LeadFormValues, defaultLeadFormValues } from "../schemas/leadFormSchema";
+import { mapInteractionFormToPayload } from "../utils/leadActionPayloadMappers";
 
 export const useSalesForm = () => {
   const { id } = useParams<{ id: string }>();
@@ -171,12 +172,13 @@ export const useSalesForm = () => {
 
         // 4. FLUJO DE SEGUIMIENTO (Interacciones):
         const notes = values.interaction_notes?.trim();
-        if (notes && notes.length >= 4) {
+        if (notes) {
+          const interactionPayload = mapInteractionFormToPayload({ type: "CALL", notes });
           await createMemberInteraction(
             campaignId,
             memberId,
-            notes,
-            "CALL", // Default interaction type
+            interactionPayload.notes,
+            interactionPayload.type,
             user.id
           );
         }

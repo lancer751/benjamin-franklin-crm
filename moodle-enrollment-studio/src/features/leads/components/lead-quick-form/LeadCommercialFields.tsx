@@ -3,20 +3,17 @@ import { Button } from "@/core/components/ui/button";
 import { Textarea } from "@/core/components/ui/textarea";
 import { cn } from "@/core/lib/utils";
 import type { LeadCreationController } from "../../hooks/useLeadCreationFlow";
+import { INTERACTION_TYPE_OPTIONS } from "../../utils/interactionType.constants";
 
 const selectClass = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const sources = [
   ["FACEBOOK", "Facebook"], ["INSTAGRAM", "Instagram"], ["TIKTOK", "TikTok"],
   ["WHATSAPP", "WhatsApp"], ["WEBSITE", "Sitio web"],
 ] as const;
-const interactionTypes = [
-  ["CALL", "Llamada"], ["WHATSAPP", "WhatsApp"], ["EMAIL", "Correo"],
-  ["MEETING", "Reunión"], ["WEBSITE_FORM", "Formulario web"], ["SELL", "Venta"],
-] as const;
-
 export function LeadCommercialFields({ controller }: { controller: LeadCreationController }) {
   const { form } = controller;
   const campaignId = form.watch("campaignId");
+  const notes = form.watch("notes") || "";
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -38,10 +35,10 @@ export function LeadCommercialFields({ controller }: { controller: LeadCreationC
       <section className="space-y-4" aria-labelledby="interaction-title">
         <div><h2 id="interaction-title" className="text-base font-semibold">Interacción inicial</h2><p className="text-sm text-muted-foreground">Deja constancia del primer contacto comercial.</p></div>
         <FormField control={form.control} name="interactionType" render={({ field }) => (
-          <FormItem><FormLabel>Tipo de interacción <span className="text-destructive">*</span></FormLabel><FormControl><div className="flex flex-wrap gap-2">{interactionTypes.map(([value, label]) => <Button key={value} type="button" size="sm" variant={field.value === value ? "default" : "outline"} className={cn("rounded-full", field.value === value && "shadow-sm")} onClick={() => field.onChange(value)} aria-pressed={field.value === value}>{label}</Button>)}</div></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Tipo de interacción <span className="text-destructive">*</span></FormLabel><FormControl><div className="flex flex-wrap gap-2">{INTERACTION_TYPE_OPTIONS.map(({ value, label }) => <Button key={value} type="button" size="sm" variant={field.value === value ? "default" : "outline"} className={cn("rounded-full", field.value === value && "shadow-sm")} onClick={() => field.onChange(value)} aria-pressed={field.value === value}>{label}</Button>)}</div></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="notes" render={({ field }) => (
-          <FormItem><FormLabel>Notas <span className="text-destructive">*</span></FormLabel><FormControl><Textarea rows={6} placeholder="Describe brevemente el resultado del primer contacto, la necesidad del prospecto o el acuerdo alcanzado." {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Notas <span className="text-destructive">*</span></FormLabel><FormControl><Textarea rows={6} maxLength={255} aria-invalid={Boolean(form.formState.errors.notes)} placeholder="Describe brevemente el resultado del primer contacto, la necesidad del prospecto o el acuerdo alcanzado." {...field} /></FormControl><div className="flex items-start justify-between gap-3"><FormMessage /><p className="shrink-0 text-xs text-muted-foreground">{notes.length}/255 caracteres</p></div></FormItem>
         )} />
       </section>
     </div>

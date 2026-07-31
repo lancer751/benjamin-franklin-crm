@@ -15,6 +15,7 @@ import {
   type LeadLookupResponse,
 } from "../services/leadService";
 import { useManualLeadLookup } from "./useManualLeadRegistration";
+import { mapInteractionFormToPayload } from "../utils/leadActionPayloadMappers";
 import {
   adaptAllowedCampaigns,
   adaptSellerCampaigns,
@@ -202,11 +203,15 @@ export function useLeadCreationFlow() {
       }
 
       try {
+        const interactionPayload = mapInteractionFormToPayload({
+          notes: data.notes,
+          type: data.interactionType,
+        });
         const interactionResponse = await createMemberInteraction(
           data.campaignId,
           memberId,
-          data.notes,
-          data.interactionType,
+          interactionPayload.notes,
+          interactionPayload.type,
           authenticatedUserId,
         ) as { success?: boolean };
         if (!interactionResponse.success) throw new Error("Interaction request failed");
