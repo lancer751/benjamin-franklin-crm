@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
-import { api } from "@/core/lib/api";
 import { getSellerCampaigns } from "@/features/users/services/userService";
 import { 
   getCampaignMembers, 
@@ -10,6 +9,7 @@ import {
   getMemberInteractions,
   createMemberInteraction,
   getMemberTasks,
+  createMemberTask,
   updateMemberTask,
   deleteMemberTask,
 } from "@/features/leads/services/leadService";
@@ -82,7 +82,8 @@ const SellerLeadsView = () => {
   const { user } = useAuthStore();
   
   // 🛡️ CORRECCIÓN DE IDs
-  const sellerId = user?.seller?.id;
+  const sellerProfileId = user?.seller?.id;
+  const creatorUserId = user?.id;
 
   const { campaignId } = useParams<{ campaignId: string }>();
   const [searchParams] = useSearchParams();
@@ -97,12 +98,12 @@ const SellerLeadsView = () => {
 
   // 1. Obtener campañas asignadas con el ID del perfil vendedor.
   const { data: sellerCampaignsRes, isLoading: isLoadingCampaigns } = useQuery({
-    queryKey: ["seller-assigned-campaigns", sellerId],
+    queryKey: ["seller-assigned-campaigns", sellerProfileId],
     queryFn: () => {
-      if (!sellerId) throw new Error("Seller profile ID is required");
-      return getSellerCampaigns(sellerId);
+      if (!sellerProfileId) throw new Error("Seller profile ID is required");
+      return getSellerCampaigns(sellerProfileId);
     },
-    enabled: Boolean(sellerId),
+    enabled: Boolean(sellerProfileId),
   });
 
   const assignedCampaignList = useMemo(() => {
@@ -119,11 +120,11 @@ const SellerLeadsView = () => {
     }
   }, [assignedCampaignList, selectedCampaignId, navigate]);
 
-  // 2. Obtener los leads de la campaña usando el sellerId esperado por el backend
+  // 2. Obtener los leads asignados al User.id autenticado.
   const { data: membersRes, isLoading: isLoadingLeads, isError: isErrorLeads } = useQuery({
-    queryKey: ["campaign-members-seller", selectedCampaignId, sellerId],
-    queryFn: () => getCampaignMembers(selectedCampaignId, { assigned_to: sellerId }),
-    enabled: !!selectedCampaignId && !!sellerId,
+    queryKey: ["campaign-members-seller", selectedCampaignId, creatorUserId],
+    queryFn: () => getCampaignMembers(selectedCampaignId, { assigned_to: creatorUserId }),
+    enabled: !!selectedCampaignId && !!creatorUserId,
   });
 
   const leads = useMemo(() => {
@@ -161,7 +162,7 @@ const SellerLeadsView = () => {
         selectedMemberId,
         payload.notes,
         payload.type,
-        sellerId || ""
+        creatorUserId || ""
       ),
     onSuccess: () => {
       toast.success("Interacción registrada correctamente");
@@ -175,22 +176,20 @@ const SellerLeadsView = () => {
   // Mutación para crear tareas
   const createTaskMutation = useMutation({
     mutationFn: async (payload: { title: string; content: string; due_date: string }) => {
-      if (!sellerId) {
-        throw new Error("Error: No se identificó tu perfil de asesor de ventas.");
+      if (!creatorUserId) {
+        throw new Error("Error: No se identificó al usuario autenticado.");
       }
-      const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks.$post({
-        param: { campaignId: selectedCampaignId, memberId: selectedMemberId },
-        json: {
+      return createMemberTask(
+        selectedCampaignId,
+        selectedMemberId,
+        {
           title: payload.title,
           content: payload.content,
           is_done: false,
           due_date: payload.due_date,
         },
-        headers: {
-          "x-seller-id": sellerId
-        }
-      } as any);
-      return await res.json();
+        creatorUserId,
+      );
     },
     onSuccess: () => {
       toast.success("Tarea registrada correctamente");
@@ -234,7 +233,7 @@ const SellerLeadsView = () => {
       updateMemberStatus(selectedCampaignId, memberId, status),
     onSuccess: () => {
       toast.success("Tipificación de lead actualizada exitosamente.");
-      queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", selectedCampaignId, sellerId] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", selectedCampaignId, creatorUserId] });
       queryClient.invalidateQueries({ queryKey: ["campaign-members", selectedCampaignId] });
     },
     onError: () => {
@@ -244,7 +243,11 @@ const SellerLeadsView = () => {
 
   const [isOpenNewLeadModal, setIsOpenNewLeadModal] = useState(false);
 
-  const manualLeadRegistration = useManualLeadRegistration(selectedCampaignId, sellerId);
+  const manualLeadRegistration = useManualLeadRegistration(
+    selectedCampaignId,
+    sellerProfileId,
+    creatorUserId,
+  );
 
   const handleManualLeadSubmit = async (data: ManualLeadData) => {
     try {
@@ -482,7 +485,7 @@ const SellerLeadsView = () => {
         onSubmit={handleManualLeadSubmit}
         isSubmitting={manualLeadRegistration.isPending}
         campaignId={selectedCampaignId}
-        sellerId={sellerId}
+        sellerProfileId={sellerProfileId}
       />
     </div>
   );

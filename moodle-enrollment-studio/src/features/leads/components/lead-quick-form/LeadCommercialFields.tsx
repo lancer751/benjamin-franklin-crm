@@ -30,7 +30,7 @@ export function LeadCommercialFields({ controller }: { controller: LeadCreationC
         )} />
         {controller.canChooseSeller && (
           <FormField control={form.control} name="sellerId" render={({ field }) => (
-            <FormItem><FormLabel>Asesor <span className="text-destructive">*</span></FormLabel><FormControl><select className={selectClass} value={field.value || ""} disabled={!campaignId || controller.sellerOptions.length === 0} onChange={field.onChange}><option value="">Selecciona un asesor</option>{controller.sellerOptions.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}</select></FormControl><FormMessage />{campaignId && controller.sellerOptions.length === 0 && <p className="text-sm text-destructive">No hay asesores asignados a esta campaña.</p>}</FormItem>
+            <FormItem><FormLabel>Asesor <span className="text-destructive">*</span></FormLabel><FormControl><select className={selectClass} value={field.value || ""} disabled={!campaignId || controller.sellerOptions.length === 0} onChange={field.onChange}><option value="">Selecciona un asesor</option>{controller.sellerOptions.map((seller) => <option key={seller.userId} value={seller.userId}>{seller.name}</option>)}</select></FormControl><FormMessage />{campaignId && controller.sellerOptions.length === 0 && <p className="text-sm text-destructive">No hay asesores asignados a esta campaña.</p>}</FormItem>
           )} />
         )}
       </section>

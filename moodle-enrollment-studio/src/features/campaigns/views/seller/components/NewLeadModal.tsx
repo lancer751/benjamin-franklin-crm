@@ -19,7 +19,7 @@ interface NewLeadModalProps {
   onSubmit: (data: ManualLeadData) => Promise<void>;
   isSubmitting: boolean;
   campaignId: string;
-  sellerId?: string;
+  sellerProfileId?: string;
 }
 
 type FieldErrors = Partial<Record<keyof ManualLeadFormInput, string>>;
@@ -37,7 +37,7 @@ export default function NewLeadModal({
   onSubmit,
   isSubmitting,
   campaignId,
-  sellerId,
+  sellerProfileId,
 }: NewLeadModalProps) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<ManualLeadFormInput>(emptyForm);
@@ -45,7 +45,7 @@ export default function NewLeadModal({
   const { lookup, isSearching, isLookupError, canLookup } = useManualLeadLookup(
     { cellphone: formData.cellphone, email: formData.email },
     campaignId,
-    sellerId,
+    sellerProfileId,
     isOpen,
   );
 

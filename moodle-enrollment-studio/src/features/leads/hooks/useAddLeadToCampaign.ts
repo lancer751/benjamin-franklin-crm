@@ -8,7 +8,14 @@ import { addLeadToCampaign } from "../services/leadService";
 
 interface AddCampaignInput { campaignId: string; sellerId: string; source: "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "WHATSAPP" | "WEBSITE" }
 
-export function useAddLeadToCampaign(leadId: string, role: string, authenticatedSellerId: string, associatedCampaignIds: Set<string>, onAdded: (memberId: string) => void) {
+export function useAddLeadToCampaign(
+  leadId: string,
+  role: string,
+  authenticatedUserId: string,
+  authenticatedSellerProfileId: string,
+  associatedCampaignIds: Set<string>,
+  onAdded: (memberId: string) => void,
+) {
   const queryClient = useQueryClient();
   const isSalesRep = role === "SALES_REP";
   const campaignsQuery = useQuery({
@@ -17,26 +24,47 @@ export function useAddLeadToCampaign(leadId: string, role: string, authenticated
     enabled: !isSalesRep,
   });
   const sellerCampaignsQuery = useQuery({
-    queryKey: ["seller-campaigns", authenticatedSellerId],
-    queryFn: () => getSellerCampaigns(authenticatedSellerId),
-    enabled: isSalesRep && Boolean(authenticatedSellerId),
+    queryKey: ["seller-campaigns", authenticatedSellerProfileId],
+    queryFn: () => getSellerCampaigns(authenticatedSellerProfileId),
+    enabled: isSalesRep && Boolean(authenticatedSellerProfileId),
   });
   const campaigns = useMemo(() => {
     const options = isSalesRep
-      ? adaptSellerAvailableCampaigns(sellerCampaignsQuery.data, authenticatedSellerId)
+      ? adaptSellerAvailableCampaigns(
+          sellerCampaignsQuery.data,
+          authenticatedUserId,
+          authenticatedSellerProfileId,
+        )
       : adaptAvailableCampaigns(campaignsQuery.data);
     return options.filter((campaign) => !associatedCampaignIds.has(campaign.id));
-  }, [associatedCampaignIds, authenticatedSellerId, campaignsQuery.data, isSalesRep, sellerCampaignsQuery.data]);
+  }, [
+    associatedCampaignIds,
+    authenticatedSellerProfileId,
+    authenticatedUserId,
+    campaignsQuery.data,
+    isSalesRep,
+    sellerCampaignsQuery.data,
+  ]);
 
   const mutation = useMutation({
     mutationFn: async (input: AddCampaignInput) => {
+      const selectedCampaign = campaigns.find((campaign) => campaign.id === input.campaignId);
+      const selectedSeller = selectedCampaign?.sellers.find((seller) => seller.userId === input.sellerId);
+      const assignedUserId = isSalesRep ? authenticatedUserId : selectedSeller?.userId || "";
+      const sellerProfileId = isSalesRep
+        ? authenticatedSellerProfileId
+        : selectedSeller?.sellerProfileId || "";
+      if (!assignedUserId || !sellerProfileId) {
+        throw new Error("Selecciona un asesor asignado a la campaña.");
+      }
+
       const response = await addLeadToCampaign(input.campaignId, {
         lead_id: leadId,
         campaing_id: input.campaignId,
-        assigned_to: isSalesRep ? authenticatedSellerId : input.sellerId,
+        assigned_to: assignedUserId,
         source: input.source,
         is_primary: false,
-      }, isSalesRep ? authenticatedSellerId : input.sellerId);
+      });
       requireSuccess(response, "No fue posible agregar el prospecto a la campaña.");
       return response;
     },

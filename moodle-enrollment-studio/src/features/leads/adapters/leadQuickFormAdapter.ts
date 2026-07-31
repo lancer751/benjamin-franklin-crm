@@ -3,7 +3,8 @@ import type { LeadFieldsData, LeadFieldsInput } from "../schemas/leadFieldsSchem
 import type { UpdateLeadReq } from "../services/leadService";
 
 export interface LeadQuickSellerOption {
-  id: string;
+  userId: string;
+  sellerProfileId: string;
   name: string;
 }
 
@@ -19,7 +20,11 @@ interface CampaignRecord {
   status?: string;
   sellersOnCampaign?: Array<{
     seller_id?: string;
-    seller?: { id?: string; user?: { first_name?: string; last_name?: string } };
+    seller?: {
+      id?: string;
+      user_id?: string;
+      user?: { id?: string; first_name?: string; last_name?: string };
+    };
   }>;
 }
 
@@ -37,10 +42,11 @@ export function adaptAllowedCampaigns(response: unknown): LeadQuickCampaignOptio
       name: campaign.name?.trim() || "Campaña sin nombre",
       sellers: (campaign.sellersOnCampaign || [])
         .map((assignment) => ({
-          id: assignment.seller_id || assignment.seller?.id || "",
+          userId: assignment.seller?.user_id || assignment.seller?.user?.id || "",
+          sellerProfileId: assignment.seller_id || assignment.seller?.id || "",
           name: sellerName(assignment.seller?.user?.first_name, assignment.seller?.user?.last_name),
         }))
-        .filter((seller) => seller.id && seller.name),
+        .filter((seller) => seller.userId && seller.sellerProfileId && seller.name),
     }));
 }
 

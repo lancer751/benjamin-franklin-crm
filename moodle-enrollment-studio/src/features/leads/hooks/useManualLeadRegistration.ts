@@ -31,7 +31,7 @@ interface LookupValues {
 export function useManualLeadLookup(
   values: LookupValues,
   campaignId: string,
-  sellerId: string | undefined,
+  sellerProfileId: string | undefined,
   enabled: boolean,
 ) {
   const phone = normalizeLeadPhone(values.cellphone);
@@ -44,7 +44,7 @@ export function useManualLeadLookup(
 
   useEffect(() => {
     setDebouncedLookup(null);
-    if (!enabled || !campaignId || !sellerId || !canLookup) {
+    if (!enabled || !campaignId || !sellerProfileId || !canLookup) {
       setIsDebouncing(false);
       return;
     }
@@ -56,13 +56,13 @@ export function useManualLeadLookup(
     }, 450);
 
     return () => window.clearTimeout(timeoutId);
-  }, [campaignId, sellerId, enabled, canLookup, validPhone, validEmail]);
+  }, [campaignId, sellerProfileId, enabled, canLookup, validPhone, validEmail]);
 
   const lookupQuery = useQuery({
     queryKey: [
       "manual-lead-lookup",
       campaignId,
-      sellerId,
+      sellerProfileId,
       debouncedLookup?.phone ?? "",
       debouncedLookup?.email ?? "",
     ],
@@ -70,9 +70,9 @@ export function useManualLeadLookup(
       phone: debouncedLookup?.phone,
       email: debouncedLookup?.email,
       campaignId,
-      sellerId: sellerId!,
+      sellerProfileId: sellerProfileId!,
     }),
-    enabled: Boolean(enabled && campaignId && sellerId && debouncedLookup),
+    enabled: Boolean(enabled && campaignId && sellerProfileId && debouncedLookup),
   });
 
   const lookupIsCurrent = Boolean(
@@ -105,19 +105,25 @@ const getExistingLead = (lookup: LeadLookupResponse) => {
   return lookup.data?.found ? lookup.data.lead : null;
 };
 
-export function useManualLeadRegistration(campaignId: string, sellerId: string | undefined) {
+export function useManualLeadRegistration(
+  campaignId: string,
+  sellerProfileId: string | undefined,
+  assignedUserId: string | undefined,
+) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: ManualLeadData) => {
-      if (!sellerId) throw new Error("No se identificó el perfil de asesor de ventas.");
+      if (!sellerProfileId || !assignedUserId) {
+        throw new Error("No se identificó al asesor de ventas.");
+      }
       if (!campaignId) throw new Error("No hay una campaña activa seleccionada.");
 
       const lookupArgs = {
         phone: data.cellphone,
         email: data.email,
         campaignId,
-        sellerId,
+        sellerProfileId,
       };
       let existingLead = getExistingLead(await lookupLeadExact(lookupArgs));
       let leadId = existingLead?.id;
@@ -131,7 +137,7 @@ export function useManualLeadRegistration(campaignId: string, sellerId: string |
           phones: [{ number: data.cellphone, type: "WHATSAPP", isPrincipal: true }],
           lead_status: "ACTIVE",
           gender: "NOT_SPECIFIED",
-        } as any, sellerId) as any;
+        } as any) as any;
 
         if (leadResponse.success && leadResponse.data?.id) {
           leadId = leadResponse.data.id;
@@ -153,10 +159,10 @@ export function useManualLeadRegistration(campaignId: string, sellerId: string |
       const memberResponse = await addLeadToCampaign(campaignId, {
         lead_id: leadId,
         campaing_id: campaignId,
-        assigned_to: sellerId,
+        assigned_to: assignedUserId,
         source: "WHATSAPP",
         is_primary: true,
-      } as any, sellerId) as any;
+      } as any) as any;
 
       if (!memberResponse.success) {
         if (memberResponse.code === "LEAD_ALREADY_IN_CAMPAIGN") {
@@ -171,7 +177,7 @@ export function useManualLeadRegistration(campaignId: string, sellerId: string |
       return { mode, member: memberResponse.data };
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", campaignId, sellerId] });
+      await queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", campaignId, assignedUserId] });
       await queryClient.invalidateQueries({ queryKey: ["campaign-members", campaignId] });
     },
   });

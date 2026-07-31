@@ -87,12 +87,8 @@ export const getLeadById = async (id: string): Promise<GetLeadByIdRes> => {
 };
 
 /** Registra un nuevo lead base (con sus respectivos teléfonos) */
-export const createLead = async (data: CreateLeadReq, sellerId?: string): Promise<InferResponseType<typeof api.leads.$post>> => {
-  const headers: Record<string, string> = {};
-  if (sellerId) {
-    headers["x-seller-id"] = sellerId;
-  }
-  const res = await api.leads.$post({ json: data } as any, { headers });
+export const createLead = async (data: CreateLeadReq): Promise<InferResponseType<typeof api.leads.$post>> => {
+  const res = await api.leads.$post({ json: data } as any);
   return await res.json();
 };
 
@@ -127,16 +123,16 @@ export const getCampaignMembers = async (campaignId?: string, query?: any): Prom
 };
 
 /** POST: Asigna o añade un Lead existente a una campaña (Crea el CampaignMember) */
-export const addLeadToCampaign = async (campaignId: string, data: CreateCampaignMemberReq, sellerId?: string): Promise<any> => {
+export const addLeadToCampaign = async (campaignId: string, data: CreateCampaignMemberReq): Promise<any> => {
   // Si usas el cliente indexado por RPC de Hono, el objeto 'param' debe mapear 'campaignId'
-  const headers: Record<string, string> = {};
-  if (sellerId) {
-    headers["x-seller-id"] = sellerId;
+  const assignedUserId = data.assigned_to;
+  if (!assignedUserId) {
+    throw new Error("No se encontró el User.id del asesor asignado");
   }
   const res = await api.campaigns[":campaignId"].members.$post({
     param: { campaignId }, 
-    json: data
-  } as any, { headers });
+    json: { ...data, assigned_to: assignedUserId }
+  } as any);
   return await res.json();
 };
 
@@ -171,13 +167,16 @@ export const getMemberInteractions = async (campaignId: string, memberId: string
 };
 
 /** POST: Registra una nueva interacción o bitácora de llamada para un miembro */
-export const createMemberInteraction = async (campaignId: string, memberId: string, notes: string, type: string, sellerId: string): Promise<unknown> => {
+export const createMemberInteraction = async (campaignId: string, memberId: string, notes: string, type: string, creatorUserId: string): Promise<unknown> => {
+  if (!creatorUserId) {
+    throw new Error("No se encontró el User.id del usuario autenticado");
+  }
   const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].interactions.$post({
     param: { campaignId, memberId },
     json: { notes, type },
-    headers: { "x-seller-id": sellerId }
+    headers: { "x-seller-id": creatorUserId }
   } as any, {
-    headers: { "x-seller-id": sellerId }
+    headers: { "x-seller-id": creatorUserId }
   });
   return await res.json();
 };
@@ -200,13 +199,16 @@ export interface MemberTaskPayload {
 
 export type MemberTaskUpdatePayload = Partial<MemberTaskPayload>;
 
-export const createMemberTask = async (campaignId: string, memberId: string, taskData: MemberTaskPayload, sellerId: string): Promise<unknown> => {
+export const createMemberTask = async (campaignId: string, memberId: string, taskData: MemberTaskPayload, creatorUserId: string): Promise<unknown> => {
+  if (!creatorUserId) {
+    throw new Error("No se encontró el User.id del usuario autenticado");
+  }
   const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks.$post({
     param: { campaignId, memberId },
     json: taskData,
-    headers: { "x-seller-id": sellerId }
+    headers: { "x-seller-id": creatorUserId }
   } as any, {
-    headers: { "x-seller-id": sellerId }
+    headers: { "x-seller-id": creatorUserId }
   });
   return await res.json();
 };
@@ -232,14 +234,17 @@ export const lookupLeadExact = async (query: {
   phone?: string;
   email?: string;
   campaignId: string;
-  sellerId: string;
+  sellerProfileId: string;
 }): Promise<LeadLookupResponse> => {
+  if (!query.sellerProfileId) {
+    throw new Error("No se encontró el SellerProfile.id del usuario autenticado");
+  }
   const res = await (api.leads as any).lookup.$get({
     query: {
       ...(query.phone && { phone: query.phone }),
       ...(query.email && { email: query.email }),
       campaign_id: query.campaignId,
-      seller_id: query.sellerId,
+      seller_id: query.sellerProfileId,
     },
   });
   const body = await res.json() as LeadLookupResponse & { error?: string };

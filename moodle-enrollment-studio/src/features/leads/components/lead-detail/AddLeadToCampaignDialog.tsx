@@ -17,16 +17,24 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   leadId: string;
   role: string;
-  sellerId: string;
+  userId: string;
+  sellerProfileId: string;
   associatedCampaignIds: Set<string>;
   onAdded: (memberId: string) => void;
 }
 
 export function AddLeadToCampaignDialog(props: Props) {
-  const controller = useAddLeadToCampaign(props.leadId, props.role, props.sellerId, props.associatedCampaignIds, (memberId) => {
-    props.onOpenChange(false);
-    props.onAdded(memberId);
-  });
+  const controller = useAddLeadToCampaign(
+    props.leadId,
+    props.role,
+    props.userId,
+    props.sellerProfileId,
+    props.associatedCampaignIds,
+    (memberId) => {
+      props.onOpenChange(false);
+      props.onAdded(memberId);
+    },
+  );
   const [campaignId, setCampaignId] = useState("");
   const [sellerId, setSellerId] = useState("");
   const [source, setSource] = useState<(typeof sources)[number][0]>("WHATSAPP");
@@ -39,8 +47,16 @@ export function AddLeadToCampaignDialog(props: Props) {
     setCampaignId(""); setSellerId(""); setSource("WHATSAPP"); resetMutation();
   }, [props.open, resetMutation]);
 
-  const submit = () => controller.mutation.mutate({ campaignId, sellerId: isSalesRep ? props.sellerId : sellerId, source });
-  const canSubmit = Boolean(campaignId && (isSalesRep ? props.sellerId : sellerId) && !controller.mutation.isPending);
+  const submit = () => controller.mutation.mutate({
+    campaignId,
+    sellerId: isSalesRep ? props.userId : sellerId,
+    source,
+  });
+  const canSubmit = Boolean(
+    campaignId &&
+    (isSalesRep ? props.userId && props.sellerProfileId : sellerId) &&
+    !controller.mutation.isPending,
+  );
   const error = controller.mutation.error instanceof Error ? controller.mutation.error.message : "";
 
   return <Dialog open={props.open} onOpenChange={props.onOpenChange}><DialogContent className="max-h-[95vh] w-[calc(100%-2rem)] overflow-y-auto sm:max-w-lg">
@@ -48,7 +64,7 @@ export function AddLeadToCampaignDialog(props: Props) {
     {controller.isLoading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" /></div> : controller.isError ? <Alert variant="destructive"><AlertDescription>No fue posible cargar las campañas disponibles.</AlertDescription></Alert> : controller.campaigns.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">Este prospecto ya pertenece a todas las campañas disponibles.</p> : <div className="space-y-4 py-2">
       <div className="space-y-2"><Label htmlFor="detail-campaign">Campaña *</Label><select id="detail-campaign" className={selectClass} value={campaignId} onChange={(event) => { setCampaignId(event.target.value); setSellerId(""); }}><option value="">Selecciona una campaña</option>{controller.campaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.name}</option>)}</select></div>
       <div className="space-y-2"><Label htmlFor="detail-source">Origen *</Label><select id="detail-source" className={selectClass} value={source} onChange={(event) => setSource(event.target.value as typeof source)}>{sources.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
-      {!isSalesRep && <div className="space-y-2"><Label htmlFor="detail-seller">Asesor *</Label><select id="detail-seller" className={selectClass} value={sellerId} disabled={!campaignId} onChange={(event) => setSellerId(event.target.value)}><option value="">Selecciona un asesor</option>{selectedCampaign?.sellers.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}</select>{campaignId && selectedCampaign?.sellers.length === 0 && <p className="text-xs text-destructive">Esta campaña no tiene asesores asignados.</p>}</div>}
+      {!isSalesRep && <div className="space-y-2"><Label htmlFor="detail-seller">Asesor *</Label><select id="detail-seller" className={selectClass} value={sellerId} disabled={!campaignId} onChange={(event) => setSellerId(event.target.value)}><option value="">Selecciona un asesor</option>{selectedCampaign?.sellers.map((seller) => <option key={seller.userId} value={seller.userId}>{seller.name}</option>)}</select>{campaignId && selectedCampaign?.sellers.length === 0 && <p className="text-xs text-destructive">Esta campaña no tiene asesores asignados.</p>}</div>}
       {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     </div>}
     <DialogFooter><Button type="button" variant="outline" onClick={() => props.onOpenChange(false)} disabled={controller.mutation.isPending}>Cancelar</Button><Button type="button" onClick={submit} disabled={!canSubmit}>{controller.mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}{controller.mutation.isPending ? "Agregando…" : "Agregar a campaña"}</Button></DialogFooter>

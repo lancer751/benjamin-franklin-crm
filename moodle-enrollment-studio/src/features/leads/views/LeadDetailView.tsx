@@ -35,13 +35,13 @@ export default function LeadDetailView() {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   if (detail.leadQuery.isLoading || detail.profileQuery.isLoading) return <DetailSkeleton />;
-  if (detail.leadQuery.isError || !detail.lead || (detail.isSalesRep && !detail.sellerId)) return <Card className="p-10 text-center"><p className="font-semibold text-destructive">No fue posible cargar este prospecto.</p><div className="mt-4 flex justify-center gap-2"><Button variant="outline" onClick={() => navigate(-1)}>Volver</Button><Button onClick={() => void detail.leadQuery.refetch()}>Reintentar</Button></div></Card>;
+  if (detail.leadQuery.isError || !detail.lead || (detail.isSalesRep && !detail.sellerProfileId)) return <Card className="p-10 text-center"><p className="font-semibold text-destructive">No fue posible cargar este prospecto.</p><div className="mt-4 flex justify-center gap-2"><Button variant="outline" onClick={() => navigate(-1)}>Volver</Button><Button onClick={() => void detail.leadQuery.refetch()}>Reintentar</Button></div></Card>;
   if (detail.isSalesRep && detail.allMembers.length > 0 && detail.members.length === 0) return <Card className="p-10 text-center"><p className="font-semibold text-destructive">No tienes acceso a este prospecto.</p><p className="mt-1 text-sm text-muted-foreground">No está asignado a tu perfil de vendedor.</p><Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>Volver</Button></Card>;
 
   const phones = Array.isArray(detail.lead.phones) ? detail.lead.phones : [];
   const principalPhone = principalPhoneFrom(phones);
   const additionalPhones = phones.filter((phone) => phone !== principalPhone);
-  const activitySellerId = detail.sellerId || detail.selectedMember?.assigned_to || detail.selectedMember?.seller?.id || "";
+  const creatorUserId = user?.id || "";
   const showActivity = (memberId: string) => { detail.setSelectedMemberId(memberId); setActiveTab("interactions"); };
   const selectAddedMember = (memberId: string) => { if (memberId) detail.setSelectedMemberId(memberId); };
   const deleteError = deleteMutation.error instanceof Error ? deleteMutation.error.message : "";
@@ -54,10 +54,10 @@ export default function LeadDetailView() {
       <div className="overflow-x-auto pb-1"><TabsList className="inline-flex h-11 min-w-full justify-start sm:grid sm:grid-cols-4"><TabsTrigger className="min-w-32" value="information">Información</TabsTrigger><TabsTrigger className="min-w-32" value="campaigns">Campañas ({detail.members.length})</TabsTrigger><TabsTrigger className="min-w-32" value="interactions">Interacciones</TabsTrigger><TabsTrigger className="min-w-32" value="tasks">Tareas</TabsTrigger></TabsList></div>
       <TabsContent value="information" className="mt-4"><LeadInformationTab lead={detail.lead} principalPhone={principalPhone} additionalPhones={additionalPhones} /></TabsContent>
       <TabsContent value="campaigns" className="mt-4"><LeadCampaignsTab members={detail.members} selectedMemberId={detail.selectedMemberId} canAddCampaign={capabilities.canAddCampaign} onAddCampaign={() => setAddCampaignOpen(true)} onViewActivity={showActivity} /></TabsContent>
-      <TabsContent value="interactions" className="mt-4"><LeadInteractionsTab members={detail.members} selectedMemberId={detail.selectedMemberId} campaignId={detail.selectedCampaignId} sellerId={activitySellerId} onChange={detail.setSelectedMemberId} canCreate={capabilities.canCreateInteraction} /></TabsContent>
-      <TabsContent value="tasks" className="mt-4"><LeadTasksTab members={detail.members} selectedMemberId={detail.selectedMemberId} campaignId={detail.selectedCampaignId} sellerId={activitySellerId} onChange={detail.setSelectedMemberId} canManage={capabilities.canManageTasks} /></TabsContent>
+      <TabsContent value="interactions" className="mt-4"><LeadInteractionsTab members={detail.members} selectedMemberId={detail.selectedMemberId} campaignId={detail.selectedCampaignId} creatorUserId={creatorUserId} onChange={detail.setSelectedMemberId} canCreate={capabilities.canCreateInteraction} /></TabsContent>
+      <TabsContent value="tasks" className="mt-4"><LeadTasksTab members={detail.members} selectedMemberId={detail.selectedMemberId} campaignId={detail.selectedCampaignId} creatorUserId={creatorUserId} onChange={detail.setSelectedMemberId} canManage={capabilities.canManageTasks} /></TabsContent>
     </Tabs>
-    <AddLeadToCampaignDialog open={addCampaignOpen} onOpenChange={setAddCampaignOpen} leadId={id} role={role} sellerId={detail.sellerId} associatedCampaignIds={campaignIdsFromMembers(detail.allMembers)} onAdded={selectAddedMember} />
+    <AddLeadToCampaignDialog open={addCampaignOpen} onOpenChange={setAddCampaignOpen} leadId={id} role={role} userId={user?.id || ""} sellerProfileId={detail.sellerProfileId} associatedCampaignIds={campaignIdsFromMembers(detail.allMembers)} onAdded={selectAddedMember} />
     <DeleteLeadDialog open={deleteOpen} onOpenChange={setDeleteOpen} isPending={deleteMutation.isPending} error={deleteError} onConfirm={() => deleteMutation.mutate()} />
   </div>;
 }

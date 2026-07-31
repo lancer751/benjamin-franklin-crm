@@ -7,15 +7,15 @@ import { createMemberTask, deleteMemberTask, getMemberTasks, updateMemberTask, t
 
 const dueDatePayload = (value: string) => value ? new Date(`${value}T12:00:00`).toISOString() : null;
 
-export function useLeadTasks(campaignId: string, memberId: string, sellerId: string) {
+export function useLeadTasks(campaignId: string, memberId: string, creatorUserId: string) {
   const queryClient = useQueryClient();
   const queryKey = ["lead-tasks", campaignId, memberId] as const;
   const query = useQuery({ queryKey, queryFn: () => getMemberTasks(campaignId, memberId), enabled: Boolean(campaignId && memberId) });
   const refresh = () => queryClient.invalidateQueries({ queryKey });
   const createMutation = useMutation({
     mutationFn: async (data: TaskFormData) => {
-      if (!sellerId) throw new Error("No se encontró un asesor válido para crear la tarea.");
-      const response = await createMemberTask(campaignId, memberId, { ...data, due_date: dueDatePayload(data.due_date), is_done: false }, sellerId);
+      if (!creatorUserId) throw new Error("No se encontró el identificador del usuario autenticado.");
+      const response = await createMemberTask(campaignId, memberId, { ...data, due_date: dueDatePayload(data.due_date), is_done: false }, creatorUserId);
       requireSuccess(response, "No fue posible crear la tarea.");
     },
     onSuccess: async () => { await refresh(); toast.success("Tarea creada correctamente."); },

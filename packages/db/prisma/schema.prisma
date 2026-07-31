@@ -84,7 +84,7 @@ enum CampaignMemberStatus {
   NUEVO
   CONTACTADO
   NO_CONTACTADO
-  NEGOCIACION
+  NEGOCIACION 
   SEGUIMIENTO
   EN_ESPERA
   MATRICULADO
@@ -140,7 +140,6 @@ model SellerProfile {
   user             User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
   assignedCampaing CampaignSeller[]
   supervisor       SalesSupervisorProfile @relation(fields: [assigned_supervisor_id], references: [id], onDelete: Cascade)
-  createdTasks     Tasks[]
 }
 
 model SalesSupervisorProfile {
@@ -223,6 +222,7 @@ model User {
   assignedOrders       Order[]                 @relation("ORDERS_ASSIGNED_TO")
   campaignMembers      CampaignMember[]
   LeadInteraction  LeadInteraction[]
+  createdTasks     Tasks[]
 }
 
 enum PhoneType {
@@ -350,7 +350,7 @@ model Tasks {
 
   lead           Lead           @relation(fields: [lead_id], references: [id])
   campaignMember CampaignMember @relation(fields: [campaign_member_id], references: [id])
-  seller         SellerProfile  @relation(fields: [created_by], references: [id])
+  userCreator    User           @relation(fields: [created_by], references: [id])
 }
 
 enum CourseType {

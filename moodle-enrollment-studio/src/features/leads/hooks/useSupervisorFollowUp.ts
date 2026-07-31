@@ -191,15 +191,20 @@ export const useSupervisorFollowUp = () => {
     mutationFn: async (newSellerId: string) => {
       if (selectedLead.id.startsWith("unassigned-")) {
         const campaignId = selectedLead.campaing_id || selectedLead.lead.primary_campaign_id;
+        const selectedSeller = realSellers.find((seller: any) => seller.id === newSellerId);
+        const assignedUserId = selectedSeller?.user_id || selectedSeller?.user?.id;
         if (!campaignId) {
           throw new Error("El prospecto no tiene una campaña asociada.");
+        }
+        if (!assignedUserId) {
+          throw new Error("No se encontró el User.id del asesor seleccionado.");
         }
         const res = await api.campaigns[":campaignId"].members.$post({
           param: { campaignId },
           json: {
             lead_id: selectedLead.lead.id,
             campaing_id: campaignId,
-            assigned_to: newSellerId,
+            assigned_to: assignedUserId,
             source: selectedLead.lead.source || "WHATSAPP",
             is_primary: true
           }

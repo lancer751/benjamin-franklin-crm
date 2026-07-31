@@ -49,7 +49,8 @@ export function useLeadCreationFlow() {
   const role = user?.role?.name ?? "";
   const isSalesRep = role === "SALES_REP";
   const canChooseSeller = role === "ADMIN" || role === "SALES_SUPERVISOR" || role === "MARKETING";
-  const authenticatedSellerId = user?.seller?.id || "";
+  const authenticatedSellerProfileId = user?.seller?.id || "";
+  const authenticatedUserId = user?.id || "";
   const [partialProgress, setPartialProgress] = useState<PartialProgress | null>(null);
   const [flowError, setFlowError] = useState("");
 
@@ -63,12 +64,12 @@ export function useLeadCreationFlow() {
 
   const values = form.watch();
   const campaignId = values.campaignId;
-  const selectedSellerId = isSalesRep ? authenticatedSellerId : values.sellerId;
+  const selectedAssignedUserId = isSalesRep ? authenticatedUserId : values.sellerId;
 
   const sellerCampaignsQuery = useQuery({
-    queryKey: ["seller-campaigns", authenticatedSellerId],
-    queryFn: () => getSellerCampaigns(authenticatedSellerId),
-    enabled: isSalesRep && Boolean(authenticatedSellerId),
+    queryKey: ["seller-campaigns", authenticatedSellerProfileId],
+    queryFn: () => getSellerCampaigns(authenticatedSellerProfileId),
+    enabled: isSalesRep && Boolean(authenticatedSellerProfileId),
   });
   const allowedCampaignsQuery = useQuery({
     queryKey: ["campaigns", "lead-quick-form", 1, 100],
@@ -86,21 +87,26 @@ export function useLeadCreationFlow() {
   const sellerOptions = canChooseSeller ? selectedCampaign?.sellers || [] : [];
 
   useEffect(() => {
-    if (isSalesRep && authenticatedSellerId) {
-      form.setValue("sellerId", authenticatedSellerId);
+    if (isSalesRep && authenticatedUserId) {
+      form.setValue("sellerId", authenticatedUserId);
     }
-  }, [authenticatedSellerId, form, isSalesRep]);
+  }, [authenticatedUserId, form, isSalesRep]);
 
   useEffect(() => {
     setPartialProgress(null);
     setFlowError("");
-  }, [campaignId, selectedSellerId, values.cellphone, values.email]);
+  }, [campaignId, selectedAssignedUserId, values.cellphone, values.email]);
+
+  const selectedSeller = sellerOptions.find((seller) => seller.userId === selectedAssignedUserId);
+  const selectedSellerProfileId = isSalesRep
+    ? authenticatedSellerProfileId
+    : selectedSeller?.sellerProfileId || "";
 
   const lookupState = useManualLeadLookup(
     { cellphone: values.cellphone, email: values.email },
     campaignId,
-    selectedSellerId,
-    Boolean(campaignId && selectedSellerId),
+    selectedSellerProfileId,
+    Boolean(campaignId && selectedSellerProfileId),
   );
   const lookup = lookupState.lookup;
   const hasIdentityConflict = isConflictLookup(lookup);
@@ -109,14 +115,19 @@ export function useLeadCreationFlow() {
 
   const registrationMutation = useMutation({
     mutationFn: async (data: LeadQuickFormData) => {
-      const sellerId = isSalesRep ? authenticatedSellerId : data.sellerId;
-      if (!sellerId) throw new Error("Selecciona un asesor asignado a la campaña.");
+      const assignedUserId = isSalesRep ? authenticatedUserId : data.sellerId;
+      const sellerProfileId = isSalesRep
+        ? authenticatedSellerProfileId
+        : sellerOptions.find((seller) => seller.userId === assignedUserId)?.sellerProfileId || "";
+      if (!assignedUserId || !sellerProfileId) {
+        throw new Error("Selecciona un asesor asignado a la campaña.");
+      }
 
       const lookupArgs = {
         phone: data.cellphone,
         email: data.email,
         campaignId: data.campaignId,
-        sellerId,
+        sellerProfileId,
       };
       const currentLookup = await lookupLeadExact(lookupArgs);
       if (isConflictLookup(currentLookup)) {
@@ -136,7 +147,7 @@ export function useLeadCreationFlow() {
         } | undefined;
         try {
           const payload = buildCreateLeadPayload(data) as Parameters<typeof createLead>[0];
-          leadResponse = await createLead(payload, sellerId) as unknown as typeof leadResponse;
+          leadResponse = await createLead(payload) as unknown as typeof leadResponse;
         } catch {
           const recoveredLookup = await lookupLeadExact(lookupArgs);
           if (recoveredLookup.data?.lead?.id) {
@@ -167,10 +178,10 @@ export function useLeadCreationFlow() {
           memberResponse = await addLeadToCampaign(data.campaignId, {
             lead_id: leadId,
             campaing_id: data.campaignId,
-            assigned_to: sellerId,
+            assigned_to: assignedUserId,
             source: data.source,
             is_primary: true,
-          }, sellerId) as typeof memberResponse;
+          }) as typeof memberResponse;
         } catch {
           const recoveredLookup = await lookupLeadExact(lookupArgs);
           memberId = recoveredLookup.data?.campaign_member_id || undefined;
@@ -196,7 +207,7 @@ export function useLeadCreationFlow() {
           memberId,
           data.notes,
           data.interactionType,
-          sellerId,
+          authenticatedUserId,
         ) as { success?: boolean };
         if (!interactionResponse.success) throw new Error("Interaction request failed");
       } catch {
@@ -213,7 +224,7 @@ export function useLeadCreationFlow() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["leads"] }),
         queryClient.invalidateQueries({ queryKey: ["campaign-members", campaignId] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", campaignId, selectedSellerId] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", campaignId, selectedSellerProfileId] }),
         queryClient.invalidateQueries({ queryKey: ["lead", leadId] }),
       ]);
       toast.success("Prospecto registrado correctamente.");
@@ -223,8 +234,8 @@ export function useLeadCreationFlow() {
 
   const schemaIsValid = leadQuickFormSchema.safeParse(values).success;
   const sellerIsValid = isSalesRep
-    ? Boolean(authenticatedSellerId)
-    : Boolean(values.sellerId && sellerOptions.some((seller) => seller.id === values.sellerId));
+    ? Boolean(authenticatedUserId && authenticatedSellerProfileId)
+    : Boolean(values.sellerId && sellerOptions.some((seller) => seller.userId === values.sellerId));
   const canSubmit = schemaIsValid
     && sellerIsValid
     && !hasIdentityConflict

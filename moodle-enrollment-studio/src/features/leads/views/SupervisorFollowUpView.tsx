@@ -238,6 +238,12 @@ const SupervisorFollowUpView = () => {
     try {
       const assignedMembers = filteredMembers.filter(m => selectedMemberIds.includes(m.id) && !m.id.startsWith("unassigned-"));
       const unassignedMembers = filteredMembers.filter(m => selectedMemberIds.includes(m.id) && m.id.startsWith("unassigned-"));
+      const selectedSeller = realSellers.find((seller: any) => seller.id === targetSellerId);
+      const assignedUserId = selectedSeller?.user_id || selectedSeller?.user?.id;
+
+      if (unassignedMembers.length > 0 && !assignedUserId) {
+        throw new Error("No se encontró el User.id del asesor seleccionado.");
+      }
 
       // Reasignar miembros ya creados (agrupados por campaña)
       if (assignedMembers.length > 0) {
@@ -271,7 +277,7 @@ const SupervisorFollowUpView = () => {
               json: {
                 lead_id: member.lead.id,
                 campaing_id: campaignId,
-                assigned_to: targetSellerId,
+                assigned_to: assignedUserId,
                 source: member.lead.source || "WHATSAPP",
                 is_primary: true
               }

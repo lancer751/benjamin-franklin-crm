@@ -16,14 +16,15 @@ export function useLeadDetail(leadId: string, user: DetailUser | null) {
     queryFn: () => getSellerProfileById(user!.id!),
     enabled: isSalesRep && Boolean(user?.id) && !user?.seller?.id,
   });
-  const sellerId = user?.seller?.id || sellerProfileIdFrom(profileQuery.data);
+  const sellerProfileId = user?.seller?.id || sellerProfileIdFrom(profileQuery.data);
+  const authenticatedUserId = user?.id || "";
   const leadQuery = useQuery({ queryKey: ["lead", leadId], queryFn: () => getLeadById(leadId), enabled: Boolean(leadId) });
   const lead = unwrapLeadDetail(leadQuery.data);
   const allMembers = useMemo<LeadCampaignMember[]>(() => Array.isArray(lead?.campaignsEngaging) ? lead.campaignsEngaging : [], [lead]);
   const members = useMemo(() => isSalesRep
-    ? allMembers.filter((member) => member.assigned_to === sellerId || member.seller?.id === sellerId)
+    ? allMembers.filter((member) => member.assigned_to === authenticatedUserId || member.seller?.id === sellerProfileId)
     : allMembers,
-  [allMembers, isSalesRep, sellerId]);
+  [allMembers, authenticatedUserId, isSalesRep, sellerProfileId]);
 
   useEffect(() => {
     if (members.some((member) => member.id === selectedMemberId)) return;
@@ -35,7 +36,7 @@ export function useLeadDetail(leadId: string, user: DetailUser | null) {
     lead,
     leadQuery,
     profileQuery,
-    sellerId,
+    sellerProfileId,
     isSalesRep,
     allMembers,
     members,

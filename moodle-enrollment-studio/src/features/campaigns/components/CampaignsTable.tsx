@@ -30,17 +30,47 @@ import { cn } from "@/core/lib/utils";
 import { toast } from "sonner";
 import { formatCampaignCurrency } from "../utils/campaignCurrency";
 
+interface CampaignSellerAssignment {
+  seller_id: string;
+  assigned_at: string;
+  seller: {
+    user: {
+      first_name: string;
+      last_name: string;
+    };
+  };
+}
+
+interface CampaignListItem {
+  id: string;
+  name: string;
+  platform: string;
+  relatedProduct?: {
+    name?: string | null;
+  } | null;
+  meta_form_id?: string | null;
+  start_date: string;
+  end_date?: string | null;
+  initial_budget?: string | number | null;
+  total_spent?: string | number | null;
+  sellersOnCampaign?: CampaignSellerAssignment[] | null;
+  status: string;
+  _count?: {
+    leadsOnCampaign?: number;
+  };
+}
+
 interface CampaignsTableProps {
   isLoading: boolean;
   isError: boolean;
-  paginatedCampaigns: any[];
+  paginatedCampaigns: CampaignListItem[];
   totalCampaignsCount: number;
   currentPage: number;
   totalPages: number;
   itemsPerPage: number;
   onPageChange: (page: number | ((prev: number) => number)) => void;
   onDeleteClick: (campaign: { id: string; name: string }) => void;
-  onEditClick?: (campaign: any) => void;
+  onEditClick?: (campaign: CampaignListItem) => void;
 }
 
 const platformColors: Record<string, string> = {
@@ -80,7 +110,7 @@ export const CampaignsTable = ({
 }: CampaignsTableProps) => {
   const navigate = useNavigate();
 
-  const renderSellers = (sellersList: any[]) => {
+  const renderSellers = (sellersList: CampaignSellerAssignment[] | null | undefined) => {
     if (!sellersList || sellersList.length === 0) {
       return <span className="text-muted-foreground/60 italic text-xs">Ninguno</span>;
     }
@@ -90,28 +120,31 @@ export const CampaignsTable = ({
     const extraCount = sellersList.length - maxDisplayed;
 
     return (
-      <div className="flex items-center gap-1">
-        {items.map((s, idx) => {
-          const user = s.seller?.user || s.user;
-          const firstName = user?.first_name || "";
-          const lastName = user?.last_name || "";
+      <div className="flex max-w-[220px] flex-wrap items-center gap-1">
+        {items.map((assignment) => {
+          const firstName = assignment.seller.user.first_name;
+          const lastName = assignment.seller.user.last_name;
           const initials = `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase() || "?";
-          const fullName = `${firstName} ${lastName}`.trim() || `Asesor ${idx + 1}`;
+          const fullName = `${firstName} ${lastName}`.trim();
 
           return (
             <div
-              key={idx}
+              key={assignment.seller_id}
               title={fullName}
-              className="h-6 w-6 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-[10px] font-bold shrink-0 shadow-sm"
+              aria-label={fullName}
+              className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-1.5 pr-2 text-primary shadow-sm"
             >
-              {initials}
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[8px] font-bold">
+                {initials}
+              </span>
+              <span className="truncate text-[10px] font-semibold">{fullName}</span>
             </div>
           );
         })}
         {extraCount > 0 && (
           <div
             title={`${extraCount} asesores más`}
-            className="h-6 w-6 rounded-full bg-muted text-muted-foreground border border-border flex items-center justify-center text-[10px] font-bold shrink-0"
+            className="flex h-7 items-center justify-center rounded-full border border-border bg-muted px-2 text-[10px] font-bold text-muted-foreground"
           >
             +{extraCount}
           </div>
@@ -205,7 +238,7 @@ export const CampaignsTable = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedCampaigns.map((c: any) => {
+              {paginatedCampaigns.map((c) => {
                 return (
                   <TableRow
                     key={c.id}
@@ -255,7 +288,7 @@ export const CampaignsTable = ({
                     </TableCell>
 
                     <TableCell>
-                      {renderSellers(c.sellers)}
+                      {renderSellers(c.sellersOnCampaign)}
                     </TableCell>
                     <TableCell className="text-right">
                       {c.status === "ACTIVE" && (

@@ -1,6 +1,6 @@
 import type { LeadCampaignMember, LeadDetail, LeadInteraction, LeadTask } from "../components/lead-detail/leadDetail.types";
 
-export interface CampaignDialogSeller { id: string; name: string }
+export interface CampaignDialogSeller { userId: string; sellerProfileId: string; name: string }
 export interface CampaignDialogOption { id: string; name: string; platform: string; sellers: CampaignDialogSeller[] }
 
 type UnknownRecord = Record<string, unknown>;
@@ -54,8 +54,12 @@ const campaignOption = (value: unknown): CampaignDialogOption | null => {
     sellers: assignments.flatMap((assignment) => {
       if (!isRecord(assignment)) return [];
       const nestedSeller = isRecord(assignment.seller) ? assignment.seller : {};
-      const sellerId = stringValue(assignment.seller_id) || stringValue(nestedSeller.id);
-      return sellerId ? [{ id: sellerId, name: sellerName(nestedSeller) }] : [];
+      const nestedUser = isRecord(nestedSeller.user) ? nestedSeller.user : {};
+      const sellerProfileId = stringValue(assignment.seller_id) || stringValue(nestedSeller.id);
+      const userId = stringValue(nestedSeller.user_id) || stringValue(nestedUser.id);
+      return userId && sellerProfileId
+        ? [{ userId, sellerProfileId, name: sellerName(nestedSeller) }]
+        : [];
     }),
   };
 };
@@ -67,14 +71,20 @@ export const adaptAvailableCampaigns = (response: unknown): CampaignDialogOption
   return campaigns.map(campaignOption).filter((campaign): campaign is CampaignDialogOption => Boolean(campaign));
 };
 
-export const adaptSellerAvailableCampaigns = (response: unknown, sellerId: string): CampaignDialogOption[] => {
+export const adaptSellerAvailableCampaigns = (
+  response: unknown,
+  userId: string,
+  sellerProfileId: string,
+): CampaignDialogOption[] => {
   if (!isRecord(response)) return [];
   const data = isRecord(response.data) ? response.data : response;
   const assignments = Array.isArray(data.assignedCampaing) ? data.assignedCampaing : [];
   return assignments.flatMap((assignment) => {
     if (!isRecord(assignment)) return [];
     const campaign = campaignOption(assignment.campaign ?? assignment.campaing ?? assignment);
-    return campaign ? [{ ...campaign, sellers: [{ id: sellerId, name: "Mi perfil" }] }] : [];
+    return campaign
+      ? [{ ...campaign, sellers: [{ userId, sellerProfileId, name: "Mi perfil" }] }]
+      : [];
   });
 };
 
