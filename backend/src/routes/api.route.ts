@@ -4,7 +4,7 @@ import { campaignMemberRoutes, leadRoutes } from "./lead/lead.route";
 import { paymentRoutes } from "./payments/payment.route";
 import { authRoutes } from "./auth/auth.route";
 import { academicRoutes } from "./academics/academics.index";
-import { orderRoutes } from "./content/orders/order.route";
+import { orderRoutes } from "./orders/order.route";
 import { productRoutes } from "./products/product.index";
 import { storefrontRoute } from "./storefront/storefront.route";
 import { cmsRoutes } from "./content/cms.index";
