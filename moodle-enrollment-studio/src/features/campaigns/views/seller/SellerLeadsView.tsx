@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -23,8 +23,17 @@ import { Button } from "@/core/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Input } from "@/core/components/ui/input";
 import { Skeleton } from "@/core/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/core/components/ui/popover";
 import { toast } from "sonner";
 import { cn } from "@/core/lib/utils";
+import {
+  CAMPAIGN_MEMBER_STATUS_CONFIG,
+  CAMPAIGN_MEMBER_STATUS_GROUPS,
+  isCampaignMemberStatus,
+  type CampaignMemberStatus,
+  type CampaignMemberStatusGroup,
+} from "@/core/constants/campaignMemberStatus";
+import type { NormalizedLead } from "@/features/leads/adapters/leadAdapter";
 import { 
   Users, 
   Search, 
@@ -32,6 +41,8 @@ import {
   UserCheck,
   Plus,
   ArrowLeft,
+  SlidersHorizontal,
+  ChevronRight,
 } from "lucide-react";
 import KanbanColumn from "./components/KanbanColumn";
 import LeadDetailsSheet from "./components/LeadDetailsSheet";
@@ -42,42 +53,36 @@ import {
   type CampaignKanbanMovePayload,
 } from "@/features/campaigns/components/kanban-dnd";
 
-export const FUNNEL_COLUMNS = [
-  { id: "NUEVO", label: "NUEVO", backendStatuses: ["NEW"], borderStyle: "border-blue-200 bg-blue-50/20 text-blue-700 dark:text-blue-400 dark:bg-blue-950/10", dotColor: "bg-blue-500" },
-  { id: "CONTACTADO", label: "CONTACTADO", backendStatuses: ["CONTACTED", "FOLLOW_UP"], borderStyle: "border-amber-200 bg-amber-50/20 text-amber-700 dark:text-amber-400 dark:bg-amber-950/10", dotColor: "bg-amber-500" },
-  { id: "NO_CONTACTADO", label: "NO CONTACTADO", backendStatuses: ["ATTEMPTED_CONTACT"], borderStyle: "border-purple-200 bg-purple-50/20 text-purple-700 dark:text-purple-400 dark:bg-purple-950/10", dotColor: "bg-purple-500" },
-  { id: "PREVENTA_CITA", label: "PREVENTA - CITA", backendStatuses: ["QUALIFIED", "ON_HOLD"], borderStyle: "border-indigo-200 bg-indigo-50/20 text-indigo-700 dark:text-indigo-400 dark:bg-indigo-950/10", dotColor: "bg-indigo-500" },
-  { id: "MATRICULADO", label: "MATRICULADO", backendStatuses: ["WON"], borderStyle: "border-2 border-emerald-350 bg-emerald-50/30 text-emerald-800 dark:text-emerald-450 dark:bg-emerald-950/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]", dotColor: "bg-emerald-500" },
-  { id: "DESCARTADO", label: "DESCARTADO", backendStatuses: ["LOST", "UNQUALIFIED"], borderStyle: "border-rose-200 bg-rose-50/20 text-rose-700 dark:text-rose-400 dark:bg-rose-950/10", dotColor: "bg-rose-500" }
-];
+interface AssignedCampaign {
+  id: string;
+  name: string;
+}
 
-export const KANBAN_STAGE_TO_ENUM: Record<string, string> = {
-  NUEVO: "NEW",
-  CONTACTADO: "CONTACTED",
-  NO_CONTACTADO: "ATTEMPTED_CONTACT",
-  PREVENTA_CITA: "QUALIFIED",
-  MATRICULADO: "WON",
-  DESCARTADO: "LOST",
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const normalizeAssignedCampaigns = (response: unknown): AssignedCampaign[] => {
+  if (!isRecord(response)) return [];
+  const data = isRecord(response.data) ? response.data : null;
+  const rawList = data?.assignedCampaing ?? response.assignedCampaing;
+  if (!Array.isArray(rawList)) return [];
+
+  return rawList.flatMap((item): AssignedCampaign[] => {
+    if (!isRecord(item)) return [];
+    const nested = isRecord(item.campaing)
+      ? item.campaing
+      : isRecord(item.campaign)
+        ? item.campaign
+        : item;
+    return typeof nested.id === "string" && typeof nested.name === "string"
+      ? [{ id: nested.id, name: nested.name }]
+      : [];
+  });
 };
 
-export const ENUM_TO_KANBAN_STAGE: Record<string, string> = {
-  NEW: "NUEVO",
-  CONTACTED: "CONTACTADO",
-  FOLLOW_UP: "CONTACTADO",
-  ATTEMPTED_CONTACT: "NO_CONTACTADO",
-  QUALIFIED: "PREVENTA_CITA",
-  ON_HOLD: "PREVENTA_CITA",
-  WON: "MATRICULADO",
-  LOST: "DESCARTADO",
-  UNQUALIFIED: "DESCARTADO",
-};
+const getPhone = (lead: NormalizedLead) => lead.phones?.[0]?.number || null;
 
-const getPhone = (lead: any) => {
-  if (lead.cellphone) return lead.cellphone;
-  if (lead.phone) return lead.phone;
-  if (lead.phones?.[0]?.number) return lead.phones[0].number;
-  return null;
-};
+const STATUS_GROUP_ORDER: CampaignMemberStatusGroup[] = ["CAPTACION", "GESTION_COMERCIAL", "RESULTADO"];
 
 const SellerLeadsView = () => {
   const navigate = useNavigate();
@@ -92,8 +97,12 @@ const SellerLeadsView = () => {
   const [searchParams] = useSearchParams();
   const selectedCampaignId = campaignId || searchParams.get("campaignId") || "";
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<CampaignMemberStatus | "ALL">("ALL");
+  const [activeStage, setActiveStage] = useState<CampaignMemberStatus>("NUEVO");
+  const [hasMoreColumns, setHasMoreColumns] = useState(true);
+  const boardRef = useRef<HTMLDivElement>(null);
 
-  const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [selectedLead, setSelectedLead] = useState<NormalizedLead | null>(null);
 
   const selectedMemberId = useMemo(() => {
     return selectedLead?.campaignsEngaging?.[0]?.id || selectedLead?.id || "";
@@ -110,16 +119,13 @@ const SellerLeadsView = () => {
   });
 
   const assignedCampaignList = useMemo(() => {
-    return (sellerCampaignsRes as any)?.success && (sellerCampaignsRes as any)?.data?.assignedCampaing
-      ? (sellerCampaignsRes as any).data.assignedCampaing
-      : (sellerCampaignsRes as any)?.assignedCampaing || [];
+    return normalizeAssignedCampaigns(sellerCampaignsRes);
   }, [sellerCampaignsRes]);
 
   // Preseleccionar la primera campaña si no hay seleccionada
   useEffect(() => {
     if (assignedCampaignList.length > 0 && !selectedCampaignId) {
-      const firstCamp = assignedCampaignList[0].campaing || assignedCampaignList[0].campaign || assignedCampaignList[0];
-      navigate(`/admin/campaigns/seller/leads/${firstCamp.id}`, { replace: true });
+      navigate(`/admin/campaigns/seller/leads/${assignedCampaignList[0].id}`, { replace: true });
     }
   }, [assignedCampaignList, selectedCampaignId, navigate]);
 
@@ -236,7 +242,7 @@ const SellerLeadsView = () => {
 
   // Mutación para actualizar la tipificación (status)
   const updateStatusMutation = useMutation({
-    mutationFn: ({ memberId, status }: { memberId: string; status: string }) =>
+    mutationFn: ({ memberId, status }: { memberId: string; status: CampaignMemberStatus }) =>
       updateMemberStatus(selectedCampaignId, memberId, status),
     onSuccess: () => {
       toast.success("Tipificación de lead actualizada exitosamente.");
@@ -274,9 +280,8 @@ const SellerLeadsView = () => {
     }
   };
 
-  const handleStatusChange = (memberId: string, newStatus: string) => {
-    const backendStatus = KANBAN_STAGE_TO_ENUM[newStatus] || newStatus;
-    updateStatusMutation.mutate({ memberId, status: backendStatus });
+  const handleStatusChange = (memberId: string, newStatus: CampaignMemberStatus) => {
+    updateStatusMutation.mutate({ memberId, status: newStatus });
   };
 
   const handleKanbanMove = ({
@@ -287,7 +292,7 @@ const SellerLeadsView = () => {
     if (
       updateStatusMutation.isPending ||
       currentStage === targetStage ||
-      !KANBAN_STAGE_TO_ENUM[targetStage]
+      !isCampaignMemberStatus(targetStage)
     ) {
       return;
     }
@@ -296,37 +301,34 @@ const SellerLeadsView = () => {
   };
 
   const handleCampaignChange = (val: string) => {
+    setSelectedLead(null);
+    setStatusFilter("ALL");
+    setActiveStage("NUEVO");
+    setHasMoreColumns(true);
+    setSearchQuery("");
     navigate(`/admin/campaigns/seller/leads/${val}`);
   };
 
   const filteredLeads = useMemo(() => {
     if (!leads) return [];
-    return leads.filter((l: any) => {
-      const fullName = `${l.first_name || ""} ${l.last_name || ""}`.toLowerCase();
-      const email = (l.email || "").toLowerCase();
-      const phone = (getPhone(l) || "").toLowerCase();
+    return leads.filter((lead) => {
+      if (statusFilter !== "ALL" && lead.lead_status !== statusFilter) return false;
+      const fullName = lead.fullName.toLowerCase();
+      const email = lead.email.toLowerCase();
+      const phone = (getPhone(lead) || "").toLowerCase();
       const query = searchQuery.toLowerCase();
       return fullName.includes(query) || email.includes(query) || phone.includes(query);
     });
-  }, [leads, searchQuery]);
+  }, [leads, searchQuery, statusFilter]);
 
   const leadsByStage = useMemo(() => {
-    const groups: Record<string, any[]> = {
-      NUEVO: [],
-      CONTACTADO: [],
-      NO_CONTACTADO: [],
-      PREVENTA_CITA: [],
-      MATRICULADO: [],
-      DESCARTADO: []
-    };
+    const groups = Object.fromEntries(
+      CAMPAIGN_MEMBER_STATUS_CONFIG.map(({ value }) => [value, [] as NormalizedLead[]]),
+    ) as Record<CampaignMemberStatus, NormalizedLead[]>;
 
-    filteredLeads.forEach((lead: any) => {
-      const status = lead.lead_status || "NEW";
-      const mappedStage = ENUM_TO_KANBAN_STAGE[status] || "NUEVO";
-      if (groups[mappedStage]) {
-        groups[mappedStage].push(lead);
-      } else {
-        groups["NUEVO"].push(lead);
+    filteredLeads.forEach((lead) => {
+      if (isCampaignMemberStatus(lead.lead_status)) {
+        groups[lead.lead_status].push(lead);
       }
     });
 
@@ -334,17 +336,39 @@ const SellerLeadsView = () => {
   }, [filteredLeads]);
 
   const selectedCampaignName = useMemo(() => {
-    const activeItem = assignedCampaignList.find((item: any) => {
-      const c = item.campaing || item.campaign || item;
-      return c.id === selectedCampaignId;
-    });
-    const camp = activeItem?.campaing || activeItem?.campaign || activeItem;
-    return camp?.name || "Campaña";
+    return assignedCampaignList.find((campaign) => campaign.id === selectedCampaignId)?.name || "Campaña";
   }, [assignedCampaignList, selectedCampaignId]);
 
+  const unsupportedStatusCount = useMemo(
+    () => filteredLeads.filter((lead) => !isCampaignMemberStatus(lead.lead_status)).length,
+    [filteredLeads],
+  );
+
+  const scrollToStage = (status: CampaignMemberStatus) => {
+    setActiveStage(status);
+    const target = boardRef.current?.querySelector<HTMLElement>(`[data-funnel-stage="${status}"]`);
+    target?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+  };
+
+  const handleBoardScroll = () => {
+    const board = boardRef.current;
+    if (!board || window.innerWidth < 768) return;
+    setHasMoreColumns(board.scrollLeft + board.clientWidth < board.scrollWidth - 4);
+    const boardLeft = board.getBoundingClientRect().left;
+    const stages = Array.from(board.querySelectorAll<HTMLElement>("[data-funnel-stage]"));
+    const nearest = stages.reduce<HTMLElement | null>((current, stage) => {
+      if (!current) return stage;
+      return Math.abs(stage.getBoundingClientRect().left - boardLeft) < Math.abs(current.getBoundingClientRect().left - boardLeft)
+        ? stage
+        : current;
+    }, null);
+    const status = nearest?.dataset.funnelStage;
+    if (isCampaignMemberStatus(status)) setActiveStage(status);
+  };
+
   return (
-    <div className="space-y-6 fade-in">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden fade-in">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="flex items-center">
             <Button
@@ -365,8 +389,8 @@ const SellerLeadsView = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="min-w-[200px]">
+        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+          <div className="min-w-[200px] flex-1 md:flex-none">
             <Select value={selectedCampaignId} onValueChange={handleCampaignChange}>
               <SelectTrigger className="w-full h-9 bg-card rounded-xl border-border shadow-sm">
                 <SelectValue placeholder="Seleccionar campaña" />
@@ -377,14 +401,11 @@ const SellerLeadsView = () => {
                 ) : assignedCampaignList.length === 0 ? (
                   <SelectItem value="empty" disabled>Sin campañas asignadas</SelectItem>
                 ) : (
-                  assignedCampaignList.map((item: any) => {
-                    const c = item.campaing || item.campaign || item;
-                    return (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    );
-                  })
+                  assignedCampaignList.map((campaign) => (
+                    <SelectItem key={campaign.id} value={campaign.id}>
+                      {campaign.name}
+                    </SelectItem>
+                  ))
                 )}
               </SelectContent>
             </Select>
@@ -411,26 +432,103 @@ const SellerLeadsView = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 rounded-xl bg-card border border-border p-4 shadow-sm">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar prospecto por nombre, email o celular..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 bg-slate-50/20 focus:bg-card border-border rounded-xl text-xs"
-          />
+      <div className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1 sm:max-w-md">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nombre, email o celular..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="h-9 rounded-xl border-border bg-slate-50/20 pl-9 text-xs focus:bg-card"
+            />
+          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-9 gap-2 rounded-xl text-xs">
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Filtros
+                {statusFilter !== "ALL" && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 space-y-3">
+              <div>
+                <p className="text-sm font-semibold">Filtrar funnel</p>
+                <p className="text-xs text-muted-foreground">Aplica el filtro a todas las etapas.</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Estado</label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => {
+                    if (value === "ALL") {
+                      setStatusFilter("ALL");
+                    } else if (isCampaignMemberStatus(value)) {
+                      setStatusFilter(value);
+                      scrollToStage(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Todos los estados</SelectItem>
+                    {CAMPAIGN_MEMBER_STATUS_CONFIG.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {statusFilter !== "ALL" && (
+                <Button variant="ghost" size="sm" className="w-full" onClick={() => setStatusFilter("ALL")}>Limpiar filtro</Button>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground sm:ml-auto">
+            <Users size={14} className="text-primary/70" />
+            En pantalla: <span className="font-extrabold text-foreground">{filteredLeads.length - unsupportedStatusCount}</span>
+          </div>
         </div>
-        <div className="text-xs text-muted-foreground font-semibold ml-auto flex items-center gap-1.5">
-          <Users size={14} className="text-primary/70" />
-          Total leads en pantalla: <span className="font-extrabold text-foreground">{filteredLeads.length}</span>
+
+        <div className="flex gap-3 overflow-x-auto pb-1" aria-label="Navegación rápida por estados">
+          {STATUS_GROUP_ORDER.map((group) => (
+            <div key={group} className="flex shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-muted/20 p-1">
+              <span className="px-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                {CAMPAIGN_MEMBER_STATUS_GROUPS[group]}
+              </span>
+              {CAMPAIGN_MEMBER_STATUS_CONFIG.filter((status) => status.group === group).map((status) => (
+                <button
+                  key={status.value}
+                  type="button"
+                  onClick={() => scrollToStage(status.value)}
+                  className={cn(
+                    "rounded-md px-2 py-1 text-[10px] font-semibold transition-colors",
+                    activeStage === status.value
+                      ? "bg-foreground text-background shadow-sm"
+                      : "text-muted-foreground hover:bg-background hover:text-foreground",
+                  )}
+                >
+                  {status.label}
+                </button>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
 
+      {unsupportedStatusCount > 0 && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {unsupportedStatusCount} prospecto(s) tienen un estado fuera del catálogo actual y no se muestran en columnas.
+        </p>
+      )}
+
       {isLoadingLeads ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 w-full animate-pulse">
-          {FUNNEL_COLUMNS.map((stage) => (
-            <div key={stage.id} className="rounded-2xl border border-border p-4 bg-slate-50/20 space-y-4 h-[70vh]">
+        <div className="grid animate-pulse grid-cols-1 gap-3 overflow-hidden md:grid-flow-col md:auto-cols-[minmax(285px,315px)] md:grid-cols-none">
+          {CAMPAIGN_MEMBER_STATUS_CONFIG.slice(0, 4).map((stage) => (
+            <div key={stage.value} className="h-[68vh] min-h-[480px] space-y-4 rounded-2xl border border-border bg-slate-50/20 p-4">
               <Skeleton className="h-6 w-2/3 mb-4 animate-none" />
               <Skeleton className="h-24 w-full rounded-xl animate-none" />
               <Skeleton className="h-24 w-full rounded-xl animate-none" />
@@ -446,25 +544,49 @@ const SellerLeadsView = () => {
           disabled={updateStatusMutation.isPending}
           onMove={handleKanbanMove}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 items-start w-full">
-            {FUNNEL_COLUMNS.map((stage) => {
-              const laneLeads = leadsByStage[stage.id] || [];
-              return (
-                <DroppableKanbanColumn
-                  key={stage.id}
-                  stageId={stage.id}
-                  disabled={updateStatusMutation.isPending}
-                >
-                  <KanbanColumn
-                    stage={stage}
-                    leads={laneLeads}
-                    onSelect={setSelectedLead}
-                    onStatusChange={handleStatusChange}
-                    isPending={updateStatusMutation.isPending}
-                  />
-                </DroppableKanbanColumn>
-              );
-            })}
+          <div className="relative min-w-0 max-w-full overflow-hidden">
+            <div
+              ref={boardRef}
+              onScroll={handleBoardScroll}
+              className="max-w-full overflow-x-auto overscroll-x-contain pb-3 [scrollbar-gutter:stable] md:pr-10"
+            >
+              <div className="block md:grid md:w-max md:min-w-full md:grid-flow-col md:auto-cols-[minmax(285px,315px)] md:items-start md:gap-3">
+                {CAMPAIGN_MEMBER_STATUS_CONFIG.map((stage) => {
+                  const laneLeads = leadsByStage[stage.value];
+                  const startsGroup = stage.value === "NEGOCIACION" || stage.value === "MATRICULADO";
+                  return (
+                    <div
+                      key={stage.value}
+                      data-funnel-stage={stage.value}
+                      className={cn(
+                        activeStage === stage.value ? "block" : "hidden md:block",
+                        startsGroup && "md:ml-1 md:border-l md:border-border md:pl-4",
+                      )}
+                    >
+                      <DroppableKanbanColumn
+                        stageId={stage.value}
+                        disabled={updateStatusMutation.isPending}
+                      >
+                        <KanbanColumn
+                          stage={stage}
+                          leads={laneLeads}
+                          onSelect={setSelectedLead}
+                          onStatusChange={handleStatusChange}
+                          isPending={updateStatusMutation.isPending}
+                        />
+                      </DroppableKanbanColumn>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {hasMoreColumns && (
+              <div className="pointer-events-none absolute right-0 top-0 hidden h-full w-14 items-center justify-end bg-gradient-to-l from-background/90 to-transparent pr-1 md:flex">
+                <span className="rounded-full border border-border bg-card p-1.5 text-muted-foreground shadow-sm" title="Hay más columnas hacia la derecha">
+                  <ChevronRight className="h-4 w-4" />
+                </span>
+              </div>
+            )}
           </div>
         </CampaignKanbanDndProvider>
       )}

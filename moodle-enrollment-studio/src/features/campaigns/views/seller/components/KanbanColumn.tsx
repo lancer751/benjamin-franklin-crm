@@ -3,18 +3,17 @@ import { Users } from "lucide-react";
 import LeadCard from "./LeadCard";
 import { DraggableLeadCard } from "@/features/campaigns/components/kanban-dnd";
 import type { NormalizedLead } from "@/features/leads/adapters/leadAdapter";
+import {
+  CAMPAIGN_MEMBER_STATUS_GROUPS,
+  type CampaignMemberStatus,
+  type CampaignMemberStatusConfig,
+} from "@/core/constants/campaignMemberStatus";
 
 interface KanbanColumnProps {
-  stage: {
-    id: string;
-    label: string;
-    backendStatuses: string[];
-    borderStyle: string;
-    dotColor: string;
-  };
+  stage: CampaignMemberStatusConfig;
   leads: NormalizedLead[];
   onSelect: (lead: NormalizedLead) => void;
-  onStatusChange: (memberId: string, newStatus: string) => void;
+  onStatusChange: (memberId: string, newStatus: CampaignMemberStatus) => void;
   isPending: boolean;
 }
 
@@ -28,8 +27,8 @@ export default function KanbanColumn({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-2xl border bg-card overflow-hidden shadow-sm h-[70vh] hover:shadow transition-all duration-300",
-        stage.id === "MATRICULADO"
+        "flex h-[68vh] min-h-[480px] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow duration-200 hover:shadow-md",
+        stage.value === "MATRICULADO"
           ? "border-emerald-350 dark:border-emerald-500/30 ring-1 ring-emerald-500/10 shadow-[0_0_8px_rgba(16,185,129,0.05)]"
           : "border-border"
       )}
@@ -38,12 +37,17 @@ export default function KanbanColumn({
       <div
         className={cn(
           "px-4 py-3.5 border-b flex items-center justify-between font-bold text-xs tracking-wider uppercase",
-          stage.borderStyle
+          stage.laneClassName
         )}
       >
         <div className="flex items-center gap-2">
-          <span className={cn("h-2 w-2 rounded-full", stage.dotColor)} />
-          {stage.label}
+          <span className={cn("h-2 w-2 rounded-full", stage.dotClassName)} />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-[9px] font-semibold normal-case tracking-normal opacity-70">
+              {CAMPAIGN_MEMBER_STATUS_GROUPS[stage.group]}
+            </span>
+            <span>{stage.label}</span>
+          </span>
         </div>
         <span className="bg-white/40 dark:bg-black/20 text-foreground px-2 py-0.5 rounded-full text-[10px] font-extrabold font-mono">
           {leads.length}
@@ -60,7 +64,7 @@ export default function KanbanColumn({
         ) : (
           leads.map((lead) => {
             const memberId = lead.campaignsEngaging?.[0]?.id || "";
-            const currentStage = stage.id;
+            const currentStage = stage.value;
 
             if (!memberId) {
               return (

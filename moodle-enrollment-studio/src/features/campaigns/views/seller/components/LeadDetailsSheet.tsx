@@ -34,7 +34,12 @@ import {
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateLead } from "@/features/leads/services/leadService";
-import { FUNNEL_COLUMNS, KANBAN_STAGE_TO_ENUM, ENUM_TO_KANBAN_STAGE } from "../SellerLeadsView";
+import {
+  CAMPAIGN_MEMBER_STATUS_CONFIG,
+  isCampaignMemberStatus,
+  type CampaignMemberStatus,
+} from "@/core/constants/campaignMemberStatus";
+import type { NormalizedLead } from "@/features/leads/adapters/leadAdapter";
 import { interactionFormSchema, type InteractionFormValues } from "@/features/leads/schemas/interactionFormSchema";
 import { taskFormSchema, type TaskFormInput, type TaskFormValues } from "@/features/leads/schemas/taskFormSchema";
 import { INTERACTION_TYPE_OPTIONS, interactionTypeLabel } from "@/features/leads/utils/interactionType.constants";
@@ -43,6 +48,7 @@ import type { LeadInteraction, LeadTask } from "@/features/leads/components/lead
 
 type InteractionPayload = ReturnType<typeof mapInteractionFormToPayload>;
 type TaskPayload = ReturnType<typeof mapTaskFormToPayload>;
+type UpdateLeadPayload = Parameters<typeof updateLead>[1];
 type PanelInteraction = LeadInteraction & { id: string; type: string };
 type PanelTask = LeadTask & { id: string; is_done: boolean };
 
@@ -73,11 +79,11 @@ const typeIcons: Record<string, { icon: LucideIcon; color: string; bg: string }>
 };
 
 interface LeadDetailsSheetProps {
-  selectedLead: any;
+  selectedLead: NormalizedLead | null;
   onClose: () => void;
-  onStatusChange: (memberId: string, newStatus: string) => void;
+  onStatusChange: (memberId: string, newStatus: CampaignMemberStatus) => void;
   isStatusPending: boolean;
-  setSelectedLead: React.Dispatch<React.SetStateAction<any>>;
+  setSelectedLead: React.Dispatch<React.SetStateAction<NormalizedLead | null>>;
   // Interactions
   interactions: PanelInteraction[];
   isLoadingInteractions: boolean;
@@ -147,12 +153,8 @@ export default function LeadDetailsSheet({
     return selectedLead?.campaignsEngaging?.[0]?.id || selectedLead?.id || "";
   }, [selectedLead]);
 
-  const getPhone = (lead: any) => {
-    if (!lead) return null; // <- Control de seguridad contra nulos
-    if (lead.cellphone) return lead.cellphone;
-    if (lead.phone) return lead.phone;
-    if (lead.phones?.[0]?.number) return lead.phones[0].number;
-    return null;
+  const getPhone = (lead: NormalizedLead) => {
+    return lead.phones?.find((phone) => phone.isPrincipal)?.number || lead.phones?.[0]?.number || null;
   };
 
   const formatSafeDate = (dateStr: string | null | undefined, pattern = "dd/MM/yyyy HH:mm") => {
@@ -193,7 +195,7 @@ export default function LeadDetailsSheet({
   const leadId = selectedLead?.id || "";
 
   const { mutate: handleUpdateLead, isPending: isUpdatingLead } = useMutation({
-    mutationFn: async (updatedData: any) => {
+    mutationFn: async (updatedData: UpdateLeadPayload) => {
       return await updateLead(leadId, updatedData);
     },
     onSuccess: () => {
@@ -203,7 +205,7 @@ export default function LeadDetailsSheet({
       queryClient.invalidateQueries({ queryKey: ["campaign-members-seller"] });
       
       // Actualizar localmente selectedLead
-      setSelectedLead((prev: any) => {
+      setSelectedLead((prev) => {
         if (!prev) return null;
         
         let updatedPhones = prev.phones || [];
@@ -231,9 +233,9 @@ export default function LeadDetailsSheet({
 
       toast.success("Información del prospecto actualizada exitosamente.");
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       console.error(err);
-      toast.error(err.message || "Error al actualizar la información del prospecto.");
+      toast.error(err instanceof Error ? err.message : "Error al actualizar la información del prospecto.");
     }
   });
 
@@ -251,7 +253,7 @@ export default function LeadDetailsSheet({
       return;
     }
 
-    const updatedData: any = {
+    const updatedData: UpdateLeadPayload = {
       first_name: editFirstName.trim(),
       last_name: editLastName.trim(),
       email: editEmail.trim() || null,
@@ -395,22 +397,19 @@ export default function LeadDetailsSheet({
                 <div className="space-y-1">
                   <Label className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Estado</Label>
                   <select
-                    value={ENUM_TO_KANBAN_STAGE[selectedLead.lead_status] || selectedLead.lead_status || "NUEVO"}
-                    onChange={(e) => {
-                      const newStatus = e.target.value;
+                    value={isCampaignMemberStatus(selectedLead.lead_status) ? selectedLead.lead_status : "NUEVO"}
+                    onChange={(event) => {
+                      if (!isCampaignMemberStatus(event.target.value)) return;
+                      const newStatus = event.target.value;
                       onStatusChange(selectedMemberId, newStatus);
-                      setSelectedLead((prev: any) => {
-                        if (!prev) return null;
-                        const nextStatusEnum = KANBAN_STAGE_TO_ENUM[newStatus] || newStatus;
-                        return { ...prev, lead_status: nextStatusEnum };
-                      });
+                      setSelectedLead((prev) => prev ? { ...prev, lead_status: newStatus } : null);
                     }}
                     className="w-full h-8 px-2 rounded-lg border border-border bg-slate-50 dark:bg-slate-900 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer shadow-sm"
                     disabled={isStatusPending}
                   >
-                    {FUNNEL_COLUMNS.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
+                    {CAMPAIGN_MEMBER_STATUS_CONFIG.map((status) => (
+                      <option key={status.value} value={status.value}>
+                        {status.label}
                       </option>
                     ))}
                   </select>

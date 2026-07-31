@@ -63,32 +63,22 @@ import {
   CAMPAIGN_MEMBER_STATUS_OPTIONS,
   getCampaignMemberStatusLabel,
 } from "@/core/utils/dictionaries";
+import {
+  CAMPAIGN_MEMBER_STATUS_BY_VALUE,
+  isCampaignMemberStatus,
+} from "@/core/constants/campaignMemberStatus";
 
 // Helper para mapear estados a español
 // Helper para badges de Tipificación (CampaignMemberStatus)
 const getTipificacionBadge = (status: string) => {
   const normalized = status?.toUpperCase() || "";
   const statusLabel = getCampaignMemberStatusLabel(normalized);
-  let classes = "font-semibold text-[10px] rounded-full px-2.5 py-0.5 border shadow-none ";
-
-  if (normalized === "WON") {
-    classes += "border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-50/50";
-  } else if (normalized === "QUALIFIED" || normalized === "ON_HOLD") {
-    classes += "border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50/50";
-  } else if (normalized === "ATTEMPTED_CONTACT") {
-    classes += "border-purple-200 text-purple-700 bg-purple-50/50 hover:bg-purple-50/50";
-  } else if (normalized === "CONTACTED" || normalized === "FOLLOW_UP") {
-    classes += "border-amber-200 text-amber-700 bg-amber-50/50 hover:bg-amber-50/50";
-  } else if (normalized === "NEW") {
-    classes += "border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-50/50";
-  } else if (normalized === "LOST") {
-    classes += "border-rose-200 text-rose-700 bg-rose-50/50 hover:bg-rose-50/50";
-  } else {
-    classes += "border-slate-200 text-slate-700 bg-slate-50/50 hover:bg-slate-50/50";
-  }
+  const colorClasses = isCampaignMemberStatus(normalized)
+    ? CAMPAIGN_MEMBER_STATUS_BY_VALUE[normalized].badgeClassName
+    : "border-slate-200 bg-slate-50 text-slate-700";
 
   return (
-    <Badge className={classes} variant="outline">
+    <Badge className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold shadow-none ${colorClasses}`} variant="outline">
       {statusLabel}
     </Badge>
   );
