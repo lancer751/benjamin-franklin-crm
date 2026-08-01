@@ -13,48 +13,46 @@ const DiscountCodeBaseSchema = z.object({
   max_uses: z.number().int().positive().optional(),
 });
 
-type DiscountCodeValidationData = Partial<
-  z.infer<typeof DiscountCodeBaseSchema>
->;
-
-function validateDiscountCode(
-  data: DiscountCodeValidationData,
-  ctx: z.RefinementCtx,
-): void {
-  if (
-    data.type === "PERCENTAGE" &&
-    data.value !== undefined &&
-    Number(data.value) > 100
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message: "A PERCENTAGE discount value can't exceed 100",
+export const CreateDiscountCodeSchema = DiscountCodeBaseSchema
+  .refine(
+    d => d.type !== "PERCENTAGE" || Number(d.value) <= 100,
+    {
+      error: "A PERCENTAGE discount value can't exceed 100",
       path: ["value"],
-    });
-  }
+    },
+  )
+  .refine(
+    d => !d.valid_from || !d.valid_until || d.valid_from <= d.valid_until,
+    {
+      error: "You can't enter a valid from date that exceeds valid until date",
+    },
+  );
 
-  if (
-    data.valid_from !== undefined &&
-    data.valid_until !== undefined &&
-    data.valid_from > data.valid_until
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      message:
-        "You can't enter a valid from date that exceeds valid until date",
-      path: ["valid_until"],
-    });
-  }
-}
-
-export const CreateDiscountCodeSchema =
-  DiscountCodeBaseSchema.superRefine(validateDiscountCode);
-
-export const UpdateDiscountCodeSchema = DiscountCodeBaseSchema.extend({
-  is_active: z.boolean(),
-})
-  .partial()
-  .superRefine(validateDiscountCode);
+export const UpdateDiscountCodeSchema =
+  DiscountCodeBaseSchema
+    .extend({
+      is_active: z.boolean(),
+    })
+    .partial()
+    .refine(
+      d =>
+        d.type !== "PERCENTAGE" ||
+        d.value === undefined ||
+        Number(d.value) <= 100,
+      {
+        error: "A PERCENTAGE discount value can't exceed 100",
+        path: ["value"],
+      },
+    )
+    .refine(
+      d =>
+        !d.valid_from ||
+        !d.valid_until ||
+        d.valid_from <= d.valid_until,
+      {
+        error: "You can't enter a valid from date that exceeds valid until date",
+      },
+    );
 
 export const DiscountCodeQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),

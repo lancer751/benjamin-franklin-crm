@@ -147,29 +147,29 @@ model SalesSupervisorProfile {
   user_id String @unique
 
   // team management
-  team_name   String?
+  // team_name   String?
   max_sellers Int     @default(10)
 
-  // permissions / supervision scope
-  can_assign_leads        Boolean @default(true)
-  can_reassign_leads      Boolean @default(true)
-  can_approve_discounts   Boolean @default(true)
-  can_cancel_orders       Boolean @default(true)
-  can_view_all_team_sales Boolean @default(true)
+  // // permissions / supervision scope
+  // can_assign_leads        Boolean @default(true)
+  // can_reassign_leads      Boolean @default(true)
+  // can_approve_discounts   Boolean @default(true)
+  // can_cancel_orders       Boolean @default(true)
+  // can_view_all_team_sales Boolean @default(true)
 
-  // approval rules
-  discount_limit_percent Decimal  @default(10) @db.Decimal(5, 2)
-  max_manual_discount    Decimal? @default(0) @db.Decimal(10, 2) // max discount zamount that the supervisor can apply manually without needing approval from a higher role
+  // // approval rules
+  // discount_limit_percent Decimal  @default(10) @db.Decimal(5, 2)
+  // max_manual_discount    Decimal? @default(0) @db.Decimal(10, 2) // max discount zamount that the supervisor can apply manually without needing approval from a higher role
 
-  // performance metrics (system-calculated)
-  supervised_sellers     Int     @default(0)
-  active_sellers         Int     @default(0)
-  total_team_sales       Int     @default(0)
-  total_team_orders      Int     @default(0)
-  completed_team_orders  Int     @default(0)
-  cancelled_team_orders  Int     @default(0)
-  team_conversion_rate   Decimal @default(0) @db.Decimal(5, 2)
-  avg_team_response_time Decimal @default(0) @db.Decimal(10, 2) // in seconds
+  // // performance metrics (system-calculated)
+  // supervised_sellers     Int     @default(0)
+  // active_sellers         Int     @default(0)
+  // total_team_sales       Int     @default(0)
+  // total_team_orders      Int     @default(0)
+  // completed_team_orders  Int     @default(0)
+  // cancelled_team_orders  Int     @default(0)
+  // team_conversion_rate   Decimal @default(0) @db.Decimal(5, 2)
+  // avg_team_response_time Decimal @default(0) @db.Decimal(10, 2) // in seconds
 
   user            User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
   assignedSellers SellerProfile[]
@@ -311,7 +311,6 @@ model Lead {
   campaignsEngaging   CampaignMember[]
   customerProfile     CustomerProfile?
   leadPrimaryCampaing Campaing?         @relation("PrimaryCampaign", fields: [primary_campaign_id], references: [id])
-  createdTasks        Tasks[]
 
   @@index([deleted_at])
 }
@@ -344,11 +343,9 @@ model Tasks {
   content            String    @db.Text
   is_done            Boolean   @default(false) // NEW
   due_date           DateTime? // NEW
-  lead_id            String // NEW
   campaign_member_id String // NEW
   created_by         String // NEW — seller who owns the task
 
-  lead           Lead           @relation(fields: [lead_id], references: [id])
   campaignMember CampaignMember @relation(fields: [campaign_member_id], references: [id])
   author         User  @relation(fields: [created_by], references: [id])
 }
@@ -592,7 +589,7 @@ model Product {
   discountCodes         DiscountCode[]
 }
 
-// TODO: make FAQ 
+// TODO: make FAQ
 model FAQ {
   id       String @id @default(uuid()) @db.Char(36)
   question String

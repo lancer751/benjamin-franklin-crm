@@ -45,23 +45,23 @@ export function leadRepository(prisma: PrismaClient) {
       const skip = (page - 1) * limit;
       const where: LeadWhereInput = search
         ? {
-            OR: [
-              { email: { contains: search, mode: "insensitive" as const } },
-              {
-                first_name: { contains: search, mode: "insensitive" as const },
-              },
-              { last_name: { contains: search, mode: "insensitive" as const } },
-              {
+          OR: [
+            { email: { contains: search, mode: "insensitive" as const } },
+            {
+              first_name: { contains: search, mode: "insensitive" as const },
+            },
+            { last_name: { contains: search, mode: "insensitive" as const } },
+            {
               campaignsEngaging: {
                 every: {
                   assigned_to,
                   status: tipification_status
                 },
               },
-              }
-            ],
-            AND: [{ lead_status: status ?? "ACTIVE" }],
-          }
+            }
+          ],
+          AND: [{ lead_status: status ?? "ACTIVE" }],
+        }
         : {};
 
       const [leads, total] = await Promise.all([
@@ -116,21 +116,21 @@ export function leadRepository(prisma: PrismaClient) {
       const [phoneLead, emailLead] = await Promise.all([
         phone
           ? prisma.lead.findFirst({
-              where: {
-                deleted_at: null,
-                phones: { some: { number: phone } },
-              },
-              select: leadSelect,
-            })
+            where: {
+              deleted_at: null,
+              phones: { some: { number: phone } },
+            },
+            select: leadSelect,
+          })
           : null,
         email
           ? prisma.lead.findFirst({
-              where: {
-                deleted_at: null,
-                email: { equals: email, mode: "insensitive" },
-              },
-              select: leadSelect,
-            })
+            where: {
+              deleted_at: null,
+              email: { equals: email, mode: "insensitive" },
+            },
+            select: leadSelect,
+          })
           : null,
       ]);
 
@@ -752,7 +752,6 @@ export function leadRepository(prisma: PrismaClient) {
       return prisma.tasks.create({
         data: {
           ...data,
-          lead_id: member.lead_id,
           campaign_member_id: memberId,
           created_by: sellerId,
         },
