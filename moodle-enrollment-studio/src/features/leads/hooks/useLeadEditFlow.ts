@@ -29,12 +29,8 @@ export function useLeadEditFlow(id: string) {
 
   const leadQuery = useQuery({
     queryKey: ["lead", id],
-    queryFn: async () => {
-      const response = await getLeadById(id);
-      const lead = unwrapLeadForEdit(response);
-      if (!lead) throw new Error(responseError(response, "El prospecto solicitado no existe."));
-      return lead;
-    },
+    queryFn: () => getLeadById(id),
+    select: (response) => unwrapLeadForEdit(response),
     enabled: Boolean(id),
     retry: false,
   });
@@ -87,7 +83,8 @@ export function useLeadEditFlow(id: string) {
 
   const queryMessage = leadQuery.error instanceof Error ? leadQuery.error.message : "No fue posible cargar este prospecto.";
   const mutationMessage = mutation.error instanceof Error ? mutation.error.message : "";
-  const isNotFound = /no existe|not found|no encontrado/i.test(queryMessage);
+  const isNotFound = leadQuery.isSuccess && leadQuery.data === null;
+  const isPreparing = leadQuery.isSuccess && leadQuery.data !== null && initialData === null;
   const hasAdditionalData = Boolean(initialData && (
     initialData.middle_name || initialData.dni || initialData.profession || initialData.secondary_email
     || initialData.address || initialData.additionalPhones.length || initialData.gender !== "NOT_SPECIFIED"
@@ -96,8 +93,8 @@ export function useLeadEditFlow(id: string) {
 
   return {
     form,
-    isLoading: leadQuery.isLoading,
-    isError: leadQuery.isError || (leadQuery.isSuccess && !initialData),
+    isLoading: leadQuery.isPending || leadQuery.isLoading || isPreparing,
+    isError: leadQuery.isError,
     isNotFound,
     queryMessage,
     mutationMessage,

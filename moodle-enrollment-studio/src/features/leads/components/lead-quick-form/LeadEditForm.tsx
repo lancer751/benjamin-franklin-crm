@@ -22,8 +22,16 @@ export function LeadEditForm({ id }: { id: string }) {
   if (controller.isError) return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Card className="space-y-5 p-8 text-center">
-        <div><h1 className="text-xl font-semibold">{controller.isNotFound ? "Prospecto no encontrado." : "No fue posible cargar el prospecto"}</h1><p className="mt-2 text-sm text-muted-foreground">{controller.queryMessage}</p></div>
+        <div><h1 className="text-xl font-semibold">No fue posible cargar el prospecto</h1><p className="mt-2 text-sm text-muted-foreground">{controller.queryMessage}</p></div>
         <div className="flex flex-wrap justify-center gap-2"><Button variant="outline" onClick={controller.back}>Volver</Button><Button onClick={controller.retry}>Reintentar</Button></div>
+      </Card>
+    </div>
+  );
+  if (controller.isNotFound) return (
+    <div className="mx-auto max-w-2xl px-4 py-10">
+      <Card className="space-y-5 p-8 text-center">
+        <div><h1 className="text-xl font-semibold">Prospecto no encontrado.</h1><p className="mt-2 text-sm text-muted-foreground">El prospecto solicitado no existe o ya no está disponible.</p></div>
+        <Button variant="outline" onClick={controller.back}>Volver</Button>
       </Card>
     </div>
   );
