@@ -42,14 +42,14 @@ import {
 import type { NormalizedLead } from "@/features/leads/adapters/leadAdapter";
 import { interactionFormSchema, type InteractionFormValues } from "@/features/leads/schemas/interactionFormSchema";
 import { taskFormSchema, type TaskFormInput, type TaskFormValues } from "@/features/leads/schemas/taskFormSchema";
-import { INTERACTION_TYPE_OPTIONS, interactionTypeLabel } from "@/features/leads/utils/interactionType.constants";
+import { INTERACTION_TYPE_OPTIONS } from "@/features/leads/utils/interactionType.constants";
 import { mapInteractionFormToPayload, mapTaskFormToPayload } from "@/features/leads/utils/leadActionPayloadMappers";
-import type { LeadInteraction, LeadTask } from "@/features/leads/components/lead-detail/leadDetail.types";
+import type { LeadTask } from "@/features/leads/components/lead-detail/leadDetail.types";
+import type { LeadInteractionViewModel } from "@/features/leads/adapters/leadInteractionAdapter";
 
 type InteractionPayload = ReturnType<typeof mapInteractionFormToPayload>;
 type TaskPayload = ReturnType<typeof mapTaskFormToPayload>;
 type UpdateLeadPayload = Parameters<typeof updateLead>[1];
-type PanelInteraction = LeadInteraction & { id: string; type: string };
 type PanelTask = LeadTask & { id: string; is_done: boolean };
 
 interface CreateMutation<TVariables> {
@@ -85,7 +85,7 @@ interface LeadDetailsSheetProps {
   isStatusPending: boolean;
   setSelectedLead: React.Dispatch<React.SetStateAction<NormalizedLead | null>>;
   // Interactions
-  interactions: PanelInteraction[];
+  interactions: LeadInteractionViewModel[];
   isLoadingInteractions: boolean;
   createInteractionMutation: CreateMutation<InteractionPayload>;
   // Tasks
@@ -563,16 +563,16 @@ export default function LeadDetailsSheet({
                               <div className="bg-card border border-border rounded-xl p-3.5 space-y-2 shadow-sm group-hover:border-primary/30 transition-colors">
                                 <div className="flex items-center justify-between text-[10px] text-muted-foreground font-semibold">
                                   <span className={cn("px-1.5 py-0.5 rounded font-extrabold text-[9px] uppercase tracking-wider", config.bg, config.color)}>
-                                    {interactionTypeLabel(item.type)}
+                                    {item.typeLabel}
                                   </span>
-                                  <span>{formatSafeDate(item.created_at)}</span>
+                                  {item.createdAt && <span>{formatSafeDate(item.createdAt)}</span>}
                                 </div>
                                 <p className="text-xs text-foreground leading-relaxed break-words">
                                   {item.notes}
                                 </p>
                                 <div className="text-[9px] text-muted-foreground font-medium flex items-center gap-1 border-t border-border/40 pt-1.5">
-                                  <span>Por:</span>
-                                  <span className="font-semibold text-foreground">{item.created_by || "Asesor Comercial"}</span>
+                                  <span>Registrado por</span>
+                                  <span className="font-semibold text-foreground">{item.creatorName}</span>
                                 </div>
                               </div>
                             </div>

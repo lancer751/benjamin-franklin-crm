@@ -15,6 +15,7 @@ import {
 } from "@/features/leads/services/leadService";
 import { adaptCampaignMembers, unpackLeads } from "@/features/leads/adapters/leadAdapter";
 import { requireSuccess } from "@/features/leads/adapters/leadDetailAdapter";
+import { adaptLeadInteraction, adaptLeadInteractionsResponse } from "@/features/leads/adapters/leadInteractionAdapter";
 import { useManualLeadRegistration } from "@/features/leads/hooks/useManualLeadRegistration";
 import type { ManualLeadData } from "@/features/leads/schemas/manualLeadSchema";
 import { getApiErrorMessage } from "@/features/leads/utils/getApiErrorMessage";
@@ -151,7 +152,7 @@ const SellerLeadsView = () => {
   });
 
   const interactions = useMemo(() => {
-    return interactionsRes?.data || (Array.isArray(interactionsRes) ? interactionsRes : []);
+    return adaptLeadInteractionsResponse(interactionsRes);
   }, [interactionsRes]);
 
   // 4. Consultas de tareas
@@ -176,7 +177,7 @@ const SellerLeadsView = () => {
         creatorUserId || ""
       );
       requireSuccess(response, "No se pudo registrar la gestión. Inténtalo nuevamente.");
-      return response;
+      return adaptLeadInteraction(response);
     },
     onSuccess: () => {
       toast.success("Interacción registrada correctamente");

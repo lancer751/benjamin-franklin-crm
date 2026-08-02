@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSellerProfileById } from "@/features/users/services/userService";
 import { getLeadById } from "../services/leadService";
-import { sellerProfileIdFrom, unwrapLeadDetail } from "../adapters/leadDetailAdapter";
-import type { LeadCampaignMember } from "../components/lead-detail/leadDetail.types";
-import { campaignIdFor } from "../components/lead-detail/leadDetail.formatters";
+import { resolveActiveCampaign, sellerProfileIdFrom, unwrapLeadDetail } from "../adapters/leadDetailAdapter";
 
 interface DetailUser { id?: string; role?: { name?: string }; seller?: { id: string } | null }
 
@@ -20,18 +18,18 @@ export function useLeadDetail(leadId: string, user: DetailUser | null) {
   const authenticatedUserId = user?.id || "";
   const leadQuery = useQuery({ queryKey: ["lead", leadId], queryFn: () => getLeadById(leadId), enabled: Boolean(leadId) });
   const lead = unwrapLeadDetail(leadQuery.data);
-  const allMembers = useMemo<LeadCampaignMember[]>(() => Array.isArray(lead?.campaignsEngaging) ? lead.campaignsEngaging : [], [lead]);
+  const allMembers = useMemo(() => lead?.campaigns ?? [], [lead]);
   const members = useMemo(() => isSalesRep
-    ? allMembers.filter((member) => member.assigned_to === authenticatedUserId || member.seller?.id === sellerProfileId)
+    ? allMembers.filter((member) => member.assignedUser?.id === authenticatedUserId)
     : allMembers,
-  [allMembers, authenticatedUserId, isSalesRep, sellerProfileId]);
+  [allMembers, authenticatedUserId, isSalesRep]);
 
   useEffect(() => {
-    if (members.some((member) => member.id === selectedMemberId)) return;
-    setSelectedMemberId((members.find((member) => member.is_primary) ?? members[0])?.id ?? "");
+    const resolvedCampaign = resolveActiveCampaign(members, selectedMemberId);
+    if ((resolvedCampaign?.id ?? "") !== selectedMemberId) setSelectedMemberId(resolvedCampaign?.id ?? "");
   }, [members, selectedMemberId]);
 
-  const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
+  const activeCampaign = resolveActiveCampaign(members, selectedMemberId);
   return {
     lead,
     leadQuery,
@@ -40,9 +38,9 @@ export function useLeadDetail(leadId: string, user: DetailUser | null) {
     isSalesRep,
     allMembers,
     members,
-    selectedMember,
+    activeCampaign,
     selectedMemberId,
-    selectedCampaignId: campaignIdFor(selectedMember),
+    selectedCampaignId: activeCampaign?.campaignId ?? "",
     setSelectedMemberId,
   };
 }

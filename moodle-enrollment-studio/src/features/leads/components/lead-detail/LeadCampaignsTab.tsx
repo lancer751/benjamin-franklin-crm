@@ -7,11 +7,11 @@ import {
   getCampaignMemberStatusConfig,
   getCampaignMemberStatusLabel,
 } from "@/core/constants/campaignMemberStatus";
-import type { LeadCampaignMember } from "./leadDetail.types";
-import { campaignFor, displayEnum, formatLeadDate, sellerNameFor } from "./leadDetail.formatters";
+import type { LeadCampaignViewModel } from "../../adapters/leadDetailAdapter";
+import { displayEnum, formatLeadDate } from "./leadDetail.formatters";
 
 interface LeadCampaignsTabProps {
-  members: LeadCampaignMember[];
+  members: LeadCampaignViewModel[];
   selectedMemberId: string;
   canAddCampaign: boolean;
   onAddCampaign: () => void;
@@ -40,7 +40,6 @@ export function LeadCampaignsTab({
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {members.map((member) => {
-            const campaign = campaignFor(member);
             const statusConfig = getCampaignMemberStatusConfig(member.status);
             return (
               <Card key={member.id} className={`p-5 transition-colors ${selectedMemberId === member.id ? "border-primary/40" : ""}`}>
@@ -50,11 +49,11 @@ export function LeadCampaignsTab({
                       <Megaphone className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">{campaign?.name || "Campaña sin nombre"}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">{displayEnum(campaign?.platform)}</p>
+                      <h3 className="font-semibold">{member.campaignName}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{displayEnum(member.platform)}</p>
                     </div>
                   </div>
-                  {member.is_primary && <Badge variant="secondary">Principal</Badge>}
+                  {member.isPrimary && <Badge variant="secondary">Principal</Badge>}
                 </div>
                 <dl className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div>
@@ -65,9 +64,9 @@ export function LeadCampaignsTab({
                       </Badge>
                     </dd>
                   </div>
-                  <div><dt className="text-sm text-muted-foreground"><UserRound className="mr-1 inline h-4 w-4" />Asesor</dt><dd className="mt-1 font-medium">{sellerNameFor(member)}</dd></div>
+                  <div><dt className="text-sm text-muted-foreground"><UserRound className="mr-1 inline h-4 w-4" />Asesor</dt><dd className="mt-1 font-medium">{member.assignedUser?.name ?? "Sin asignar"}</dd></div>
                   <div><dt className="text-sm text-muted-foreground"><Waypoints className="mr-1 inline h-4 w-4" />Fuente</dt><dd className="mt-1 font-medium">{displayEnum(member.source)}</dd></div>
-                  <div><dt className="text-sm text-muted-foreground"><CalendarDays className="mr-1 inline h-4 w-4" />Asociación</dt><dd className="mt-1 font-medium">{formatLeadDate(member.created_at)}</dd></div>
+                  <div><dt className="text-sm text-muted-foreground"><CalendarDays className="mr-1 inline h-4 w-4" />Asociación</dt><dd className="mt-1 font-medium">{formatLeadDate(member.createdAt)}</dd></div>
                 </dl>
                 <Button variant="link" className="mt-4 h-auto px-0" onClick={() => onViewActivity(member.id)}>Ver actividad</Button>
               </Card>

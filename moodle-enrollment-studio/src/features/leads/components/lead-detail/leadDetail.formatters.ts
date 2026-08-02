@@ -1,4 +1,4 @@
-import type { LeadCampaignMember, LeadPhone, PersonName } from "./leadDetail.types";
+import type { LeadPhone, PersonName } from "./leadDetail.types";
 import { INTERACTION_TYPE_LABELS } from "../../utils/interactionType.constants";
 
 const labels: Record<string, string> = {
@@ -24,8 +24,5 @@ export const formatLeadDate = (value?: string | null, withTime = false) => {
   if (Number.isNaN(date.getTime())) return "No especificado";
   return new Intl.DateTimeFormat("es-PE", withTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" }).format(date);
 };
-export const campaignFor = (member?: LeadCampaignMember | null) => member?.campaing ?? member?.campaign ?? null;
-export const campaignIdFor = (member?: LeadCampaignMember | null) => campaignFor(member)?.id ?? member?.campaing_id ?? member?.campaign_id ?? "";
-export const sellerNameFor = (member?: LeadCampaignMember | null) => personFullName(member?.seller?.user) || "Sin asignar";
 export const principalPhoneFrom = (phones: LeadPhone[]) => phones.find((phone) => phone.isPrincipal || phone.is_principal) ?? phones[0];
 export const isValidPhone = (phone?: string | null) => (phone?.replace(/\D/g, "").length ?? 0) >= 7;

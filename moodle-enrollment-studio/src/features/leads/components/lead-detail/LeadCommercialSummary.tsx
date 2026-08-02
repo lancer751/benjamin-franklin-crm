@@ -1,15 +1,15 @@
 import { Megaphone, Route, UserRound, Waypoints } from "lucide-react";
 import { Card } from "@/core/components/ui/card";
 import { getCampaignMemberStatusLabel } from "@/core/constants/campaignMemberStatus";
-import type { LeadCampaignMember } from "./leadDetail.types";
-import { campaignFor, displayEnum, sellerNameFor } from "./leadDetail.formatters";
+import type { LeadCampaignViewModel } from "../../adapters/leadDetailAdapter";
+import { displayEnum } from "./leadDetail.formatters";
 
-export function LeadCommercialSummary({ member }: { member?: LeadCampaignMember | null }) {
+export function LeadCommercialSummary({ campaign }: { campaign?: LeadCampaignViewModel | null }) {
   const items = [
-    { icon: Megaphone, label: "Campaña", value: member ? campaignFor(member)?.name || "Campaña sin nombre" : "Sin campaña asociada" },
-    { icon: Route, label: "Etapa actual", value: member ? getCampaignMemberStatusLabel(member.status) : "Sin etapa" },
-    { icon: UserRound, label: "Asesor asignado", value: member ? sellerNameFor(member) : "Sin asignar" },
-    { icon: Waypoints, label: "Fuente", value: member ? displayEnum(member.source) : "No especificado" },
+    { icon: Megaphone, label: "Campaña", value: campaign?.campaignName ?? "Sin campaña asociada" },
+    { icon: Route, label: "Etapa actual", value: campaign ? getCampaignMemberStatusLabel(campaign.status) : "Sin etapa" },
+    { icon: UserRound, label: "Asesor asignado", value: campaign?.assignedUser?.name ?? "Sin asignar" },
+    { icon: Waypoints, label: "Fuente", value: campaign ? displayEnum(campaign.source) : "No especificado" },
   ];
 
   return (

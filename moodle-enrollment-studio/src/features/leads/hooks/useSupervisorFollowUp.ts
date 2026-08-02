@@ -5,6 +5,7 @@ import { getAllLeads } from "../services/leadService";
 import { reassignCampaignMember, reassignBulkCampaignMembers } from "@/features/campaigns/services/campaignService";
 import { api } from "@/core/lib/api";
 import { adaptLeads, normalizeAssignedCampaigns, unpackLeads } from "../adapters/leadAdapter";
+import { adaptLeadInteractionsResponse } from "../adapters/leadInteractionAdapter";
 import { calculateSupervisorKPIs } from "../utils/leadLogic";
 import { getSellerCampaigns, getSellers } from "@/features/users/services/userService";
 
@@ -185,6 +186,7 @@ export const useSupervisorFollowUp = () => {
     },
     enabled: !!selectedLead?.id && !selectedLead.id.startsWith("unassigned-"),
   });
+  const interactions = useMemo(() => adaptLeadInteractionsResponse(interactionsRes), [interactionsRes]);
 
   // Reasignar asesor comercial mutation
   const reassignMutation = useMutation({
@@ -275,7 +277,7 @@ export const useSupervisorFollowUp = () => {
     isLoadingLeads,
     selectedLead,
     setSelectedLead,
-    interactionsRes,
+    interactions,
     isLoadingInteractions,
     reassignMutation,
     bulkReassignMutation,

@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/core/lib/api";
-import { interactionTypeLabel } from "../utils/interactionType.constants";
 import { 
   Users, 
   TrendingUp, 
@@ -105,7 +104,7 @@ const SupervisorFollowUpView = () => {
     isLoadingLeads,
     selectedLead,
     setSelectedLead,
-    interactionsRes,
+    interactions,
     isLoadingInteractions,
     reassignMutation,
     bulkReassignMutation,
@@ -788,14 +787,14 @@ const SupervisorFollowUpView = () => {
                         <Loader2 size={12} className="animate-spin text-primary" />
                         <span>Cargando comentarios...</span>
                       </div>
-                    ) : !(interactionsRes?.success && Array.isArray(interactionsRes.data) && interactionsRes.data.length > 0) ? (
+                    ) : interactions.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-1.5 bg-slate-50 border border-slate-100 rounded-xl shadow-inner">
                         <BookOpen size={24} className="opacity-40 mb-1" />
                         <p className="text-xs font-medium">No hay bitácoras de llamadas aún para este período.</p>
                       </div>
                     ) : (
                       <div className="relative border-l border-slate-200 ml-4 pl-6 space-y-6">
-                        {interactionsRes.data.map((interaction: any) => {
+                        {interactions.map((interaction) => {
                           const isWhatsapp = interaction.type === "WHATSAPP";
                           const isCall = interaction.type === "CALL";
                           const dotBorderColor = isWhatsapp 
@@ -820,7 +819,7 @@ const SupervisorFollowUpView = () => {
                                 {interaction.notes}
                               </div>
                               <span className="text-[10px] text-slate-400 mt-1 block">
-                                Por: {interaction.seller?.user?.first_name ? `${interaction.seller.user.first_name} ${interaction.seller.user.last_name || ""}`.trim() : "Sistema"} • Canal: {interactionTypeLabel(interaction.type)}
+                                Registrado por {interaction.creatorName} • Canal: {interaction.typeLabel}
                               </span>
                             </div>
                           );

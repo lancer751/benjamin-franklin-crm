@@ -48,8 +48,8 @@ export default function LeadDetailView() {
 
   return <div className="space-y-5">
     <Button variant="ghost" className="gap-2 px-0" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" />Volver</Button>
-    <LeadDetailHeader lead={detail.lead} phone={principalPhone?.number} capabilities={capabilities} onEdit={() => navigate(`/prospectos/${id}/editar`)} onAddCampaign={() => setAddCampaignOpen(true)} onDelete={() => { deleteMutation.reset(); setDeleteOpen(true); }} />
-    <LeadCommercialSummary member={detail.selectedMember} />
+    <LeadDetailHeader lead={detail.lead} activeCampaign={detail.activeCampaign} phone={principalPhone?.number} capabilities={capabilities} onEdit={() => navigate(`/prospectos/${id}/editar`)} onAddCampaign={() => setAddCampaignOpen(true)} onDelete={() => { deleteMutation.reset(); setDeleteOpen(true); }} />
+    <LeadCommercialSummary campaign={detail.activeCampaign} />
     <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as DetailTab)}>
       <div className="overflow-x-auto pb-1"><TabsList className="inline-flex h-11 min-w-full justify-start sm:grid sm:grid-cols-4"><TabsTrigger className="min-w-32" value="information">Información</TabsTrigger><TabsTrigger className="min-w-32" value="campaigns">Campañas ({detail.members.length})</TabsTrigger><TabsTrigger className="min-w-32" value="interactions">Interacciones</TabsTrigger><TabsTrigger className="min-w-32" value="tasks">Tareas</TabsTrigger></TabsList></div>
       <TabsContent value="information" className="mt-4"><LeadInformationTab lead={detail.lead} principalPhone={principalPhone} additionalPhones={additionalPhones} /></TabsContent>

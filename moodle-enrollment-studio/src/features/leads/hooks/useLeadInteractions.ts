@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { requireSuccess, unwrapDetailList } from "../adapters/leadDetailAdapter";
-import type { LeadInteraction } from "../components/lead-detail/leadDetail.types";
+import { requireSuccess } from "../adapters/leadDetailAdapter";
+import { adaptLeadInteraction, adaptLeadInteractionsResponse } from "../adapters/leadInteractionAdapter";
 import type { InteractionFormValues } from "../schemas/interactionFormSchema";
 import { createMemberInteraction, getMemberInteractions } from "../services/leadService";
 import { mapInteractionFormToPayload } from "../utils/leadActionPayloadMappers";
@@ -20,11 +20,12 @@ export function useLeadInteractions(campaignId: string, memberId: string, creato
       const payload = mapInteractionFormToPayload(data);
       const response = await createMemberInteraction(campaignId, memberId, payload.notes, payload.type, creatorUserId);
       requireSuccess(response, "No se pudo registrar la gestión. Inténtalo nuevamente.");
+      return adaptLeadInteraction(response);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey });
       toast.success("Interacción registrada correctamente.");
     },
   });
-  return { query, interactions: unwrapDetailList<LeadInteraction>(query.data, "interactions"), createMutation };
+  return { query, interactions: adaptLeadInteractionsResponse(query.data), createMutation };
 }

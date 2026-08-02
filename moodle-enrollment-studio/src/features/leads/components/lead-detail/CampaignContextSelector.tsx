@@ -1,9 +1,8 @@
 import { getCampaignMemberStatusLabel } from "@/core/constants/campaignMemberStatus";
-import type { LeadCampaignMember } from "./leadDetail.types";
-import { campaignFor, sellerNameFor } from "./leadDetail.formatters";
+import type { LeadCampaignViewModel } from "../../adapters/leadDetailAdapter";
 
 interface CampaignContextSelectorProps {
-  members: LeadCampaignMember[];
+  members: LeadCampaignViewModel[];
   selectedMemberId: string;
   onChange: (memberId: string) => void;
 }
@@ -21,7 +20,7 @@ export function CampaignContextSelector({ members, selectedMemberId, onChange }:
       >
         {members.map((member) => (
           <option key={member.id} value={member.id}>
-            {campaignFor(member)?.name || "Campaña sin nombre"} · {getCampaignMemberStatusLabel(member.status)} · {sellerNameFor(member)}
+            {member.campaignName} · {getCampaignMemberStatusLabel(member.status)} · {member.assignedUser?.name ?? "Sin asignar"}
           </option>
         ))}
       </select>

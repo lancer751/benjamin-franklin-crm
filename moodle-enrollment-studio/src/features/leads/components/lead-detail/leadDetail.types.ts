@@ -1,3 +1,5 @@
+import type { LeadInteractionApiRecord } from "../../adapters/leadInteractionAdapter";
+
 export interface LeadPhone {
   number?: string | null;
   type?: string | null;
@@ -11,8 +13,8 @@ export interface PersonName {
   last_name?: string | null;
 }
 
-export interface LeadCampaignMember {
-  id: string;
+export interface LeadCampaignMemberApiRecord {
+  id?: string;
   lead_id?: string | null;
   campaing_id?: string | null;
   campaign_id?: string | null;
@@ -24,11 +26,12 @@ export interface LeadCampaignMember {
   is_primary?: boolean | null;
   campaing?: { id?: string | null; name?: string | null; platform?: string | null } | null;
   campaign?: { id?: string | null; name?: string | null; platform?: string | null } | null;
-  seller?: { id?: string | null; user?: PersonName | null } | null;
+  assignedUser?: { id?: string; first_name?: string | null; last_name?: string | null } | null;
+  leadInteractions?: LeadInteractionApiRecord[] | null;
 }
 
-export interface LeadDetail extends PersonName {
-  id: string;
+export interface LeadDetailApiRecord extends PersonName {
+  id?: string;
   profession?: string | null;
   gender?: string | null;
   address?: string | null;
@@ -40,16 +43,7 @@ export interface LeadDetail extends PersonName {
   created_at?: string | null;
   updated_at?: string | null;
   phones?: LeadPhone[] | null;
-  campaignsEngaging?: LeadCampaignMember[] | null;
-}
-
-export interface LeadInteraction {
-  id?: string;
-  notes?: string | null;
-  created_by?: string | null;
-  type?: string | null;
-  created_at?: string | null;
-  seller?: { user?: PersonName | null } | null;
+  campaignsEngaging?: LeadCampaignMemberApiRecord[] | null;
 }
 
 export interface LeadTask {

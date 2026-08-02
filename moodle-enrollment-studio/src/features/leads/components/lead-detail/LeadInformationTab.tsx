@@ -1,11 +1,12 @@
 import { CalendarDays, Mail, MapPin, Phone, UserRound } from "lucide-react";
 import { Card } from "@/core/components/ui/card";
-import type { LeadDetail, LeadPhone } from "./leadDetail.types";
+import type { LeadDetailViewModel } from "../../adapters/leadDetailAdapter";
+import type { LeadPhone } from "./leadDetail.types";
 import { displayEnum, displayValue, formatLeadDate, personFullName } from "./leadDetail.formatters";
 
 const Field = ({ icon: Icon, label, value }: { icon: typeof UserRound; label: string; value?: string | null }) => <div className="flex gap-3"><Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><div><p className="text-sm font-medium text-muted-foreground">{label}</p><p className="mt-1 text-sm leading-6">{displayValue(value)}</p></div></div>;
 
-export function LeadInformationTab({ lead, principalPhone, additionalPhones }: { lead: LeadDetail; principalPhone?: LeadPhone; additionalPhones: LeadPhone[] }) {
+export function LeadInformationTab({ lead, principalPhone, additionalPhones }: { lead: LeadDetailViewModel; principalPhone?: LeadPhone; additionalPhones: LeadPhone[] }) {
   const cards = [
     { title: "Datos personales", icon: UserRound, fields: [
       [UserRound, "Nombre completo", personFullName(lead)], [UserRound, "DNI", lead.dni], [UserRound, "Género", displayEnum(lead.gender)], [UserRound, "Profesión", lead.profession],
