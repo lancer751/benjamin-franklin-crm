@@ -43,26 +43,37 @@ export function leadRepository(prisma: PrismaClient) {
     //  Leads
     async findMany({ page, limit, search, status, assigned_to, tipification_status }: LeadQuery) {
       const skip = (page - 1) * limit;
-      const where: LeadWhereInput = search
-        ? {
+      
+      const where: LeadWhereInput = {
+        deleted_at: null,
+        lead_status: status ?? "ACTIVE",
+
+        ...(search && {
           OR: [
-            { email: { contains: search, mode: "insensitive" as const } },
+            { email: { contains: search, mode: "insensitive" } },
+            { first_name: { contains: search, mode: "insensitive" } },
+            { last_name: { contains: search, mode: "insensitive" } },
             {
-              first_name: { contains: search, mode: "insensitive" as const },
-            },
-            { last_name: { contains: search, mode: "insensitive" as const } },
-            {
-              campaignsEngaging: {
-                every: {
-                  assigned_to,
-                  status: tipification_status
+              phones: {
+                some: {
+                  number: {
+                    contains: search,
+                  },
                 },
               },
-            }
+            },
           ],
-          AND: [{ lead_status: status ?? "ACTIVE" }],
-        }
-        : {};
+        }),
+
+        ...((assigned_to || tipification_status) && {
+          campaignsEngaging: {
+            some: {
+              ...(assigned_to && { assigned_to }),
+              ...(tipification_status && { status: tipification_status }),
+            },
+          },
+        }),
+      };
 
       const [leads, total] = await Promise.all([
         prisma.lead.findMany({
@@ -80,6 +91,7 @@ export function leadRepository(prisma: PrismaClient) {
                 campaing: { select: { id: true, name: true } },
                 assignedUser: {
                   select: {
+                    id: true,
                     first_name: true,
                     last_name: true,
                   },

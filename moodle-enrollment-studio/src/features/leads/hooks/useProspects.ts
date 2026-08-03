@@ -23,6 +23,7 @@ export function useProspects() {
   const isSalesRep = role === "SALES_REP";
   const canViewSeller = role === "ADMIN" || role === "SALES_SUPERVISOR" || role === "MARKETING";
   const sellerId = user?.seller?.id ?? "";
+  const authenticatedUserId = user?.id ?? "";
   const [requestedPage, setRequestedPage] = useState(1);
   const [search, setSearchValue] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -42,6 +43,11 @@ export function useProspects() {
 
   const createdFrom = registeredOn ? `${registeredOn}T00:00:00.000` : "";
   const createdTo = registeredOn ? `${registeredOn}T23:59:59.999` : "";
+  const assignedTo = isSalesRep
+    ? authenticatedUserId
+    : canViewSeller && advisorId !== "ALL"
+      ? advisorId
+      : "";
 
   const leadQuery = useMemo<LeadListQuery>(() => ({
     page: String(requestedPage),
@@ -51,8 +57,8 @@ export function useProspects() {
     ...(memberStatus !== "ALL" && { member_status: memberStatus }),
     ...(campaignId !== "ALL" && { campaign_id: campaignId }),
     ...(createdFrom && createdTo && { created_from: createdFrom, created_to: createdTo }),
-    ...(canViewSeller && advisorId !== "ALL" && { assigned_to: advisorId }),
-  }), [advisorId, campaignId, canViewSeller, createdFrom, createdTo, debouncedSearch, leadStatus, memberStatus, requestedPage]);
+    ...(assignedTo && { assigned_to: assignedTo }),
+  }), [assignedTo, campaignId, createdFrom, createdTo, debouncedSearch, leadStatus, memberStatus, requestedPage]);
 
   const sellerCampaignsQuery = useQuery({
     queryKey: ["seller-campaigns", sellerId],
@@ -62,7 +68,7 @@ export function useProspects() {
 
   const allowedCampaignsQuery = useQuery({
     queryKey: ["campaigns", "prospects-selector", 1, 100],
-    queryFn: () => getCampaigns({ page: 1, limit: 100 }),
+    queryFn: () => getCampaigns({ page: "1", limit: "100" }),
     enabled: Boolean(user) && !isSalesRep,
   });
 
@@ -78,7 +84,7 @@ export function useProspects() {
       leadStatus,
       createdFrom,
       createdTo,
-      canViewSeller ? advisorId : "self-or-all",
+      assignedTo || "all-advisors",
     ],
     queryFn: () => getAllLeads(leadQuery),
     enabled: Boolean(user),
