@@ -1,0 +1,193 @@
+{
+  "notes": "Reemplaza los valores con UUIDs de ejemplo por IDs reales de la base de datos antes de enviarlos.",
+  "users": {
+    "admin": {
+      "first_name": "Carlos",
+      "middle_name": "Alberto",
+      "last_name": "Mendoza",
+      "email": "admin.bf@example.com",
+      "corporate_email": "carlos.mendoza@bf.edu.pe",
+      "cellphone": "987654321",
+      "corporate_cellphone": "987654322",
+      "role_id": "11111111-1111-1111-1111-111111111111",
+      "is_active": true,
+      "password": "Password123#",
+      "birth_date": "1990-05-14",
+      "role": "ADMIN"
+    },
+    "salesSupervisor": {
+      "first_name": "Lucía",
+      "middle_name": "María",
+      "last_name": "Rojas",
+      "email": "supervisor.bf@example.com",
+      "corporate_email": "lucia.rojas@bf.edu.pe",
+      "cellphone": "987654323",
+      "corporate_cellphone": "987654324",
+      "role_id": "22222222-2222-2222-2222-222222222222",
+      "is_active": true,
+      "password": "Password123#",
+      "birth_date": "1988-09-20",
+      "role": "SALES_SUPERVISOR",
+      "sales_supervisor_profile": {
+        "team_name": "Equipo Norte",
+        "max_sellers": 8,
+        "can_assign_leads": true,
+        "can_reassign_leads": true,
+        "can_approve_discounts": true,
+        "can_cancel_orders": true,
+        "can_view_all_team_sales": true,
+        "discount_limit_percent": "10",
+        "max_manual_discount": "100",
+        "supervised_sellers": 0,
+        "active_sellers": 0,
+        "total_team_sales": 0,
+        "total_team_orders": 0,
+        "completed_team_orders": 0,
+        "cancelled_team_orders": 0,
+        "team_conversion_rate": "0",
+        "avg_team_response_time": "0"
+      }
+    },
+    "seller": {
+      "first_name": "Miguel",
+      "middle_name": "Andrés",
+      "last_name": "Pérez",
+      "email": "seller.bf@example.com",
+      "corporate_email": "miguel.perez@bf.edu.pe",
+      "cellphone": "987654325",
+      "corporate_cellphone": "987654326",
+      "role_id": "33333333-3333-3333-3333-333333333333",
+      "is_active": true,
+      "password": "Password123#",
+      "birth_date": "1994-02-10",
+      "role": "SALES_REP",
+      "seller_profile": {
+        "sales_target": 50,
+        "assigned_supervisor_id": "44444444-4444-4444-4444-444444444444"
+      }
+    }
+  },
+  "courses": [
+    {
+      "type": "COURSE",
+      "name": "Gestión de Ventas Digitales",
+      "description": "Curso práctico para vender online con mejores procesos y herramientas.",
+      "classes_number": 12,
+      "image_url": "https://example.com/images/ventas-digitales.jpg",
+      "code": "VENT001"
+    }
+  ],
+  "editions": [
+    {
+      "course_id": "55555555-5555-5555-5555-555555555555",
+      "edition_number": 1,
+      "start_date": "2026-09-01",
+      "end_date": "2026-11-30",
+      "hours_amount": 40,
+      "classes_number": 12,
+      "duration_value": 3,
+      "duration_unit": "MONTHS",
+      "modality": "VIRTUAL",
+      "moodle_course_id": 1001,
+      "meet_link": "https://meet.google.com/abc-defg-hij",
+      "syllabus_url": "https://example.com/syllabus/ventas-digitales.pdf",
+      "whatsapp_group_link": "https://chat.whatsapp.com/example",
+      "edition_status": "SCHEDULED",
+      "edition_code": "LP-001-26-01",
+      "assigned_professors": [
+        {
+          "professor_id": "66666666-6666-6666-6666-666666666666"
+        }
+      ],
+      "schedules": [
+        {
+          "day_of_week": "LUNES",
+          "type": "REGULAR",
+          "slots": [
+            {
+              "start_time": "19:00",
+              "end_time": "21:00"
+            }
+          ]
+        }
+      ],
+      "assignOnlyActiveProfessors": true
+    }
+  ],
+  "products": [
+    {
+      "name": "Programa de Ventas Digitales",
+      "edition_id": "77777777-7777-7777-7777-777777777777",
+      "category_id": "88888888-8888-8888-8888-888888888888",
+      "enrollment_fee": "300.00",
+      "discount_price": "1200.00",
+      "discount_expires_at": "2026-09-15",
+      "installments_max_number": 6,
+      "installments_min_number": 1,
+      "prices": [
+        {
+          "attendance_mode": "HEREDADO",
+          "cash_price": "1500.00",
+          "installment_price": "1700.00"
+        }
+      ]
+    }
+  ],
+  "campaigns": [
+    {
+      "name": "Campaña de Lanzamiento Ventas",
+      "initial_budget": 5000,
+      "start_date": "2026-08-01",
+      "end_date": "2026-10-31",
+      "platform": "FACEBOOK",
+      "is_organic": false,
+      "status": "ACTIVE",
+      "product_id": "99999999-9999-9999-9999-999999999999",
+      "supervisor_id": "44444444-4444-4444-4444-444444444444",
+      "meta_campaign_id": null,
+      "meta_form_id": null,
+      "click_to_whatsapp": false,
+      "whatsapp_number": null,
+      "seller_ids": [
+        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+      ]
+    }
+  ],
+  "leads": [
+    {
+      "first_name": "Ana",
+      "middle_name": "Isabel",
+      "last_name": "Torres",
+      "email": "ana.torres@example.com",
+      "profession": "Diseñadora",
+      "gender": "FEMALE",
+      "lead_status": "ACTIVE",
+      "address": "Av. Siempre Viva 123",
+      "secondary_email": "ana.torres.secondary@example.com",
+      "dni": "12345678",
+      "phones": [
+        {
+          "number": "987654321",
+          "type": "WHATSAPP",
+          "isPrincipal": true
+        }
+      ]
+    }
+  ],
+  "campaignMembers": [
+    {
+      "lead_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "campaing_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "assigned_to": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "source": "FACEBOOK",
+      "is_primary": true
+    }
+  ],
+  "campaignSellers": [
+    {
+      "seller_ids": [
+        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+      ]
+    }
+  ]
+}

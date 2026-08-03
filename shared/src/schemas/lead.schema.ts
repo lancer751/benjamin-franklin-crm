@@ -134,9 +134,6 @@ const TaskBaseSchema = z.object({
   content: z.string().min(4, "Task content must be at least 4 characters"),
   is_done: z.boolean().default(false),
   due_date: z.coerce.date().optional().nullable(),
-  lead_id: UUIDField,
-  campaign_member_id: UUIDField,
-  created_by: UUIDField,
 });
 
 export const CreateTaskSchema = TaskBaseSchema;

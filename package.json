@@ -11,7 +11,8 @@
     "moodle-enrollment-studio"
   ],
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "turbo watch dev",
+    "dev:crm": "turbo dev --filter=backend --filter=@repo/database --filter=shared --filter=moodle-enrollment-studio",
     "dev:client": "turbo dev --filter=moodle-enrollment-studio",
     "dev:server": "turbo dev --filter=backend",
     "build": "turbo build",

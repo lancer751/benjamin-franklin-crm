@@ -13,6 +13,7 @@
   "scripts": {
     "prisma:generate": "bunx prisma generate",
     "prisma:push": "bunx prisma db push",
+    "check-types": "tsc --noEmit",
     "prisma:migrate": "bunx prisma migrate dev --name init",
     "prisma:deploy": "bunx prisma migrate deploy",
     "prisma:seed": "bunx prisma db seed",
@@ -20,8 +21,8 @@
     "db:reset": "bunx prisma migrate reset",
     "db:setup": "bunx prisma generate && prisma db push && prisma db seed",
     "db:push": "bunx prisma db push",
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "bunx prisma generate && tsc",
+    "dev": "tsc -w --preserveWatchOutput",
     "format": "bunx prisma format",
     "generate": "bunx prisma generate",
     "lint": "eslint . --max-warnings 0",

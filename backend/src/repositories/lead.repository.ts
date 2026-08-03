@@ -617,12 +617,19 @@ export function leadRepository(prisma: PrismaClient) {
         },
       });
     },
-
-    // ── Tasks ────────────────────────────────────────────────────────────────
-
     async findTasks(memberId: string) {
       return prisma.tasks.findMany({
         where: { campaign_member_id: memberId },
+        select: {
+          author: {
+            select: {
+              first_name: true,
+              last_name: true
+            }
+          },
+          created_at: true,
+          updated_at: true
+        },
         orderBy: { due_date: "asc" },
       });
     },
