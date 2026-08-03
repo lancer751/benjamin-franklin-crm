@@ -1,10 +1,10 @@
-import { AlertTriangle, FolderOpen, PackageOpen, Settings } from "lucide-react";
+import { AlertTriangle, PackageOpen, Settings } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { cn } from "@/core/lib/utils";
 import AcademicDetailsCard from "../form/AcademicDetailsCard";
 import PricingCard from "../form/PricingCard";
 import type { ProductFormValues } from "../../schemas";
+import { CategorySelect } from "../categories/CategorySelect";
 
 interface ProductCommercialSectionProps {
   form: ProductFormValues;
@@ -16,11 +16,8 @@ interface ProductCommercialSectionProps {
     value: string,
   ) => void;
   editions: any[];
-  categories: any[];
   isLoadingEditions: boolean;
-  isLoadingCategories: boolean;
   isEditionsError: boolean;
-  isCategoriesError: boolean;
   selectedEdition: any;
   isEdit: boolean;
   disabled?: boolean;
@@ -32,16 +29,11 @@ const ProductCommercialSection = (props: ProductCommercialSectionProps) => {
 
   return (
     <fieldset disabled={props.disabled} className="m-0 space-y-5 border-0 p-0">
-      {(props.isEditionsError || props.isCategoriesError) && (
+      {props.isEditionsError && (
         <div className="flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <AlertTriangle size={18} className="shrink-0" />
-          No se pudo cargar{" "}
-          {props.isEditionsError && props.isCategoriesError
-            ? "ediciones ni categorías"
-            : props.isEditionsError
-              ? "las ediciones"
-              : "las categorías"}
-          . Conservamos los datos del formulario para que puedas reintentar.
+          No se pudieron cargar las ediciones. Conservamos los datos del formulario para que
+          puedas reintentar.
         </div>
       )}
 
@@ -84,38 +76,12 @@ const ProductCommercialSection = (props: ProductCommercialSectionProps) => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
-              <div>
-                <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
-                  <FolderOpen size={12} className="text-slate-400" />
-                  Categoría
-                </label>
-                <Select
+              <CategorySelect
                   value={form.category_id}
-                  onValueChange={(value) => setFieldValue("category_id", value)}
-                  disabled={props.isLoadingCategories}
-                >
-                  <SelectTrigger
-                    className={cn(
-                      "h-10 rounded-xl border-slate-200 bg-white text-xs shadow-sm",
-                      errors.category_id && "border-destructive ring-1 ring-destructive",
-                    )}
-                  >
-                    <SelectValue
-                      placeholder={props.isLoadingCategories ? "Cargando..." : "Seleccionar categoría"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {props.categories.map((category: any) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.category_id && (
-                  <p className="mt-1 text-[10px] font-medium text-destructive">{errors.category_id}</p>
-                )}
-              </div>
+                  onChange={(categoryId) => setFieldValue("category_id", categoryId)}
+                  error={errors.category_id}
+                  disabled={props.disabled}
+                />
 
               <div>
                 <label className="mb-1.5 block text-[11px] font-semibold text-slate-600">

@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCourseEditions } from "@/features/academic/services/courseService";
-import { getCategories } from "../services/categoryService";
 import { createProduct, updateProduct } from "../services/productService";
 import { getBenefits } from "../services/benefitService";
 import { toast } from "sonner";
@@ -151,12 +150,6 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     enabled: open,
   });
 
-  const { data: categoriesRes, isLoading: isLoadingCategories, isError: isCategoriesError } = useQuery({
-    queryKey: ["categories"],
-    queryFn: getCategories,
-    enabled: open,
-  });
-
   const { data: benefitsRes, isLoading: isLoadingBenefits, isError: isBenefitsError } = useQuery({
     queryKey: ["benefits"],
     queryFn: getBenefits,
@@ -189,15 +182,6 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
   const editions = (editionsRes as any)?.success ? (editionsRes as any).data : [];
   const selectedEdition = editions.find((e: any) => e.id === form.edition_id);
 
-  const categories = useMemo(() => {
-    const res = categoriesRes as any;
-    if (!res) return [];
-    if (Array.isArray(res)) return res;
-    if (res && typeof res === "object" && "data" in res && Array.isArray(res.data)) {
-      return res.data;
-    }
-    return [];
-  }, [categoriesRes]);
   // Dynamic Modality, Name, Image, Certification and FAQs Auto-fill logic
   useEffect(() => {
     if (!selectedEdition) return;
@@ -423,9 +407,6 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     isLoadingEditions,
     isEditionsError,
     editions,
-    categories,
-    isLoadingCategories,
-    isCategoriesError,
     selectedEdition,
     isPending: mutation.isPending,
     isEdit,

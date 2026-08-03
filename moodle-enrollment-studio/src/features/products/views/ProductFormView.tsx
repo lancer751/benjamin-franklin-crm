@@ -51,9 +51,6 @@ const ProductFormView = () => {
     isLoadingEditions,
     isEditionsError,
     editions,
-    categories,
-    isLoadingCategories,
-    isCategoriesError,
     selectedEdition,
     isPending,
     handleLoadDefaultFAQs,
@@ -184,7 +181,7 @@ const ProductFormView = () => {
 
       {permissions.readonly && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-800">Modo de lectura activo. Puedes revisar la completitud, pero tu rol no permite guardar cambios.</div>}
 
-      {activeStep === "commercial" && <ProductCommercialSection form={form} errors={errors} setFieldValue={setFieldValue} setPriceValue={setPriceValue} editions={editions} categories={categories} isLoadingEditions={isLoadingEditions} isLoadingCategories={isLoadingCategories} isEditionsError={isEditionsError} isCategoriesError={isCategoriesError} selectedEdition={selectedEdition} isEdit={isEdit} disabled={permissions.readonly || !permissions.canEditAll} />}
+      {activeStep === "commercial" && <ProductCommercialSection form={form} errors={errors} setFieldValue={setFieldValue} setPriceValue={setPriceValue} editions={editions} isLoadingEditions={isLoadingEditions} isEditionsError={isEditionsError} selectedEdition={selectedEdition} isEdit={isEdit} disabled={permissions.readonly || !permissions.canEditAll} />}
       {activeStep === "marketing" && <ProductMarketingSection form={form} errors={errors} setFieldValue={setFieldValue} availableBenefits={availableBenefits} isLoadingBenefits={isLoadingBenefits} isBenefitsError={isBenefitsError} onToggleBenefit={handleToggleBenefit} pendingFiles={pendingFiles} isUploadingFiles={isUploadingFiles} onLoadDefaultFAQs={handleLoadDefaultFAQs} disabled={permissions.readonly} />}
       {activeStep === "web" && <ProductWebContentSection form={form} errors={errors} setFieldValue={setFieldValue} requirements={[...requirements.sections.commercial, ...requirements.sections.marketing.filter((item) => item.id === "benefit_ids"), ...requirements.sections.web]} disabled={permissions.readonly} />}
       {activeStep === "review" && <ProductReviewSummary form={form} requirements={requirements} />}
