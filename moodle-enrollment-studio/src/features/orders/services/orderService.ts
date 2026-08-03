@@ -4,6 +4,7 @@ import { getProducts } from "@/features/products/services/productService";
 import type {
   ApiSuccess,
   CreateOrderPayload,
+  GetOrdersParams,
   OrderLeadSummary,
   OrderListResponse,
   OrderProduct,
@@ -58,11 +59,37 @@ export function mapOrderApiError(error: unknown): string {
   if (message.includes("Cannot complete order with unpaid balance")) {
     return "No se puede completar la orden porque mantiene un saldo pendiente. Registra o confirma los pagos correspondientes.";
   }
+  if (
+    message.includes(
+      "Estado de tipificación inválido para generar una orden",
+    )
+  ) {
+    return "El prospecto ya no se encuentra en la etapa “Matriculado” para esta campaña. Actualiza la información e inténtalo nuevamente.";
+  }
   return "No se pudo guardar la orden. Revisa los datos e inténtalo nuevamente.";
 }
 
-export const getOrders = async (): Promise<OrderListResponse> => {
-  const response = await api.orders.$get();
+export const getOrders = async ({
+  page = 1,
+  limit = 20,
+  order_status,
+  lead_id,
+  generated_by,
+  creation_order = "desc",
+}: GetOrdersParams = {}): Promise<OrderListResponse> => {
+  const normalizedOrderStatus = order_status?.trim();
+  const normalizedLeadId = lead_id?.trim();
+  const normalizedGeneratedBy = generated_by?.trim();
+  const response = await api.orders.$get({
+    query: {
+      page: String(page),
+      limit: String(limit),
+      creation_order,
+      ...(normalizedOrderStatus ? { order_status: normalizedOrderStatus } : {}),
+      ...(normalizedLeadId ? { lead_id: normalizedLeadId } : {}),
+      ...(normalizedGeneratedBy ? { generated_by: normalizedGeneratedBy } : {}),
+    },
+  });
   return readResponse<OrderListResponse>(response);
 };
 

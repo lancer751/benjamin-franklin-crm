@@ -1,5 +1,16 @@
 export type AttendanceMode = "VIRTUAL" | "PRESENCIAL" | "HEREDADO";
+export type PaymentModality = "FULL" | "INSTALLMENTS";
 export type OrderStatus = "PENDING" | "COMPLETED" | "CANCELLED" | "REFUNDED";
+export type OrderCreationOrder = "asc" | "desc";
+
+export interface GetOrdersParams {
+  page?: number;
+  limit?: number;
+  order_status?: string;
+  lead_id?: string;
+  generated_by?: string;
+  creation_order?: OrderCreationOrder;
+}
 
 export interface OrderPhone {
   number: string;
@@ -26,8 +37,8 @@ export interface OrderLeadSummary {
 export interface OrderProductPrice {
   attendance_mode: AttendanceMode;
   cash_price: string | number;
-  installment_price?: string | number;
-  enrollment_fee?: string | number;
+  installment_price?: string | number | null;
+  enrollment_fee?: string | number | null;
 }
 
 export interface OrderProduct {
@@ -53,6 +64,7 @@ export interface OrderDetailResponse {
   // The current backend does not return this field. Keeping it optional lets
   // the UI enable safe item editing if the API later exposes the source mode.
   attendance_mode?: AttendanceMode;
+  payment_modality?: PaymentModality;
   product: {
     id: string;
     name: string;
@@ -134,6 +146,7 @@ export interface OrderResponse {
 export interface OrderFormItem {
   product_id: string;
   attendance_mode: AttendanceMode | "";
+  payment_modality: PaymentModality | "";
   discount_code: string | null;
 }
 
@@ -147,13 +160,39 @@ export interface OrderFormValues {
 export interface CreateOrderItemPayload {
   product_id: string;
   attendance_mode: AttendanceMode;
-  discount_code: string | null;
+  payment_modality: PaymentModality;
+  discount_code?: string;
 }
 
 export interface CreateOrderPayload {
   lead_id: string;
-  discount?: string;
+  related_campaign: string;
+  generated_by: string;
+  assigned_to: string;
   order_items: CreateOrderItemPayload[];
+}
+
+export interface OrderMatriculatedCampaign {
+  memberId: string;
+  campaignId: string;
+  campaignName: string;
+  platform: string;
+  assignedUserId: string;
+  assignedUserName: string;
+  isPrimary: boolean;
+}
+
+export interface OrderLeadContext {
+  leadId: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  matriculatedCampaigns: OrderMatriculatedCampaign[];
+}
+
+export interface OrderCreationSubmissionContext {
+  campaign: OrderMatriculatedCampaign;
+  generatedBy: string;
 }
 
 export interface UpdateOrderPayload {

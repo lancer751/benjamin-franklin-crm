@@ -60,6 +60,11 @@ const statusOptions = [
   ["REFUNDED", "Reembolsadas"],
 ] as const;
 
+const ORDER_CREATION_OPTIONS = [
+  { label: "Más recientes", value: "desc" },
+  { label: "Más antiguas", value: "asc" },
+] as const;
+
 export default function OrdersView() {
   const controller = useOrdersView();
 
@@ -419,6 +424,19 @@ export default function OrdersView() {
                 ))}
               </select>
             </label>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="shrink-0">Ordenar por</span>
+              <select
+                value={controller.creationOrder}
+                onChange={(event) => controller.setCreationOrder(event.target.value === "asc" ? "asc" : "desc")}
+                className="h-10 min-w-40 rounded-md border bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+              >
+                {ORDER_CREATION_OPTIONS.map(({ label, value }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+              {controller.isRefreshing && <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-label="Actualizando órdenes" />}
+            </label>
           </div>
         </div>
 
@@ -468,6 +486,7 @@ export default function OrdersView() {
         ) : (
           <div className="min-w-0 p-3 sm:p-5">
             <CustomTable
+              key={controller.creationOrder}
               data={controller.filteredOrders}
               columns={columns}
               onRowClick={controller.navigateToDetail}

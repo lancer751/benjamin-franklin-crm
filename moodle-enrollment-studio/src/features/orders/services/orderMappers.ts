@@ -3,17 +3,24 @@ import type {
   CreateOrderItemPayload,
   CreateOrderPayload,
   MappedOrderForm,
+  OrderCreationSubmissionContext,
   OrderFormItem,
   OrderFormValues,
+  PaymentModality,
   OrderProduct,
   OrderResponse,
   UpdateOrderPayload,
 } from "../types";
 
 const attendanceModes: AttendanceMode[] = ["VIRTUAL", "PRESENCIAL", "HEREDADO"];
+const paymentModalities: PaymentModality[] = ["FULL", "INSTALLMENTS"];
 
 function isAttendanceMode(value: unknown): value is AttendanceMode {
   return attendanceModes.includes(value as AttendanceMode);
+}
+
+function isPaymentModality(value: unknown): value is PaymentModality {
+  return paymentModalities.includes(value as PaymentModality);
 }
 
 function normalizeMoney(value: string): string | undefined {
@@ -25,18 +32,27 @@ export function normalizeOrderItem(item: OrderFormItem): CreateOrderItemPayload 
   if (!isAttendanceMode(item.attendance_mode)) {
     throw new Error("La modalidad del producto es obligatoria.");
   }
+  if (!isPaymentModality(item.payment_modality)) {
+    throw new Error("La modalidad de pago es obligatoria.");
+  }
+  const discountCode = item.discount_code?.replace(/\s+/g, "").toUpperCase();
   return {
     product_id: item.product_id,
     attendance_mode: item.attendance_mode,
-    discount_code: item.discount_code?.trim() || null,
+    payment_modality: item.payment_modality,
+    ...(discountCode?.length === 7 ? { discount_code: discountCode } : {}),
   };
 }
 
-export function mapCreateFormToPayload(values: OrderFormValues): CreateOrderPayload {
-  const discount = normalizeMoney(values.discount);
+export function mapCreateFormToPayload(
+  values: OrderFormValues,
+  context: OrderCreationSubmissionContext,
+): CreateOrderPayload {
   return {
     lead_id: values.lead_id,
-    ...(discount !== undefined && { discount }),
+    related_campaign: context.campaign.campaignId,
+    generated_by: context.generatedBy,
+    assigned_to: context.campaign.assignedUserId,
     order_items: values.order_items.map(normalizeOrderItem),
   };
 }
@@ -44,12 +60,17 @@ export function mapCreateFormToPayload(values: OrderFormValues): CreateOrderPayl
 export function mapOrderToFormValues(order: OrderResponse): MappedOrderForm {
   const canEditItems =
     order.orderDetails.length > 0 &&
-    order.orderDetails.every((detail) => isAttendanceMode(detail.attendance_mode));
+    order.orderDetails.every(
+      (detail) =>
+        isAttendanceMode(detail.attendance_mode) &&
+        isPaymentModality(detail.payment_modality),
+    );
 
   const orderItems: OrderFormItem[] = canEditItems
     ? order.orderDetails.map((detail) => ({
         product_id: detail.product_id,
         attendance_mode: detail.attendance_mode as AttendanceMode,
+        payment_modality: detail.payment_modality as PaymentModality,
         discount_code: detail.discount_code,
       }))
     : [];
@@ -64,7 +85,7 @@ export function mapOrderToFormValues(order: OrderResponse): MappedOrderForm {
     canEditItems,
     ...(!canEditItems && {
       limitation:
-        "La API de la orden no devuelve la modalidad de asistencia de sus productos. Para evitar modificar precios con una modalidad inferida, los productos y el descuento se muestran en solo lectura.",
+        "La API de la orden no devuelve las modalidades de asistencia y pago de sus productos. Para evitar modificar precios con datos inferidos, los productos y el descuento se muestran en solo lectura.",
     }),
   };
 }
@@ -74,6 +95,7 @@ function comparableItems(items: OrderFormItem[]): string {
     items.map((item) => ({
       product_id: item.product_id,
       attendance_mode: item.attendance_mode,
+      payment_modality: item.payment_modality,
       discount_code: item.discount_code?.trim() || null,
     })),
   );
@@ -135,7 +157,11 @@ export function calculateOrderPreview(
       item.product_id,
       item.attendance_mode,
     );
-    return sum + Number(price?.cash_price ?? 0);
+    const amount =
+      item.payment_modality === "INSTALLMENTS"
+        ? price?.installment_price
+        : price?.cash_price;
+    return sum + Number(amount ?? 0);
   }, 0);
   const discount = Math.max(0, Number(values.discount || 0) || 0);
   return {

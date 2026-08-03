@@ -12,7 +12,10 @@ import {
   getOrderProducts,
   mapOrderApiError,
 } from "../services/orderService";
-import type { OrderFormValues } from "../types";
+import type {
+  OrderCreationSubmissionContext,
+  OrderFormValues,
+} from "../types";
 
 export default function CreateOrderView() {
   const navigate = useNavigate();
@@ -22,8 +25,12 @@ export default function CreateOrderView() {
   });
   const mutation = useCreateOrder();
 
-  const handleSubmit = (values: OrderFormValues) => {
-    mutation.mutate(mapCreateFormToPayload(values));
+  const handleSubmit = (
+    values: OrderFormValues,
+    creationContext?: OrderCreationSubmissionContext,
+  ) => {
+    if (!creationContext) return;
+    mutation.mutate(mapCreateFormToPayload(values, creationContext));
   };
 
   return (

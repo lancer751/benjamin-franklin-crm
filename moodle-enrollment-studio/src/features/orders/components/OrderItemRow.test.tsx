@@ -24,7 +24,12 @@ function Harness() {
       lead_id: "",
       discount: "0.00",
       order_items: [
-        { product_id: "", attendance_mode: "", discount_code: null },
+        {
+          product_id: "",
+          attendance_mode: "",
+          payment_modality: "FULL",
+          discount_code: null,
+        },
       ],
     },
   });

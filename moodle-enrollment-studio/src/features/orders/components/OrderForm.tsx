@@ -1,11 +1,15 @@
+import { useEffect, useState } from "react";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
-import { Controller } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 import { Alert, AlertDescription } from "@/core/components/ui/alert";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
 import { Label } from "@/core/components/ui/label";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useOrderLeadContext } from "../hooks/useOrderLeadContext";
 import { useOrderForm } from "../hooks/useOrderForm";
 import type {
+  OrderCreationSubmissionContext,
   OrderFormValues,
   OrderProduct,
   OrderResponse,
@@ -24,7 +28,10 @@ interface OrderFormProps {
   limitation?: string;
   isSubmitting: boolean;
   submitError?: string;
-  onSubmit: (values: OrderFormValues) => void | Promise<void>;
+  onSubmit: (
+    values: OrderFormValues,
+    creationContext?: OrderCreationSubmissionContext,
+  ) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -52,10 +59,55 @@ export function OrderForm({
     handleSubmit,
     formState: { errors },
   } = controller.form;
+  const authUserId = useAuthStore((state) => state.user?.id ?? "");
+  const leadId = useWatch({ control, name: "lead_id" });
+  const leadContextQuery = useOrderLeadContext(
+    mode === "create" ? leadId : "",
+  );
+  const campaigns = leadContextQuery.data?.matriculatedCampaigns ?? [];
+  const [selectedCampaignId, setSelectedCampaignId] = useState("");
+
+  useEffect(() => {
+    setSelectedCampaignId("");
+  }, [leadId]);
+
+  useEffect(() => {
+    const campaign = campaigns[0];
+    if (campaigns.length === 1 && campaign) {
+      setSelectedCampaignId(campaign.memberId || campaign.campaignId);
+    } else {
+      setSelectedCampaignId("");
+    }
+  }, [campaigns]);
+
+  const selectedCampaign = campaigns.find(
+    (campaign) =>
+      (campaign.memberId || campaign.campaignId) === selectedCampaignId,
+  );
+  const creationReady = Boolean(
+    mode === "create" &&
+      leadContextQuery.data &&
+      !leadContextQuery.isFetching &&
+      selectedCampaign?.assignedUserId &&
+      authUserId,
+  );
+
+  const submitForm = (values: OrderFormValues) => {
+    if (mode === "create") {
+      if (!selectedCampaign || !selectedCampaign.assignedUserId || !authUserId) {
+        return;
+      }
+      return onSubmit(values, {
+        campaign: selectedCampaign,
+        generatedBy: authUserId,
+      });
+    }
+    return onSubmit(values);
+  };
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit(submitForm)}
       className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
     >
       <div className="space-y-6">
@@ -63,9 +115,18 @@ export function OrderForm({
           mode={mode}
           control={control}
           orderLead={order?.lead}
+          leadContext={leadContextQuery.data}
+          isLoadingLeadContext={
+            mode === "create" && Boolean(leadId) && leadContextQuery.isFetching
+          }
+          leadContextError={mode === "create" && leadContextQuery.isError}
+          selectedCampaignId={selectedCampaignId}
+          onSelectedCampaignIdChange={setSelectedCampaignId}
+          onRetryLeadContext={() => void leadContextQuery.refetch()}
         />
 
         <OrderItemsSection
+          title={mode === "create" ? "2. Productos de la orden" : "Productos"}
           control={control}
           setValue={setValue}
           fields={controller.fields}
@@ -82,41 +143,43 @@ export function OrderForm({
           onRemove={controller.removeItem}
         />
 
-        <section className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm">
-          <div>
-            <h2 className="text-lg font-semibold">Descuento general</h2>
-            <p className="text-sm text-muted-foreground">
-              Se aplica sobre el subtotal completo de la orden.
-            </p>
-          </div>
-          <Controller
-            control={control}
-            name="discount"
-            render={({ field, fieldState }) => (
-              <div className="max-w-sm space-y-2">
-                <Label htmlFor="order-discount">Monto en soles</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    S/
-                  </span>
-                  <Input
-                    {...field}
-                    id="order-discount"
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    className="pl-9"
-                    disabled={!itemsEditable}
-                  />
+        {mode === "edit" && (
+          <section className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm">
+            <div>
+              <h2 className="text-lg font-semibold">Descuento general</h2>
+              <p className="text-sm text-muted-foreground">
+                Se aplica sobre el subtotal completo de la orden.
+              </p>
+            </div>
+            <Controller
+              control={control}
+              name="discount"
+              render={({ field, fieldState }) => (
+                <div className="max-w-sm space-y-2">
+                  <Label htmlFor="order-discount">Monto en soles</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                      S/
+                    </span>
+                    <Input
+                      {...field}
+                      id="order-discount"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      className="pl-9"
+                      disabled={!itemsEditable}
+                    />
+                  </div>
+                  {fieldState.error && (
+                    <p className="text-sm font-medium text-destructive">
+                      {fieldState.error.message}
+                    </p>
+                  )}
                 </div>
-                {fieldState.error && (
-                  <p className="text-sm font-medium text-destructive">
-                    {fieldState.error.message}
-                  </p>
-                )}
-              </div>
-            )}
-          />
-        </section>
+              )}
+            />
+          </section>
+        )}
 
         {mode === "edit" && <OrderStatusSection control={control} />}
 
@@ -138,7 +201,11 @@ export function OrderForm({
           </Button>
           <Button
             type="submit"
-            disabled={!controller.canSubmit || isSubmitting}
+            disabled={
+              !controller.canSubmit ||
+              isSubmitting ||
+              (mode === "create" && !creationReady)
+            }
           >
             {isSubmitting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

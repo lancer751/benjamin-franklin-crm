@@ -20,6 +20,7 @@ function Harness() {
         items.append({
           product_id: "",
           attendance_mode: "",
+          payment_modality: "FULL",
           discount_code: null,
         })
       }

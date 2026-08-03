@@ -15,6 +15,7 @@ import { OrderItemRow } from "./OrderItemRow";
 import { formatPEN } from "./orderDisplay";
 
 interface OrderItemsSectionProps {
+  title?: string;
   control: Control<OrderFormValues>;
   setValue: UseFormSetValue<OrderFormValues>;
   fields: FieldArrayWithId<OrderFormValues, "order_items", "id">[];
@@ -28,6 +29,7 @@ interface OrderItemsSectionProps {
 }
 
 export function OrderItemsSection({
+  title = "Productos",
   control,
   setValue,
   fields,
@@ -43,7 +45,7 @@ export function OrderItemsSection({
     <section className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Productos</h2>
+          <h2 className="text-lg font-semibold">{title}</h2>
           <p className="text-sm text-muted-foreground">
             Cada modalidad se ofrece únicamente cuando tiene un precio configurado.
           </p>

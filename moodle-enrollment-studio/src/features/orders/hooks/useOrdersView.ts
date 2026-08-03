@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -14,7 +14,7 @@ import {
   getOrders,
   updateOrder,
 } from "../services/orderService";
-import type { OrderListItem } from "../types";
+import type { OrderCreationOrder, OrderListItem } from "../types";
 import {
   getOrderListPermissions,
   type OrderListPermissions,
@@ -34,12 +34,15 @@ export interface OrdersViewController {
   permissions: OrderListPermissions;
   search: string;
   statusFilter: OrderStatusFilter;
+  creationOrder: OrderCreationOrder;
   pendingAction: PendingOrderAction | null;
   isLoading: boolean;
+  isRefreshing: boolean;
   isError: boolean;
   isMutating: boolean;
   setSearch: (value: string) => void;
   setStatusFilter: (value: OrderStatusFilter) => void;
+  setCreationOrder: (value: OrderCreationOrder) => void;
   setPendingAction: (value: PendingOrderAction | null) => void;
   retry: () => void;
   navigateToNew: () => void;
@@ -56,15 +59,22 @@ export function useOrdersView(): OrdersViewController {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<OrderStatusFilter>("ALL");
+  const [creationOrder, setCreationOrder] =
+    useState<OrderCreationOrder>("desc");
   const [pendingAction, setPendingAction] =
     useState<PendingOrderAction | null>(null);
 
   const ordersQuery = useQuery({
-    queryKey: ["orders", "list-view"],
+    queryKey: ["orders", "list-view", { page: 1, limit: 20, creationOrder }],
     queryFn: async () => {
-      const response = await getOrders();
+      const response = await getOrders({
+        page: 1,
+        limit: 20,
+        creation_order: creationOrder,
+      });
       return response.data.map(mapOrderResponseToListItem);
     },
+    placeholderData: keepPreviousData,
   });
 
   const orders = ordersQuery.data ?? EMPTY_ORDERS;
@@ -119,12 +129,15 @@ export function useOrdersView(): OrdersViewController {
     permissions,
     search,
     statusFilter,
+    creationOrder,
     pendingAction,
     isLoading: ordersQuery.isLoading,
+    isRefreshing: ordersQuery.isFetching && !ordersQuery.isLoading,
     isError: ordersQuery.isError,
     isMutating: deleteMutation.isPending || cancelMutation.isPending,
     setSearch,
     setStatusFilter,
+    setCreationOrder,
     setPendingAction,
     retry: () => {
       void ordersQuery.refetch();

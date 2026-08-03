@@ -19,6 +19,7 @@ const validValues = {
     {
       product_id: product.id,
       attendance_mode: "VIRTUAL" as const,
+      payment_modality: "FULL" as const,
       discount_code: null,
     },
   ],

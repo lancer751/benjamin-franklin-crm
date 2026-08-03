@@ -58,6 +58,7 @@ export function useOrderForm({
       fieldArray.append({
         product_id: "",
         attendance_mode: "",
+        payment_modality: "FULL",
         discount_code: null,
       }),
     removeItem: fieldArray.remove,

@@ -10,7 +10,16 @@ const orderItemSchema = z.object({
   attendance_mode: z.enum(["VIRTUAL", "PRESENCIAL", "HEREDADO"]).or(
     z.literal("").refine(() => false, "Selecciona una modalidad"),
   ),
-  discount_code: z.string().nullable(),
+  payment_modality: z.enum(["FULL", "INSTALLMENTS"]).or(
+    z.literal("").refine(() => false, "Selecciona una modalidad de pago"),
+  ),
+  discount_code: z
+    .string()
+    .nullable()
+    .refine(
+      (value) => !value || value.length === 7,
+      "El código debe tener exactamente 7 caracteres.",
+    ),
 });
 
 export function buildOrderFormSchema(
@@ -88,6 +97,7 @@ export const emptyOrderFormValues: OrderFormValues = {
     {
       product_id: "",
       attendance_mode: "",
+      payment_modality: "FULL",
       discount_code: null,
     },
   ],
