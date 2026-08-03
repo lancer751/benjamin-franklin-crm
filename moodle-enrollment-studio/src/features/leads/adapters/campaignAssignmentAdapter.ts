@@ -1,8 +1,10 @@
-export interface CampaignSellerOption {
+export interface AdvisorFilterOption {
   userId: string;
   sellerProfileId: string;
   name: string;
 }
+
+export type CampaignSellerOption = AdvisorFilterOption;
 
 export interface CampaignAssignmentOption {
   id: string;
@@ -102,6 +104,18 @@ export const adaptCampaignAssignments = (
   return recordArray(campaignsResponse, "campaings")
     .map((campaign) => adaptCampaign(campaign, sellersByProfileId))
     .filter((campaign): campaign is CampaignAssignmentOption => campaign !== null);
+};
+
+export const adaptAdvisorFilterOptions = (
+  campaignsResponse: unknown,
+  sellersResponse: unknown,
+): AdvisorFilterOption[] => {
+  const advisors = adaptCampaignAssignments(campaignsResponse, sellersResponse)
+    .flatMap((campaign) => campaign.sellers);
+
+  return Array.from(
+    new Map(advisors.map((advisor) => [advisor.userId, advisor])).values(),
+  ).sort((first, second) => first.name.localeCompare(second.name, "es"));
 };
 
 export const adaptSellerCampaignAssignments = (

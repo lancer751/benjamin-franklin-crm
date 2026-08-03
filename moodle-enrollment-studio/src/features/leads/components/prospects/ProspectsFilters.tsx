@@ -50,7 +50,7 @@ function getCampaignPlaceholder(controller: ProspectsController): string {
 
 export function ProspectsFilters({ controller }: ProspectsFiltersProps) {
   const selectedCampaign = controller.campaigns.find((campaign) => campaign.id === controller.campaignId);
-  const selectedSeller = controller.sellers.find((seller) => seller.id === controller.advisorId);
+  const selectedSeller = controller.sellers.find((seller) => seller.userId === controller.advisorId);
   const selectedLeadStatus = LEAD_STATUS_OPTIONS.find((status) => status.value === controller.leadStatus);
   const campaignPlaceholder = getCampaignPlaceholder(controller);
 
@@ -154,7 +154,7 @@ export function ProspectsFilters({ controller }: ProspectsFiltersProps) {
             >
               <option value="ALL">Todos los asesores</option>
               {controller.sellers.map((seller) => (
-                <option key={seller.id} value={seller.id}>{seller.name}</option>
+                <option key={seller.userId} value={seller.userId}>{seller.name}</option>
               ))}
             </select>
           </div>

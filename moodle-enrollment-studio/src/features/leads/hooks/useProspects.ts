@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getCampaigns } from "@/features/campaigns/services/campaignService";
-import { getSellerCampaigns } from "@/features/users/services/userService";
+import { getSellerCampaigns, getSellers } from "@/features/users/services/userService";
 import { getAllLeads, type LeadListQuery } from "../services/leadService";
 import type { CampaignMemberStatus } from "@/core/constants/campaignMemberStatus";
 import {
@@ -10,9 +10,9 @@ import {
   adaptProspectRows,
   normalizeAssignedCampaigns,
   normalizeCampaignOptions,
-  normalizeSellerOptionsFromCampaigns,
   unpackLeadPage,
 } from "../adapters/leadAdapter";
+import { adaptAdvisorFilterOptions } from "../adapters/campaignAssignmentAdapter";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -72,6 +72,12 @@ export function useProspects() {
     enabled: Boolean(user) && !isSalesRep,
   });
 
+  const sellersQuery = useQuery({
+    queryKey: ["users", "sellers", "prospects-selector"],
+    queryFn: getSellers,
+    enabled: Boolean(user) && canViewSeller,
+  });
+
   const leadsQuery = useQuery({
     queryKey: [
       "leads",
@@ -94,8 +100,13 @@ export function useProspects() {
   const pageData = useMemo(() => unpackLeadPage(leadsQuery.data), [leadsQuery.data]);
   const leads = useMemo(() => adaptLeads(pageData.leads), [pageData.leads]);
   const rows = useMemo(
-    () => adaptProspectRows(leads, campaignId === "ALL" ? undefined : campaignId),
-    [campaignId, leads],
+    () => adaptProspectRows(
+      leads,
+      campaignId === "ALL" ? undefined : campaignId,
+      assignedTo || undefined,
+      memberStatus === "ALL" ? undefined : memberStatus,
+    ),
+    [assignedTo, campaignId, leads, memberStatus],
   );
   const campaigns = useMemo(
     () => isSalesRep
@@ -104,8 +115,10 @@ export function useProspects() {
     [allowedCampaignsQuery.data, isSalesRep, sellerCampaignsQuery.data],
   );
   const sellers = useMemo(
-    () => canViewSeller ? normalizeSellerOptionsFromCampaigns(allowedCampaignsQuery.data) : [],
-    [allowedCampaignsQuery.data, canViewSeller],
+    () => canViewSeller
+      ? adaptAdvisorFilterOptions(allowedCampaignsQuery.data, sellersQuery.data)
+      : [],
+    [allowedCampaignsQuery.data, canViewSeller, sellersQuery.data],
   );
   const totalPages = Math.max(1, Math.ceil(pageData.total / Math.max(1, pageData.limit)));
   const hasActiveFilters = Boolean(

@@ -21,6 +21,11 @@ export interface NormalizedCampaignMember {
   is_primary: boolean;
   campaign: NormalizedCampaign;
   campaing: NormalizedCampaign; // compatibility fallback
+  assignedUser: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
   seller?: {
     id: string;
     user?: {
@@ -32,11 +37,6 @@ export interface NormalizedCampaignMember {
 }
 
 export interface NormalizedAssignedCampaign {
-  id: string;
-  name: string;
-}
-
-export interface ProspectSellerOption {
   id: string;
   name: string;
 }
@@ -109,46 +109,48 @@ export const normalizeCampaignOptions = (serverRes: any): NormalizedAssignedCamp
   return Array.from(campaignsById.values());
 };
 
-export const normalizeSellerOptionsFromCampaigns = (serverRes: any): ProspectSellerOption[] => {
-  const campaigns = serverRes?.data?.campaings
-    || serverRes?.campaings
-    || serverRes?.data?.data?.campaings
-    || [];
-  const sellersById = new Map<string, ProspectSellerOption>();
-
-  if (!Array.isArray(campaigns)) return [];
-
-  campaigns.forEach((campaign: any) => {
-    const assignments = Array.isArray(campaign?.sellersOnCampaign)
-      ? campaign.sellersOnCampaign
-      : [];
-    assignments.forEach((assignment: any) => {
-      const id = assignment?.seller_id || assignment?.seller?.id;
-      const user = assignment?.seller?.user;
-      const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim();
-      if (id && name) sellersById.set(id, { id, name });
-    });
-  });
-
-  return Array.from(sellersById.values()).sort((a, b) => a.name.localeCompare(b.name, "es"));
-};
-
 export const resolvePresentationMember = (
   lead: NormalizedLead,
   campaignId?: string,
+  assignedUserId?: string,
+  memberStatus?: string,
 ): NormalizedCampaignMember | undefined => {
   const members = lead.campaignsEngaging || [];
-  if (campaignId) {
-    return members.find((member) => member.campaign_id === campaignId || member.campaing_id === campaignId);
+  const matchesActiveCommercialFilters = (member: NormalizedCampaignMember) =>
+    (!campaignId || member.campaign_id === campaignId || member.campaing_id === campaignId)
+    && (!assignedUserId
+      || member.assignedUser?.id === assignedUserId
+      || member.assigned_to === assignedUserId)
+    && (!memberStatus || member.status === memberStatus);
+
+  if (campaignId || assignedUserId || memberStatus) {
+    const filteredMember = members.find(matchesActiveCommercialFilters);
+    if (filteredMember) return filteredMember;
   }
-  return members.find((member) => member.is_primary) || members[0];
+  if (campaignId) {
+    const campaignMember = members.find(
+      (member) => member.campaign_id === campaignId || member.campaing_id === campaignId,
+    );
+    if (campaignMember) return campaignMember;
+  } else {
+    const primaryMember = members.find((member) => member.is_primary);
+    if (primaryMember) return primaryMember;
+  }
+  return members[0];
 };
 
 export const adaptProspectRows = (
   leads: NormalizedLead[],
   activeCampaignId?: string,
+  activeAssignedUserId?: string,
+  activeMemberStatus?: string,
 ): ProspectPresentationRow[] => leads.map((lead) => {
-  const member = resolvePresentationMember(lead, activeCampaignId);
+  const member = resolvePresentationMember(
+    lead,
+    activeCampaignId,
+    activeAssignedUserId,
+    activeMemberStatus,
+  );
   const phone = lead.phones.find((item) => item.isPrincipal) || lead.phones[0];
   const initials = [lead.first_name, lead.last_name]
     .filter(Boolean)
@@ -160,7 +162,14 @@ export const adaptProspectRows = (
       .filter((item) => item.id !== member?.id)
       .map((item) => item.campaign.name)
       .filter(Boolean);
-  const sellerUser = member?.seller?.user;
+  const assignedUser = member?.assignedUser;
+  const advisorName = assignedUser
+    ? [assignedUser.first_name, assignedUser.last_name]
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ") || "Asesor sin nombre"
+    : "Sin asignar";
 
   return {
     id: lead.id,
@@ -175,7 +184,7 @@ export const adaptProspectRows = (
     additionalCampaignCount: additionalCampaignNames.length,
     additionalCampaignNames,
     memberStatus: member?.status || "",
-    sellerName: [sellerUser?.first_name, sellerUser?.last_name].filter(Boolean).join(" ") || "Sin asignar",
+    sellerName: advisorName,
   };
 });
 
@@ -271,6 +280,7 @@ export const adaptCampaignMembers = (rawMembers: any[]): NormalizedLead[] => {
       is_primary: Boolean(member.is_primary),
       campaign,
       campaing: campaign,
+      assignedUser: member.assignedUser ?? null,
       seller: member.seller
     };
 
@@ -336,6 +346,7 @@ export const adaptLeads = (rawLeads: any[]): NormalizedLead[] => {
         is_primary: Boolean(member.is_primary),
         campaign,
         campaing: campaign,
+        assignedUser: member.assignedUser ?? null,
         seller: member.seller
       };
     });
