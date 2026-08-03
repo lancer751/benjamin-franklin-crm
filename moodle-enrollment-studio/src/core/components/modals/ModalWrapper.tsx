@@ -35,7 +35,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
       <DialogContent 
         className={cn(
           "w-[95vw] overflow-hidden p-0 flex flex-col max-h-[90vh]", 
-          `sm:${maxWidth}`, 
+          maxWidth, 
           className
         )}
       >

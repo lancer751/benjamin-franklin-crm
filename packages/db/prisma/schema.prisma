@@ -84,7 +84,7 @@ enum CampaignMemberStatus {
   NUEVO
   CONTACTADO
   NO_CONTACTADO
-  NEGOCIACION
+  NEGOCIACION 
   SEGUIMIENTO
   EN_ESPERA
   MATRICULADO
@@ -578,7 +578,6 @@ model Product {
   updated_at              DateTime             @updatedAt
   brochure_url            String?
   pricing_status          ProductPricingStatus @default(VALID)
-  installment_price Decimal?       @db.Decimal(10, 2) // null if the edition is ASINCRONICO
   enrollment_fee    Decimal?       @db.Decimal(10, 2) // amount to pay if the lead wants to enroll to an edition and pay later the full price, however if the edition is of type ASINCRONICO it has to be null
 
   orders_details        OrderDetail[]

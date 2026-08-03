@@ -17,9 +17,15 @@ export const login = async (data: LoginReq): Promise<LoginRes> => {
   return await res.json();
 };
 
-export const getMe = async (): Promise<MeRes> => {
-  const res = await api.auth.me.$get();
-  return await res.json();
+export const getMe = async (): Promise<MeRes | null> => {
+  try {
+    const res = await api.auth.me.$get();
+
+    if (!res.ok) return null;
+    return await res.json() as MeRes;
+  } catch {
+    return null;
+  }
 };
 
 export const logout = async () => {

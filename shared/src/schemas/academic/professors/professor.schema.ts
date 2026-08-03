@@ -7,7 +7,7 @@ export const BaseProfessorSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   lastname: z.string().min(1, "Lastname is required").max(255),
   linkedin_account_url: z.url().optional(),
-  profession: z.url().optional(),
+  profession: z.string().optional(),
   curriculum_vitae: z.url().optional(),
   email: z.email("Invalid email"),
   corporate_email: z.email("Invalid corporate email"),

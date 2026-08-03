@@ -14,6 +14,31 @@ import type {
 } from "shared";
 
 export function leadRepository(prisma: PrismaClient) {
+  const resolveSellerProfileByUserId = async (userId: string) => {
+    const seller = await prisma.sellerProfile.findUnique({
+      where: {
+        user_id: userId,
+      },
+      select: {
+        id: true,
+        user_id: true,
+        user: {
+          select: {
+            is_active: true,
+          },
+        },
+      },
+    });
+
+    if (!seller) {
+      throw {
+        code: "NOT_FOUND",
+        message: "Seller profile not found for the selected user",
+      };
+    }
+
+    return seller;
+  };
   return {
     //  Leads
     async findMany({ page, limit, search, status, assigned_to, tipification_status }: LeadQuery) {
@@ -399,67 +424,91 @@ export function leadRepository(prisma: PrismaClient) {
     },
 
     async createMember(data: CreateCampaignMemberInput) {
-      // Verify lead and campaign exist
-      const [lead, campaign, seller] = await Promise.all([
-        prisma.lead.findUnique({
-          where: { id: data.lead_id },
-          select: { id: true },
-        }),
-        prisma.campaing.findUnique({
-          where: { id: data.campaing_id },
-          select: { id: true, status: true },
-        }),
-        prisma.sellerProfile.findUnique({
-          where: { id: data.assigned_to },
-          select: { id: true },
-        }),
-      ]);
+  const [lead, campaign, seller] = await Promise.all([
+    prisma.lead.findUnique({
+      where: { id: data.lead_id },
+      select: { id: true },
+    }),
 
-      if (!lead) throw { code: "NOT_FOUND", message: "Lead not found" };
-      if (!campaign) throw { code: "NOT_FOUND", message: "Campaign not found" };
-      if (campaign.status !== "ACTIVE")
-        throw {
-          code: "INVALID",
-          message: "Can only add leads to ACTIVE campaigns",
-        };
-      if (!seller) throw { code: "NOT_FOUND", message: "Seller not found" };
+    prisma.campaing.findUnique({
+      where: { id: data.campaing_id },
+      select: { id: true, status: true },
+    }),
 
-      // Check seller is assigned to this campaign
-      const campaignSeller = await prisma.campaignSeller.findUnique({
-        where: {
-          campaign_id_seller_id: {
-            campaign_id: data.campaing_id,
-            seller_id: data.assigned_to,
-          },
-        },
-      });
-      if (!campaignSeller)
-        throw {
-          code: "INVALID",
-          message: "Seller is not assigned to this campaign",
-        };
+    resolveSellerProfileByUserId(data.assigned_to),
+  ]);
 
-      return prisma.campaignMember.create({
-        data: {
-          lead_id: data.lead_id,
-          campaing_id: data.campaing_id,
-          assigned_to: data.assigned_to,
-          source: data.source,
-          is_primary: data.is_primary,
-        },
-        include: {
-          lead: { include: { phones: true } },
-          assignedUser: {
-            select: {
-              id: true,
+  if (!lead) {
+    throw {
+      code: "NOT_FOUND",
+      message: "Lead not found",
+    };
+  }
 
-              first_name: true,
-              last_name: true,
-            },
-          },
-        },
-      });
+  if (!campaign) {
+    throw {
+      code: "NOT_FOUND",
+      message: "Campaign not found",
+    };
+  }
+
+  if (campaign.status !== "ACTIVE") {
+    throw {
+      code: "INVALID",
+      message: "Can only add leads to ACTIVE campaigns",
+    };
+  }
+
+  if (!seller.user.is_active) {
+    throw {
+      code: "INVALID",
+      message: "Cannot assign a lead to an inactive seller",
+    };
+  }
+
+  const campaignSeller = await prisma.campaignSeller.findUnique({
+    where: {
+      campaign_id_seller_id: {
+        campaign_id: data.campaing_id,
+        seller_id: seller.id,
+      },
     },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!campaignSeller) {
+    throw {
+      code: "INVALID",
+      message: "Seller is not assigned to this campaign",
+    };
+  }
+
+  return prisma.campaignMember.create({
+    data: {
+      lead_id: data.lead_id,
+      campaing_id: data.campaing_id,
+      assigned_to: data.assigned_to,
+      source: data.source,
+      is_primary: data.is_primary,
+    },
+    include: {
+      lead: {
+        include: {
+          phones: true,
+        },
+      },
+      assignedUser: {
+        select: {
+          id: true,
+          first_name: true,
+          last_name: true,
+        },
+      },
+    },
+  });
+},
 
     async updateMemberStatus(
       memberId: string,
@@ -471,112 +520,173 @@ export function leadRepository(prisma: PrismaClient) {
       });
     },
     async reassignMembersBeforeRemove({
-      member_ids,
+  member_ids,
+  assigned_to,
+}: ReassignMultipleCampaignMembersInput) {
+  const [members, seller] = await Promise.all([
+    prisma.campaignMember.findMany({
+      where: {
+        id: {
+          in: member_ids,
+        },
+      },
+      select: {
+        id: true,
+        campaing_id: true,
+      },
+    }),
+
+    resolveSellerProfileByUserId(assigned_to),
+  ]);
+
+  if (members.length !== member_ids.length) {
+    const foundIds = new Set(members.map((member) => member.id));
+    const missingIds = member_ids.filter((id) => !foundIds.has(id));
+
+    throw {
+      code: "NOT_FOUND",
+      message: `Campaign member IDs not found: ${missingIds.join(", ")}`,
+    };
+  }
+
+  if (!seller.user.is_active) {
+    throw {
+      code: "INVALID",
+      message: "Cannot reassign leads to an inactive seller",
+    };
+  }
+
+  const distinctCampaignIds = [
+    ...new Set(members.map((member) => member.campaing_id)),
+  ];
+
+  const campaignSellerLinks = await prisma.campaignSeller.findMany({
+    where: {
+      seller_id: seller.id,
+      campaign_id: {
+        in: distinctCampaignIds,
+      },
+    },
+    select: {
+      campaign_id: true,
+    },
+  });
+
+  if (campaignSellerLinks.length !== distinctCampaignIds.length) {
+    const assignedCampaignIds = new Set(
+      campaignSellerLinks.map((link) => link.campaign_id),
+    );
+
+    const unassignedCampaignIds = distinctCampaignIds.filter(
+      (campaignId) => !assignedCampaignIds.has(campaignId),
+    );
+
+    throw {
+      code: "INVALID",
+      message: `Seller is not assigned to campaign(s): ${unassignedCampaignIds.join(", ")}`,
+    };
+  }
+
+  await prisma.campaignMember.updateMany({
+    where: {
+      id: {
+        in: member_ids,
+      },
+    },
+    data: {
       assigned_to,
-    }: ReassignMultipleCampaignMembersInput) {
-      // 1. Fetch all members being reassigned, keep only what's needed
-      const members = await prisma.campaignMember.findMany({
-        where: { id: { in: member_ids } },
-        select: { id: true, campaing_id: true },
-      });
+    },
+  });
 
-      if (members.length !== member_ids.length) {
-        const foundIds = new Set(members.map((m) => m.id));
-        const missing = member_ids.filter((id) => !foundIds.has(id));
-        throw {
-          code: "NOT_FOUND",
-          message: `Campaign member IDs not found: ${missing.join(", ")}`,
-        };
-      }
-
-      // 2. Verify the target seller exists and is active
-      const seller = await prisma.sellerProfile.findUnique({
-        where: { id: assigned_to },
-        select: { id: true, user: { select: { is_active: true } } },
-      });
-      if (!seller) throw { code: "NOT_FOUND", message: "Seller not found" };
-      if (!seller.user.is_active)
-        throw {
-          code: "INVALID",
-          message: "Cannot reassign leads to an inactive seller",
-        };
-
-      // 3. Verify seller is assigned to every distinct campaign in the selection
-      const distinctCampaignIds = [
-        ...new Set(members.map((m) => m.campaing_id)),
-      ];
-
-      const campaignSellerLinks = await prisma.campaignSeller.findMany({
-        where: {
-          seller_id: assigned_to,
-          campaign_id: { in: distinctCampaignIds },
-        },
-        select: { campaign_id: true },
-      });
-
-      if (campaignSellerLinks.length !== distinctCampaignIds.length) {
-        const linkedIds = new Set(
-          campaignSellerLinks.map((l) => l.campaign_id),
-        );
-        const unlinked = distinctCampaignIds.filter((id) => !linkedIds.has(id));
-        throw {
-          code: "INVALID",
-          message: `Seller is not assigned to campaign(s): ${unlinked.join(", ")}`,
-        };
-      }
-
-      // 4. Perform the bulk reassignment
-      await prisma.campaignMember.updateMany({
-        where: { id: { in: member_ids } },
-        data: { assigned_to },
-      });
-
-      return prisma.campaignMember.findMany({
-        where: { id: { in: member_ids } },
+  return prisma.campaignMember.findMany({
+    where: {
+      id: {
+        in: member_ids,
+      },
+    },
+    include: {
+      lead: {
         include: {
-          lead: { include: { phones: true } },
-          assignedUser: {
-            select: {
-              id: true,
-              first_name: true,
-              last_name: true,
-            },
-          },
+          phones: true,
         },
-      });
+      },
+      assignedUser: {
+        select: {
+          id: true,
+          first_name: true,
+          last_name: true,
+        },
+      },
     },
+  });
+},
     async reassignMember(
-      memberId: string,
-      { assigned_to }: ReassignCampaignMemberInput,
-    ) {
-      // Find the member to get the campaign_id for validation
-      const member = await prisma.campaignMember.findUnique({
-        where: { id: memberId },
-        select: { campaing_id: true },
-      });
-      if (!member)
-        throw { code: "NOT_FOUND", message: "Campaign member not found" };
+  memberId: string,
+  { assigned_to }: ReassignCampaignMemberInput,
+) {
+  const [member, seller] = await Promise.all([
+    prisma.campaignMember.findUnique({
+      where: { id: memberId },
+      select: {
+        id: true,
+        campaing_id: true,
+      },
+    }),
 
-      // Verify new seller is in the campaign
-      const campaignSeller = await prisma.campaignSeller.findUnique({
-        where: {
-          campaign_id_seller_id: {
-            campaign_id: member.campaing_id,
-            seller_id: assigned_to,
-          },
-        },
-      });
-      if (!campaignSeller)
-        throw {
-          code: "INVALID",
-          message: "Target seller is not assigned to this campaign",
-        };
+    resolveSellerProfileByUserId(assigned_to),
+  ]);
 
-      return prisma.campaignMember.update({
-        where: { id: memberId },
-        data: { assigned_to },
-      });
+  if (!member) {
+    throw {
+      code: "NOT_FOUND",
+      message: "Campaign member not found",
+    };
+  }
+
+  if (!seller.user.is_active) {
+    throw {
+      code: "INVALID",
+      message: "Cannot reassign a lead to an inactive seller",
+    };
+  }
+
+  const campaignSeller = await prisma.campaignSeller.findUnique({
+    where: {
+      campaign_id_seller_id: {
+        campaign_id: member.campaing_id,
+        seller_id: seller.id,
+      },
     },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!campaignSeller) {
+    throw {
+      code: "INVALID",
+      message: "Target seller is not assigned to this campaign",
+    };
+  }
+
+  return prisma.campaignMember.update({
+    where: {
+      id: memberId,
+    },
+    data: {
+      assigned_to,
+    },
+    include: {
+      assignedUser: {
+        select: {
+          id: true,
+          first_name: true,
+          last_name: true,
+        },
+      },
+    },
+  });
+},
 
     // ── Interactions ─────────────────────────────────────────────────────────
 

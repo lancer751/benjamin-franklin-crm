@@ -1,0 +1,154 @@
+import { UUID_PATH } from "@/core/lib/constants";
+import { api } from "@/core/lib/api";
+import { InferRequestType, InferResponseType } from "hono/client";
+
+type UsersRes = InferResponseType<typeof api.users.$get>;
+type UserByIdRes = InferResponseType<(typeof api.users)[typeof UUID_PATH]["$get"]>;
+type CreateUserReq = InferRequestType<typeof api.users.$post>["json"];
+type UpdateUserReq = InferRequestType<(typeof api.users)[typeof UUID_PATH]["$put"]>["json"];
+type RolesRes = InferResponseType<typeof api.users.roles.$get>;
+
+type SupervisorsRes = InferResponseType<(typeof api.users)["sales-supervisors"]["$get"]>;
+type SupervisorDetailRes = InferResponseType<
+  (typeof api.users)["sales-supervisors"][typeof UUID_PATH]["$get"]
+>;
+type UpdateSupervisorProfileReq = InferRequestType<
+  (typeof api.users)["sales-supervisors"][typeof UUID_PATH]["$put"]
+>["json"];
+
+type SellersRes = InferResponseType<typeof api.users.sellers.$get>;
+type SellerProfileByIdRes = InferResponseType<(typeof api.users.sellers)[":id"]["$get"]>;
+type UpdateSellerProfileReq = InferRequestType<(typeof api.users.sellers)[":id"]["$put"]>["json"];
+type SellerCampaignsRes = InferResponseType<
+  (typeof api.users.sellers)[":id"]["campaigns"]["$get"]
+>;
+
+export type UserByIdSuccess = Extract<UserByIdRes, { success: true }>;
+export type SupervisorDetailSuccess = Extract<SupervisorDetailRes, { success: true }>;
+export type SellerProfileByIdSuccess = Extract<SellerProfileByIdRes, { success: true }>;
+
+export class UserServiceError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "UserServiceError";
+  }
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const responseMessage = (body: unknown, fallback: string) => {
+  if (typeof body === "string" && body.trim()) return body;
+  if (isRecord(body)) {
+    if (typeof body.message === "string" && body.message.trim()) return body.message;
+    if (typeof body.error === "string" && body.error.trim()) return body.error;
+  }
+  return fallback;
+};
+
+export const getUsers = async (): Promise<UsersRes> => {
+  const res = await api.users.$get();
+  return await res.json();
+};
+
+export const getUserById = async (id: string): Promise<UserByIdSuccess> => {
+  const res = await api.users[UUID_PATH].$get({ param: { id } });
+  const body: UserByIdRes = await res.json();
+  if (!res.ok || !isRecord(body) || body.success !== true) {
+    throw new UserServiceError(
+      res.status,
+      responseMessage(body, "No fue posible obtener la información de la cuenta."),
+    );
+  }
+  return body as UserByIdSuccess;
+};
+
+export const createUser = async (data: CreateUserReq) => {
+  const res = await api.users.$post({ json: data });
+  return await res.json();
+};
+
+export const updateUser = async (id: string, data: UpdateUserReq) => {
+  const res = await api.users[UUID_PATH].$put({ param: { id }, json: data });
+  return await res.json();
+};
+
+export const deleteUser = async (id: string) => {
+  const res = await api.users[UUID_PATH].$delete({ param: { id } });
+  return await res.json();
+};
+
+export const getRoles = async (): Promise<RolesRes> => {
+  const res = await api.users.roles.$get();
+  return await res.json();
+};
+
+export const getSellers = async (): Promise<SellersRes> => {
+  const res = await api.users.sellers.$get();
+  return await res.json();
+};
+
+// Este endpoint recibe el user_id del vendedor.
+export const getSellerById = async (id: string): Promise<SellerProfileByIdSuccess> => {
+  const res = await api.users.sellers[":id"].$get({ param: { id } });
+  const body: SellerProfileByIdRes = await res.json();
+  if (!res.ok || !isRecord(body) || body.success !== true) {
+    throw new UserServiceError(
+      res.status,
+      responseMessage(body, "No fue posible obtener el perfil de vendedor."),
+    );
+  }
+  return body as SellerProfileByIdSuccess;
+};
+
+export const getSellerProfileById = getSellerById;
+
+// Este endpoint recibe el ID del perfil vendedor, no el user_id.
+export const getSellerCampaigns = async (
+  sellerProfileId: string,
+): Promise<SellerCampaignsRes> => {
+  const res = await api.users.sellers[":id"]["campaigns"].$get({
+    param: { id: sellerProfileId },
+  });
+  return await res.json();
+};
+
+export const updateSellerProfile = async (id: string, data: UpdateSellerProfileReq) => {
+  const res = await api.users.sellers[":id"].$put({ param: { id }, json: data });
+  return await res.json();
+};
+
+export const getSupervisors = async (): Promise<SupervisorsRes> => {
+  const res = await api.users["sales-supervisors"].$get();
+  return await res.json();
+};
+
+export const getSalesSupervisorByUserId = async (
+  id: string,
+): Promise<SupervisorDetailSuccess> => {
+  const res = await api.users["sales-supervisors"][UUID_PATH].$get({ param: { id } });
+  const body: SupervisorDetailRes = await res.json();
+  if (!res.ok || !isRecord(body) || body.success !== true) {
+    throw new UserServiceError(
+      res.status,
+      responseMessage(body, "No fue posible obtener el perfil de supervisor."),
+    );
+  }
+  return body as SupervisorDetailSuccess;
+};
+
+export const getSupervisorById = getSalesSupervisorByUserId;
+
+export const updateSupervisorProfile = async (
+  id: string,
+  data: UpdateSupervisorProfileReq,
+) => {
+  const res = await api.users["sales-supervisors"][UUID_PATH].$put({
+    param: { id },
+    json: data,
+  });
+  return await res.json();
+};

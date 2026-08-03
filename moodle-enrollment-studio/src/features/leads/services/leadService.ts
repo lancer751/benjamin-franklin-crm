@@ -1,117 +1,255 @@
 import { api } from "@/core/lib/api";
-import { LeadStatus } from "@repo/database";
-import {LeadStatusSchema} from "shared"
-import { InferRequestType } from "hono/client";
-import z from "zod";
+import { InferRequestType, InferResponseType } from "hono/client";
 
-// 1. Constante exacta del backend (Regex UUID)
-const UUID_PATH =
-  ":id{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}}" as const;
+// Constantes exactas del backend para resolver el tipado RPC
+const UUID_PATH = ":id{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}}" as const;
+const MEMBER_PATH = "/:memberId/status" as const; // Ruta base inferred para sub-recursos
 
 // ==========================================
 // TIPOS INFERIDOS (Sincronizados con el Backend)
 // ==========================================
 
-// Leads
-export type GetAllLeadsRes = Awaited<ReturnType<typeof api.leads.$get>>;
-export type PaginatedLeads = Awaited<
-  ReturnType<GetAllLeadsRes["json"]>
->["data"];
+// 1. Rutas de Leads (/api/leads)
+export type GetAllLeadsRes = InferResponseType<typeof api.leads.$get>;
+export type GetLeadByIdRes = InferResponseType<(typeof api.leads)[typeof UUID_PATH]["$get"]>;
+export type CreateLeadReq = InferRequestType<typeof api.leads.$post>["json"];
+export type UpdateLeadReq = InferRequestType<(typeof api.leads)[typeof UUID_PATH]["$put"]>["json"];
+export type LeadQuerySchemaInput = InferRequestType<typeof api.leads.$get>["query"];
 
-// export type GetLeadByIdRes = InferResponseType<(typeof api.leads)[typeof UUID_PATH]["$get"]>;
-// export type CreateLeadReq = InferRequestType<typeof api.leads.$post>["json"];
-// export type UpdateLeadReq = InferRequestType<(typeof api.leads)[typeof UUID_PATH]["$put"]>["json"];
-// export type DeleteLeadRes = InferResponseType<(typeof api.leads)[typeof UUID_PATH]["$delete"]>;
+export interface LeadListQuery {
+  page?: string;
+  limit?: string;
+  search?: string;
+  status?: "ACTIVE" | "INACTIVE";
+  lead_status?: "ACTIVE" | "INACTIVE";
+  member_status?: string;
+  assigned_to?: string;
+  campaign_id?: string;
+  created_from?: string;
+  created_to?: string;
+}
 
-// Interacciones (Ruta: /leads/:id/interactions)
-// Nota: Accedemos a la propiedad ["interactions"] que cuelga del ID
-// export type GetLeadInteractionsRes = InferResponseType<
-//   (typeof api.leads)[typeof UUID_PATH]["interactions"]["$get"]
-// >;
+export interface LeadLookupResponse {
+  success: boolean;
+  code?: "LEAD_IDENTITY_CONFLICT";
+  message?: string;
+  data?: {
+    found: boolean;
+    matchedBy: "phone" | "email" | "phone_and_email" | null;
+    campaign_member_id: string | null;
+    lead: {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+      phones: Array<{
+        number: string;
+        type: string;
+        isPrincipal: boolean;
+      }>;
+    } | null;
+  };
+}
 
-// Creación Manual de Interacciones (Ruta: /leads/interactions)
-// export type CreateInteractionReq = InferRequestType<typeof api.leads.interactions.$post>["json"];
-// export type CreateInteractionRes = InferResponseType<typeof api.leads.interactions.$post>;
-
-// // Creación Externa (Ruta: /leads/external)
-// export type CreateLeadExternalReq = InferRequestType<typeof api.leads.external.$post>["json"];
+// 2. Rutas de Miembros de Campaña (/api/campaigns/:campaignId/members)
+// Para acceder a los métodos anidados del sub-router usamos casting limpio o invocación directa por convención RPC
+export type GetCampaignMembersRes = InferResponseType<typeof api.campaigns[typeof UUID_PATH]["members"]["$get"]>;
+export type CreateCampaignMemberReq = InferRequestType<typeof api.campaigns[":campaignId"]["members"]["$post"]>["json"];
+export type UpdateMemberStatusReq = InferRequestType<typeof api.campaigns[typeof UUID_PATH]["members支撑" /* Fallback seguro para strings string */]["$patch"]>["json"];
 
 // ==========================================
 // SERVICIOS: LEADS
 // ==========================================
-export interface filterLeadsParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: LeadStatus
-}
 
-export const getAllLeads = async (
-  params?: filterLeadsParams,
-): Promise<PaginatedLeads> => {
-  const parsedParams = z
-    .object({
-      page: z.number().optional().default(1),
-      limit: z.number().optional().default(20),
-      search: z.string().optional().default(""),
-      status: z.enum(["ACTIVE", "INACTIVE"])
-    })
-    .parse(params);
-
-  const res = await api.leads.$get({
-    query: {
-      limit: parsedParams.limit.toString(),
-      page: parsedParams.page.toString(),
-      search: parsedParams.search.toString(),
-      status: parsedParams.status.toString() as LeadStatus
-    },
-  });
-  console.log(res);
-  return (await res.json()).data;
+/** Obtiene la lista unificada y paginada de todos los leads */
+export const getAllLeads = async (query?: LeadListQuery): Promise<GetAllLeadsRes> => {
+  const cleanQuery = (query && !("queryKey" in query)) ? query : undefined;
+  const res = await api.leads.$get(cleanQuery ? { query: cleanQuery as any } : undefined);
+  return await res.json();
 };
 
-// export const getLeadById = async (id: string): Promise<GetLeadByIdRes> => {
-//   const res = await (api.leads as any)[UUID_PATH].$get({ param: { id } });
-//   return await res.json();
-// };
+/** Busca leads con cancelación, para selectores remotos y autocompletados. */
+export const searchLeads = async (
+  query: LeadListQuery,
+  signal?: AbortSignal,
+): Promise<GetAllLeadsRes> => {
+  const res = await api.leads.$get(
+    { query: query as LeadQuerySchemaInput },
+    signal ? { init: { signal } } : undefined,
+  );
+  return await res.json();
+};
 
-// export const createLead = async (data: CreateLeadReq) => {
-//   const res = await api.leads.$post({ json: data });
-//   return await res.json();
-// };
+/** Obtiene el perfil detallado de un lead por su UUID */
+export const getLeadById = async (id: string): Promise<GetLeadByIdRes> => {
+  const res = await (api.leads as any)[UUID_PATH].$get({ param: { id } });
+  return await res.json();
+};
 
-// export const updateLead = async (id: string, data: UpdateLeadReq) => {
-//   const res = await (api.leads as any)[UUID_PATH].$put({
-//     param: { id },
-//     json: data
-//   });
-//   return await res.json();
-// };
+/** Registra un nuevo lead base (con sus respectivos teléfonos) */
+export const createLead = async (data: CreateLeadReq): Promise<InferResponseType<typeof api.leads.$post>> => {
+  const res = await api.leads.$post({ json: data } as any);
+  return await res.json();
+};
 
-// export const deleteLead = async (id: string): Promise<DeleteLeadRes> => {
-//   const res = await (api.leads as any)[UUID_PATH].$delete({ param: { id } });
-//   return await res.json();
-// };
+/** Actualiza los datos planos del perfil de un lead */
+export const updateLead = async (id: string, data: UpdateLeadReq): Promise<InferResponseType<(typeof api.leads)[typeof UUID_PATH]["$put"]>> => {
+  const res = await (api.leads as any)[UUID_PATH].$put({
+    param: { id },
+    json: data
+  });
+  return await res.json();
+};
 
-// // ==========================================
-// // SERVICIOS: INTERACCIONES & EXTERNAL
-// // ==========================================
+/** Retira un lead de las vistas activas mediante el soft delete del backend. */
+export const deleteLead = async (id: string): Promise<unknown> => {
+  const res = await api.leads[UUID_PATH].$delete({ param: { id } });
+  return await res.json();
+};
 
-// /** Obtiene interacciones de un Lead específico */
-// export const getLeadInteractions = async (id: string): Promise<GetLeadInteractionsRes> => {
-//   // Aquí usamos "as any" para saltar el error de la barra "/" duplicada en el tipo de Hono
-//   const res = await (api.leads as any)[UUID_PATH].interactions.$get({ param: { id } });
-//   return await res.json();
-// };
+// ==========================================
+// SERVICIOS: CAMPAIGN MEMBERS (Distribución y Seguimiento)
+// ==========================================
 
-// /** Registra una interacción manualmente desde el CRM */
-// export const createInteraction = async (data: CreateInteractionReq): Promise<CreateInteractionRes> => {
-//   const res = await api.leads.interactions.$post({ json: data });
-//   return await res.json();
-// };
+/** GET: Obtiene todos los miembros asignados a una campaña específica */
+export const getCampaignMembers = async (campaignId?: string, query?: any): Promise<any> => {
+  // Si no hay campaignId, nos aseguramos de no enviarle la expresión regular cruda a Hono
+  const paramField = campaignId ? campaignId : "all";
 
-// /** Crea un lead desde una fuente externa (Meta, Web, etc) */
-// export const createLeadExternal = async (data: CreateLeadExternalReq) => {
-//   const res = await api.leads.external.$post({ json: data });
-//   return await res.json();
-// };
+  const res = await (api.campaigns as any)[paramField].members.$get({
+    query
+  });
+  return await res.json();
+};
+
+/** POST: Asigna o añade un Lead existente a una campaña (Crea el CampaignMember) */
+export const addLeadToCampaign = async (campaignId: string, data: CreateCampaignMemberReq): Promise<any> => {
+  // Si usas el cliente indexado por RPC de Hono, el objeto 'param' debe mapear 'campaignId'
+  const assignedUserId = data.assigned_to;
+  if (!assignedUserId) {
+    throw new Error("No se encontró el User.id del asesor asignado");
+  }
+  const res = await api.campaigns[":campaignId"].members.$post({
+    param: { campaignId }, 
+    json: { ...data, assigned_to: assignedUserId }
+  } as any);
+  return await res.json();
+};
+
+/** PATCH: Actualiza el estado de tipificación comercial de un miembro (:memberId/status) */
+export const updateMemberStatus = async (campaignId: string, memberId: string, status: string): Promise<any> => {
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].status.$patch({
+    param: { campaignId, memberId },
+    json: { status }
+  });
+  return await res.json();
+};
+
+/** PATCH: Reasigna el prospecto de la campaña a otro asesor comercial (:memberId/reassign) */
+export const reassignMember = async (campaignId: string, memberId: string, assignedTo: string): Promise<any> => {
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].reassign.$patch({
+    param: { campaignId, memberId },
+    json: { assigned_to: assignedTo }
+  });
+  return await res.json();
+};
+
+// ==========================================
+// SERVICIOS: SUB-RECURSOS (Interacciones y Tareas)
+// ==========================================
+
+/** GET: Obtiene el historial de interacciones y comentarios de gestión de un miembro */
+export const getMemberInteractions = async (campaignId: string, memberId: string): Promise<any> => {
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].interactions.$get({
+    param: { campaignId, memberId }
+  });
+  return await res.json();
+};
+
+/** POST: Registra una nueva interacción o bitácora de llamada para un miembro */
+export const createMemberInteraction = async (campaignId: string, memberId: string, notes: string, type: string, creatorUserId: string): Promise<unknown> => {
+  if (!creatorUserId) {
+    throw new Error("No se encontró el User.id del usuario autenticado");
+  }
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].interactions.$post({
+    param: { campaignId, memberId },
+    json: { notes, type },
+    headers: { "x-seller-id": creatorUserId }
+  } as any, {
+    headers: { "x-seller-id": creatorUserId }
+  });
+  return await res.json();
+};
+
+/** GET: Obtiene las tareas y recordatorios pendientes de un miembro de campaña */
+export const getMemberTasks = async (campaignId: string, memberId: string): Promise<any> => {
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks.$get({
+    param: { campaignId, memberId }
+  });
+  return await res.json();
+};
+
+/** POST: Crea un nuevo recordatorio o tarea para el miembro de campaña */
+export interface MemberTaskPayload {
+  title: string;
+  content: string;
+  is_done: boolean;
+  due_date?: string | null;
+}
+
+export type MemberTaskUpdatePayload = Partial<MemberTaskPayload>;
+
+export const createMemberTask = async (campaignId: string, memberId: string, taskData: MemberTaskPayload, creatorUserId: string): Promise<unknown> => {
+  if (!creatorUserId) {
+    throw new Error("No se encontró el User.id del usuario autenticado");
+  }
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks.$post({
+    param: { campaignId, memberId },
+    json: taskData,
+    headers: { "x-seller-id": creatorUserId }
+  } as any, {
+    headers: { "x-seller-id": creatorUserId }
+  });
+  return await res.json();
+};
+
+/** PATCH: Actualiza o marca como completada una tarea específica */
+export const updateMemberTask = async (campaignId: string, memberId: string, taskId: string, taskData: MemberTaskUpdatePayload): Promise<unknown> => {
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks[":taskId"].$patch({
+    param: { campaignId, memberId, taskId },
+    json: taskData
+  });
+  return await res.json();
+};
+
+/** DELETE: Elimina una tarea o recordatorio del sistema */
+export const deleteMemberTask = async (campaignId: string, memberId: string, taskId: string): Promise<unknown> => {
+  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].tasks[":taskId"].$delete({
+    param: { campaignId, memberId, taskId }
+  });
+  return await res.json();
+};
+
+export const lookupLeadExact = async (query: {
+  phone?: string;
+  email?: string;
+  campaignId: string;
+  sellerProfileId: string;
+}): Promise<LeadLookupResponse> => {
+  if (!query.sellerProfileId) {
+    throw new Error("No se encontró el SellerProfile.id del usuario autenticado");
+  }
+  const res = await (api.leads as any).lookup.$get({
+    query: {
+      ...(query.phone && { phone: query.phone }),
+      ...(query.email && { email: query.email }),
+      campaign_id: query.campaignId,
+      seller_id: query.sellerProfileId,
+    },
+  });
+  const body = await res.json() as LeadLookupResponse & { error?: string };
+  if (!res.ok && body.code !== "LEAD_IDENTITY_CONFLICT") {
+    throw new Error(body.message || body.error || "No fue posible buscar el prospecto.");
+  }
+  return body;
+};

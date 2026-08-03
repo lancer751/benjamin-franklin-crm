@@ -145,6 +145,11 @@ export const UpdateTaskSchema = TaskBaseSchema.partial().refine(
 
 // ── Query schemas ─────────────────────────────────────────────────────────────
 
+const LeadQueryDateSchema = z.union([
+  z.iso.date(),
+  z.iso.datetime({ offset: true, local: true }),
+]);
+
 export const LeadQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

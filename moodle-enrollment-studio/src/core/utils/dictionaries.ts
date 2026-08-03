@@ -13,6 +13,16 @@ export const EditionStatusMap: Record<string, string> = {
     CANCELLED: "Cancelado",
 };
 
+export const DayOfWeekMap: Record<string, string> = {
+    MONDAY: "Lunes",
+    TUESDAY: "Martes",
+    WEDNESDAY: "Miércoles",
+    THURSDAY: "Jueves",
+    FRIDAY: "Viernes",
+    SATURDAY: "Sábado",
+    SUNDAY: "Domingo",
+};
+
 export const DurationUnitMap: Record<string, string> = {
     WEEKS: "Semanas",
     MONTHS: "Meses",
@@ -33,6 +43,33 @@ export const RoleTranslationsMap: Record<string, string> = {
     COLLECTIONS: "Cobranzas",
 };
 
+export const CampaignStatusMap: Record<string, string> = {
+    ACTIVE: "Activa",
+    INACTIVE: "Inactiva",
+    PAUSED: "Pausada",
+};
+
+export const CampaignPlatformMap: Record<string, string> = {
+    FACEBOOK: "Facebook Ads",
+    INSTAGRAM: "Instagram",
+    TIKTOK: "TikTok Ads",
+    WEBSITE: "Sitio Web",
+};
+
+export {
+    CAMPAIGN_MEMBER_STATUS_OPTIONS,
+    getCampaignMemberStatusLabel,
+    type CampaignMemberStatus,
+} from "@/core/constants/campaignMemberStatus";
+
+export const ProductSalesStatusMap: Record<string, string> = {
+    DRAFT: "Borrador",
+    PUBLISHED: "Publicado",
+    ON_SALE: "En Venta",
+    COMPLETED: "Completado",
+    CANCELLED: "Cancelado"
+};
+
 /**
  * Función helper para traducir un Enum de forma segura.
  * Si el valor no existe en el diccionario, retorna el valor original (fallback).
@@ -47,3 +84,4 @@ export const translateEnum = (
     if (!value) return "No especificado";
     return dictionary[value] || value;
 };
+

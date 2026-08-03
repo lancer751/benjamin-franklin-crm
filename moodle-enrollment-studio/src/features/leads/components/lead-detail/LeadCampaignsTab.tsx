@@ -1,0 +1,79 @@
+import { CalendarDays, Megaphone, Plus, UserRound, Waypoints } from "lucide-react";
+import { Badge } from "@/core/components/ui/badge";
+import { Button } from "@/core/components/ui/button";
+import { Card } from "@/core/components/ui/card";
+import { cn } from "@/core/lib/utils";
+import {
+  getCampaignMemberStatusConfig,
+  getCampaignMemberStatusLabel,
+} from "@/core/constants/campaignMemberStatus";
+import type { LeadCampaignViewModel } from "../../adapters/leadDetailAdapter";
+import { displayEnum, formatLeadDate } from "./leadDetail.formatters";
+
+interface LeadCampaignsTabProps {
+  members: LeadCampaignViewModel[];
+  selectedMemberId: string;
+  canAddCampaign: boolean;
+  onAddCampaign: () => void;
+  onViewActivity: (memberId: string) => void;
+}
+
+export function LeadCampaignsTab({
+  members,
+  selectedMemberId,
+  canAddCampaign,
+  onAddCampaign,
+  onViewActivity,
+}: LeadCampaignsTabProps) {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">Campañas asociadas</h2>
+          <p className="text-sm text-muted-foreground">Selecciona una para consultar su actividad.</p>
+        </div>
+        {canAddCampaign && <Button onClick={onAddCampaign}><Plus className="h-4 w-4" />Agregar a campaña</Button>}
+      </div>
+
+      {members.length === 0 ? (
+        <Card className="p-10 text-center text-muted-foreground">Este prospecto todavía no está asociado a una campaña.</Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {members.map((member) => {
+            const statusConfig = getCampaignMemberStatusConfig(member.status);
+            return (
+              <Card key={member.id} className={`p-5 transition-colors ${selectedMemberId === member.id ? "border-primary/40" : ""}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <Megaphone className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{member.campaignName}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{displayEnum(member.platform)}</p>
+                    </div>
+                  </div>
+                  {member.isPrimary && <Badge variant="secondary">Principal</Badge>}
+                </div>
+                <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Etapa</dt>
+                    <dd className="mt-1">
+                      <Badge variant="outline" className={cn(statusConfig?.badgeClassName || "border-slate-200 bg-slate-50 text-slate-700")}>
+                        {getCampaignMemberStatusLabel(member.status)}
+                      </Badge>
+                    </dd>
+                  </div>
+                  <div><dt className="text-sm text-muted-foreground"><UserRound className="mr-1 inline h-4 w-4" />Asesor</dt><dd className="mt-1 font-medium">{member.assignedUser?.name ?? "Sin asignar"}</dd></div>
+                  <div><dt className="text-sm text-muted-foreground"><Waypoints className="mr-1 inline h-4 w-4" />Fuente</dt><dd className="mt-1 font-medium">{displayEnum(member.source)}</dd></div>
+                  <div><dt className="text-sm text-muted-foreground"><CalendarDays className="mr-1 inline h-4 w-4" />Asociación</dt><dd className="mt-1 font-medium">{formatLeadDate(member.createdAt)}</dd></div>
+                </dl>
+                <Button variant="link" className="mt-4 h-auto px-0" onClick={() => onViewActivity(member.id)}>Ver actividad</Button>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

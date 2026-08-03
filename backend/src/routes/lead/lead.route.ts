@@ -297,21 +297,11 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
       }
 
       if (c.var.authUser.role === "SALES_REP") {
-        const sellerProfileId = await c.get("prisma").sellerProfile.findUnique({
-          where: { user_id: c.var.authUser.userId },
-          select: { id: true },
-        });
-
-        if (!sellerProfileId) {
-          throw new HTTPException(404, { message: "seller profile not found" });
-        }
-
-        if (sellerProfileId.id === data.assigned_to) {
-          throw new HTTPException(500, {
-            message:
-              "A seller can't assign a lead to another seller more than himself",
-          });
-        }
+          if (c.var.authUser.userId !== data.assigned_to) {
+            throw new HTTPException(403, {
+              message: "A seller can only assign a lead to himself",
+            });
+          }
       }
 
       try {
@@ -328,7 +318,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   // PATCH /:memberId/status — update CampaignMemberStatus
   .patch(
     "/:memberId/status",
-    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_SUPERVISOR"),
+    verifyUserRoleAccess("ADMIN", "MARKETING", "SALES_REP", "SALES_SUPERVISOR"),
     zValidator("param", MemberParam),
     zValidator("json", UpdateCampaignMemberStatusSchema),
     async (c) => {

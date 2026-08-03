@@ -10,7 +10,11 @@ import { ToggleGroup, ToggleGroupItem } from '@/core/components/ui/toggle-group'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/core/components/ui/hover-card';
 import { Progress } from '@/core/components/ui/progress';
 import { useAcademicCalendarView } from '../hooks/useAcademicCalendarView';
-import { formatToLocalTime, displayFriendlyDate } from '@/core/utils/date-utils';
+import { formatToLocalTime, displayFriendlyDate, formatFriendlySpanishDate } from '@/core/utils/date-utils';
+import { translateEnum, EditionStatusMap } from '@/core/utils/dictionaries';
+import { Popover, PopoverTrigger, PopoverContent } from '@/core/components/ui/popover';
+import { Checkbox } from '@/core/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/core/components/ui/select';
 
 const getStatusStyles = (status: string) => {
   switch (status) {
@@ -28,20 +32,21 @@ const getStatusStyles = (status: string) => {
   }
 };
 
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'COMPLETED': return 'Completado';
-    case 'IN_PROGRESS': return 'En Progreso';
-    case 'OPEN': return 'Programado';
-    case 'SCHEDULED': return 'Programado';
-    case 'SCHEDULED_GRAY': return 'Programado';
-    default: return status;
-  }
-};
+const getStatusText = (status: string) => translateEnum(status, EditionStatusMap);
 
 export const AcademicCalendarView = () => {
   const navigate = useNavigate();
-  const { editions: mockEditions, isLoading } = useAcademicCalendarView();
+  const { 
+    editions: rawEditions, 
+    isLoading,
+    search,
+    setSearch,
+    statusFilter,
+    setStatusFilter,
+    modalityFilter,
+    setModalityFilter
+  } = useAcademicCalendarView();
+  const editions = rawEditions ?? [];
   const [viewMode, setViewMode] = useState<"Mes" | "Semestre" | "Año">("Año");
 
   const [referenceDate, setReferenceDate] = useState(new Date());
@@ -176,34 +181,40 @@ export const AcademicCalendarView = () => {
     const coursesMap = new Map();
 
     // 1. Filtrar ediciones visibles y adjuntar su posición
-    const visiblePositions = mockEditions.map(ed => {
-      const pos = getBarPosition(ed.start_date, ed.end_date);
+    const visiblePositions = (editions ?? []).map(ed => {
+      const pos = getBarPosition(ed?.start_date, ed?.end_date);
       return { ...ed, pos };
-    }).filter(ed => ed.pos.display !== 'none');
+    }).filter(ed => ed?.pos?.display !== 'none');
 
     // 2. Agrupar por curso
     visiblePositions.forEach(ed => {
-      if (!coursesMap.has(ed.course_id)) {
-        coursesMap.set(ed.course_id, {
-          course_id: ed.course_id,
-          course_name: ed.course_name,
-          course_type: ed.course_type,
-          editions: []
-        });
+      if (ed?.course_id) {
+        if (!coursesMap.has(ed.course_id)) {
+          coursesMap.set(ed.course_id, {
+            course_id: ed.course_id,
+            course_name: ed.course_name,
+            course_type: ed.course_type,
+            editions: []
+          });
+        }
+        coursesMap.get(ed.course_id).editions.push(ed);
       }
-      coursesMap.get(ed.course_id).editions.push(ed);
     });
 
     // 3. Calcular "Stacking" (niveles) por cada curso para evitar superposición
     const result = Array.from(coursesMap.values()).map(course => {
       // Ordenar por fecha de inicio para acomodar secuencialmente
-      const sorted = [...course.editions].sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+      const sorted = [...(course?.editions ?? [])].sort((a, b) => {
+        const startA = a?.start_date ? new Date(a.start_date).getTime() : 0;
+        const startB = b?.start_date ? new Date(b.start_date).getTime() : 0;
+        return startA - startB;
+      });
       
       const levelEnds: number[] = [];
       
       sorted.forEach(ed => {
-        const startMs = new Date(ed.start_date).getTime();
-        const endMs = new Date(ed.end_date).getTime();
+        const startMs = ed?.start_date ? new Date(ed.start_date).getTime() : 0;
+        const endMs = ed?.end_date ? new Date(ed.end_date).getTime() : 0;
         let assignedLevel = -1;
         
         for (let i = 0; i < levelEnds.length; i++) {
@@ -221,7 +232,9 @@ export const AcademicCalendarView = () => {
           levelEnds.push(endMs);
         }
         
-        ed.level = assignedLevel;
+        if (ed) {
+          ed.level = assignedLevel;
+        }
       });
       
       course.maxLevel = levelEnds.length > 0 ? levelEnds.length - 1 : 0;
@@ -229,7 +242,7 @@ export const AcademicCalendarView = () => {
     });
 
     return result;
-  }, [viewRange, mockEditions]);
+  }, [viewRange, editions]);
 
   // Variables para Stacking UI
   const isMonthView = viewMode === 'Mes';
@@ -239,9 +252,44 @@ export const AcademicCalendarView = () => {
   const topPadding = 16;
 
   // KPI Calculations
-  const visibleEditionsCount = groupedCourses.reduce((acc, course) => acc + course.editions.length, 0);
-  const inProgressCount = mockEditions.filter(ed => ed.edition_status === 'IN_PROGRESS' && getBarPosition(ed.start_date, ed.end_date).display !== 'none').length;
-  const occupancyRate = 76; // Static for demo
+  const visibleEditionsCount = groupedCourses.reduce((acc, course) => acc + (course?.editions?.length ?? 0), 0);
+  
+  // 1. Variable 'Total Ediciones'
+  const totalEditions = editions?.length ?? 0;
+  const totalEditionsFormatted = totalEditions < 10 ? `0${totalEditions}` : `${totalEditions}`;
+
+  // 2. Variable 'En Progreso'
+  const inProgressCount = editions?.filter(ed => ed?.edition_status === 'IN_PROGRESS')?.length ?? 0;
+  const inProgressFormatted = inProgressCount < 10 ? `0${inProgressCount}` : `${inProgressCount}`;
+
+  // 3. Variable 'Tasa de Ocupación'
+  const occupancyRate = totalEditions > 0 
+    ? Math.round((editions?.filter(e => (e?.assigned_professors?.length ?? 0) > 0)?.length ?? 0) / totalEditions * 100) 
+    : 0;
+
+  // 4. Variable 'Próximo Inicio'
+  const sortedEditionsForNext = [...(editions ?? [])]
+    .filter(e => e?.start_date && e?.edition_status !== 'CANCELLED')
+    .sort((a, b) => {
+      const dateA = a?.start_date ? new Date(a.start_date).getTime() : 0;
+      const dateB = b?.start_date ? new Date(b.start_date).getTime() : 0;
+      return dateA - dateB;
+    });
+
+  const todayTime = new Date().setHours(0, 0, 0, 0);
+
+  let nextEdition = sortedEditionsForNext.find(e => {
+    const startMs = e?.start_date ? new Date(e.start_date).getTime() : 0;
+    return startMs >= todayTime;
+  });
+
+  // If no future start, take the closest past edition (last element in sorted ascending list)
+  if (!nextEdition && sortedEditionsForNext.length > 0) {
+    nextEdition = sortedEditionsForNext[sortedEditionsForNext.length - 1];
+  }
+
+  const nextEditionDateStr = nextEdition?.start_date ? formatFriendlySpanishDate(nextEdition.start_date) : "Sin fecha";
+  const nextEditionCourseName = nextEdition?.course_name || "Sin curso";
 
   if (isLoading) {
     return (
@@ -254,33 +302,118 @@ export const AcademicCalendarView = () => {
   return (
     <div className="flex flex-col h-full bg-slate-50 min-h-screen p-6 space-y-6 overflow-hidden">
       {/* Top Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between w-full">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Calendario Académico</h1>
         
-        <div className="flex items-center space-x-4">
-          <div className="relative w-64">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <div className="relative w-full sm:w-64 shrink-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Buscar ediciones..."
-              className="pl-8 bg-white border-none shadow-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 bg-white border-none shadow-sm animate-fade-in"
             />
           </div>
           
-          <Button variant="outline" className="bg-white border-none shadow-sm flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filtros
-          </Button>
-          
-          <div className="bg-white rounded-md shadow-sm p-1">
-            <ToggleGroup type="single" value={viewMode} onValueChange={(val: any) => val && setViewMode(val)}>
-              <ToggleGroupItem value="Mes" className="h-8 px-3 text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all">Mes</ToggleGroupItem>
-              <ToggleGroupItem value="Semestre" className="h-8 px-3 text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all">Semestre</ToggleGroupItem>
-              <ToggleGroupItem value="Año" className="h-8 px-3 text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all">Año</ToggleGroupItem>
-            </ToggleGroup>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="bg-white border-none shadow-sm flex items-center gap-2 relative transition-all duration-200 hover:bg-slate-50">
+                  <Filter className="h-4 w-4" />
+                  Filtros
+                  {(statusFilter.length > 0 || modalityFilter !== "ALL") && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white animate-pulse">
+                      {(statusFilter.length > 0 ? 1 : 0) + (modalityFilter !== "ALL" ? 1 : 0)}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-5 bg-white rounded-xl border border-slate-200 shadow-xl z-50">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-sm text-slate-800 mb-3 tracking-tight">Estados de Edición</h4>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {[
+                        { label: 'En Progreso', value: 'IN_PROGRESS' },
+                        { label: 'Programado', value: 'SCHEDULED' },
+                        { label: 'Abierto (Inscripciones)', value: 'OPEN' },
+                        { label: 'Completado', value: 'COMPLETED' },
+                        { label: 'Cancelado', value: 'CANCELLED' },
+                        { label: 'Borrador', value: 'DRAFT' }
+                      ].map((status) => {
+                        const isChecked = statusFilter.includes(status.value);
+                        return (
+                          <div key={status.value} className="flex items-center space-x-3 transition-colors duration-150 hover:bg-slate-50 p-1.5 rounded-md cursor-pointer">
+                            <Checkbox 
+                              id={`status-${status.value}`}
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setStatusFilter([...statusFilter, status.value]);
+                                } else {
+                                  setStatusFilter(statusFilter.filter(s => s !== status.value));
+                                }
+                              }}
+                            />
+                            <label 
+                              htmlFor={`status-${status.value}`}
+                              className="text-sm font-medium text-slate-600 cursor-pointer select-none flex-1"
+                            >
+                              {status.label}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-slate-100 pt-4">
+                    <h4 className="font-semibold text-sm text-slate-800 mb-3 tracking-tight">Modalidad</h4>
+                    <Select value={modalityFilter} onValueChange={setModalityFilter}>
+                      <SelectTrigger className="w-full bg-slate-50 border border-slate-200 rounded-lg shadow-inner text-slate-700">
+                        <SelectValue placeholder="Seleccione modalidad" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-slate-200 rounded-lg shadow-lg">
+                        <SelectItem value="ALL" className="cursor-pointer hover:bg-slate-50">Todas</SelectItem>
+                        <SelectItem value="VIRTUAL" className="cursor-pointer hover:bg-slate-50">Virtual</SelectItem>
+                        <SelectItem value="PRESENCIAL" className="cursor-pointer hover:bg-slate-50">Presencial</SelectItem>
+                        <SelectItem value="HIBRIDO" className="cursor-pointer hover:bg-slate-50">Híbrido</SelectItem>
+                        <SelectItem value="ASINCRONICO" className="cursor-pointer hover:bg-slate-50">Asincrónico</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {(statusFilter.length > 0 || modalityFilter !== "ALL") && (
+                    <div className="border-t border-slate-100 pt-3 flex justify-end">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors h-8 px-3 rounded-lg"
+                        onClick={() => {
+                          setStatusFilter([]);
+                          setModalityFilter("ALL");
+                        }}
+                      >
+                        Limpiar filtros
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            <div className="bg-white rounded-md shadow-sm p-1 flex-1 sm:flex-initial">
+              <ToggleGroup type="single" value={viewMode} onValueChange={(val: any) => val && setViewMode(val)} className="flex-1 sm:flex-initial">
+                <ToggleGroupItem value="Mes" className="h-8 px-2 sm:px-3 text-xs sm:text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all flex-1 text-center">Mes</ToggleGroupItem>
+                <ToggleGroupItem value="Semestre" className="h-8 px-2 sm:px-3 text-xs sm:text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all flex-1 text-center">Semestre</ToggleGroupItem>
+                <ToggleGroupItem value="Año" className="h-8 px-2 sm:px-3 text-xs sm:text-sm data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 rounded-sm transition-all flex-1 text-center">Año</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </div>
 
-          <Avatar className="h-9 w-9 border border-border shadow-sm">
+          <Avatar className="h-9 w-9 border border-border shadow-sm hidden sm:inline-flex">
             <AvatarImage src="https://github.com/shadcn.png" />
             <AvatarFallback>U</AvatarFallback>
           </Avatar>
@@ -288,16 +421,16 @@ export const AcademicCalendarView = () => {
       </div>
 
       {/* Sub Header & Navigation */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+        <div className="w-full md:max-w-xl">
           <h2 className="text-lg font-semibold text-slate-800">Visualización de planificación</h2>
           <p className="text-sm text-slate-500">Superposición de ediciones consolidadas por curso para el periodo actual ({viewMode})</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full md:w-auto shrink-0">
           <Button variant="outline" size="sm" className="h-8 bg-white border-slate-200 text-slate-600 font-medium" onClick={handleToday}>
             Hoy
           </Button>
-          <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg shadow-sm border border-slate-100">
+          <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg shadow-sm border border-slate-100 shrink-0">
             <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100" onClick={handlePrev}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -312,7 +445,8 @@ export const AcademicCalendarView = () => {
       </div>
 
       {/* Gantt Chart Container */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col flex-1 min-h-[400px]">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col flex-1 min-h-[400px] overflow-x-auto">
+        <div className="min-w-[880px] lg:min-w-full flex flex-col flex-1">
         {/* Gantt Header */}
         <div className="grid grid-cols-[320px_1fr] border-b border-slate-100 bg-white sticky top-0 z-30 rounded-t-xl">
           <div className="p-4 font-semibold text-xs text-slate-500 tracking-wider flex items-center border-r border-slate-100">
@@ -417,7 +551,7 @@ export const AcademicCalendarView = () => {
                                <div className="flex items-center justify-between w-full truncate gap-2">
                                  {/* Label Dinámico según la vista */}
                                  <span className="text-xs font-semibold truncate">
-                                   {isMonthView ? getStatusText(ed.edition_status) : `Ed. ${ed.edition_number}`}
+                                   {isMonthView ? translateEnum(ed.edition_status, EditionStatusMap) : `Ed. ${ed.edition_number} (${translateEnum(ed.edition_status, EditionStatusMap)})`}
                                  </span>
                                  
                                  {/* Extra Info (solo en Mes por el espacio) */}
@@ -438,7 +572,7 @@ export const AcademicCalendarView = () => {
                                    <p className="text-xs font-mono text-slate-400 mt-0.5 truncate">{ed.edition_code}</p>
                                  </div>
                                  <Badge variant="outline" className="text-[10px] shrink-0">
-                                   {getStatusText(ed.edition_status)}
+                                   {translateEnum(ed.edition_status, EditionStatusMap)}
                                  </Badge>
                                </div>
                                <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t border-slate-100">
@@ -465,16 +599,17 @@ export const AcademicCalendarView = () => {
             );
           })}
         </div>
+        </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-6 shrink-0 pt-2">
-        {/* Card 1: TOTAL EDICIONES (Sync with visible) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0 pt-2">
+        {/* Card 1: TOTAL EDICIONES */}
         <Card className="border-none shadow-sm transition-all duration-300">
           <CardContent className="p-6">
-            <h3 className="text-xs font-bold text-slate-500 mb-2 tracking-wider">TOTAL EDICIONES ({viewMode.toUpperCase()})</h3>
+            <h3 className="text-xs font-bold text-slate-500 mb-2 tracking-wider">TOTAL EDICIONES</h3>
             <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-extrabold text-slate-900">{visibleEditionsCount < 10 ? `0${visibleEditionsCount}` : visibleEditionsCount}</span>
+              <span className="text-4xl font-extrabold text-slate-900">{totalEditionsFormatted}</span>
               <span className="text-sm font-bold text-emerald-500 flex items-center">
                 <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M23 6L13.5 15.5L8.5 10.5L1 18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -491,7 +626,7 @@ export const AcademicCalendarView = () => {
           <CardContent className="p-6">
             <h3 className="text-xs font-bold text-slate-500 mb-2 tracking-wider">EN PROGRESO</h3>
             <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-extrabold text-blue-600">{inProgressCount < 10 ? `0${inProgressCount}` : inProgressCount}</span>
+              <span className="text-4xl font-extrabold text-blue-600">{inProgressFormatted}</span>
               <span className="text-sm text-slate-500">Activos ahora</span>
             </div>
           </CardContent>
@@ -517,8 +652,8 @@ export const AcademicCalendarView = () => {
                 <CalendarIcon className="w-6 h-6" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-base font-bold text-slate-900 truncate">12 Abr 2026</span>
-                <span className="text-sm text-slate-500 truncate">DS Fundamentals</span>
+                <span className="text-base font-bold text-slate-900 truncate">{nextEditionDateStr}</span>
+                <span className="text-sm text-slate-500 truncate">{nextEditionCourseName}</span>
               </div>
             </div>
           </CardContent>

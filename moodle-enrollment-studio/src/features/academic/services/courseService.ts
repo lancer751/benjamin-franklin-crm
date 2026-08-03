@@ -15,8 +15,6 @@ export type DeleteCourseRes = InferResponseType<(typeof api.academic.courses)[ty
 
 // --- Ediciones ---
 export type EditionsRes = InferResponseType<typeof api.academic.courses.editions.$get>;
-// Nota: Para ediciones el backend usa ":id" simple o el UUID_PATH, 
-// ajustamos según lo que devuelva el autocompletado
 export type EditionByIdRes = InferResponseType<(typeof api.academic.courses.editions)[typeof UUID_PATH]["$get"]>;
 export type CreateEditionReq = InferRequestType<typeof api.academic.courses.editions.$post>["json"];
 export type UpdateEditionReq = InferRequestType<(typeof api.academic.courses.editions)[typeof UUID_PATH]["$put"]>["json"];

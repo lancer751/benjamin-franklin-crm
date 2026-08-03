@@ -12,12 +12,6 @@ export default tseslint.config(
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
-      parserOptions: {
-        projectService: {
-          allowDefaultProject: ["./eslint.config.ts"],
-        },
-        tsconfigRootDir: import.meta.dirname,
-      },
     },
     plugins: {
       "react-hooks": reactHooks,
@@ -25,10 +19,7 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": [
-        "warn",
-        { allowConstantExport: true },
-      ],
+      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
     },
   },

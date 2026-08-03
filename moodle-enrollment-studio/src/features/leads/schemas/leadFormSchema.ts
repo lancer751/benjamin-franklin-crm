@@ -1,25 +1,74 @@
-import z from "zod";
+import { z } from "zod";
+import { interactionFormSchema } from "./interactionFormSchema";
 
+// 1. Mapeo nativo de errores en español compatible con React Hook Form
+const spanishErrorMap: z.ZodErrorMap = (issue, ctx) => {
+  const defaultMsg = ctx?.defaultError || "Campo inválido";
+
+  if (issue.code === z.ZodIssueCode.invalid_type) {
+    if (issue.received === "undefined" || issue.received === "null") {
+      return { message: "Este campo es obligatorio" };
+    }
+  }
+
+  if (issue.code === z.ZodIssueCode.too_small) {
+    if (issue.type === "string") {
+      if (issue.minimum === 1) {
+        return { message: "Este campo es obligatorio" };
+      }
+      return { message: `El campo debe tener al menos ${issue.minimum} caracteres` };
+    }
+  }
+
+  if (issue.code === z.ZodIssueCode.invalid_string && issue.validation === "email") {
+    return { message: "Ingresa un correo electrónico válido" };
+  }
+
+  if (issue.path.includes("dni")) {
+    if (
+      issue.code === z.ZodIssueCode.too_small ||
+      issue.code === z.ZodIssueCode.too_big ||
+      issue.code === z.ZodIssueCode.invalid_string ||
+      issue.code === z.ZodIssueCode.custom
+    ) {
+      return { message: "El DNI debe contener exactamente 8 números" };
+    }
+  }
+
+  return { message: defaultMsg };
+};
+
+z.setErrorMap(spanishErrorMap as any);
+
+// 2. Definición directa del esquema de formulario puro para Frontend (Evitando herencias de ZodEffects)
 export const leadFormSchema = z.object({
-  first_name: z.string().trim().min(3, "Este campo es obligatorio"),
-  middle_name: z.string().trim().min(3, "Este campo es obligatorio"),
-  last_name: z.string().trim().min(3, "Este campo es obligatorio"),
-  
-  dni: z.string().regex(/^\d+$/, "Solo números").length(8, "Debe tener exactamente 8 caracteres").optional().or(z.literal("")),
-  gender: z.enum(["MALE", "FEMALE", "NOT_SPECIFIED"]).optional(),
-  
-  email: z.string().email("Email inválido"),
-  secondary_email: z.string().email("Email inválido").optional().or(z.literal("")),
-  phone: z.string().min(9, "Teléfono inválido"),
-  
-  address: z.string().min(10, "Debe tener al menos 10 caracteres").optional().or(z.literal("")),
-  second_address: z.string().min(10, "Debe tener al menos 10 caracteres").optional().or(z.literal("")),
-  
-  profession: z.string().optional().or(z.literal("")),
-  primary_campaign_id: z.string().uuid("Campaña inválida").optional().or(z.literal("")).or(z.literal("none")),
-  lead_status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+  first_name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
+  middle_name: z.string().min(3, "El apellido paterno debe tener al menos 3 caracteres"),
+  last_name: z.string().min(3, "El apellido materno debe tener al menos 3 caracteres"),
+  email: z.string().email("Ingresa un correo electrónico válido"),
+  cellphone: z.string().min(9, "El teléfono debe tener al menos 9 dígitos"),
+  dni: z.preprocess((val) => (val === "" ? null : val), z.string().length(8, "El DNI debe tener exactamente 8 dígitos").nullable().optional()),
+  secondary_email: z.preprocess((val) => (val === "" ? null : val), z.string().email("Correo secundario inválido").nullable().optional()),
+  address: z.preprocess((val) => (val === "" ? null : val), z.string().min(10, "La dirección debe tener al menos 10 caracteres").nullable().optional()),
+  second_address: z.preprocess((val) => (val === "" ? null : val), z.string().min(10, "La dirección debe tener al menos 10 caracteres").nullable().optional()),
+  profession: z.string().optional().nullable().or(z.literal("")),
+  primary_campaign_id: z.preprocess(
+    (val) => (val === "" || val === "none" ? undefined : val),
+    z.string().uuid().optional()
+  ),
   source: z.string().default("MANUAL"),
-  interaction_notes: z.string().optional(),
+  interaction_notes: interactionFormSchema.shape.notes.optional().nullable().or(z.literal("")),
+  gender: z.preprocess(
+    (val) => (val === "MALE" || val === "FEMALE" || val === "NOT_SPECIFIED" ? val : "NOT_SPECIFIED"),
+    z.enum(["MALE", "FEMALE", "NOT_SPECIFIED"]).default("NOT_SPECIFIED")
+  ),
+  lead_status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+  phones: z.array(
+    z.object({
+      number: z.string(),
+      type: z.string()
+    })
+  ).optional().nullable()
 });
 
 export type LeadFormValues = z.infer<typeof leadFormSchema>;
@@ -29,15 +78,15 @@ export const defaultLeadFormValues: Partial<LeadFormValues> = {
   middle_name: "",
   last_name: "",
   dni: "",
-  gender: "NOT_SPECIFIED",
+  gender: "NOT_SPECIFIED" as any,
   email: "",
   secondary_email: "",
-  phone: "",
+  cellphone: "",
   address: "",
   second_address: "",
   profession: "",
   primary_campaign_id: "",
-  lead_status: "ACTIVE",
+  lead_status: "ACTIVE" as any,
   source: "MANUAL",
   interaction_notes: "",
 };

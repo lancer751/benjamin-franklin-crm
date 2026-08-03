@@ -14,6 +14,7 @@ import { bulkRouter } from "./routes/bulk.route";
 import { verifyUserRoleAccess } from "./middlewares/auth.middleware";
 import { metaService } from "./services/metaservice";
 import { handleRepoError } from "./routes/lead/lead.route";
+import { showRoutes } from "hono/dev";
 
 export const app = new Hono();
 const allowedOrigins = envParsed.ALLOWED_ORIGINS;
@@ -130,6 +131,8 @@ app.get("/health", async (c) => {
 
 // });
 
+
+showRoutes(app);
 
 export default {
   port: envParsed.PORT,

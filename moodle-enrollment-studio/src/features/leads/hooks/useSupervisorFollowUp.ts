@@ -1,0 +1,292 @@
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { getAllLeads } from "../services/leadService";
+import { reassignCampaignMember, reassignBulkCampaignMembers } from "@/features/campaigns/services/campaignService";
+import { api } from "@/core/lib/api";
+import { adaptLeads, normalizeAssignedCampaigns, unpackLeads } from "../adapters/leadAdapter";
+import { adaptLeadInteractionsResponse } from "../adapters/leadInteractionAdapter";
+import { calculateSupervisorKPIs } from "../utils/leadLogic";
+import { getSellerCampaigns, getSellers } from "@/features/users/services/userService";
+
+export const useSupervisorFollowUp = () => {
+  const queryClient = useQueryClient();
+
+  const [activeSellerTab, setActiveSellerTab] = useState<string>("ALL");
+  const [selectedLead, setSelectedLead] = useState<any>(null);
+
+  // 1. Obtener los prospectos de la academia filtrados por el asesor activo en la base de datos
+  const { data: leadsRes, isLoading: isLoadingLeads } = useQuery({
+    queryKey: ["all-leads", activeSellerTab],
+    queryFn: () => {
+      const assignedToParam = activeSellerTab === "UNASSIGNED"
+        ? "unassigned"
+        : activeSellerTab === "ALL"
+        ? undefined
+        : activeSellerTab;
+
+      return getAllLeads({
+        ...(assignedToParam && { assigned_to: assignedToParam }),
+        page: 1,
+        limit: 20
+      });
+    },
+  });
+
+  const leads = useMemo(() => {
+    const rawData = unpackLeads(leadsRes);
+    return adaptLeads(rawData);
+  }, [leadsRes]);
+
+  // 1b. Obtener todos los vendedores reales
+  const {
+    data: realSellersRes,
+    isLoading: isLoadingSellers,
+    isError: isErrorSellers,
+  } = useQuery({
+    queryKey: ["real-sellers-list"],
+    queryFn: getSellers,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const realSellers = useMemo(() => {
+    return (realSellersRes as any)?.success ? (realSellersRes as any).data : (realSellersRes || []);
+  }, [realSellersRes]);
+
+  const selectedSellerId = activeSellerTab !== "ALL" && activeSellerTab !== "UNASSIGNED"
+    ? activeSellerTab
+    : undefined;
+
+  const {
+    data: assignedCampaignsRes,
+    isLoading: isLoadingAssignedCampaigns,
+    isError: isErrorAssignedCampaigns,
+  } = useQuery({
+    queryKey: ["seller-assigned-campaigns", selectedSellerId],
+    queryFn: () => {
+      if (!selectedSellerId) throw new Error("Seller profile ID is required");
+      return getSellerCampaigns(selectedSellerId);
+    },
+    enabled: Boolean(selectedSellerId),
+  });
+
+  const assignedCampaigns = useMemo(
+    () => normalizeAssignedCampaigns(assignedCampaignsRes),
+    [assignedCampaignsRes],
+  );
+
+  // 2. Definir la lista de asesores usando la lista oficial de vendedores
+  const sellers = useMemo(() => {
+    const list = [
+      {
+        id: "ALL",
+        name: "👥 TODOS LOS LEADS",
+        email: "Vista global de prospectos",
+      },
+      {
+        id: "UNASSIGNED",
+        name: "SIN ASIGNAR ⚠️",
+        email: "Prospectos entrantes sin asesor",
+      },
+      ...realSellers.map((seller: any) => ({
+        id: seller.id,
+        name: `${seller.user?.first_name || ""} ${seller.user?.last_name || ""}`.trim().toUpperCase(),
+        email: seller.user?.email || "Asesor Comercial asignado",
+      })),
+    ];
+    return list;
+  }, [realSellers]);
+
+  // Asegurar pestaña "ALL" por defecto si queda vacía
+  useEffect(() => {
+    if (!activeSellerTab) {
+      setActiveSellerTab("ALL");
+    }
+  }, [activeSellerTab]);
+
+  // 3. Mapear los prospectos devueltos al formato de miembros activos para la tabla
+  const activeMembers = useMemo(() => {
+    if (activeSellerTab === "ALL") {
+      return leads.flatMap((lead) => {
+        if (!lead.campaignsEngaging || lead.campaignsEngaging.length === 0) {
+          return [
+            {
+              id: `unassigned-${lead.id}`,
+              created_at: lead.created_at,
+              status: "NUEVO",
+              assigned_to: "UNASSIGNED",
+              source: lead.phones?.[0]?.type || "WHATSAPP",
+              campaing_id: lead.primary_campaign_id || "",
+              campaign_id: lead.primary_campaign_id || "",
+              lead,
+              campaign: { id: lead.primary_campaign_id || "", name: "Bandeja de Entrada General", status: "ACTIVE" },
+              campaing: { id: lead.primary_campaign_id || "", name: "Bandeja de Entrada General", status: "ACTIVE" } // Typo backward compatibility
+            }
+          ];
+        }
+        return lead.campaignsEngaging.map((member) => ({
+          ...member,
+          lead
+        }));
+      });
+    }
+
+    if (activeSellerTab === "UNASSIGNED") {
+      return leads.map((lead) => ({
+        id: `unassigned-${lead.id}`,
+        created_at: lead.created_at,
+        status: "NUEVO",
+        assigned_to: "UNASSIGNED",
+        source: lead.phones?.[0]?.type || "WHATSAPP",
+        campaing_id: lead.primary_campaign_id || "",
+        campaign_id: lead.primary_campaign_id || "",
+        lead,
+        campaign: { id: lead.primary_campaign_id || "", name: "Bandeja de Entrada General", status: "ACTIVE" },
+        campaing: { id: lead.primary_campaign_id || "", name: "Bandeja de Entrada General", status: "ACTIVE" } // Typo backward compatibility
+      }));
+    }
+
+    const selectedSeller = realSellers.find((seller: any) => seller.id === activeSellerTab);
+    const selectedFirstName = selectedSeller?.user?.first_name?.trim().toLowerCase() || "";
+    const selectedLastName = selectedSeller?.user?.last_name?.trim().toLowerCase() || "";
+
+    return leads.flatMap((lead) => {
+      const relevantMembers = (lead.campaignsEngaging || []).filter((member) => {
+        if (member.assigned_to === activeSellerTab || member.seller?.id === activeSellerTab) {
+          return true;
+        }
+
+        const memberFirstName = member.seller?.user?.first_name?.trim().toLowerCase() || "";
+        const memberLastName = member.seller?.user?.last_name?.trim().toLowerCase() || "";
+        return Boolean(
+          selectedFirstName
+          && memberFirstName === selectedFirstName
+          && memberLastName === selectedLastName,
+        );
+      });
+
+      return relevantMembers
+        .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+        .map((member) => ({ ...member, lead }));
+    });
+  }, [leads, activeSellerTab, realSellers]);
+
+  // Obtener interacciones del prospecto seleccionado para el Sheet lateral
+  const { data: interactionsRes, isLoading: isLoadingInteractions } = useQuery({
+    queryKey: ["member-interactions", selectedLead?.id],
+    queryFn: async () => {
+      if (!selectedLead) return null;
+      const res = await api.campaigns[":campaignId"]["members"][":memberId"]["interactions"].$get({
+        param: { 
+          campaignId: selectedLead.campaignId || selectedLead.campaing_id || selectedLead.campaing?.id, 
+          memberId: selectedLead.id 
+        }
+      });
+      return res.json();
+    },
+    enabled: !!selectedLead?.id && !selectedLead.id.startsWith("unassigned-"),
+  });
+  const interactions = useMemo(() => adaptLeadInteractionsResponse(interactionsRes), [interactionsRes]);
+
+  // Reasignar asesor comercial mutation
+  const reassignMutation = useMutation({
+    mutationFn: async (newSellerId: string) => {
+      if (selectedLead.id.startsWith("unassigned-")) {
+        const campaignId = selectedLead.campaing_id || selectedLead.lead.primary_campaign_id;
+        const selectedSeller = realSellers.find((seller: any) => seller.id === newSellerId);
+        const assignedUserId = selectedSeller?.user_id || selectedSeller?.user?.id;
+        if (!campaignId) {
+          throw new Error("El prospecto no tiene una campaña asociada.");
+        }
+        if (!assignedUserId) {
+          throw new Error("No se encontró el User.id del asesor seleccionado.");
+        }
+        const res = await api.campaigns[":campaignId"].members.$post({
+          param: { campaignId },
+          json: {
+            lead_id: selectedLead.lead.id,
+            campaing_id: campaignId,
+            assigned_to: assignedUserId,
+            source: selectedLead.lead.source || "WHATSAPP",
+            is_primary: true
+          }
+        });
+        return await res.json();
+      }
+      return reassignCampaignMember(
+        selectedLead.campaing_id || selectedLead.campaing?.id, 
+        selectedLead.id, 
+        { assigned_to: newSellerId }
+      );
+    },
+    onSuccess: (res: any) => {
+      if (res.success) {
+        toast.success("Prospecto reasignado al nuevo asesor comercial");
+        setSelectedLead(null);
+        queryClient.invalidateQueries({ queryKey: ["all-leads"] });
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+        queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      } else {
+        toast.error(res.message || "Error al reasignar prospecto");
+      }
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Error al reasignar prospecto");
+    }
+  });
+
+  // Reasignar asesores de manera masiva
+  const bulkReassignMutation = useMutation({
+    mutationFn: async ({ campaignId, memberIds, assignedTo }: { campaignId: string; memberIds: string[]; assignedTo: string }) => {
+      return reassignBulkCampaignMembers(campaignId, {
+        member_ids: memberIds,
+        assigned_to: assignedTo
+      });
+    },
+    onSuccess: (res: any) => {
+      if (res.success) {
+        toast.success("Prospectos reasignados exitosamente al nuevo asesor comercial");
+        queryClient.invalidateQueries({ queryKey: ["all-leads"] });
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+        queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      } else {
+        toast.error(res.message || "Error al reasignar prospectos");
+      }
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Error al reasignar prospectos");
+    }
+  });
+
+  // Información del asesor activo
+  const activeSeller = useMemo(() => {
+    return sellers.find(s => s.id === activeSellerTab) || null;
+  }, [sellers, activeSellerTab]);
+
+  // KPIs dinámicos calculados desde la base de datos de leads
+  const kpis = useMemo(() => {
+    return calculateSupervisorKPIs(realSellers);
+  }, [realSellers]);
+
+  return {
+    sellers,
+    activeSellerTab,
+    setActiveSellerTab,
+    activeSeller,
+    activeMembers,
+    isLoadingLeads,
+    selectedLead,
+    setSelectedLead,
+    interactions,
+    isLoadingInteractions,
+    reassignMutation,
+    bulkReassignMutation,
+    kpis,
+    realSellers,
+    isLoadingSellers,
+    isErrorSellers,
+    assignedCampaigns,
+    isLoadingAssignedCampaigns,
+    isErrorAssignedCampaigns,
+  };
+};

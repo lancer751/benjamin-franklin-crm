@@ -61,9 +61,17 @@ export const DiscountCodeQuerySchema = z.object({
   valid_from: z.coerce.date().optional(),
   valid_until: z.coerce.date().optional(),
   is_active: z.boolean().optional(),
-  user_id: z.uuid().length(36).optional()
+  user_id: z.uuid().length(36).optional(),
 });
 
-export type CreateDiscountCodeInput = z.infer<typeof CreateDiscountCodeSchema>;
-export type UpdateDiscountCodeInput = z.infer<typeof UpdateDiscountCodeSchema>;
-export type DiscountQueryPagination = z.infer<typeof DiscountCodeQuerySchema>;
+export type CreateDiscountCodeInput = z.infer<
+  typeof CreateDiscountCodeSchema
+>;
+
+export type UpdateDiscountCodeInput = z.infer<
+  typeof UpdateDiscountCodeSchema
+>;
+
+export type DiscountQueryPagination = z.infer<
+  typeof DiscountCodeQuerySchema
+>;

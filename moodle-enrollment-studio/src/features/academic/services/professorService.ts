@@ -8,6 +8,9 @@ export type CreateProfessorReq = InferRequestType<typeof api.academic.professors
 export type UpdateProfessorReq = InferRequestType<(typeof api.academic.professors)[typeof UUID_PATH]["$put"]>["json"];
 export type DeleteProfessorRes = InferResponseType<(typeof api.academic.professors)[typeof UUID_PATH]["$delete"]>;
 
+export type DeactivateProfessorRes = InferResponseType<(typeof api.academic.professors)[typeof UUID_PATH]["desactivate"]["$patch"]>;
+export type RestoreProfessorRes = InferResponseType<(typeof api.academic.professors)[typeof UUID_PATH]["restore"]["$patch"]>;
+
 export const getProfessors = async (): Promise<ProfessorsRes> => {
   const res = await api.academic.professors.$get();
   return await res.json();
@@ -33,5 +36,19 @@ export const updateProfessor = async (id: string, data: UpdateProfessorReq) => {
 
 export const deleteProfessor = async (id: string): Promise<DeleteProfessorRes> => {
   const res = await (api.academic.professors as any)[UUID_PATH].$delete({ param: { id } });
+  return await res.json();
+};
+
+export const deactivateProfessor = async (id: string): Promise<DeactivateProfessorRes> => {
+  const res = await (api.academic.professors as any)[UUID_PATH]["desactivate"].$patch({
+    param: { id }
+  });
+  return await res.json();
+};
+
+export const restoreProfessor = async (id: string): Promise<RestoreProfessorRes> => {
+  const res = await (api.academic.professors as any)[UUID_PATH]["restore"].$patch({
+    param: { id }
+  });
   return await res.json();
 };
