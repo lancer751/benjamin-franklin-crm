@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getCampaigns } from "@/features/campaigns/services/campaignService";
-import { getSellerCampaigns } from "@/features/users/services/userService";
+import { getSellerCampaigns, getSellers } from "@/features/users/services/userService";
 import {
   addLeadToCampaign,
   createLead,
@@ -49,7 +49,10 @@ export function useLeadCreationFlow() {
   const user = useAuthStore((state) => state.user);
   const role = user?.role?.name ?? "";
   const isSalesRep = role === "SALES_REP";
-  const canChooseSeller = role === "ADMIN" || role === "SALES_SUPERVISOR" || role === "MARKETING";
+  const canChooseSeller = role === "ADMIN"
+    || role === "SALES_SUPERVISOR"
+    || role === "SUPERVISOR"
+    || role === "MARKETING";
   const authenticatedSellerProfileId = user?.seller?.id || "";
   const authenticatedUserId = user?.id || "";
   const [partialProgress, setPartialProgress] = useState<PartialProgress | null>(null);
@@ -77,21 +80,52 @@ export function useLeadCreationFlow() {
     queryFn: () => getCampaigns({ page: "1", limit: "100" }),
     enabled: Boolean(user) && !isSalesRep,
   });
+  const sellersQuery = useQuery({
+    queryKey: ["users", "sellers", "campaign-assignment"],
+    queryFn: getSellers,
+    enabled: Boolean(user) && canChooseSeller && !isSalesRep,
+  });
 
   const campaigns = useMemo(
     () => isSalesRep
       ? adaptSellerCampaigns(sellerCampaignsQuery.data)
-      : adaptAllowedCampaigns(allowedCampaignsQuery.data),
-    [allowedCampaignsQuery.data, isSalesRep, sellerCampaignsQuery.data],
+      : adaptAllowedCampaigns(allowedCampaignsQuery.data, sellersQuery.data),
+    [allowedCampaignsQuery.data, isSalesRep, sellerCampaignsQuery.data, sellersQuery.data],
   );
   const selectedCampaign = campaigns.find((campaign) => campaign.id === campaignId);
   const sellerOptions = canChooseSeller ? selectedCampaign?.sellers || [] : [];
+  const isLoadingSellers = canChooseSeller
+    && Boolean(campaignId)
+    && (allowedCampaignsQuery.isLoading || sellersQuery.isLoading);
+  const sellerOptionsError = canChooseSeller
+    && Boolean(campaignId)
+    && (allowedCampaignsQuery.isError || sellersQuery.isError);
 
   useEffect(() => {
     if (isSalesRep && authenticatedUserId) {
-      form.setValue("sellerId", authenticatedUserId);
+      form.setValue("sellerId", authenticatedUserId, { shouldValidate: true });
     }
   }, [authenticatedUserId, form, isSalesRep]);
+
+  useEffect(() => {
+    if (!canChooseSeller || !campaignId || isLoadingSellers || sellerOptionsError) return;
+    const currentSellerId = form.getValues("sellerId") || "";
+    if (sellerOptions.length === 1) {
+      const onlySeller = sellerOptions[0];
+      if (currentSellerId !== onlySeller.userId) {
+        form.setValue("sellerId", onlySeller.userId, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+      form.clearErrors("sellerId");
+      return;
+    }
+    if (currentSellerId && !sellerOptions.some((seller) => seller.userId === currentSellerId)) {
+      form.setValue("sellerId", "", { shouldDirty: true });
+      form.clearErrors("sellerId");
+    }
+  }, [campaignId, canChooseSeller, form, isLoadingSellers, sellerOptions, sellerOptionsError]);
 
   useEffect(() => {
     setPartialProgress(null);
@@ -243,6 +277,8 @@ export function useLeadCreationFlow() {
     : Boolean(values.sellerId && sellerOptions.some((seller) => seller.userId === values.sellerId));
   const canSubmit = schemaIsValid
     && sellerIsValid
+    && !isLoadingSellers
+    && !sellerOptionsError
     && !hasIdentityConflict
     && !lookupState.isSearching
     && !registrationMutation.isPending;
@@ -261,6 +297,8 @@ export function useLeadCreationFlow() {
     canChooseSeller,
     campaigns,
     sellerOptions,
+    isLoadingSellers,
+    sellerOptionsError,
     isLoadingCampaigns: isSalesRep ? sellerCampaignsQuery.isLoading : allowedCampaignsQuery.isLoading,
     campaignError: isSalesRep ? sellerCampaignsQuery.isError : allowedCampaignsQuery.isError,
     lookup,
@@ -276,8 +314,11 @@ export function useLeadCreationFlow() {
     isPending: registrationMutation.isPending,
     hasPartialInteraction: Boolean(partialProgress?.memberId),
     setCampaign: (id: string) => {
-      form.setValue("campaignId", id, { shouldValidate: true });
-      if (!isSalesRep) form.setValue("sellerId", "", { shouldValidate: true });
+      form.setValue("campaignId", id, { shouldDirty: true, shouldValidate: true });
+      if (!isSalesRep) {
+        form.setValue("sellerId", "", { shouldDirty: true });
+        form.clearErrors("sellerId");
+      }
     },
     submit: form.handleSubmit((data) => registrationMutation.mutate(data)),
     cancel: () => navigate("/prospectos"),

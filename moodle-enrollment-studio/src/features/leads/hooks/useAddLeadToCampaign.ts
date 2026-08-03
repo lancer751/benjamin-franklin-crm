@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getCampaigns } from "@/features/campaigns/services/campaignService";
-import { getSellerCampaigns } from "@/features/users/services/userService";
+import { getSellerCampaigns, getSellers } from "@/features/users/services/userService";
 import { adaptAvailableCampaigns, adaptSellerAvailableCampaigns, createdMemberIdFrom, requireSuccess } from "../adapters/leadDetailAdapter";
 import { addLeadToCampaign } from "../services/leadService";
 
@@ -28,6 +28,11 @@ export function useAddLeadToCampaign(
     queryFn: () => getSellerCampaigns(authenticatedSellerProfileId),
     enabled: isSalesRep && Boolean(authenticatedSellerProfileId),
   });
+  const sellersQuery = useQuery({
+    queryKey: ["users", "sellers", "campaign-assignment"],
+    queryFn: getSellers,
+    enabled: !isSalesRep,
+  });
   const campaigns = useMemo(() => {
     const options = isSalesRep
       ? adaptSellerAvailableCampaigns(
@@ -35,7 +40,7 @@ export function useAddLeadToCampaign(
           authenticatedUserId,
           authenticatedSellerProfileId,
         )
-      : adaptAvailableCampaigns(campaignsQuery.data);
+      : adaptAvailableCampaigns(campaignsQuery.data, sellersQuery.data);
     return options.filter((campaign) => !associatedCampaignIds.has(campaign.id));
   }, [
     associatedCampaignIds,
@@ -44,6 +49,7 @@ export function useAddLeadToCampaign(
     campaignsQuery.data,
     isSalesRep,
     sellerCampaignsQuery.data,
+    sellersQuery.data,
   ]);
 
   const mutation = useMutation({
@@ -80,8 +86,12 @@ export function useAddLeadToCampaign(
 
   return {
     campaigns,
-    isLoading: isSalesRep ? sellerCampaignsQuery.isLoading : campaignsQuery.isLoading,
-    isError: isSalesRep ? sellerCampaignsQuery.isError : campaignsQuery.isError,
+    isLoading: isSalesRep
+      ? sellerCampaignsQuery.isLoading
+      : campaignsQuery.isLoading || sellersQuery.isLoading,
+    isError: isSalesRep
+      ? sellerCampaignsQuery.isError
+      : campaignsQuery.isError || sellersQuery.isError,
     mutation,
   };
 }

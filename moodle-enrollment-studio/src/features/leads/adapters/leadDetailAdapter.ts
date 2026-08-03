@@ -2,6 +2,12 @@ import { isCampaignMemberStatus, type CampaignMemberStatus } from "@/core/consta
 import type { LeadPhone, LeadTask, PersonName } from "../components/lead-detail/leadDetail.types";
 import { adaptLeadInteractions, type LeadInteractionViewModel } from "./leadInteractionAdapter";
 import { getApiErrorMessage } from "../utils/getApiErrorMessage";
+import {
+  adaptCampaignAssignments,
+  adaptSellerCampaignAssignments,
+  type CampaignAssignmentOption,
+  type CampaignSellerOption,
+} from "./campaignAssignmentAdapter";
 
 export interface AssignedUserViewModel { id: string; name: string }
 export interface LeadCampaignViewModel {
@@ -33,8 +39,8 @@ export interface LeadDetailViewModel extends PersonName {
   campaigns: LeadCampaignViewModel[];
 }
 
-export interface CampaignDialogSeller { userId: string; sellerProfileId: string; name: string }
-export interface CampaignDialogOption { id: string; name: string; platform: string; sellers: CampaignDialogSeller[] }
+export type CampaignDialogSeller = CampaignSellerOption;
+export type CampaignDialogOption = CampaignAssignmentOption;
 
 type UnknownRecord = Record<string, unknown>;
 const isRecord = (value: unknown): value is UnknownRecord => typeof value === "object" && value !== null;
@@ -128,55 +134,17 @@ export const sellerProfileIdFrom = (response: unknown) => {
   return stringValue(response.id);
 };
 
-const sellerName = (seller: UnknownRecord) => {
-  const user = isRecord(seller.user) ? seller.user : {};
-  return [stringValue(user.first_name), stringValue(user.last_name)].filter(Boolean).join(" ") || "Asesor sin nombre";
-};
-
-const campaignOption = (value: unknown): CampaignDialogOption | null => {
-  if (!isRecord(value)) return null;
-  const id = stringValue(value.id);
-  if (!id || stringValue(value.status) !== "ACTIVE") return null;
-  const assignments = Array.isArray(value.sellersOnCampaign) ? value.sellersOnCampaign : [];
-  return {
-    id,
-    name: stringValue(value.name) || stringValue(value.campaing_name) || "Campaña sin nombre",
-    platform: stringValue(value.platform),
-    sellers: assignments.flatMap((assignment) => {
-      if (!isRecord(assignment)) return [];
-      const nestedSeller = isRecord(assignment.seller) ? assignment.seller : {};
-      const nestedUser = isRecord(nestedSeller.user) ? nestedSeller.user : {};
-      const sellerProfileId = stringValue(assignment.seller_id) || stringValue(nestedSeller.id);
-      const userId = stringValue(nestedSeller.user_id) || stringValue(nestedUser.id);
-      return userId && sellerProfileId
-        ? [{ userId, sellerProfileId, name: sellerName(nestedSeller) }]
-        : [];
-    }),
-  };
-};
-
-export const adaptAvailableCampaigns = (response: unknown): CampaignDialogOption[] => {
-  if (!isRecord(response)) return [];
-  const data = isRecord(response.data) ? response.data : response;
-  const campaigns = Array.isArray(data.campaings) ? data.campaings : [];
-  return campaigns.map(campaignOption).filter((campaign): campaign is CampaignDialogOption => Boolean(campaign));
-};
+export const adaptAvailableCampaigns = (
+  campaignsResponse: unknown,
+  sellersResponse: unknown,
+): CampaignDialogOption[] => adaptCampaignAssignments(campaignsResponse, sellersResponse);
 
 export const adaptSellerAvailableCampaigns = (
   response: unknown,
   userId: string,
   sellerProfileId: string,
 ): CampaignDialogOption[] => {
-  if (!isRecord(response)) return [];
-  const data = isRecord(response.data) ? response.data : response;
-  const assignments = Array.isArray(data.assignedCampaing) ? data.assignedCampaing : [];
-  return assignments.flatMap((assignment) => {
-    if (!isRecord(assignment)) return [];
-    const campaign = campaignOption(assignment.campaign ?? assignment.campaing ?? assignment);
-    return campaign
-      ? [{ ...campaign, sellers: [{ userId, sellerProfileId, name: "Mi perfil" }] }]
-      : [];
-  });
+  return adaptSellerCampaignAssignments(response, userId, sellerProfileId);
 };
 
 export const createdMemberIdFrom = (response: unknown) => {

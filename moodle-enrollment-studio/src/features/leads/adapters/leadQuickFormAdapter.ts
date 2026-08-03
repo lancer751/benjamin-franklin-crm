@@ -1,53 +1,26 @@
 import type { LeadQuickFormData } from "../schemas/leadQuickFormSchema";
 import type { LeadFieldsData, LeadFieldsInput } from "../schemas/leadFieldsSchema";
 import type { UpdateLeadReq } from "../services/leadService";
+import {
+  adaptCampaignAssignments,
+  type CampaignAssignmentOption,
+  type CampaignSellerOption,
+} from "./campaignAssignmentAdapter";
 
-export interface LeadQuickSellerOption {
-  userId: string;
-  sellerProfileId: string;
-  name: string;
-}
-
-export interface LeadQuickCampaignOption {
-  id: string;
-  name: string;
-  sellers: LeadQuickSellerOption[];
-}
+export type LeadQuickSellerOption = CampaignSellerOption;
+export type LeadQuickCampaignOption = CampaignAssignmentOption;
 
 interface CampaignRecord {
   id?: string;
   name?: string;
   status?: string;
-  sellersOnCampaign?: Array<{
-    seller_id?: string;
-    seller?: {
-      id?: string;
-      user_id?: string;
-      user?: { id?: string; first_name?: string; last_name?: string };
-    };
-  }>;
 }
 
-const sellerName = (firstName?: string, lastName?: string) => (
-  [firstName, lastName].filter(Boolean).join(" ").trim()
-);
-
-export function adaptAllowedCampaigns(response: unknown): LeadQuickCampaignOption[] {
-  const body = response as { data?: { campaings?: CampaignRecord[] }; campaings?: CampaignRecord[] } | undefined;
-  const campaigns = body?.data?.campaings || body?.campaings || [];
-  return campaigns
-    .filter((campaign) => campaign.id && campaign.status === "ACTIVE")
-    .map((campaign) => ({
-      id: campaign.id!,
-      name: campaign.name?.trim() || "Campaña sin nombre",
-      sellers: (campaign.sellersOnCampaign || [])
-        .map((assignment) => ({
-          userId: assignment.seller?.user_id || assignment.seller?.user?.id || "",
-          sellerProfileId: assignment.seller_id || assignment.seller?.id || "",
-          name: sellerName(assignment.seller?.user?.first_name, assignment.seller?.user?.last_name),
-        }))
-        .filter((seller) => seller.userId && seller.sellerProfileId && seller.name),
-    }));
+export function adaptAllowedCampaigns(
+  campaignsResponse: unknown,
+  sellersResponse: unknown,
+): LeadQuickCampaignOption[] {
+  return adaptCampaignAssignments(campaignsResponse, sellersResponse);
 }
 
 export function adaptSellerCampaigns(response: unknown): LeadQuickCampaignOption[] {
@@ -55,7 +28,12 @@ export function adaptSellerCampaigns(response: unknown): LeadQuickCampaignOption
   return (body?.assignedCampaing || [])
     .map((assignment) => assignment.campaign)
     .filter((campaign): campaign is CampaignRecord => Boolean(campaign?.id && campaign.status === "ACTIVE"))
-    .map((campaign) => ({ id: campaign.id!, name: campaign.name?.trim() || "Campaña sin nombre", sellers: [] }));
+    .map((campaign) => ({
+      id: campaign.id!,
+      name: campaign.name?.trim() || "Campaña sin nombre",
+      platform: "",
+      sellers: [],
+    }));
 }
 
 export function buildCreateLeadPayload(data: LeadQuickFormData) {

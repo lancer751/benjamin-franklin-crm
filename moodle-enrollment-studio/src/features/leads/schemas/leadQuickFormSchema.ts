@@ -4,7 +4,7 @@ import { interactionFormSchema, interactionTypeSchema } from "./interactionFormS
 
 export const leadQuickFormSchema = leadFieldsSchema.extend({
   campaignId: z.string().uuid("Selecciona una campaña."),
-  sellerId: z.string().optional(),
+  sellerId: z.string().uuid("Selecciona un asesor."),
   source: z.enum(["FACEBOOK", "INSTAGRAM", "TIKTOK", "WHATSAPP", "WEBSITE"]),
   interactionType: interactionTypeSchema,
   notes: interactionFormSchema.shape.notes,
