@@ -79,6 +79,7 @@ export interface ProspectPresentationRow {
   additionalCampaignCount: number;
   additionalCampaignNames: string[];
   memberStatus: string;
+  leadStatus: string;
   sellerName: string;
   campaignCount: number;
 }
@@ -194,6 +195,7 @@ export const adaptProspectRows = (
     additionalCampaignCount: additionalCampaignNames.length,
     additionalCampaignNames,
     memberStatus: member?.status || "",
+    leadStatus: lead.lead_status,
     sellerName: advisorName,
     campaignCount: lead.campaignCount ?? 0,
   };

@@ -8,6 +8,8 @@ import type { SuccessResponse } from "@/app";
 export type CampaignsQueryReq = InferRequestType<typeof api.campaigns.$get>["query"];
 export type CampaignsRes = InferResponseType<typeof api.campaigns.$get>;
 export type CampaignByIdRes = InferResponseType<typeof api.campaigns[":id"]["$get"]>;
+export type CampaignMembersQueryReq = InferRequestType<typeof api.campaigns[":campaignId"]["members"]["$get"]>["query"];
+export type CampaignMembersRes = InferResponseType<typeof api.campaigns[":campaignId"]["members"]["$get"]>;
 export type CreateCampaignReq = InferRequestType<typeof api.campaigns.$post>["json"];
 export type UpdateCampaignReq = InferRequestType<typeof api.campaigns[":id"]["$put"]>["json"];
 export type DeleteCampaignRes = InferResponseType<typeof api.campaigns[":id"]["$delete"]>;
@@ -130,7 +132,10 @@ export const removeSellerFromCampaign = async (id: string, sellerId: string): Pr
 /**
  * Obtener todos los miembros (leads) de una campaña con filtros opcionales
  */
-export const getCampaignMembers = async (campaignId: string, query?: any) => {
+export const getCampaignMembers = async (
+  campaignId: string,
+  query?: CampaignMembersQueryReq,
+): Promise<CampaignMembersRes> => {
   const res = await api.campaigns[":campaignId"]["members"].$get({
     param: { campaignId },
     query: query || {}
