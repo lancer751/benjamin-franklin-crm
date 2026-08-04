@@ -1,6 +1,7 @@
 import type { LeadQuickFormData } from "../schemas/leadQuickFormSchema";
 import type { LeadFieldsData, LeadFieldsInput } from "../schemas/leadFieldsSchema";
 import type { UpdateLeadReq } from "../services/leadService";
+import { isLeadStatus } from "../utils/prospectDisplay";
 import {
   adaptCampaignAssignments,
   type CampaignAssignmentOption,
@@ -102,7 +103,7 @@ export function mapLeadToFormValues(lead: LeadRecord): LeadFieldsInput {
     email: text(lead.email),
     profession: text(lead.profession),
     gender: lead.gender === "MALE" || lead.gender === "FEMALE" ? lead.gender : "NOT_SPECIFIED",
-    lead_status: lead.lead_status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+    lead_status: isLeadStatus(lead.lead_status) ? lead.lead_status : "ACTIVE",
     address: text(lead.address),
     secondary_email: text(lead.secondary_email),
     dni: text(lead.dni),

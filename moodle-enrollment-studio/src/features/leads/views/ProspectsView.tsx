@@ -32,7 +32,6 @@ export const ProspectsView = () => {
       <Card className="overflow-hidden shadow-sm">
         <ProspectsTable
           rows={prospects.rows}
-          showSeller={prospects.canViewSeller}
           isLoading={prospects.isLoading}
           isFetching={prospects.isFetching}
           isError={prospects.isError}

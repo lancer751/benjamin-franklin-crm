@@ -8,6 +8,7 @@ import { useLeadEditFlow } from "../../hooks/useLeadEditFlow";
 import { LeadAdditionalFields } from "./LeadAdditionalFields";
 import { LeadFormActions } from "./LeadFormActions";
 import { LeadPrimaryFields } from "./LeadPrimaryFields";
+import { LeadStatusField } from "./LeadStatusField";
 
 const LeadEditSkeleton = () => (
   <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:py-8">
@@ -46,7 +47,8 @@ export function LeadEditForm({ id }: { id: string }) {
         <form onSubmit={controller.submit} className="space-y-5" noValidate>
           <fieldset disabled={controller.isPending} className="space-y-5">
             <Card className="space-y-6 p-5 shadow-sm sm:p-6"><LeadPrimaryFields /></Card>
-            <LeadAdditionalFields defaultOpen={controller.hasAdditionalData} showLeadStatus />
+            <LeadStatusField />
+            <LeadAdditionalFields defaultOpen={controller.hasAdditionalData} />
           </fieldset>
           {controller.mutationMessage && <Alert variant="destructive"><AlertTitle>No se guardaron los cambios</AlertTitle><AlertDescription>{controller.mutationMessage}</AlertDescription></Alert>}
           <LeadFormActions cancel={controller.cancel} disabled={!controller.canSubmit} isPending={controller.isPending} label="Guardar cambios" pendingLabel="Guardando…" />

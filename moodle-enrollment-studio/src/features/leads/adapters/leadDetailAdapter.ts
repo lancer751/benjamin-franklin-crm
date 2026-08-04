@@ -1,4 +1,5 @@
 import { isCampaignMemberStatus, type CampaignMemberStatus } from "@/core/constants/campaignMemberStatus";
+import { isLeadStatus, type LeadStatus } from "../utils/prospectDisplay";
 import type { LeadPhone, LeadTask, PersonName } from "../components/lead-detail/leadDetail.types";
 import { adaptLeadInteractions, type LeadInteractionViewModel } from "./leadInteractionAdapter";
 import { getApiErrorMessage } from "../utils/getApiErrorMessage";
@@ -14,10 +15,10 @@ export interface LeadCampaignViewModel {
   id: string;
   campaignId: string;
   campaignName: string;
-  platform: string;
+  platform: string | null;
   status: CampaignMemberStatus;
   assignedUser: AssignedUserViewModel | null;
-  source: string;
+  source: string | null;
   isPrimary: boolean;
   createdAt: string | null;
   updatedAt: string | null;
@@ -32,7 +33,7 @@ export interface LeadDetailViewModel extends PersonName {
   email: string | null;
   secondary_email: string | null;
   dni: string | null;
-  lead_status: string | null;
+  lead_status: LeadStatus | null;
   created_at: string | null;
   updated_at: string | null;
   phones: LeadPhone[];
@@ -59,7 +60,7 @@ const adaptAssignedUser = (value: unknown): AssignedUserViewModel | null => {
   if (!isRecord(value)) return null;
   const id = stringValue(value.id).trim();
   if (!id) return null;
-  return { id, name: normalizedName(value.first_name, value.last_name) || "Usuario no disponible" };
+  return { id, name: normalizedName(value.first_name, value.last_name) || "Asesor sin nombre" };
 };
 
 const adaptCampaign = (value: unknown): LeadCampaignViewModel | null => {
@@ -71,11 +72,11 @@ const adaptCampaign = (value: unknown): LeadCampaignViewModel | null => {
   return {
     id,
     campaignId,
-    campaignName: stringValue(campaign?.name).trim() || "Campaña sin nombre",
-    platform: stringValue(campaign?.platform).trim(),
+    campaignName: normalizedName(campaign?.name) || "Campaña sin nombre",
+    platform: nullableString(campaign?.platform)?.trim() || null,
     status: value.status,
     assignedUser: adaptAssignedUser(value.assignedUser),
-    source: stringValue(value.source).trim(),
+    source: nullableString(value.source)?.trim() || null,
     isPrimary: value.is_primary === true,
     createdAt: nullableString(value.created_at),
     updatedAt: nullableString(value.updated_at),
@@ -112,7 +113,7 @@ export const unwrapLeadDetail = (response: unknown): LeadDetailViewModel | null 
     email: nullableString(candidate.email),
     secondary_email: nullableString(candidate.secondary_email),
     dni: nullableString(candidate.dni),
-    lead_status: nullableString(candidate.lead_status),
+    lead_status: isLeadStatus(candidate.lead_status) ? candidate.lead_status : null,
     created_at: nullableString(candidate.created_at),
     updated_at: nullableString(candidate.updated_at),
     phones: adaptPhones(candidate.phones),
@@ -152,11 +153,11 @@ export const createdMemberIdFrom = (response: unknown) => {
   return stringValue(response.data.id);
 };
 
-export const resolveActiveCampaign = (
+export const resolveActiveCampaignMember = (
   campaigns: LeadCampaignViewModel[],
-  selectedCampaignId?: string,
+  selectedMemberId?: string,
 ): LeadCampaignViewModel | null => campaigns.find((campaign) => (
-  campaign.id === selectedCampaignId || campaign.campaignId === selectedCampaignId
+  campaign.id === selectedMemberId
 )) ?? campaigns.find((campaign) => campaign.isPrimary) ?? campaigns[0] ?? null;
 
 export const campaignIdsFromMembers = (campaigns: LeadCampaignViewModel[]) => new Set(campaigns.map((campaign) => campaign.campaignId));

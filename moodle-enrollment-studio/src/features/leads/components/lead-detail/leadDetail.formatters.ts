@@ -3,7 +3,7 @@ import { INTERACTION_TYPE_LABELS } from "../../utils/interactionType.constants";
 
 const labels: Record<string, string> = {
   ...INTERACTION_TYPE_LABELS,
-  ACTIVE: "Activo", INACTIVE: "Inactivo", NOT_SPECIFIED: "No especificado",
+  NOT_SPECIFIED: "No especificado",
   FACEBOOK: "Facebook", INSTAGRAM: "Instagram", TIKTOK: "TikTok", WEBSITE: "Sitio web",
   MANUAL: "Registro manual", MALE: "Masculino", FEMALE: "Femenino",
 };

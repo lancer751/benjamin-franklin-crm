@@ -63,6 +63,7 @@ export interface NormalizedLead {
   courseName: string;
   phones: NormalizedLeadPhone[];
   campaignsEngaging: NormalizedCampaignMember[];
+  campaignCount: number;
 }
 
 export interface ProspectPresentationRow {
@@ -79,7 +80,16 @@ export interface ProspectPresentationRow {
   additionalCampaignNames: string[];
   memberStatus: string;
   sellerName: string;
+  campaignCount: number;
 }
+
+type UnknownRecord = Record<string, unknown>;
+const isRecord = (value: unknown): value is UnknownRecord => typeof value === "object" && value !== null;
+const readCampaignCount = (lead: unknown): number => {
+  if (!isRecord(lead) || !isRecord(lead._count)) return 0;
+  const count = lead._count.campaignsEngaging;
+  return typeof count === "number" && Number.isFinite(count) ? count : 0;
+};
 
 export interface LeadPage {
   leads: any[];
@@ -185,6 +195,7 @@ export const adaptProspectRows = (
     additionalCampaignNames,
     memberStatus: member?.status || "",
     sellerName: advisorName,
+    campaignCount: lead.campaignCount ?? 0,
   };
 });
 
@@ -304,7 +315,8 @@ export const adaptCampaignMembers = (rawMembers: any[]): NormalizedLead[] => {
       primary_campaign_id: lead.primary_campaign_id || member.campaing_id || "",
       courseName: cName,
       phones,
-      campaignsEngaging: [normalizedMember]
+      campaignsEngaging: [normalizedMember],
+      campaignCount: readCampaignCount(lead),
     };
   });
 };
@@ -369,7 +381,8 @@ export const adaptLeads = (rawLeads: any[]): NormalizedLead[] => {
       primary_campaign_id: lead.primary_campaign_id || "",
       courseName,
       phones,
-      campaignsEngaging
+      campaignsEngaging,
+      campaignCount: readCampaignCount(lead),
     };
   });
 };

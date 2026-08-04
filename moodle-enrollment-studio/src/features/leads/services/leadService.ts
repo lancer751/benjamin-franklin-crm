@@ -1,5 +1,7 @@
 import { api } from "@/core/lib/api";
 import { InferRequestType, InferResponseType } from "hono/client";
+import type { CampaignMemberStatus } from "@/core/constants/campaignMemberStatus";
+import type { LeadStatus } from "../utils/prospectDisplay";
 
 // Constantes exactas del backend para resolver el tipado RPC
 const UUID_PATH = ":id{[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}}" as const;
@@ -20,13 +22,9 @@ export interface LeadListQuery {
   page?: string;
   limit?: string;
   search?: string;
-  status?: "ACTIVE" | "INACTIVE";
-  lead_status?: "ACTIVE" | "INACTIVE";
-  member_status?: string;
+  status?: LeadStatus;
   assigned_to?: string;
   campaign_id?: string;
-  created_from?: string;
-  created_to?: string;
 }
 
 export interface LeadLookupResponse {
@@ -64,7 +62,7 @@ export type UpdateMemberStatusReq = InferRequestType<typeof api.campaigns[typeof
 /** Obtiene la lista unificada y paginada de todos los leads */
 export const getAllLeads = async (query?: LeadListQuery): Promise<GetAllLeadsRes> => {
   const cleanQuery = (query && !("queryKey" in query)) ? query : undefined;
-  const res = await api.leads.$get(cleanQuery ? { query: cleanQuery as any } : undefined);
+  const res = await api.leads.$get(cleanQuery ? { query: cleanQuery as LeadQuerySchemaInput } : undefined);
   return await res.json();
 };
 
@@ -137,13 +135,29 @@ export const addLeadToCampaign = async (campaignId: string, data: CreateCampaign
 };
 
 /** PATCH: Actualiza el estado de tipificación comercial de un miembro (:memberId/status) */
-export const updateMemberStatus = async (campaignId: string, memberId: string, status: string): Promise<any> => {
-  const res = await (api.campaigns as any)[":campaignId"].members[":memberId"].status.$patch({
+export interface UpdateCampaignMemberStatusParams {
+  campaignId: string;
+  memberId: string;
+  status: CampaignMemberStatus;
+}
+
+export const updateCampaignMemberStatus = async ({
+  campaignId,
+  memberId,
+  status,
+}: UpdateCampaignMemberStatusParams): Promise<unknown> => {
+  const res = await api.campaigns[":campaignId"].members[":memberId"].status.$patch({
     param: { campaignId, memberId },
-    json: { status }
+    json: { status },
   });
   return await res.json();
 };
+
+export const updateMemberStatus = (
+  campaignId: string,
+  memberId: string,
+  status: CampaignMemberStatus,
+): Promise<unknown> => updateCampaignMemberStatus({ campaignId, memberId, status });
 
 /** PATCH: Reasigna el prospecto de la campaña a otro asesor comercial (:memberId/reassign) */
 export const reassignMember = async (campaignId: string, memberId: string, assignedTo: string): Promise<any> => {

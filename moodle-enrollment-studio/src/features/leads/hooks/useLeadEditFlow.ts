@@ -60,9 +60,14 @@ export function useLeadEditFlow(id: string) {
       if (!initialData) throw new Error("No fue posible preparar los datos originales del prospecto.");
       const payload = buildUpdateLeadPayload(initialData, data);
       if (Object.keys(payload).length === 0) return { unchanged: true };
-      const response = await updateLead(id, payload);
+      let response: Awaited<ReturnType<typeof updateLead>>;
+      try {
+        response = await updateLead(id, payload);
+      } catch {
+        throw new Error("No fue posible actualizar el prospecto. Inténtalo nuevamente.");
+      }
       const body = response as unknown as { success?: boolean; message?: string; error?: string };
-      if (body.success !== true) throw new Error(responseError(response, "No fue posible actualizar el prospecto."));
+      if (body.success !== true) throw new Error(responseError(response, "No fue posible actualizar el prospecto. Inténtalo nuevamente."));
       return { unchanged: false };
     },
     onSuccess: async ({ unchanged }) => {
@@ -88,7 +93,6 @@ export function useLeadEditFlow(id: string) {
   const hasAdditionalData = Boolean(initialData && (
     initialData.middle_name || initialData.dni || initialData.profession || initialData.secondary_email
     || initialData.address || initialData.additionalPhones.length || initialData.gender !== "NOT_SPECIFIED"
-    || initialData.lead_status !== "ACTIVE"
   ));
 
   return {

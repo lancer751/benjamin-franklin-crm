@@ -10,10 +10,9 @@ const selectClass = "h-10 w-full rounded-md border border-input bg-background px
 
 interface LeadAdditionalFieldsProps {
   defaultOpen?: boolean;
-  showLeadStatus?: boolean;
 }
 
-export function LeadAdditionalFields({ defaultOpen = false, showLeadStatus = false }: LeadAdditionalFieldsProps) {
+export function LeadAdditionalFields({ defaultOpen = false }: LeadAdditionalFieldsProps) {
   const form = useFormContext<LeadFieldsInput>();
   const phones = useFieldArray({ control: form.control, name: "additionalPhones" });
   return (
@@ -28,7 +27,6 @@ export function LeadAdditionalFields({ defaultOpen = false, showLeadStatus = fal
             <FormField control={form.control} name="profession" render={({ field }) => <FormItem><FormLabel>Profesión</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>} />
             <FormField control={form.control} name="secondary_email" render={({ field }) => <FormItem><FormLabel>Correo secundario</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>} />
             <FormField control={form.control} name="address" render={({ field }) => <FormItem><FormLabel>Dirección</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>} />
-            {showLeadStatus && <FormField control={form.control} name="lead_status" render={({ field }) => <FormItem><FormLabel>Estado</FormLabel><FormControl><select className={selectClass} value={field.value} onChange={field.onChange}><option value="ACTIVE">Activo</option><option value="INACTIVE">Inactivo</option></select></FormControl><FormMessage /></FormItem>} />}
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between"><div><h3 className="text-sm font-medium">Teléfonos adicionales</h3><p className="text-xs text-muted-foreground">El celular principal siempre se conserva como principal.</p></div><Button type="button" variant="outline" size="sm" onClick={() => phones.append({ number: "", type: "TELEPHONE", id: undefined })}><Plus className="h-4 w-4" />Agregar</Button></div>

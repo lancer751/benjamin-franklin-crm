@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LEAD_STATUS_VALUES } from "../utils/prospectDisplay";
 import { manualLeadSchema, normalizeLeadEmail, normalizeLeadPhone } from "./manualLeadSchema";
 
 const PERSON_NAME_PATTERN = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' -]+$/;
@@ -44,7 +45,7 @@ export const leadFieldsSchema = manualLeadSchema.extend({
   secondary_email: optionalEmail,
   address: optionalText,
   additionalPhones: z.array(additionalPhoneSchema),
-  lead_status: z.enum(["ACTIVE", "INACTIVE"]),
+  lead_status: z.enum(LEAD_STATUS_VALUES),
 });
 
 export type LeadFieldsInput = z.input<typeof leadFieldsSchema>;

@@ -1,21 +1,15 @@
-import { CalendarDays, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import { Card } from "@/core/components/ui/card";
 import { Input } from "@/core/components/ui/input";
 import { Label } from "@/core/components/ui/label";
-import { Skeleton } from "@/core/components/ui/skeleton";
-import { cn } from "@/core/lib/utils";
 import type { ProspectsController } from "../../hooks/useProspects";
-import {
-  LEAD_STATUS_OPTIONS,
-} from "../../utils/prospectDisplay";
-import {
-  CAMPAIGN_MEMBER_STATUS_OPTIONS,
-  getCampaignMemberStatusLabel,
-  isCampaignMemberStatus,
-} from "@/core/constants/campaignMemberStatus";
+import { EMPTY_PROSPECT_DATE_RANGE } from "../../utils/prospectDateRange";
+import { LEAD_STATUS_OPTIONS } from "../../utils/prospectDisplay";
+import { ProspectsDateRangeFilter } from "./ProspectsDateRangeFilter";
 
 const selectClassName = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+const DATE_RANGE_CONTRACT_LIMITATION = "El filtro estará disponible cuando la API de prospectos admita fechas de inicio y fin.";
 
 interface FilterChipProps {
   label: string;
@@ -40,24 +34,14 @@ interface ProspectsFiltersProps {
   controller: ProspectsController;
 }
 
-function getCampaignPlaceholder(controller: ProspectsController): string {
-  if (controller.campaignsError) return "No fue posible cargar campañas";
-  if (controller.isSalesRep && controller.campaigns.length === 0) {
-    return "No tienes campañas asignadas";
-  }
-  return "Todas las campañas";
-}
-
 export function ProspectsFilters({ controller }: ProspectsFiltersProps) {
-  const selectedCampaign = controller.campaigns.find((campaign) => campaign.id === controller.campaignId);
   const selectedSeller = controller.sellers.find((seller) => seller.userId === controller.advisorId);
   const selectedLeadStatus = LEAD_STATUS_OPTIONS.find((status) => status.value === controller.leadStatus);
-  const campaignPlaceholder = getCampaignPlaceholder(controller);
 
   return (
     <Card className="space-y-4 p-4 shadow-sm">
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-1.5 md:col-span-2">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1.5">
           <Label htmlFor="prospect-search">Buscar prospectos</Label>
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -71,49 +55,11 @@ export function ProspectsFilters({ controller }: ProspectsFiltersProps) {
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="prospect-campaign">Campaña</Label>
-          {controller.areCampaignsLoading ? (
-            <Skeleton className="h-10 w-full" aria-label="Cargando campañas" />
-          ) : (
-            <select
-              id="prospect-campaign"
-              className={selectClassName}
-              value={controller.campaignId}
-              onChange={(event) => controller.setCampaignId(event.target.value)}
-            >
-              <option value="ALL">{campaignPlaceholder}</option>
-              {controller.campaigns.map((campaign) => (
-                <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
+        <ProspectsDateRangeFilter
+          value={EMPTY_PROSPECT_DATE_RANGE}
+          applyDisabledReason={DATE_RANGE_CONTRACT_LIMITATION}
+        />
 
-        <div className="space-y-1.5">
-          <Label htmlFor="prospect-stage">Etapa</Label>
-          <select
-            id="prospect-stage"
-            className={selectClassName}
-            value={controller.memberStatus}
-            onChange={(event) => {
-              if (event.target.value === "ALL" || isCampaignMemberStatus(event.target.value)) {
-                controller.setMemberStatus(event.target.value);
-              }
-            }}
-          >
-            <option value="ALL">Todas las etapas</option>
-            {CAMPAIGN_MEMBER_STATUS_OPTIONS.map((status) => (
-              <option key={status.value} value={status.value}>{status.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className={cn(
-        "grid items-end gap-3 md:grid-cols-2",
-        controller.canViewSeller ? "lg:grid-cols-[1fr_1fr_1fr_auto]" : "lg:grid-cols-[1fr_1fr_auto]",
-      )}>
         <div className="space-y-1.5">
           <Label htmlFor="prospect-status">Estado del lead</Label>
           <select
@@ -123,24 +69,8 @@ export function ProspectsFilters({ controller }: ProspectsFiltersProps) {
             onChange={(event) => controller.setLeadStatus(event.target.value)}
           >
             <option value="ALL">Todos los estados</option>
-            {LEAD_STATUS_OPTIONS.map((status) => (
-              <option key={status.value} value={status.value}>{status.label}</option>
-            ))}
+            {LEAD_STATUS_OPTIONS.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
           </select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="prospect-date">Fecha de registro</Label>
-          <div className="relative">
-            <CalendarDays className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="prospect-date"
-              type="date"
-              value={controller.registeredOn}
-              onChange={(event) => controller.setRegisteredOn(event.target.value)}
-              className="pl-9"
-            />
-          </div>
         </div>
 
         {controller.canViewSeller && (
@@ -153,28 +83,23 @@ export function ProspectsFilters({ controller }: ProspectsFiltersProps) {
               onChange={(event) => controller.setAdvisorId(event.target.value)}
             >
               <option value="ALL">Todos los asesores</option>
-              {controller.sellers.map((seller) => (
-                <option key={seller.userId} value={seller.userId}>{seller.name}</option>
-              ))}
+              {controller.sellers.map((seller) => <option key={seller.userId} value={seller.userId}>{seller.name}</option>)}
             </select>
           </div>
         )}
-
-        {controller.hasActiveFilters && (
-          <Button type="button" variant="outline" onClick={controller.clearFilters} className="h-10">
-            Limpiar filtros
-          </Button>
-        )}
       </div>
+
+      {controller.hasActiveFilters && (
+        <div className="flex justify-end">
+          <Button type="button" variant="outline" onClick={controller.clearFilters}>Limpiar filtros</Button>
+        </div>
+      )}
 
       {controller.hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 border-t pt-3" aria-label="Filtros activos">
           <span className="text-xs font-medium text-muted-foreground">Filtros activos:</span>
           {controller.search.trim() && <FilterChip label={`Búsqueda: ${controller.search.trim()}`} onRemove={() => controller.setSearch("")} />}
-          {selectedCampaign && <FilterChip label={`Campaña: ${selectedCampaign.name}`} onRemove={() => controller.setCampaignId("ALL")} />}
-          {controller.memberStatus !== "ALL" && <FilterChip label={`Etapa: ${getCampaignMemberStatusLabel(controller.memberStatus)}`} onRemove={() => controller.setMemberStatus("ALL")} />}
           {selectedLeadStatus && <FilterChip label={`Estado: ${selectedLeadStatus.label}`} onRemove={() => controller.setLeadStatus("ALL")} />}
-          {controller.registeredOn && <FilterChip label={`Fecha: ${controller.registeredOn}`} onRemove={() => controller.setRegisteredOn("")} />}
           {selectedSeller && <FilterChip label={`Asesor: ${selectedSeller.name}`} onRemove={() => controller.setAdvisorId("ALL")} />}
         </div>
       )}

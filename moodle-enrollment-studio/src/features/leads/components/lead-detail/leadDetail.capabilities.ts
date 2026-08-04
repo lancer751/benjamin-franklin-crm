@@ -3,6 +3,7 @@ export interface LeadDetailCapabilities {
   canAddCampaign: boolean;
   canCreateInteraction: boolean;
   canManageTasks: boolean;
+  canChangeCampaignStage: boolean;
   canDeleteLead: boolean;
 }
 
@@ -13,6 +14,7 @@ export const leadDetailCapabilities = (role?: string): LeadDetailCapabilities =>
     canAddCampaign: canOperateLead,
     canCreateInteraction: canOperateLead,
     canManageTasks: ["ADMIN", "SALES_SUPERVISOR", "SALES_REP"].includes(role || ""),
+    canChangeCampaignStage: canOperateLead,
     canDeleteLead: ["ADMIN", "SALES_SUPERVISOR"].includes(role || ""),
   };
 };

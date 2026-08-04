@@ -3,6 +3,21 @@ export const LEAD_STATUS_OPTIONS = [
   { value: "INACTIVE", label: "Inactivo" },
 ] as const;
 
+export type LeadStatus = (typeof LEAD_STATUS_OPTIONS)[number]["value"];
+
+export const LEAD_STATUS_VALUES = LEAD_STATUS_OPTIONS.map((option) => option.value) as [
+  LeadStatus,
+  ...LeadStatus[],
+];
+
+export const isLeadStatus = (value: unknown): value is LeadStatus => (
+  LEAD_STATUS_VALUES.some((status) => status === value)
+);
+
+export const getLeadStatusLabel = (status?: string | null): string => (
+  LEAD_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? "No especificado"
+);
+
 export const PLATFORM_LABELS: Record<string, string> = {
   FACEBOOK: "Facebook",
   INSTAGRAM: "Instagram",
