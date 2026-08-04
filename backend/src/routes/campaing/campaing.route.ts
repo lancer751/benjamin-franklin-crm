@@ -21,7 +21,7 @@ import { syncMetaLeadsForCampaign } from "@/services/leadgenProcessor";
 
 const UUIDParam = z.object({ id: z.string().uuid().length(36) });
 
-// ── Error helper ─────────────────────────────────────────────────────────────
+// Error helper
 // Translates repository error codes into HTTP exceptions so routes stay clean
 function handleRepoError(err: unknown): never {
   if (err && typeof err === "object" && "code" in err) {

@@ -55,7 +55,7 @@
   "include": [
     "src/**/*",
     "eslint.config.ts"
-  ],
+, "scripts/dev.ts"  ],
   "exclude": [
     "node_modules",
     "dist"

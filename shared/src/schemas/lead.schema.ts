@@ -81,14 +81,13 @@ export const UpdateLeadSchema = LeadBaseSchema.partial()
     path: ["phones"],
   });
 
-// ── CampaignMember (the lead's assignment to a campaign) ─────────────────────
+// ── CampaignMember (the lead's assignment to a campaign) 
 
 const CampaignMemberBaseSchema = z.object({
   lead_id: UUIDField,
   campaing_id: UUIDField,
   assigned_to: UUIDField,
   source: LeadOriginSourceSchema,
-  is_primary: z.boolean().default(false),
 });
 
 export const CreateCampaignMemberSchema = CampaignMemberBaseSchema;
@@ -111,7 +110,7 @@ export const ReassignCampaignMemberSchema = z.object({
   assigned_to: UUIDField,
 });
 
-// ── LeadInteraction ───────────────────────────────────────────────────────────
+// ── LeadInteraction 
 
 const LeadInteractionBaseSchema = z.object({
   notes: z.string().min(4, "Notes must be at least 4 characters"),
@@ -127,16 +126,13 @@ export const UpdateLeadInteractionSchema =
     { message: "At least one field must be provided" },
   );
 
-// ── Task ──────────────────────────────────────────────────────────────────────
+// ── Task 
 
 const TaskBaseSchema = z.object({
   title: z.string().min(3, "Task title must be at least 3 characters"),
   content: z.string().min(4, "Task content must be at least 4 characters"),
   is_done: z.boolean().default(false),
   due_date: z.coerce.date().optional().nullable(),
-  //lead_id: UUIDField,
-  //campaign_member_id: UUIDField,
-  //created_by: UUIDField,
 });
 
 export const CreateTaskSchema = TaskBaseSchema;
@@ -146,7 +142,7 @@ export const UpdateTaskSchema = TaskBaseSchema.partial().refine(
   { message: "At least one field must be provided" },
 );
 
-// ── Query schemas ─────────────────────────────────────────────────────────────
+// ── Query schemas ──
 
 const LeadQueryDateSchema = z.union([
   z.iso.date(),
@@ -159,14 +155,14 @@ export const LeadQuerySchema = z.object({
   search: z.string().optional(),
   status: LeadStatusSchema.optional(),
   campaign_id: UUIDField.optional(),
+  // assigned_to is the user ID of the person assigned to the lead, if any
   assigned_to: z.string().optional(),
-  tipification_status: CampaignMemberStatusSchema.optional()
 });
 
 export const CampaignMemberQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  status: CampaignMemberStatusSchema.optional(),
+  campaign_member_status: CampaignMemberStatusSchema.optional(),
   assigned_to: UUIDField.optional(),
 });
 

@@ -60,6 +60,8 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       200,
     );
   })
+  // preview of the lead's details before adding to a campaign
+  // this must go inside a campaign members folder, but for now we keep it here for simplicity
   .get(
     "/lookup",
     zValidator(
@@ -252,8 +254,10 @@ export const leadRoutes = new Hono<ContextWithPrisma>()
       }
     },
   );
+
+
 // ACTIONS WITH THE LEADS ON CAMPAIGNS
-// ── /campaigns/:id/members ────────────────────────────────────────────────────
+// ── /campaigns/:id/members
 export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
   .use(verifyUserAccessAuth)
@@ -297,11 +301,11 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
       }
 
       if (c.var.authUser.role === "SALES_REP") {
-          if (c.var.authUser.userId !== data.assigned_to) {
-            throw new HTTPException(403, {
-              message: "A seller can only assign a lead to himself",
-            });
-          }
+        if (c.var.authUser.userId !== data.assigned_to) {
+          throw new HTTPException(403, {
+            message: "A seller can only assign a lead to himself",
+          });
+        }
       }
 
       try {

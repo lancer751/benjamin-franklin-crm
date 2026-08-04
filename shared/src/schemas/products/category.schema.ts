@@ -3,7 +3,7 @@ import { UUIDField } from "../helpers";
 
 export const CategorySchema = z.object({
   id: UUIDField,
-  name: z.string().min(2, "Category name must be at least 2 characters"),
+  name: z.string().min(2, "Category name must be at least 2 characters").transform(val => val.trim().toLowerCase()),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
 });

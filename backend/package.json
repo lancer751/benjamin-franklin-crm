@@ -12,11 +12,12 @@
   "scripts": {
     "build": "tsc && tsc-alias",
     "start": "bun run --env-file=.env ./dist/src/app.js",
-    "dev": "bun run --hot --env-file=../.env --env-file=.env src/index.ts",
+    "dev": "bun run --hot --env-file=.env src/index.ts",
     "show-envs": "bun --print process.env",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "detect-cycles": "madge src --circular",
+    "check-types": "tsc --noEmit",
     "test-webhook": "bun run --env-file=.env ./src/scripts/simulate-webhook.ts "
   },
   "devDependencies": {

@@ -1,20 +1,21 @@
 {
   "$schema": "./node_modules/turbo/schema.json",
-  "ui": "tui",
+  "ui": "stream",
   "tasks": {
-    "prisma:generate": {
-      "inputs": ["prisma/schema.prisma", "prisma.config.ts"],
-      "outputs": ["generated/**", "node_modules/.prisma/**"],
-      "env": ["DATABASE_URL"]
+ 
+     "check-types": {
+      "dependsOn": ["^check-types"],
+      "outputs": []
     },
     "build": {
-      "dependsOn": ["^build", "prisma:generate"],
+      "dependsOn": ["^build", "^check-types"],
       "inputs": [
         "src/**/*.ts",
         "src/**/*.tsx",
         "src/**/*.js",
         "src/**/*.jsx",
         "src/**/*.astro",
+        "prisma/schema.prisma", "prisma.config.ts",
         "src/**/*.json",
         "tsconfig.json",
         "tsconfig.*.json",
@@ -24,12 +25,13 @@
         "eslint.config.js",
         "index.html",
         "prisma/schema.prisma",
-        "prisma.config.ts"
+        "prisma.config.ts",
       ],
-      "outputs": ["dist/**", "build/**", ".turbo/**"],
-      "env": ["NODE_ENV", "VITE_*", "DATABASE_URL", "VITE_API_URL"]
+      "outputs": ["dist/**", "build/**", ".turbo/**", "generated/**", "node_modules/.prisma/**"],
+      "env": ["NODE_ENV", "VITE_*"]
     },
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true,
       "inputs": [
