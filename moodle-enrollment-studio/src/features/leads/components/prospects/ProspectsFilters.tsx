@@ -4,12 +4,9 @@ import { Card } from "@/core/components/ui/card";
 import { Input } from "@/core/components/ui/input";
 import { Label } from "@/core/components/ui/label";
 import type { ProspectsController } from "../../hooks/useProspects";
-import { EMPTY_PROSPECT_DATE_RANGE } from "../../utils/prospectDateRange";
 import { LEAD_STATUS_OPTIONS } from "../../utils/prospectDisplay";
-import { ProspectsDateRangeFilter } from "./ProspectsDateRangeFilter";
 
 const selectClassName = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
-const DATE_RANGE_CONTRACT_LIMITATION = "El filtro estará disponible cuando la API de prospectos admita fechas de inicio y fin.";
 
 interface FilterChipProps {
   label: string;
@@ -40,26 +37,21 @@ export function ProspectsFilters({ controller }: ProspectsFiltersProps) {
 
   return (
     <Card className="space-y-4 p-4 shadow-sm">
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="prospect-search">Buscar prospectos</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="prospect-search"
-              value={controller.search}
-              onChange={(event) => controller.setSearch(event.target.value)}
-              placeholder="Buscar por nombre, correo, DNI o celular"
-              className="pl-9"
-            />
-          </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="prospect-search">Buscar prospectos</Label>
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Input
+            id="prospect-search"
+            value={controller.search}
+            onChange={(event) => controller.setSearch(event.target.value)}
+            placeholder="Buscar por nombre, correo, DNI o celular"
+            className="pl-9"
+          />
         </div>
+      </div>
 
-        <ProspectsDateRangeFilter
-          value={EMPTY_PROSPECT_DATE_RANGE}
-          applyDisabledReason={DATE_RANGE_CONTRACT_LIMITATION}
-        />
-
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="prospect-status">Estado del lead</Label>
           <select

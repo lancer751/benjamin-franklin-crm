@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, ChevronDown, Info, X } from "lucide-react";
+import { CalendarDays, ChevronDown, X } from "lucide-react";
 import type { DateRange } from "react-day-picker";
-import { Alert, AlertDescription } from "@/core/components/ui/alert";
 import { Button } from "@/core/components/ui/button";
 import { Calendar } from "@/core/components/ui/calendar";
-import { Label } from "@/core/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/core/components/ui/popover";
 import { cn } from "@/core/lib/utils";
 import {
@@ -21,10 +19,10 @@ import {
 interface ProspectsDateRangeFilterProps {
   value: ProspectDateRange;
   onApply?: (range: ProspectDateRange) => void;
-  applyDisabledReason?: string;
+  isApplyDisabled?: boolean;
 }
 
-export function ProspectsDateRangeFilter({ value, onApply, applyDisabledReason }: ProspectsDateRangeFilterProps) {
+export function ProspectsDateRangeFilter({ value, onApply, isApplyDisabled = false }: ProspectsDateRangeFilterProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ProspectDateRange>(value);
   const [isCompact, setIsCompact] = useState(false);
@@ -54,25 +52,39 @@ export function ProspectsDateRangeFilter({ value, onApply, applyDisabledReason }
   const clearDraft = () => setDraft(EMPTY_PROSPECT_DATE_RANGE);
   const selected: DateRange | undefined = draft.from ? { from: draft.from, to: draft.to ?? undefined } : undefined;
   const isEmpty = !draft.from && !draft.to;
-  const canApply = (isEmpty || isValidProspectDateRange(draft)) && Boolean(onApply) && !applyDisabledReason;
+  const canApply = (isEmpty || isValidProspectDateRange(draft)) && Boolean(onApply) && !isApplyDisabled;
+  const appliedPresetLabel = DATE_RANGE_PRESETS.find((preset) => preset.value === value.preset)?.label;
+  const appliedRangeLabel = formatDateRangeLabel(value);
 
   return (
-    <div className="space-y-1.5">
-      <Label>Rango de fecha</Label>
+    <div className="w-full sm:w-auto">
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
-          <Button type="button" variant="outline" className="w-full justify-between font-normal" aria-label={`Rango de fecha: ${formatDateRangeLabel(value)}`}>
-            <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="truncate">{formatDateRangeLabel(value)}</span></span>
+          <Button type="button" variant="outline" className="w-full justify-between gap-3 font-normal sm:w-auto" aria-label={`Periodo de registro: ${appliedRangeLabel}`}>
+            <span className="flex min-w-0 items-center gap-2">
+              <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+              {appliedPresetLabel ? (
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="shrink-0 font-medium text-foreground">{appliedPresetLabel}</span>
+                  <span className="truncate text-muted-foreground">{appliedRangeLabel}</span>
+                </span>
+              ) : (
+                <span className="truncate">Cualquier fecha</span>
+              )}
+            </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
           align="end"
+          side="bottom"
           sideOffset={8}
           collisionPadding={12}
-          className="flex max-h-[min(42rem,calc(100vh-1.5rem))] w-[min(52rem,calc(100vw-1.5rem))] flex-col overflow-hidden p-0"
+          avoidCollisions
+          sticky="always"
+          className="flex max-h-[min(42rem,calc(100vh-1.5rem))] w-[min(46rem,calc(100vw-1.5rem))] flex-col overflow-hidden p-0"
         >
-          <div className="grid min-h-0 flex-1 overflow-y-auto md:grid-cols-[180px_minmax(0,1fr)]">
+          <div className="grid min-h-0 flex-1 overflow-y-auto md:grid-cols-[156px_minmax(0,1fr)]">
             <div className="grid grid-cols-2 gap-1 border-b p-3 md:block md:space-y-1 md:border-b-0 md:border-r">
               {DATE_RANGE_PRESETS.map((preset) => (
                 <Button
@@ -89,7 +101,7 @@ export function ProspectsDateRangeFilter({ value, onApply, applyDisabledReason }
               ))}
             </div>
             <div className="min-w-0">
-              <div className="grid gap-3 border-b p-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+              <div className="mx-auto grid w-full max-w-[25rem] gap-3 border-b p-3 sm:grid-cols-[minmax(140px,180px)_auto_minmax(140px,180px)] sm:items-end">
                 <div><p className="text-xs font-medium text-muted-foreground">Fecha de inicio</p><p className="mt-1 rounded-md border bg-muted/30 px-3 py-2 text-sm">{formatDateField(draft.from)}</p></div>
                 <span className="hidden pb-2 text-muted-foreground sm:block">–</span>
                 <div><p className="text-xs font-medium text-muted-foreground">Fecha final</p><p className="mt-1 rounded-md border bg-muted/30 px-3 py-2 text-sm">{formatDateField(draft.to)}</p></div>
@@ -110,7 +122,6 @@ export function ProspectsDateRangeFilter({ value, onApply, applyDisabledReason }
                   initialFocus
                 />
               </div>
-              {applyDisabledReason && <div className="px-3 pb-3"><Alert><Info className="h-4 w-4" /><AlertDescription>{applyDisabledReason}</AlertDescription></Alert></div>}
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t bg-background p-3 shadow-[0_-4px_12px_rgba(15,23,42,0.05)]">

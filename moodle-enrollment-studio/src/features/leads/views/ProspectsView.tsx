@@ -2,9 +2,11 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/core/components/ui/button";
 import { Card } from "@/core/components/ui/card";
+import { ProspectsDateRangeFilter } from "../components/prospects/ProspectsDateRangeFilter";
 import { ProspectsFilters } from "../components/prospects/ProspectsFilters";
 import { ProspectsTable } from "../components/prospects/ProspectsTable";
 import { useProspects } from "../hooks/useProspects";
+import { EMPTY_PROSPECT_DATE_RANGE } from "../utils/prospectDateRange";
 
 export const ProspectsView = () => {
   const navigate = useNavigate();
@@ -21,10 +23,16 @@ export const ProspectsView = () => {
           <p className="mt-1 text-sm text-muted-foreground">{prospects.description}</p>
           <p className="mt-2 text-xs font-medium text-muted-foreground" aria-live="polite">{totalLabel}</p>
         </div>
-        <Button onClick={() => navigate("/prospectos/nuevo")} className="gap-2 self-start">
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Nuevo Prospecto
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:self-start">
+          <ProspectsDateRangeFilter
+            value={EMPTY_PROSPECT_DATE_RANGE}
+            isApplyDisabled
+          />
+          <Button onClick={() => navigate("/prospectos/nuevo")} className="w-full gap-2 sm:w-auto">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nuevo Prospecto
+          </Button>
+        </div>
       </div>
 
       <ProspectsFilters controller={prospects} />
