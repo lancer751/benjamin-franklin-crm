@@ -1,7 +1,7 @@
 import type { SuccessResponse } from "@/app";
 import { UUID_ROUTE } from "@/helpers/constants";
 import type { ContextWithPrisma } from "@/lib/contextVariables";
-import type { PrismaClient } from "@repo/database";
+import type { PaymentInclude, PrismaClient } from "@repo/database";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -17,8 +17,8 @@ import {
   verifyUserRoleAccess,
 } from "@/middlewares/auth.middleware";
 
-const paymentInclude = {
-  order: { include: { lead: true } },
+const paymentInclude : PaymentInclude= {
+  order: { include: { member: true } },
   schedulePayment: true,
 } as const;
 
@@ -81,7 +81,7 @@ export const paymentRoutes = new Hono<ContextWithPrisma>()
         include: {
           order: {
             include: {
-              lead: true,
+              member: true,
             },
           },
           schedulePayment: true,

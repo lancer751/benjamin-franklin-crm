@@ -11,6 +11,7 @@ import {
   UpdateCampaignSchema,
   AssignSellersSchema,
   CampaignQuerySchema,
+  CampaignMemberQuerySchema,
 } from "shared";
 import { campaignRepository } from "@/repositories/campaign.repository";
 import {
@@ -18,6 +19,7 @@ import {
   verifyUserRoleAccess,
 } from "@/middlewares/auth.middleware";
 import { syncMetaLeadsForCampaign } from "@/services/leadgenProcessor";
+import { leadRepository } from "@/repositories/lead.repository";
 
 const UUIDParam = z.object({ id: z.string().uuid().length(36) });
 
@@ -125,6 +127,7 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
       }
     },
   )
+  // CAMPAIGN SELLERS MANAGEMENT ROUTES
   // POST /campaigns/:id/sellers  — assign sellers
   .post(
     "/:id/sellers",
@@ -187,4 +190,14 @@ export const campaignRoutes = new Hono<ContextWithPrisma>()
         handleRepoError(err);
       }
     },
-  );
+  )
+  // CAMPAIGN MEMBERS MANAGEMENT ROUTES
+  // .get("/members", zValidator("query", CampaignMemberQuerySchema), async (c) => {
+  //   const repo = leadRepository(c.get("prisma"));
+
+  //   const result = await repo.findManyMembers(c.req.valid("query"));
+  //   return c.json<SuccessResponse<typeof result>>(
+  //     { success: true, message: "Campaign members retrieved", data: result },
+  //     200,
+  //   );
+  // })

@@ -272,7 +272,7 @@ export const campaignMemberRoutes = new Hono<ContextWithPrisma>()
     async (c) => {
       const { campaignId } = c.req.valid("param");
       const repo = leadRepository(c.get("prisma"));
-      const result = await repo.findMembersByMember(
+      const result = await repo.findMembersOnCampaign(
         campaignId,
         c.req.valid("query"),
       );

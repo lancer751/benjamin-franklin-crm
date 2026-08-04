@@ -55,6 +55,7 @@ export const sellersRoutes = new Hono<ContextWithPrisma>()
       include: {
         user: {
           include: {
+            _count: { select: { assignedOrders: true, campaignMembers: true } },
             assignedOrders: true,
             campaignMembers: true,
           },
