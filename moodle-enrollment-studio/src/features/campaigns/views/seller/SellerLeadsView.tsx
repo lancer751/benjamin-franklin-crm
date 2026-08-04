@@ -146,7 +146,7 @@ const SellerLeadsView = () => {
 
   // 3. Consultas e interacciones
   const { data: interactionsRes, isLoading: isLoadingInteractions } = useQuery({
-    queryKey: ["member-interactions", selectedMemberId],
+    queryKey: ["member-interactions", selectedCampaignId, selectedMemberId],
     queryFn: () => getMemberInteractions(selectedCampaignId, selectedMemberId),
     enabled: !!selectedCampaignId && !!selectedMemberId,
   });
@@ -157,7 +157,7 @@ const SellerLeadsView = () => {
 
   // 4. Consultas de tareas
   const { data: tasksRes, isLoading: isLoadingTasks } = useQuery({
-    queryKey: ["member-tasks", selectedMemberId],
+    queryKey: ["member-tasks", selectedCampaignId, selectedMemberId],
     queryFn: () => getMemberTasks(selectedCampaignId, selectedMemberId),
     enabled: !!selectedCampaignId && !!selectedMemberId,
   });
@@ -181,7 +181,7 @@ const SellerLeadsView = () => {
     },
     onSuccess: () => {
       toast.success("Interacción registrada correctamente");
-      queryClient.invalidateQueries({ queryKey: ["member-interactions", selectedMemberId] });
+      queryClient.invalidateQueries({ queryKey: ["member-interactions", selectedCampaignId, selectedMemberId] });
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, "No se pudo registrar la gestión. Inténtalo nuevamente."));
@@ -210,7 +210,7 @@ const SellerLeadsView = () => {
     },
     onSuccess: () => {
       toast.success("Tarea registrada correctamente");
-      queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedMemberId] });
+      queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedCampaignId, selectedMemberId] });
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, "No se pudo crear la tarea. Inténtalo nuevamente."));
@@ -219,11 +219,11 @@ const SellerLeadsView = () => {
 
   // Mutación para marcar la tarea como completada
   const updateTaskMutation = useMutation({
-    mutationFn: ({ taskId, is_done }: { taskId: string; is_done: boolean }) =>
-      updateMemberTask(selectedCampaignId, selectedMemberId, taskId, { is_done }),
+    mutationFn: ({ taskId, payload }: { taskId: string; payload: Parameters<typeof updateMemberTask>[3] }) =>
+      updateMemberTask(selectedCampaignId, selectedMemberId, taskId, payload),
     onSuccess: () => {
       toast.success("Tarea actualizada correctamente");
-      queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedMemberId] });
+      queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedCampaignId, selectedMemberId] });
     },
     onError: () => {
       toast.error("Error al actualizar la tarea");
@@ -236,7 +236,7 @@ const SellerLeadsView = () => {
       deleteMemberTask(campaignId, memberId, taskId),
     onSuccess: () => {
       toast.success("Tarea registrada correctamente");
-      queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedMemberId] });
+      queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedCampaignId, selectedMemberId] });
     },
     onError: () => {
       toast.error("Error al eliminar la tarea");

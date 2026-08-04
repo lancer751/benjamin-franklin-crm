@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ArrowLeft, BookOpen, Calendar, CheckCircle2, ChevronLeft, ChevronRight, Layers, Loader2, Phone, TrendingUp, Users, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/core/components/ui/badge";
@@ -15,6 +16,10 @@ import {
 } from "@/core/constants/campaignMemberStatus";
 import { LEAD_STATUS_OPTIONS, getLeadStatusLabel, isLeadStatus } from "../utils/prospectDisplay";
 import { useSupervisorFollowUp, type TeamFollowUpMode } from "../hooks/useSupervisorFollowUp";
+import { useSupervisorMemberDrawer } from "../hooks/useSupervisorMemberDrawer";
+import type { TeamFollowUpMemberRow } from "../adapters/teamFollowUpAdapter";
+import type { NormalizedLead } from "../adapters/leadAdapter";
+import LeadDetailsSheet from "@/features/campaigns/views/seller/components/LeadDetailsSheet";
 
 const formatDateTime = (value: string): string => {
   if (!value) return "No disponible";
@@ -60,6 +65,18 @@ const SupervisorFollowUpView = () => {
   const navigate = useNavigate();
   const followUp = useSupervisorFollowUp();
   const isCampaignMode = followUp.mode === "CAMPAIGN";
+  const [selectedMember, setSelectedMember] = useState<TeamFollowUpMemberRow | null>(null);
+  const [drawerLead, setDrawerLead] = useState<NormalizedLead | null>(null);
+  const drawer = useSupervisorMemberDrawer(selectedMember);
+
+  const openMemberDrawer = (member: TeamFollowUpMemberRow) => {
+    setSelectedMember(member);
+    setDrawerLead(member.drawerLead);
+  };
+  const closeMemberDrawer = () => {
+    setSelectedMember(null);
+    setDrawerLead(null);
+  };
 
   const handleModeChange = (value: string) => {
     if (value === "ALL" || value === "UNASSIGNED" || value === "CAMPAIGN") {
@@ -206,8 +223,21 @@ const SupervisorFollowUpView = () => {
                       </TableRow></TableHeader>
                       <TableBody>
                         {followUp.memberRows.length === 0 ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">No hay prospectos para los filtros seleccionados.</TableCell></TableRow> : followUp.memberRows.map((member) => (
-                          <TableRow key={member.id}>
-                            <TableCell>{formatDateTime(member.associatedAt)}</TableCell><TableCell className="font-medium">{member.programName}</TableCell><TableCell>{member.phone}</TableCell><TableCell>{member.prospectName}</TableCell><TableCell><MemberStatusBadge status={member.memberStatus} /></TableCell><TableCell>{member.advisorName}</TableCell>
+                          <TableRow
+                            key={member.id}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`Ver gestión de ${member.prospectName} en ${member.programName}`}
+                            className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                            onClick={() => openMemberDrawer(member)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                openMemberDrawer(member);
+                              }
+                            }}
+                          >
+                            <TableCell>{formatDateTime(member.associatedAt)}</TableCell><TableCell className="font-medium">{member.programName}</TableCell><TableCell>{member.phone}</TableCell><TableCell>{member.prospectName}</TableCell><TableCell><MemberStatusBadge status={member.memberStatus} /></TableCell><TableCell>{member.advisorName || "No disponible"}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -235,6 +265,29 @@ const SupervisorFollowUpView = () => {
           )}
         </Tabs>
       </Card>
+
+      <LeadDetailsSheet
+        selectedLead={drawerLead}
+        setSelectedLead={setDrawerLead}
+        onClose={closeMemberDrawer}
+        onStatusChange={drawer.changeStatus}
+        isStatusPending={drawer.statusMutation.isPending}
+        interactions={drawer.interactions}
+        isLoadingInteractions={drawer.interactionsQuery.isLoading}
+        isErrorInteractions={drawer.interactionsQuery.isError}
+        onRetryInteractions={() => void drawer.interactionsQuery.refetch()}
+        createInteractionMutation={drawer.createInteractionMutation}
+        tasks={drawer.tasks}
+        isLoadingTasks={drawer.tasksQuery.isLoading}
+        isErrorTasks={drawer.tasksQuery.isError}
+        onRetryTasks={() => void drawer.tasksQuery.refetch()}
+        createTaskMutation={drawer.createTaskMutation}
+        updateTaskMutation={drawer.updateTaskMutation}
+        deleteTaskMutation={drawer.deleteTaskMutation}
+        selectedCampaignId={selectedMember?.campaignId ?? ""}
+        interactionCount={selectedMember?.interactionCount}
+        capabilities={{ ...drawer.capabilities, canEditLead: false }}
+      />
     </div>
   );
 };

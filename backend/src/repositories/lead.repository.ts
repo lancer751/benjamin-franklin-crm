@@ -59,6 +59,7 @@ export function leadRepository(prisma: PrismaClient) {
             { email: { contains: search, mode: "insensitive" } },
             { first_name: { contains: search, mode: "insensitive" } },
             { last_name: { contains: search, mode: "insensitive" } },
+            { phones: {some: {number: { contains: search}}}}
           ],
         }),
         ...((existsCampaignMembers > 0 || assigned_to )&& {

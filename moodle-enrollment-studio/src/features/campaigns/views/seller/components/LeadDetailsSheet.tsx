@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
@@ -27,13 +28,11 @@ import {
   Trash2,
   ClipboardList,
   Pencil,
-  Check,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateLead } from "@/features/leads/services/leadService";
+import { updateLead, type MemberTaskUpdatePayload } from "@/features/leads/services/leadService";
 import {
   CAMPAIGN_MEMBER_STATUS_OPTIONS,
   isCampaignMemberStatus,
@@ -45,12 +44,22 @@ import { taskFormSchema, type TaskFormInput, type TaskFormValues } from "@/featu
 import { INTERACTION_TYPE_OPTIONS } from "@/features/leads/utils/interactionType.constants";
 import { mapInteractionFormToPayload, mapTaskFormToPayload } from "@/features/leads/utils/leadActionPayloadMappers";
 import type { LeadTask } from "@/features/leads/components/lead-detail/leadDetail.types";
+import type { LeadDrawerCapabilities } from "@/features/leads/components/lead-detail/leadDetail.capabilities";
 import type { LeadInteractionViewModel } from "@/features/leads/adapters/leadInteractionAdapter";
+import {
+  buildUpdateLeadPayload,
+  hasLeadChanges,
+  mapLeadToFormValues,
+} from "@/features/leads/adapters/leadQuickFormAdapter";
+import {
+  defaultLeadFieldValues,
+  leadFieldsSchema,
+  type LeadFieldsData,
+  type LeadFieldsInput,
+} from "@/features/leads/schemas/leadFieldsSchema";
 
 type InteractionPayload = ReturnType<typeof mapInteractionFormToPayload>;
 type TaskPayload = ReturnType<typeof mapTaskFormToPayload>;
-type UpdateLeadPayload = Parameters<typeof updateLead>[1];
-type PanelTask = LeadTask & { id: string; is_done: boolean };
 
 interface CreateMutation<TVariables> {
   isPending: boolean;
@@ -60,13 +69,6 @@ interface CreateMutation<TVariables> {
 interface ActionMutation<TVariables> {
   isPending: boolean;
   mutate: (variables: TVariables) => void;
-}
-
-interface LeadPhone {
-  id?: string;
-  number: string;
-  type: string;
-  isPrincipal?: boolean;
 }
 
 const typeIcons: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
@@ -89,13 +91,28 @@ interface LeadDetailsSheetProps {
   isLoadingInteractions: boolean;
   createInteractionMutation: CreateMutation<InteractionPayload>;
   // Tasks
-  tasks: PanelTask[];
+  tasks: LeadTask[];
   isLoadingTasks: boolean;
   createTaskMutation: CreateMutation<TaskPayload>;
-  updateTaskMutation: ActionMutation<{ taskId: string; is_done: boolean }>;
+  updateTaskMutation: CreateMutation<{ taskId: string; payload: MemberTaskUpdatePayload }>;
   deleteTaskMutation: ActionMutation<{ campaignId: string; memberId: string; taskId: string }>;
   selectedCampaignId: string;
+  capabilities?: LeadDrawerCapabilities;
+  interactionCount?: number;
+  isErrorInteractions?: boolean;
+  onRetryInteractions?: () => void;
+  isErrorTasks?: boolean;
+  onRetryTasks?: () => void;
 }
+
+const DEFAULT_CAPABILITIES: LeadDrawerCapabilities = {
+  canEditLead: true,
+  canChangeStatus: true,
+  canCreateInteraction: true,
+  canCreateTask: true,
+  canUpdateTask: true,
+  canDeleteTask: true,
+};
 
 export default function LeadDetailsSheet({
   selectedLead,
@@ -112,27 +129,19 @@ export default function LeadDetailsSheet({
   updateTaskMutation,
   deleteTaskMutation,
   selectedCampaignId,
+  capabilities = DEFAULT_CAPABILITIES,
+  interactionCount,
+  isErrorInteractions = false,
+  onRetryInteractions,
+  isErrorTasks = false,
+  onRetryTasks,
 }: LeadDetailsSheetProps) {
   const [activeTab, setActiveTab] = useState<"interactions" | "tasks">("interactions");
 
   // Local editing states
   const [isEditing, setIsEditing] = useState(false);
-  const [editFirstName, setEditFirstName] = useState("");
-  const [editLastName, setEditLastName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editCellphone, setEditCellphone] = useState("");
-
-  useEffect(() => {
-    if (selectedLead) {
-      setEditFirstName(selectedLead.first_name || "");
-      setEditLastName(selectedLead.last_name || "");
-      setEditEmail(selectedLead.email || "");
-      const principalPhone = selectedLead.phones?.find((p: LeadPhone) => p.isPrincipal)?.number || "";
-      setEditCellphone(principalPhone);
-    } else {
-      setIsEditing(false);
-    }
-  }, [selectedLead]);
+  const [initialEditData, setInitialEditData] = useState<LeadFieldsData | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const interactionForm = useForm<InteractionFormValues>({
     resolver: zodResolver(interactionFormSchema),
@@ -144,6 +153,13 @@ export default function LeadDetailsSheet({
     defaultValues: { title: "", content: "", due_date: "", is_done: false },
     mode: "onTouched",
   });
+  const leadEditForm = useForm<LeadFieldsInput, unknown, LeadFieldsData>({
+    resolver: standardSchemaResolver(leadFieldsSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
+    shouldFocusError: true,
+    defaultValues: defaultLeadFieldValues,
+  });
   const interactionType = interactionForm.watch("type");
   const interactionNotes = interactionForm.watch("notes") || "";
   const taskTitle = taskForm.watch("title") || "";
@@ -152,7 +168,14 @@ export default function LeadDetailsSheet({
   const selectedMemberId = useMemo(() => {
     return selectedLead?.campaignsEngaging?.[0]?.id || selectedLead?.id || "";
   }, [selectedLead]);
-
+  const leadId = selectedLead?.id || "";
+  const editValues = leadEditForm.watch();
+  const parsedEditValues = useMemo(() => leadFieldsSchema.safeParse(editValues), [editValues]);
+  const hasEditChanges = Boolean(
+    initialEditData
+    && parsedEditValues.success
+    && hasLeadChanges(initialEditData, parsedEditValues.data),
+  );
   const getPhone = (lead: NormalizedLead) => {
     return lead.phones?.find((phone) => phone.isPrincipal)?.number || lead.phones?.[0]?.number || null;
   };
@@ -165,6 +188,27 @@ export default function LeadDetailsSheet({
       return dateStr;
     }
   };
+  const taskAuthorName = (task: LeadTask) => task.author
+    ? [task.author.first_name, task.author.middle_name, task.author.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim()
+    : "";
+
+  useEffect(() => {
+    setActiveTab("interactions");
+    interactionForm.reset({ type: "CALL", notes: "" });
+    taskForm.reset({ title: "", content: "", due_date: "", is_done: false });
+    setEditingTaskId(null);
+  }, [selectedMemberId]);
+
+  useEffect(() => {
+    leadEditForm.reset(defaultLeadFieldValues);
+    leadEditForm.clearErrors();
+    setInitialEditData(null);
+    setIsEditing(false);
+  }, [leadEditForm, leadId]);
 
   const handleCreateInteraction = interactionForm.handleSubmit(async (values) => {
     try {
@@ -177,122 +221,133 @@ export default function LeadDetailsSheet({
 
   const handleCreateTask = taskForm.handleSubmit(async (values) => {
     try {
-      await createTaskMutation.mutateAsync(mapTaskFormToPayload(values));
+      const payload = mapTaskFormToPayload(values);
+      if (editingTaskId) {
+        await updateTaskMutation.mutateAsync({ taskId: editingTaskId, payload });
+      } else {
+        await createTaskMutation.mutateAsync(payload);
+      }
+      setEditingTaskId(null);
       taskForm.reset({ title: "", content: "", due_date: "", is_done: false });
     } catch {
       // Error handled by mutation
     }
   });
 
-  const handleToggleTask = (taskId: string, currentDone: boolean) => {
-    updateTaskMutation.mutate({
+  const handleToggleTask = (taskId: string | undefined, currentDone: boolean | null | undefined) => {
+    if (!taskId || !capabilities.canUpdateTask) return;
+    void updateTaskMutation.mutateAsync({
       taskId,
-      is_done: !currentDone
+      payload: { is_done: !currentDone },
     });
+  };
+  const beginTaskEdit = (task: LeadTask) => {
+    if (!task.id || !capabilities.canUpdateTask) return;
+    setEditingTaskId(task.id);
+    taskForm.reset({
+      title: task.title || "",
+      content: task.content || "",
+      due_date: task.due_date ? task.due_date.slice(0, 10) : "",
+      is_done: Boolean(task.is_done),
+    });
+  };
+  const cancelTaskEdit = () => {
+    setEditingTaskId(null);
+    taskForm.reset({ title: "", content: "", due_date: "", is_done: false });
   };
 
   const queryClient = useQueryClient();
-  const leadId = selectedLead?.id || "";
 
-  const { mutate: handleUpdateLead, isPending: isUpdatingLead } = useMutation({
-    mutationFn: async (updatedData: UpdateLeadPayload) => {
-      return await updateLead(leadId, updatedData);
+  const updateLeadMutation = useMutation({
+    mutationFn: async (data: LeadFieldsData) => {
+      if (!initialEditData) throw new Error("No fue posible preparar los datos originales del prospecto.");
+      const payload = buildUpdateLeadPayload(initialEditData, data);
+      if (Object.keys(payload).length === 0) return data;
+      let response: Awaited<ReturnType<typeof updateLead>>;
+      try {
+        response = await updateLead(leadId, payload);
+      } catch {
+        throw new Error("No fue posible actualizar el prospecto. Inténtalo nuevamente.");
+      }
+      const body = response as unknown as { success?: boolean; message?: string; error?: string };
+      if (body.success !== true) {
+        throw new Error(body.message || body.error || "No fue posible actualizar el prospecto. Inténtalo nuevamente.");
+      }
+      return data;
     },
-    onSuccess: () => {
-      setIsEditing(false);
-      // Refrescar las queries activas para actualizar el Kanban y el panel
-      queryClient.invalidateQueries({ queryKey: ["campaign-members"] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-members-seller"] });
-      
-      // Actualizar localmente selectedLead
+    onSuccess: async (data) => {
       setSelectedLead((prev) => {
         if (!prev) return null;
-        
-        let updatedPhones = prev.phones || [];
-        const initialCellphone = prev.phones?.find((p: LeadPhone) => p.isPrincipal)?.number || "";
-        
-        if (editCellphone !== initialCellphone) {
-          const hasPrincipal = updatedPhones.some((p: LeadPhone) => p.isPrincipal);
-          if (hasPrincipal) {
-            updatedPhones = updatedPhones.map((p: LeadPhone) => 
-              p.isPrincipal ? { ...p, number: editCellphone, type: "WHATSAPP" } : p
-            );
-          } else {
-            updatedPhones = [...updatedPhones, { number: editCellphone, type: "WHATSAPP", isPrincipal: true }];
-          }
-        }
-
+        const phones = [...(prev.phones || [])];
+        const principalIndex = phones.findIndex((item) => item.isPrincipal);
+        const targetIndex = principalIndex >= 0 ? principalIndex : phones.length > 0 ? 0 : -1;
+        const principalPhone = {
+          number: data.cellphone,
+          type: data.principalPhoneType,
+          isPrincipal: true,
+        };
+        if (targetIndex >= 0) phones[targetIndex] = { ...phones[targetIndex], ...principalPhone };
+        else phones.push(principalPhone);
         return {
           ...prev,
-          first_name: editFirstName.trim(),
-          last_name: editLastName.trim(),
-          email: editEmail.trim(),
-          phones: updatedPhones
+          first_name: data.first_name || "",
+          last_name: data.last_name || "",
+          email: data.email || "",
+          phones,
         };
       });
-
-      toast.success("Información del prospecto actualizada exitosamente.");
+      leadEditForm.reset(data);
+      leadEditForm.clearErrors();
+      setInitialEditData(data);
+      setIsEditing(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["lead", leadId] }),
+        queryClient.invalidateQueries({ queryKey: ["leads"] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-members"] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-members-seller"] }),
+        queryClient.invalidateQueries({ queryKey: ["team-follow-up", "leads"] }),
+        queryClient.invalidateQueries({ queryKey: ["team-follow-up", "campaign-members"] }),
+      ]);
+      toast.success("Prospecto actualizado correctamente.");
     },
-    onError: (err: unknown) => {
-      console.error(err);
-      toast.error(err instanceof Error ? err.message : "Error al actualizar la información del prospecto.");
-    }
+    onError: (error: unknown) => toast.error(
+      error instanceof Error ? error.message : "No fue posible actualizar el prospecto. Inténtalo nuevamente.",
+    ),
   });
 
-  const onSaveEdit = () => {
-    if (!editFirstName.trim()) {
-      toast.error("El nombre es requerido");
+  const beginLeadEdit = () => {
+    if (!selectedLead) return;
+    const mapped = mapLeadToFormValues(selectedLead);
+    const parsed = leadFieldsSchema.safeParse(mapped);
+    if (!parsed.success) {
+      toast.error("No fue posible preparar los datos del prospecto para edición.");
       return;
     }
-    if (!editLastName.trim()) {
-      toast.error("El apellido es requerido");
-      return;
-    }
-    if (!editEmail.trim()) {
-      toast.error("El correo es requerido");
-      return;
-    }
-
-    const updatedData: UpdateLeadPayload = {
-      first_name: editFirstName.trim(),
-      last_name: editLastName.trim(),
-      email: editEmail.trim() || null,
-    };
-
-    const initialCellphone = selectedLead?.phones?.find((p: LeadPhone) => p.isPrincipal)?.number || "";
-    if (editCellphone !== initialCellphone) {
-      if (!/^9\d{8}$/.test(editCellphone)) {
-        toast.error("El número de celular debe tener exactamente 9 dígitos y empezar con 9.");
-        return;
-      }
-      updatedData.phones = [
-        {
-          number: editCellphone,
-          type: "WHATSAPP",
-          isPrincipal: true
-        }
-      ];
-    }
-
-    handleUpdateLead(updatedData);
+    setInitialEditData(parsed.data);
+    leadEditForm.reset(mapped);
+    leadEditForm.clearErrors();
+    setIsEditing(true);
   };
 
   const onCancelEdit = () => {
-    if (selectedLead) {
-      setEditFirstName(selectedLead.first_name || "");
-      setEditLastName(selectedLead.last_name || "");
-      setEditEmail(selectedLead.email || "");
-      const principalPhone = selectedLead.phones?.find((p: LeadPhone) => p.isPrincipal)?.number || "";
-      setEditCellphone(principalPhone);
-    }
+    if (initialEditData) leadEditForm.reset(initialEditData);
+    else leadEditForm.reset(defaultLeadFieldValues);
+    leadEditForm.clearErrors();
+    updateLeadMutation.reset();
     setIsEditing(false);
   };
 
+  const onSaveEdit = leadEditForm.handleSubmit((data) => updateLeadMutation.mutate(data));
+
   const phone = selectedLead ? getPhone(selectedLead) : null;
+  const displayInteractionCount = interactionCount === undefined
+    ? interactions.length
+    : Math.max(interactionCount, interactions.length);
+  const isTaskMutationPending = createTaskMutation.isPending || updateTaskMutation.isPending;
 
   return (
     <Sheet open={!!selectedLead} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="sm:max-w-md w-full flex flex-col h-full bg-background border-l border-border p-0 shadow-2xl" side="right">
+      <SheetContent className="w-full sm:max-w-[500px] flex flex-col h-full bg-background border-l border-border p-0 shadow-2xl" side="right">
         {selectedLead && (
           <>
             {/* Header Panel */}
@@ -306,96 +361,120 @@ export default function LeadDetailsSheet({
                     {!isEditing ? (
                       <>
                         <SheetTitle className="text-md font-extrabold text-foreground truncate flex items-center gap-2">
-                          <span>{selectedLead.first_name} {selectedLead.last_name}</span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-5 w-5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md shrink-0"
-                            onClick={() => setIsEditing(true)}
-                            title="Editar información"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
+                          <span>{[selectedLead.first_name, selectedLead.middle_name, selectedLead.last_name].filter(Boolean).join(" ").replace(/\s+/g, " ").trim() || "Prospecto sin nombre"}</span>
+                          {capabilities.canEditLead && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-5 w-5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md shrink-0"
+                              onClick={beginLeadEdit}
+                              title="Editar información"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </SheetTitle>
                         <SheetDescription className="text-xs text-muted-foreground truncate">
                           {selectedLead.email || "Sin correo electrónico"}
                         </SheetDescription>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {phone || "Sin celular"}
+                        </p>
                       </>
                     ) : (
-                      <div className="space-y-2 mt-1">
+                      <form onSubmit={onSaveEdit} className="mt-1 space-y-2" noValidate>
                         <div className="grid grid-cols-2 gap-1.5">
-                          <Input
-                            placeholder="Nombre"
-                            value={editFirstName}
-                            onChange={(e) => setEditFirstName(e.target.value)}
-                            className="h-8 text-xs px-2 rounded-lg bg-slate-50/50 dark:bg-slate-900/50"
-                            disabled={isUpdatingLead}
-                          />
-                          <Input
-                            placeholder="Apellido"
-                            value={editLastName}
-                            onChange={(e) => setEditLastName(e.target.value)}
-                            className="h-8 text-xs px-2 rounded-lg bg-slate-50/50 dark:bg-slate-900/50"
-                            disabled={isUpdatingLead}
-                          />
+                          <div className="space-y-1">
+                            <Label htmlFor="drawer-lead-first-name" className="sr-only">Nombre</Label>
+                            <Input
+                              id="drawer-lead-first-name"
+                              placeholder="Nombre"
+                              autoComplete="given-name"
+                              aria-invalid={Boolean(leadEditForm.formState.errors.first_name)}
+                              aria-describedby={leadEditForm.formState.errors.first_name ? "drawer-lead-first-name-error" : undefined}
+                              className="h-8 rounded-lg bg-slate-50/50 px-2 text-xs dark:bg-slate-900/50"
+                              disabled={updateLeadMutation.isPending}
+                              {...leadEditForm.register("first_name")}
+                            />
+                            {leadEditForm.formState.errors.first_name && <p id="drawer-lead-first-name-error" role="alert" className="text-[10px] text-destructive">{leadEditForm.formState.errors.first_name.message}</p>}
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="drawer-lead-last-name" className="sr-only">Apellido</Label>
+                            <Input
+                              id="drawer-lead-last-name"
+                              placeholder="Apellido"
+                              autoComplete="family-name"
+                              aria-invalid={Boolean(leadEditForm.formState.errors.last_name)}
+                              aria-describedby={leadEditForm.formState.errors.last_name ? "drawer-lead-last-name-error" : undefined}
+                              className="h-8 rounded-lg bg-slate-50/50 px-2 text-xs dark:bg-slate-900/50"
+                              disabled={updateLeadMutation.isPending}
+                              {...leadEditForm.register("last_name")}
+                            />
+                            {leadEditForm.formState.errors.last_name && <p id="drawer-lead-last-name-error" role="alert" className="text-[10px] text-destructive">{leadEditForm.formState.errors.last_name.message}</p>}
+                          </div>
                         </div>
-                        <Input
-                          placeholder="Correo electrónico"
-                          type="email"
-                          value={editEmail}
-                          onChange={(e) => setEditEmail(e.target.value)}
-                          className="h-8 text-xs px-2 rounded-lg w-full bg-slate-50/50 dark:bg-slate-900/50"
-                          disabled={isUpdatingLead}
-                        />
-                        <Input
-                          placeholder="Celular"
-                          type="text"
-                          value={editCellphone}
-                          onChange={(e) => setEditCellphone(e.target.value.replace(/\D/g, "").slice(0, 9))}
-                          className="h-8 text-xs px-2 rounded-lg w-full bg-slate-50/50 dark:bg-slate-900/50"
-                          disabled={isUpdatingLead}
-                        />
-                      </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="drawer-lead-email" className="sr-only">Correo electrónico</Label>
+                          <Input
+                            id="drawer-lead-email"
+                            placeholder="Correo electrónico"
+                            type="email"
+                            autoComplete="email"
+                            aria-invalid={Boolean(leadEditForm.formState.errors.email)}
+                            aria-describedby={leadEditForm.formState.errors.email ? "drawer-lead-email-error" : undefined}
+                            className="h-8 w-full rounded-lg bg-slate-50/50 px-2 text-xs dark:bg-slate-900/50"
+                            disabled={updateLeadMutation.isPending}
+                            {...leadEditForm.register("email")}
+                          />
+                          {leadEditForm.formState.errors.email && <p id="drawer-lead-email-error" role="alert" className="text-[10px] text-destructive">{leadEditForm.formState.errors.email.message}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="drawer-lead-cellphone" className="sr-only">Celular</Label>
+                          <Input
+                            id="drawer-lead-cellphone"
+                            placeholder="Celular"
+                            inputMode="numeric"
+                            autoComplete="tel"
+                            aria-invalid={Boolean(leadEditForm.formState.errors.cellphone)}
+                            aria-describedby={leadEditForm.formState.errors.cellphone ? "drawer-lead-cellphone-error" : undefined}
+                            className="h-8 w-full rounded-lg bg-slate-50/50 px-2 text-xs dark:bg-slate-900/50"
+                            disabled={updateLeadMutation.isPending}
+                            {...leadEditForm.register("cellphone")}
+                          />
+                          {leadEditForm.formState.errors.cellphone && <p id="drawer-lead-cellphone-error" role="alert" className="text-[10px] text-destructive">{leadEditForm.formState.errors.cellphone.message}</p>}
+                        </div>
+                        <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="focus-visible:ring-2 focus-visible:ring-ring"
+                            disabled={updateLeadMutation.isPending}
+                            onClick={onCancelEdit}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            type="submit"
+                            size="sm"
+                            className="focus-visible:ring-2 focus-visible:ring-ring"
+                            disabled={!parsedEditValues.success || !hasEditChanges || updateLeadMutation.isPending}
+                            aria-busy={updateLeadMutation.isPending}
+                          >
+                            {updateLeadMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                            {updateLeadMutation.isPending ? "Guardando..." : "Guardar cambios"}
+                          </Button>
+                        </div>
+                      </form>
                     )}
                   </div>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  {isEditing && (
-                    <>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 rounded-lg"
-                        onClick={onSaveEdit}
-                        disabled={isUpdatingLead}
-                        title="Guardar cambios"
-                      >
-                        {isUpdatingLead ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        ) : (
-                          <Check className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg"
-                        onClick={onCancelEdit}
-                        disabled={isUpdatingLead}
-                        title="Cancelar edición"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
                 </div>
               </div>
 
               {/* Status Selector & Call Actions */}
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/60">
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Estado</Label>
+                  <Label className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Etapa</Label>
                   <select
                     value={isCampaignMemberStatus(selectedLead.lead_status) ? selectedLead.lead_status : ""}
                     onChange={(event) => {
@@ -405,7 +484,7 @@ export default function LeadDetailsSheet({
                       setSelectedLead((prev) => prev ? { ...prev, lead_status: newStatus } : null);
                     }}
                     className="w-full h-8 px-2 rounded-lg border border-border bg-slate-50 dark:bg-slate-900 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer shadow-sm"
-                    disabled={isStatusPending}
+                    disabled={isStatusPending || !capabilities.canChangeStatus}
                   >
                     {!isCampaignMemberStatus(selectedLead.lead_status) && <option value="" disabled>Estado desconocido</option>}
                     {CAMPAIGN_MEMBER_STATUS_OPTIONS.map((status) => (
@@ -430,6 +509,7 @@ export default function LeadDetailsSheet({
                   )}
                 </div>
               </div>
+
             </div>
 
             {/* Navigation Tabs */}
@@ -446,6 +526,9 @@ export default function LeadDetailsSheet({
                 >
                   <MessageSquare size={13} />
                   Gestión
+                  {displayInteractionCount > 0 && (
+                    <span className="bg-primary text-primary-foreground text-[9px] h-4 min-w-4 px-1 rounded-full flex items-center justify-center font-extrabold shrink-0">{displayInteractionCount}</span>
+                  )}
                 </button>
                 <button
                   onClick={() => setActiveTab("tasks")}
@@ -472,7 +555,7 @@ export default function LeadDetailsSheet({
               {activeTab === "interactions" ? (
                 <div className="space-y-6">
                   {/* Form to log interaction */}
-                  <form onSubmit={handleCreateInteraction} className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm" noValidate>
+                  {capabilities.canCreateInteraction && <form onSubmit={handleCreateInteraction} className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm" noValidate>
                     <Label className="text-xs font-bold text-foreground flex items-center gap-1">
                       <MessageSquare size={13} className="text-primary" /> Registrar Gestión Comercial
                     </Label>
@@ -533,7 +616,7 @@ export default function LeadDetailsSheet({
                         {createInteractionMutation.isPending ? "Registrando..." : "Registrar Bitácora"}
                       </Button>
                     </div>
-                  </form>
+                  </form>}
 
                   {/* Timeline List */}
                   <div className="space-y-4">
@@ -542,12 +625,15 @@ export default function LeadDetailsSheet({
                     </h4>
                     {isLoadingInteractions ? (
                       <div className="space-y-3">
+                        <p className="text-xs text-muted-foreground">Cargando gestión del prospecto...</p>
                         <Skeleton className="h-16 w-full rounded-xl" />
                         <Skeleton className="h-16 w-full rounded-xl" />
                       </div>
+                    ) : isErrorInteractions ? (
+                      <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-center"><p className="text-xs text-destructive">No fue posible cargar las interacciones.</p>{onRetryInteractions && <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onRetryInteractions}>Reintentar</Button>}</div>
                     ) : interactions.length === 0 ? (
                       <div className="text-center py-6 text-muted-foreground bg-slate-50/50 dark:bg-slate-900/10 rounded-xl border border-dashed border-border/80">
-                        <p className="text-xs font-medium">Sin interacciones registradas.</p>
+                        <p className="text-xs font-medium">No hay interacciones registradas para este prospecto en esta campaña.</p>
                       </div>
                     ) : (
                       <div className="relative pl-4 space-y-4 border-l border-border/80 ml-2 pt-1">
@@ -585,9 +671,10 @@ export default function LeadDetailsSheet({
               ) : (
                 <div className="space-y-6">
                   {/* Form to create task */}
-                  <form onSubmit={handleCreateTask} className="rounded-xl border border-border bg-card p-4 space-y-3.5 shadow-sm" noValidate>
+                  {capabilities.canCreateTask && <form onSubmit={handleCreateTask} className="rounded-xl border border-border bg-card p-4 space-y-3.5 shadow-sm" noValidate>
                     <Label className="text-xs font-bold text-foreground flex items-center gap-1">
-                      <Plus size={13} className="text-primary" /> Crear Recordatorio / Tarea
+                      {editingTaskId ? <Pencil size={13} className="text-primary" /> : <Plus size={13} className="text-primary" />}
+                      {editingTaskId ? "Editar tarea" : "Crear Recordatorio / Tarea"}
                     </Label>
                     <div className="space-y-2">
                       <Input
@@ -597,7 +684,7 @@ export default function LeadDetailsSheet({
                         aria-invalid={Boolean(taskForm.formState.errors.title)}
                         aria-describedby={taskForm.formState.errors.title ? "panel-task-title-error" : undefined}
                         className="h-8 bg-slate-50/20 text-xs border-border rounded-xl focus:bg-card"
-                        disabled={createTaskMutation.isPending}
+                        disabled={isTaskMutationPending}
                         {...taskForm.register("title")}
                       />
                       <div className="flex items-start justify-between gap-2">
@@ -611,7 +698,7 @@ export default function LeadDetailsSheet({
                         aria-invalid={Boolean(taskForm.formState.errors.content)}
                         aria-describedby={taskForm.formState.errors.content ? "panel-task-content-error" : undefined}
                         className="min-h-[60px] bg-slate-50/20 text-xs border-border rounded-xl focus:bg-card"
-                        disabled={createTaskMutation.isPending}
+                        disabled={isTaskMutationPending}
                         {...taskForm.register("content")}
                       />
                       <div className="flex items-start justify-between gap-2">
@@ -626,29 +713,30 @@ export default function LeadDetailsSheet({
                           aria-invalid={Boolean(taskForm.formState.errors.due_date)}
                           aria-describedby={taskForm.formState.errors.due_date ? "panel-task-due-date-help panel-task-due-date-error" : "panel-task-due-date-help"}
                           className="h-8 bg-slate-50/20 text-xs border-border rounded-xl focus:bg-card"
-                          disabled={createTaskMutation.isPending}
+                          disabled={isTaskMutationPending}
                           {...taskForm.register("due_date")}
                         />
                         <p id="panel-task-due-date-help" className="text-[10px] text-muted-foreground">Puedes crear la tarea sin una fecha definida.</p>
                         {taskForm.formState.errors.due_date && <p id="panel-task-due-date-error" role="alert" className="text-[10px] text-destructive">{taskForm.formState.errors.due_date.message}</p>}
                       </div>
                     </div>
-                    <div className="flex justify-end pt-1">
+                    <div className="flex justify-end gap-2 pt-1">
+                      {editingTaskId && <Button type="button" variant="outline" size="sm" className="h-8" disabled={isTaskMutationPending} onClick={cancelTaskEdit}>Cancelar</Button>}
                       <Button
                         type="submit"
                         size="sm"
                         className="btn-primary font-bold text-xs h-8 px-4 rounded-lg shadow-sm"
-                        disabled={createTaskMutation.isPending}
+                        disabled={isTaskMutationPending}
                       >
-                        {createTaskMutation.isPending ? (
+                        {isTaskMutationPending ? (
                           <Loader2 size={12} className="animate-spin mr-1.5" />
                         ) : (
                           <Plus size={12} className="mr-1.5" />
                         )}
-                        {createTaskMutation.isPending ? "Creando..." : "Crear Tarea"}
+                        {isTaskMutationPending ? "Guardando..." : editingTaskId ? "Guardar cambios" : "Crear Tarea"}
                       </Button>
                     </div>
-                  </form>
+                  </form>}
 
                   {/* Tasks List */}
                   <div className="space-y-4">
@@ -657,18 +745,21 @@ export default function LeadDetailsSheet({
                     </h4>
                     {isLoadingTasks ? (
                       <div className="space-y-3">
+                        <p className="text-xs text-muted-foreground">Cargando tareas del prospecto...</p>
                         <Skeleton className="h-14 w-full rounded-xl" />
                         <Skeleton className="h-14 w-full rounded-xl" />
                       </div>
+                    ) : isErrorTasks ? (
+                      <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-center"><p className="text-xs text-destructive">No fue posible cargar las tareas.</p>{onRetryTasks && <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onRetryTasks}>Reintentar</Button>}</div>
                     ) : tasks.length === 0 ? (
                       <div className="text-center py-6 text-muted-foreground bg-slate-50/50 dark:bg-slate-900/10 rounded-xl border border-dashed border-border/80">
-                        <p className="text-xs font-medium">Sin tareas pendientes de seguimiento.</p>
+                        <p className="text-xs font-medium">No hay tareas registradas para este prospecto en esta campaña.</p>
                       </div>
                     ) : (
                       <div className="space-y-2.5">
                         {tasks.map((item) => (
                           <div
-                            key={item.id}
+                            key={item.id || `${item.created_at || "task"}-${item.title || "untitled"}`}
                             className={cn(
                               "flex items-start gap-3 p-3.5 rounded-xl border border-border bg-card shadow-sm transition-all duration-200",
                               item.is_done && "bg-slate-50/50 dark:bg-slate-900/5 opacity-70 border-border/60"
@@ -683,7 +774,7 @@ export default function LeadDetailsSheet({
                                   ? "bg-primary border-primary text-primary-foreground"
                                   : "hover:border-primary/50 bg-background"
                               )}
-                              disabled={updateTaskMutation.isPending}
+                              disabled={updateTaskMutation.isPending || !item.id || !capabilities.canUpdateTask}
                             >
                               {item.is_done && <CheckCircle2 size={11} className="stroke-[3]" />}
                             </button>
@@ -693,7 +784,7 @@ export default function LeadDetailsSheet({
                                 "font-bold text-xs leading-none text-foreground truncate",
                                 item.is_done && "line-through text-muted-foreground"
                               )}>
-                                {item.title}
+                                {item.title || "Título no disponible"}
                               </h5>
                               {item.content && (
                                 <p className={cn(
@@ -713,22 +804,45 @@ export default function LeadDetailsSheet({
                                   {item.due_date ? formatSafeDate(item.due_date, "dd/MM/yyyy") : "Sin fecha definida"}
                                 </span>
                               </div>
+                              {taskAuthorName(item) && <p className="text-[9px] text-muted-foreground">Creada por <span className="font-semibold text-foreground">{taskAuthorName(item)}</span>{item.created_at ? ` · ${formatSafeDate(item.created_at)}` : ""}</p>}
                             </div>
 
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-slate-400 hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0 self-center"
-                              disabled={deleteTaskMutation.isPending}
-                              onClick={() => deleteTaskMutation.mutate({ 
-                                campaignId: selectedCampaignId, 
-                                memberId: selectedMemberId, 
-                                taskId: item.id 
-                              })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {item.id && (capabilities.canUpdateTask || capabilities.canDeleteTask) && (
+                              <div className="flex shrink-0 self-center items-center gap-1">
+                                {capabilities.canUpdateTask && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-slate-400 transition-colors hover:bg-primary/10 hover:text-primary"
+                                    disabled={updateTaskMutation.isPending}
+                                    onClick={() => beginTaskEdit(item)}
+                                    title="Editar tarea"
+                                    aria-label="Editar tarea"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {capabilities.canDeleteTask && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-slate-400 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                    disabled={deleteTaskMutation.isPending}
+                                    onClick={() => deleteTaskMutation.mutate({
+                                      campaignId: selectedCampaignId,
+                                      memberId: selectedMemberId,
+                                      taskId: item.id,
+                                    })}
+                                    title="Eliminar tarea"
+                                    aria-label="Eliminar tarea"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
