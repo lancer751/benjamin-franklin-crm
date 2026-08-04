@@ -1,4 +1,4 @@
-import { type LeadWhereInput, type PrismaClient } from "@repo/database";
+import { type CampaignMemberWhereInput, type LeadWhereInput, type PrismaClient } from "@repo/database";
 import type {
   CreateLeadInput,
   UpdateLeadInput,
@@ -16,7 +16,7 @@ import type {
 
 
 export function leadRepository(prisma: PrismaClient) {
- // TODO
+  // TODO
   // create a repository for the sellers module in order to encapsulate the database logic and provide a clean interface for the rest of the application  
 
   // method to resolve the assigned user and check if the user is a seller and active
@@ -47,10 +47,13 @@ export function leadRepository(prisma: PrismaClient) {
   };
   return {
     //  Leads generated from any source without being assigned to a campaign or a seller
-    async findMany({ page, limit, search, status, assigned_to }: LeadQuery) {
+    async findMany({ page, limit, search, status, assigned_to, from_date, to_date }: LeadQuery) {
       const skip = (page - 1) * limit;
-
       const existsCampaignMembers = await prisma.campaignMember.count({})
+
+      const endOfDay = to_date
+        ? new Date(to_date.setHours(23, 59, 59, 999))
+        : undefined;
 
       const where: LeadWhereInput = {
         lead_status: status ?? "ACTIVE",
@@ -59,15 +62,22 @@ export function leadRepository(prisma: PrismaClient) {
             { email: { contains: search, mode: "insensitive" } },
             { first_name: { contains: search, mode: "insensitive" } },
             { last_name: { contains: search, mode: "insensitive" } },
+            { phones: { some: { number: { contains: search } } } }
           ],
         }),
-        ...((existsCampaignMembers > 0 || assigned_to )&& {
+        ...((existsCampaignMembers > 0 || assigned_to) && {
           campaignsEngaging: {
             some: {
               assigned_to
             }
           }
-        })
+        }),
+        ...((from_date || endOfDay) && {
+          created_at: {
+            ...(from_date && { gte: from_date }),
+            ...(endOfDay && { lte: endOfDay }),
+          },
+        }),
       };
 
       const [leads, total] = await Promise.all([
@@ -84,7 +94,7 @@ export function leadRepository(prisma: PrismaClient) {
         prisma.lead.count({ where }),
       ]);
 
-      const formattedLeads = leads.map(lead => ({...lead, assignedToCampaign: lead._count.campaignsEngaging > 0}))
+      const formattedLeads = leads.map(lead => ({ ...lead, assignedToCampaign: lead._count.campaignsEngaging > 0 }))
       return { leads: formattedLeads, total, page, limit };
     },
     async lookupExact(phone?: string, email?: string, campaignId?: string) {
@@ -180,6 +190,11 @@ export function leadRepository(prisma: PrismaClient) {
                   first_name: true,
                   last_name: true,
                 },
+              },
+              orders: {
+                include: {
+                  orderDetails: true
+                }
               },
               leadInteractions: {
                 orderBy: { id: "desc" },
@@ -383,16 +398,50 @@ export function leadRepository(prisma: PrismaClient) {
       });
     },
     // ── CampaignMember ───────────────────────────────────────────────────────
-    async findMembersByMember(campaignId: string, query: CampaignMemberQuery) {
+    async findManyMembers(query: CampaignMemberQuery) {
       const { page, limit, campaign_member_status, assigned_to } = query;
       const skip = (page - 1) * limit;
-      const where = {
+      const where: CampaignMemberWhereInput = {
+        ...(campaign_member_status && { status: campaign_member_status }),
+        ...(assigned_to && { assigned_to }),
+      };
+
+      const [members, total] = await Promise.all([
+        prisma.campaignMember.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { created_at: "desc" },
+          include: {
+            lead: { include: { phones: true } },
+            assignedUser: {
+              select: {
+                id: true,
+                first_name: true,
+
+
+                last_name: true,
+              },
+            },
+
+            _count: { select: { leadInteractions: true } },
+          },
+        }),
+        prisma.campaignMember.count({ where }),
+      ]);
+
+      return { members, total, page, limit };
+    },
+    async findMembersOnCampaign(campaignId: string, query: CampaignMemberQuery) {
+      const { page, limit, campaign_member_status, assigned_to } = query;
+      const skip = (page - 1) * limit;
+      const where: CampaignMemberWhereInput = {
         campaing_id: campaignId,
         ...(campaign_member_status && { status: campaign_member_status }),
         ...(assigned_to && { assigned_to }),
       };
 
-      const [data, total] = await Promise.all([
+      const [members, total] = await Promise.all([
         prisma.campaignMember.findMany({
           where,
           skip,
@@ -413,9 +462,8 @@ export function leadRepository(prisma: PrismaClient) {
         prisma.campaignMember.count({ where }),
       ]);
 
-      return { data, total, page, limit };
+      return { members, total, page, limit };
     },
-
     async createMember(data: CreateCampaignMemberInput) {
       const [lead, campaign, seller] = await Promise.all([
         prisma.lead.findUnique({
