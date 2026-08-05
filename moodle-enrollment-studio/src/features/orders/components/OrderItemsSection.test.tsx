@@ -6,7 +6,7 @@ import { OrderItemsSection } from "./OrderItemsSection";
 
 function Harness() {
   const form = useForm<OrderFormValues>({
-    defaultValues: { lead_id: "", discount: "", order_items: [] },
+    defaultValues: { leadId: "", assigned_to: "", discount: "", order_items: [] },
   });
   const items = useFieldArray({ control: form.control, name: "order_items" });
   return (

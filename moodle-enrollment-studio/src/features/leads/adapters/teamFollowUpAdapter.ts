@@ -2,8 +2,14 @@ import type { NormalizedLead } from "./leadAdapter";
 
 export interface TeamFollowUpMemberRow {
   id: string;
+  memberId: string;
   leadId: string;
   campaignId: string;
+  status: string;
+  assignedTo: string;
+  createdAt: string;
+  updatedAt: string;
+  isPrimary: boolean;
   associatedAt: string;
   programName: string;
   phone: string;
@@ -11,7 +17,13 @@ export interface TeamFollowUpMemberRow {
   memberStatus: string;
   advisorName: string | null;
   source: string | null;
+  assignedUser: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  } | null;
   interactionCount: number;
+  lead: NormalizedLead;
   drawerLead: NormalizedLead;
 }
 
@@ -46,8 +58,8 @@ const cleanName = (...parts: unknown[]): string =>
 const principalPhone = (lead: UnknownRecord): string | null => {
   if (!Array.isArray(lead.phones)) return null;
   const phones = lead.phones.filter(isRecord);
-  const principal = phones.find((phone) => phone.isPrincipal === true);
-  return principal ? text(principal.number) || null : null;
+  const preferred = phones.find((phone) => phone.isPrincipal === true) ?? phones[0];
+  return preferred ? text(preferred.number) || null : null;
 };
 
 export const adaptTeamFollowUpMemberPage = (
@@ -56,7 +68,7 @@ export const adaptTeamFollowUpMemberPage = (
   programName: string,
 ): TeamFollowUpMemberPage => {
   const envelope = isRecord(response) && isRecord(response.data) ? response.data : {};
-  const rawMembers = Array.isArray(envelope.data) ? envelope.data.filter(isRecord) : [];
+  const rawMembers = Array.isArray(envelope.members) ? envelope.members.filter(isRecord) : [];
 
   return {
     members: rawMembers.map((member) => {
@@ -102,10 +114,35 @@ export const adaptTeamFollowUpMemberPage = (
           }
           : null,
       };
+      const drawerLead: NormalizedLead = {
+        id: leadId,
+        first_name: firstName,
+        middle_name: middleName,
+        last_name: lastName,
+        fullName,
+        email: text(lead.email),
+        gender: text(lead.gender) || "NOT_SPECIFIED",
+        dni: text(lead.dni),
+        source: source || "",
+        created_at: text(lead.created_at),
+        lead_status: memberStatus,
+        primary_campaign_id: memberCampaignId,
+        courseName: programName || "No disponible",
+        phones: phone ? [{ number: phone, type: "CELULAR", isPrincipal: true }] : [],
+        campaignsEngaging: [normalizedMember],
+        campaignCount: 1,
+        assignedToCampaign: true,
+      };
       return {
         id: campaignMemberId,
+        memberId: campaignMemberId,
         leadId,
         campaignId: memberCampaignId,
+        status: memberStatus,
+        assignedTo: text(member.assigned_to),
+        createdAt: text(member.created_at),
+        updatedAt: text(member.updated_at),
+        isPrimary: member.is_primary === true,
         associatedAt: text(member.created_at),
         programName: programName || "No disponible",
         phone: phone || "No disponible",
@@ -113,25 +150,16 @@ export const adaptTeamFollowUpMemberPage = (
         memberStatus,
         advisorName,
         source,
+        assignedUser: assignedUser && assignedUserId
+          ? {
+              id: assignedUserId,
+              firstName: text(assignedUser.first_name),
+              lastName: text(assignedUser.last_name),
+            }
+          : null,
         interactionCount: count,
-        drawerLead: {
-          id: leadId,
-          first_name: firstName,
-          middle_name: middleName,
-          last_name: lastName,
-          fullName,
-          email: text(lead.email),
-          gender: text(lead.gender) || "NOT_SPECIFIED",
-          dni: text(lead.dni),
-          source: source || "",
-          created_at: text(lead.created_at),
-          lead_status: memberStatus,
-          primary_campaign_id: memberCampaignId,
-          courseName: programName || "No disponible",
-          phones: phone ? [{ number: phone, type: "CELULAR", isPrincipal: true }] : [],
-          campaignsEngaging: [normalizedMember],
-          campaignCount: 1,
-        },
+        lead: drawerLead,
+        drawerLead,
       };
     }),
     total: number(envelope.total, 0),

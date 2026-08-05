@@ -6,6 +6,7 @@ import {
   mapOrderApiError,
 } from "../services/orderService";
 import type { CreateOrderPayload } from "../types";
+import { orderQueryKeys } from "../queryKeys";
 
 export function useCreateOrder() {
   const queryClient = useQueryClient();
@@ -13,14 +14,20 @@ export function useCreateOrder() {
 
   return useMutation({
     mutationFn: (payload: CreateOrderPayload) => createOrder(payload),
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.setQueryData(["order", response.data.id], response);
+    onSuccess: async (response) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: orderQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ["lead"] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-members"] }),
+        queryClient.invalidateQueries({ queryKey: ["seller-detail"] }),
+        queryClient.invalidateQueries({ queryKey: ["team-follow-up"] }),
+        queryClient.invalidateQueries({ queryKey: orderQueryKeys.leadContexts() }),
+      ]);
+      queryClient.setQueryData(orderQueryKeys.detail(response.data.id), response);
       toast.success("Orden creada correctamente");
       navigate(`/ordenes/${response.data.id}`);
     },
     onError: (error) => {
-      console.error("Create order failed", error);
       toast.error(mapOrderApiError(error));
     },
   });

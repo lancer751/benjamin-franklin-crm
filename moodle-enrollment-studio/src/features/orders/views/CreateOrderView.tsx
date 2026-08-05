@@ -16,11 +16,12 @@ import type {
   OrderCreationSubmissionContext,
   OrderFormValues,
 } from "../types";
+import { orderQueryKeys } from "../queryKeys";
 
 export default function CreateOrderView() {
   const navigate = useNavigate();
   const productsQuery = useQuery({
-    queryKey: ["order-products"],
+    queryKey: orderQueryKeys.products,
     queryFn: getOrderProducts,
   });
   const mutation = useCreateOrder();

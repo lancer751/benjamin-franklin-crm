@@ -56,6 +56,9 @@ export function mapOrderResponseToListItem(
 
   return {
     id: order.id,
+    memberId: order.member.id,
+    leadId: order.member.lead.id,
+    campaignId: order.member.campaignId,
     orderCode: order.order_code || "Orden sin código",
     status: order.order_status,
     subtotal: safeMoney(order.sub_total),
@@ -68,6 +71,9 @@ export function mapOrderResponseToListItem(
       dni: order.lead.dni ?? null,
     },
     seller,
+    creator: order.userCreator ? {
+      fullName: joinName(order.userCreator) || "Usuario no disponible",
+    } : null,
     products: order.orderDetails.map((detail) => ({
       name: detail.product.name,
       price: safeMoney(detail.price),

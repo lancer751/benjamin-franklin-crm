@@ -18,6 +18,7 @@ import { SearchableCombobox } from "@/features/campaigns/components/SearchableCo
 import {
   findProductPrice,
   getAvailableAttendanceModes,
+  orderItemAllowsInstallments,
 } from "../services/orderMappers";
 import type { OrderFormValues, OrderProduct } from "../types";
 import { formatPEN, modeLabel } from "./orderDisplay";
@@ -60,6 +61,8 @@ export function OrderItemRow({
     productField.field.value,
     modeField.field.value,
   );
+  const selectedProduct = products.find((product) => product.id === productField.field.value);
+  const allowsInstallments = orderItemAllowsInstallments(selectedProduct, price);
   const displayedPrice =
     paymentField.field.value === "INSTALLMENTS"
       ? price?.installment_price
@@ -161,7 +164,7 @@ export function OrderItemRow({
               <SelectItem value="FULL">Pago completo</SelectItem>
               <SelectItem
                 value="INSTALLMENTS"
-                disabled={price?.installment_price == null}
+                disabled={!allowsInstallments}
               >
                 Pago en cuotas
               </SelectItem>

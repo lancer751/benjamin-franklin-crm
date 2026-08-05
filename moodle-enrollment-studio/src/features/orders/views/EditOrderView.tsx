@@ -17,14 +17,21 @@ import {
   mapOrderApiError,
 } from "../services/orderService";
 import type { OrderFormValues } from "../types";
+import { getSellers } from "@/features/users/services/userService";
+import { adaptSellerOptions } from "@/features/leads/adapters/campaignAssignmentAdapter";
+import { orderQueryKeys } from "../queryKeys";
 
 export default function EditOrderView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const orderQuery = useOrder(id);
   const productsQuery = useQuery({
-    queryKey: ["order-products"],
+    queryKey: orderQueryKeys.products,
     queryFn: getOrderProducts,
+  });
+  const sellersQuery = useQuery({
+    queryKey: ["users", "sellers", "order-edit"],
+    queryFn: getSellers,
   });
   const mutation = useUpdateOrder(id ?? "");
   const order = orderQuery.data?.data;
@@ -32,6 +39,18 @@ export default function EditOrderView() {
     () => (order ? mapOrderToFormValues(order) : undefined),
     [order],
   );
+  const assigneeOptions = useMemo(() => {
+    const options = adaptSellerOptions(sellersQuery.data);
+    const assignedUser = order?.assignedUser;
+    if (!assignedUser || options.some((option) => option.userId === assignedUser.id)) {
+      return options;
+    }
+    const currentName = [assignedUser.first_name, assignedUser.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || "Asesor actual";
+    return [{ userId: assignedUser.id, sellerProfileId: "", name: currentName }, ...options];
+  }, [order?.assignedUser, sellersQuery.data]);
 
   if (orderQuery.isLoading || productsQuery.isLoading) {
     return (
@@ -105,6 +124,8 @@ export default function EditOrderView() {
         products={productsQuery.data ?? []}
         itemsEditable={mapped.canEditItems}
         limitation={mapped.limitation}
+        assigneeOptions={assigneeOptions}
+        assigneesLoading={sellersQuery.isLoading}
         isSubmitting={mutation.isPending}
         submitError={
           mutation.error ? mapOrderApiError(mutation.error) : undefined

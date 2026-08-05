@@ -13,7 +13,8 @@ const product: OrderProduct = {
 };
 
 const validValues = {
-  lead_id: "22222222-2222-4222-8222-222222222222",
+  leadId: "22222222-2222-4222-8222-222222222222",
+  assigned_to: "",
   discount: "10.00",
   order_items: [
     {
@@ -32,7 +33,7 @@ describe("orderFormSchema", () => {
   });
 
   it("no permite crear sin prospecto", () => {
-    expect(schema.safeParse({ ...validValues, lead_id: "" }).success).toBe(false);
+    expect(schema.safeParse({ ...validValues, leadId: "" }).success).toBe(false);
   });
 
   it("no permite crear sin productos", () => {

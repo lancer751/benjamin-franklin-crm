@@ -6,6 +6,7 @@ import {
   updateOrder,
 } from "../services/orderService";
 import type { UpdateOrderPayload } from "../types";
+import { orderQueryKeys } from "../queryKeys";
 
 export function useUpdateOrder(id: string) {
   const queryClient = useQueryClient();
@@ -13,14 +14,18 @@ export function useUpdateOrder(id: string) {
 
   return useMutation({
     mutationFn: (payload: UpdateOrderPayload) => updateOrder(id, payload),
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.setQueryData(["order", id], response);
+    onSuccess: async (response) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: orderQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ["payments"] }),
+        queryClient.invalidateQueries({ queryKey: ["seller-detail"] }),
+        queryClient.invalidateQueries({ queryKey: ["team-follow-up"] }),
+      ]);
+      queryClient.setQueryData(orderQueryKeys.detail(id), response);
       toast.success("Orden actualizada correctamente");
       navigate(`/ordenes/${id}`);
     },
     onError: (error) => {
-      console.error("Update order failed", error);
       toast.error(mapOrderApiError(error));
     },
   });

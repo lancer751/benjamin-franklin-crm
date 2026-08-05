@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { OrderFormValues, OrderProduct } from "../types";
-import { calculateOrderPreview, findProductPrice } from "../services/orderMappers";
+import { calculateOrderPreview, findProductPrice, orderItemAllowsInstallments } from "../services/orderMappers";
+import { ORDER_STATUSES } from "../orderStatus";
 
 const uuidMessage = "Selecciona una opción válida";
 const decimalPattern = /^\d+(?:\.\d{1,2})?$/;
@@ -28,9 +29,10 @@ export function buildOrderFormSchema(
 ) {
   return z
     .object({
-      lead_id: options.requireLead
+      leadId: options.requireLead
         ? z.string().uuid("Selecciona un prospecto")
         : z.string(),
+      assigned_to: z.string(),
       discount: z
         .string()
         .trim()
@@ -45,9 +47,7 @@ export function buildOrderFormSchema(
       order_items: options.requireItems
         ? z.array(orderItemSchema).min(1, "Agrega al menos un producto")
         : z.array(orderItemSchema),
-      order_status: z
-        .enum(["PENDING", "COMPLETED", "CANCELLED", "REFUNDED"])
-        .optional(),
+      order_status: z.enum(ORDER_STATUSES).optional(),
     })
     .superRefine((values, context) => {
       const seen = new Set<string>();
@@ -71,6 +71,15 @@ export function buildOrderFormSchema(
             message: "No existe un precio para esta modalidad",
           });
         }
+        const product = products.find((candidate) => candidate.id === item.product_id);
+        const price = findProductPrice(products, item.product_id, item.attendance_mode);
+        if (item.payment_modality === "INSTALLMENTS" && !orderItemAllowsInstallments(product, price)) {
+          context.addIssue({
+            code: "custom",
+            path: ["order_items", index, "payment_modality"],
+            message: "Este producto solo permite pagos al contado",
+          });
+        }
       });
 
       if (options.requireItems) {
@@ -91,7 +100,8 @@ export function buildOrderFormSchema(
 }
 
 export const emptyOrderFormValues: OrderFormValues = {
-  lead_id: "",
+  leadId: "",
+  assigned_to: "",
   discount: "",
   order_items: [
     {

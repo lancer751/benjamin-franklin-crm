@@ -16,7 +16,10 @@ import {
   type CampaignMemberStatus,
 } from "@/core/constants/campaignMemberStatus";
 import { cn } from "@/core/lib/utils";
-import type { NormalizedLead } from "@/features/leads/adapters/leadAdapter";
+import {
+  getPreferredPhone,
+  type NormalizedLead,
+} from "@/features/leads/adapters/leadAdapter";
 import type { KanbanDragState } from "@/features/campaigns/components/kanban-dnd";
 
 interface LeadCardProps {
@@ -34,11 +37,12 @@ export default function LeadCard({ lead, onSelect, onStatusChange, isPending, dr
     onMouseDown: stopDragStart,
   };
 
-  const phone = lead.phones?.[0]?.number || null;
+  const phone = getPreferredPhone(lead.phones)?.number || null;
   const formattedPhone = phone ? phone.replace(/\D/g, "") : "";
   const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}` : "";
   const memberId = lead.campaignsEngaging?.[0]?.id || "";
-  const currentStatus = isCampaignMemberStatus(lead.lead_status) ? lead.lead_status : null;
+  const memberStatus = lead.campaignsEngaging[0]?.status;
+  const currentStatus = isCampaignMemberStatus(memberStatus) ? memberStatus : null;
   const statusConfig = currentStatus ? CAMPAIGN_MEMBER_STATUS_CONFIG[currentStatus] : null;
 
   return (
@@ -66,7 +70,7 @@ export default function LeadCard({ lead, onSelect, onStatusChange, isPending, dr
           {lead.fullName || `${lead.first_name} ${lead.last_name}`.trim() || "Prospecto sin nombre"}
         </h4>
         <Badge variant="outline" className={cn("w-fit rounded-full px-2 py-0 text-[10px] font-semibold", statusConfig?.badgeClassName || "border-slate-200 bg-slate-50 text-slate-700")}>
-          {getCampaignMemberStatusLabel(lead.lead_status)}
+          {getCampaignMemberStatusLabel(memberStatus)}
         </Badge>
       </div>
 

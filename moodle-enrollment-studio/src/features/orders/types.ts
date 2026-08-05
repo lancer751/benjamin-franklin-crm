@@ -7,7 +7,7 @@ export interface GetOrdersParams {
   page?: number;
   limit?: number;
   order_status?: string;
-  lead_id?: string;
+  member_id?: string;
   generated_by?: string;
   creation_order?: OrderCreationOrder;
 }
@@ -55,7 +55,7 @@ export interface OrderProduct {
 }
 
 export interface OrderDetailResponse {
-  id: string;
+  id?: string;
   product_id: string;
   price: string | number;
   discount_code: string | null;
@@ -77,7 +77,22 @@ export interface OrderDetailResponse {
     pricing_status?: string;
     installments_min_number?: number | null;
     installments_max_number?: number | null;
+    category?: { name?: string | null } | null;
   };
+  paymentPlan?: OrderPaymentPlan | null;
+}
+
+export interface OrderDisplayItem {
+  productId: string;
+  productName: string;
+  categoryName: string;
+  imageUrl: string | null;
+  basePrice: string;
+  discountAmount: string;
+  finalPrice: string;
+  paymentModality: PaymentModality | null;
+  discountCode: string | null;
+  paymentPlan: OrderPaymentPlan | null;
 }
 
 export interface OrderInstallment {
@@ -127,7 +142,21 @@ export interface OrderSeller {
 
 export interface OrderResponse {
   id: string;
-  lead_id: string;
+  orderCode: string;
+  status: OrderStatus;
+  createdAt: string;
+  updatedAt: string;
+  subtotal: string;
+  discountAmount: string;
+  total: string;
+  member_id: string;
+  memberId: string;
+  lead_id?: string;
+  leadId: string;
+  leadName: string;
+  campaignId: string;
+  assignedUserName: string;
+  creatorName: string;
   generated_by?: string | null;
   sub_total: string | number;
   total_amount: string | number;
@@ -137,7 +166,24 @@ export interface OrderResponse {
   created_at: string;
   updated_at: string;
   lead: OrderLeadSummary;
+  member: {
+    id: string;
+    campaignId: string;
+    lead: OrderLeadSummary;
+  };
+  userCreator?: {
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+  } | null;
+  assignedUser?: {
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+  } | null;
   orderDetails: OrderDetailResponse[];
+  items: OrderDisplayItem[];
+  paymentPlan: OrderPaymentPlan | null;
   paymentPlans?: OrderPaymentPlan[];
   payments?: OrderPayment[];
   seller?: OrderSeller | null;
@@ -151,7 +197,8 @@ export interface OrderFormItem {
 }
 
 export interface OrderFormValues {
-  lead_id: string;
+  leadId: string;
+  assigned_to: string;
   discount: string;
   order_items: OrderFormItem[];
   order_status?: OrderStatus;
@@ -165,10 +212,9 @@ export interface CreateOrderItemPayload {
 }
 
 export interface CreateOrderPayload {
-  lead_id: string;
+  member_id: string;
   related_campaign: string;
-  generated_by: string;
-  assigned_to: string;
+  assigned_to?: string;
   order_items: CreateOrderItemPayload[];
 }
 
@@ -180,6 +226,8 @@ export interface OrderMatriculatedCampaign {
   assignedUserId: string;
   assignedUserName: string;
   isPrimary: boolean;
+  status: "MATRICULADO";
+  associatedAt: string | null;
 }
 
 export interface OrderLeadContext {
@@ -192,12 +240,11 @@ export interface OrderLeadContext {
 
 export interface OrderCreationSubmissionContext {
   campaign: OrderMatriculatedCampaign;
-  generatedBy: string;
 }
 
 export interface UpdateOrderPayload {
-  discount?: string;
   order_status?: OrderStatus;
+  assigned_to?: string;
   order_items?: CreateOrderItemPayload[];
 }
 
@@ -207,10 +254,18 @@ export interface ApiSuccess<T> {
   data: T;
 }
 
-export type OrderListResponse = ApiSuccess<OrderResponse[]>;
+export type OrderListResponse = ApiSuccess<{
+  orders: OrderResponse[];
+  total: number;
+  page: number;
+  limit: number;
+}>;
 
 export interface OrderListItem {
   id: string;
+  memberId: string;
+  leadId: string;
+  campaignId: string;
   orderCode: string;
   status: OrderStatus;
   subtotal: string;
@@ -226,6 +281,9 @@ export interface OrderListItem {
     fullName: string;
     email: string | null;
     initials: string;
+  } | null;
+  creator: {
+    fullName: string;
   } | null;
   products: Array<{
     name: string;

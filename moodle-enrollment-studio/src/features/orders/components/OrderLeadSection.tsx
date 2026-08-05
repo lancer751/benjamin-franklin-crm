@@ -108,7 +108,7 @@ export function OrderLeadSection({
   onSelectedCampaignIdChange,
   onRetryLeadContext,
 }: OrderLeadSectionProps) {
-  const { field, fieldState } = useController({ control, name: "lead_id" });
+  const { field, fieldState } = useController({ control, name: "leadId" });
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -140,7 +140,7 @@ export function OrderLeadSection({
   const campaigns = leadContext?.matriculatedCampaigns ?? [];
   const selectedCampaign = campaigns.find(
     (campaign) =>
-      (campaign.memberId || campaign.campaignId) === selectedCampaignId,
+      campaign.memberId === selectedCampaignId,
   );
 
   return (
@@ -374,10 +374,10 @@ export function OrderLeadSection({
                     <SelectContent>
                       {campaigns.map((campaign) => (
                         <SelectItem
-                          key={campaign.memberId || campaign.campaignId}
-                          value={campaign.memberId || campaign.campaignId}
+                          key={campaign.memberId}
+                          value={campaign.memberId}
                         >
-                          {campaign.campaignName} · Asesor: {campaign.assignedUserName || "No disponible"}
+                          {campaign.campaignName} · Matriculado · Asesor: {campaign.assignedUserName || "No disponible"}
                         </SelectItem>
                       ))}
                     </SelectContent>

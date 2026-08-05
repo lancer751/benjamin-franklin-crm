@@ -25,6 +25,8 @@ export interface LeadListQuery {
   status?: LeadStatus;
   assigned_to?: string;
   campaign_id?: string;
+  from_date?: string;
+  to_date?: string;
 }
 
 export interface LeadLookupResponse {

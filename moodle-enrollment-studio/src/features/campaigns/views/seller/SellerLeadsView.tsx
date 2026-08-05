@@ -3,8 +3,8 @@ import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getSellerCampaigns } from "@/features/users/services/userService";
+import { getCampaignMembers } from "@/features/campaigns/services/campaignService";
 import { 
-  getCampaignMembers, 
   updateMemberStatus,
   getMemberInteractions,
   createMemberInteraction,
@@ -13,7 +13,11 @@ import {
   updateMemberTask,
   deleteMemberTask,
 } from "@/features/leads/services/leadService";
-import { adaptCampaignMembers, unpackLeads } from "@/features/leads/adapters/leadAdapter";
+import {
+  adaptCampaignMembers,
+  getPreferredPhone,
+  unpackCampaignMembers,
+} from "@/features/leads/adapters/leadAdapter";
 import { requireSuccess } from "@/features/leads/adapters/leadDetailAdapter";
 import { adaptLeadInteraction, adaptLeadInteractionsResponse } from "@/features/leads/adapters/leadInteractionAdapter";
 import { useManualLeadRegistration } from "@/features/leads/hooks/useManualLeadRegistration";
@@ -81,7 +85,7 @@ const normalizeAssignedCampaigns = (response: unknown): AssignedCampaign[] => {
   });
 };
 
-const getPhone = (lead: NormalizedLead) => lead.phones?.[0]?.number || null;
+const getMemberStatus = (lead: NormalizedLead) => lead.campaignsEngaging[0]?.status;
 
 const STATUS_GROUP_ORDER = Array.from(
   new Set(CAMPAIGN_MEMBER_STATUS_LIST.map((status) => status.group)),
@@ -140,8 +144,8 @@ const SellerLeadsView = () => {
   });
 
   const leads = useMemo(() => {
-    const rawData = unpackLeads(membersRes);
-    return adaptCampaignMembers(rawData);
+    const memberPage = unpackCampaignMembers(membersRes);
+    return adaptCampaignMembers(memberPage.members);
   }, [membersRes]);
 
   // 3. Consultas e interacciones
@@ -315,10 +319,10 @@ const SellerLeadsView = () => {
   const filteredLeads = useMemo(() => {
     if (!leads) return [];
     return leads.filter((lead) => {
-      if (statusFilter !== "ALL" && lead.lead_status !== statusFilter) return false;
+      if (statusFilter !== "ALL" && getMemberStatus(lead) !== statusFilter) return false;
       const fullName = lead.fullName.toLowerCase();
       const email = lead.email.toLowerCase();
-      const phone = (getPhone(lead) || "").toLowerCase();
+      const phone = (getPreferredPhone(lead.phones)?.number || "").toLowerCase();
       const query = searchQuery.toLowerCase();
       return fullName.includes(query) || email.includes(query) || phone.includes(query);
     });
@@ -330,8 +334,9 @@ const SellerLeadsView = () => {
     ) as Record<CampaignMemberStatus, NormalizedLead[]>;
 
     filteredLeads.forEach((lead) => {
-      if (isCampaignMemberStatus(lead.lead_status)) {
-        groups[lead.lead_status].push(lead);
+      const memberStatus = getMemberStatus(lead);
+      if (isCampaignMemberStatus(memberStatus)) {
+        groups[memberStatus].push(lead);
       }
     });
 
@@ -343,8 +348,13 @@ const SellerLeadsView = () => {
   }, [assignedCampaignList, selectedCampaignId]);
 
   const unsupportedStatusCount = useMemo(
-    () => filteredLeads.filter((lead) => !isCampaignMemberStatus(lead.lead_status)).length,
+    () => filteredLeads.filter((lead) => !isCampaignMemberStatus(getMemberStatus(lead))).length,
     [filteredLeads],
+  );
+
+  const visibleMemberCount = useMemo(
+    () => Object.values(leadsByStage).reduce((total, stageLeads) => total + stageLeads.length, 0),
+    [leadsByStage],
   );
 
   const scrollToStage = (status: CampaignMemberStatus) => {
@@ -492,7 +502,7 @@ const SellerLeadsView = () => {
 
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground sm:ml-auto">
             <Users size={14} className="text-primary/70" />
-            En pantalla: <span className="font-extrabold text-foreground">{filteredLeads.length - unsupportedStatusCount}</span>
+            En pantalla: <span className="font-extrabold text-foreground">{visibleMemberCount}</span>
           </div>
         </div>
 

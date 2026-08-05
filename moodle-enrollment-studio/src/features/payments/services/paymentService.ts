@@ -10,9 +10,17 @@ import type {
 } from "../types";
 
 interface ApiErrorBody {
-  error?: string;
+  error?: string | { message?: string; name?: string };
   message?: string;
 }
+
+const apiErrorMessage = (body: unknown): string => {
+  if (!body || typeof body !== "object") return "Error inesperado del servidor";
+  const errorBody = body as ApiErrorBody;
+  if (typeof errorBody.error === "string") return errorBody.error;
+  if (errorBody.error && typeof errorBody.error.message === "string") return errorBody.error.message;
+  return errorBody.message || "Error inesperado del servidor";
+};
 
 export class PaymentApiError extends Error {
   constructor(
@@ -27,10 +35,9 @@ export class PaymentApiError extends Error {
 async function readResponse<T>(response: Response): Promise<T> {
   const body = (await response.json()) as unknown;
   if (!response.ok) {
-    const error = body as ApiErrorBody;
     throw new PaymentApiError(
       response.status,
-      error.error || error.message || "Error inesperado del servidor",
+      apiErrorMessage(body),
     );
   }
   return body as T;

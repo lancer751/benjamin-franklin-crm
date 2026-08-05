@@ -8,6 +8,7 @@ import type {
   OrderFormValues,
   PaymentModality,
   OrderProduct,
+  OrderProductPrice,
   OrderResponse,
   UpdateOrderPayload,
 } from "../types";
@@ -21,11 +22,6 @@ function isAttendanceMode(value: unknown): value is AttendanceMode {
 
 function isPaymentModality(value: unknown): value is PaymentModality {
   return paymentModalities.includes(value as PaymentModality);
-}
-
-function normalizeMoney(value: string): string | undefined {
-  if (value.trim() === "") return undefined;
-  return Number(value).toFixed(2);
 }
 
 export function normalizeOrderItem(item: OrderFormItem): CreateOrderItemPayload {
@@ -49,10 +45,9 @@ export function mapCreateFormToPayload(
   context: OrderCreationSubmissionContext,
 ): CreateOrderPayload {
   return {
-    lead_id: values.lead_id,
+    member_id: context.campaign.memberId,
     related_campaign: context.campaign.campaignId,
-    generated_by: context.generatedBy,
-    assigned_to: context.campaign.assignedUserId,
+    ...(context.campaign.assignedUserId ? { assigned_to: context.campaign.assignedUserId } : {}),
     order_items: values.order_items.map(normalizeOrderItem),
   };
 }
@@ -77,7 +72,8 @@ export function mapOrderToFormValues(order: OrderResponse): MappedOrderForm {
 
   return {
     values: {
-      lead_id: order.lead_id,
+      leadId: order.lead.id,
+      assigned_to: order.assignedUser?.id ?? "",
       discount: Number(order.discount || 0).toFixed(2),
       order_items: orderItems,
       order_status: order.order_status,
@@ -108,19 +104,19 @@ export function mapUpdateFormToPayload(
   const payload: UpdateOrderPayload = {};
   const itemsChanged =
     comparableItems(values.order_items) !== comparableItems(initialValues.order_items);
-  const discountChanged =
-    normalizeMoney(values.discount) !== normalizeMoney(initialValues.discount);
   const statusChanged = values.order_status !== initialValues.order_status;
+  const assigneeChanged = values.assigned_to !== initialValues.assigned_to;
 
-  if (itemsChanged || discountChanged) {
-    // Backend recalculates and persists discount only when it also receives
-    // order_items, so a discount edit must include the complete current array.
+  if (itemsChanged) {
     payload.order_items = values.order_items.map(normalizeOrderItem);
-    payload.discount = normalizeMoney(values.discount) ?? "0.00";
   }
 
   if (statusChanged && values.order_status) {
     payload.order_status = values.order_status;
+  }
+
+  if (assigneeChanged && values.assigned_to) {
+    payload.assigned_to = values.assigned_to;
   }
 
   return payload;
@@ -140,10 +136,19 @@ export function getAvailableAttendanceModes(
   products: OrderProduct[],
   productId: string,
 ): AttendanceMode[] {
-  return (
-    products
-      .find((product) => product.id === productId)
-      ?.prices.map((price) => price.attendance_mode) ?? []
+  const product = products.find((item) => item.id === productId);
+  if (!product) return [];
+  const configuredModes = product.prices.map((price) => price.attendance_mode);
+  return product.edition?.modality === "HIBRIDO"
+    ? configuredModes.filter((mode) => mode === "VIRTUAL" || mode === "PRESENCIAL")
+    : configuredModes.filter((mode) => mode === "HEREDADO");
+}
+
+export function orderItemAllowsInstallments(product?: OrderProduct, price?: OrderProductPrice): boolean {
+  return Boolean(
+    product
+    && product.edition?.modality !== "ASINCRONICO"
+    && price?.installment_price != null,
   );
 }
 

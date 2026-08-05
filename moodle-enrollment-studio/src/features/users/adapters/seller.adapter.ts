@@ -48,6 +48,7 @@ export interface CleanSellerProfile {
   returnRate: number;
   responseTimeAvgSeconds: number;
   campaignMembers: CleanCampaignMember[];
+  assignedOrders: Array<{ id: string; status: string; totalAmount: number }>;
   recentLeadActivity: CleanCampaignMember[];
   campaigns: CleanAssignedCampaign[];
   leadStatusCounts: Record<LeadStatus, number>;
@@ -76,6 +77,13 @@ interface RawSellerProfile {
     cellphone?: string | null;
     corporate_cellphone?: string | null;
     is_active?: boolean | null;
+    assignedOrders?: Array<{
+      id?: string | null;
+      order_status?: string | null;
+      total_amount?: number | string | null;
+    }> | null;
+    campaignMembers?: RawSellerProfile["campaignMembers"];
+    _count?: { assignedOrders?: number; campaignMembers?: number } | null;
   } | null;
   campaignMembers?: Array<{
     id?: string | null;
@@ -142,7 +150,7 @@ export function adaptSellerProfile(
   const rawCampaigns = (rawCampaignsData ?? {}) as RawCampaignsResponse;
   const user = rawSeller.user ?? {};
 
-  const campaignMembers: CleanCampaignMember[] = (rawSeller.campaignMembers ?? []).map(
+  const campaignMembers: CleanCampaignMember[] = (rawSeller.campaignMembers ?? user.campaignMembers ?? []).map(
     (member) => ({
       id: member.id ?? "",
       leadId: member.lead_id ?? "",
@@ -180,6 +188,11 @@ export function adaptSellerProfile(
     campaignMembers.map((member) => member.status),
   );
   const totalLeads = campaignMembers.length;
+  const assignedOrders = (user.assignedOrders ?? []).map((order) => ({
+    id: order.id ?? "",
+    status: order.order_status ?? "",
+    totalAmount: toNumber(order.total_amount),
+  }));
 
   return {
     id: rawSeller.id ?? "",
@@ -191,12 +204,17 @@ export function adaptSellerProfile(
     isActive: user.is_active ?? false,
     salesTarget,
     totalSales,
-    totalOrders: Math.trunc(toNumber(rawSeller.total_orders)),
-    completedOrders: Math.trunc(toNumber(rawSeller.completed_orders)),
-    canceledOrders: Math.trunc(toNumber(rawSeller.canceled_orders)),
+    totalOrders: rawSeller.total_orders == null ? assignedOrders.length : Math.trunc(toNumber(rawSeller.total_orders)),
+    completedOrders: rawSeller.completed_orders == null
+      ? assignedOrders.filter((order) => order.status === "COMPLETED").length
+      : Math.trunc(toNumber(rawSeller.completed_orders)),
+    canceledOrders: rawSeller.canceled_orders == null
+      ? assignedOrders.filter((order) => order.status === "CANCELLED").length
+      : Math.trunc(toNumber(rawSeller.canceled_orders)),
     returnRate: toNumber(rawSeller.return_rate),
     responseTimeAvgSeconds: toNumber(rawSeller.response_time_avg),
     campaignMembers,
+    assignedOrders,
     recentLeadActivity: [...campaignMembers]
       .sort((a, b) => getTimestamp(b.updatedAt ?? b.createdAt) - getTimestamp(a.updatedAt ?? a.createdAt))
       .slice(0, 5),

@@ -10,6 +10,11 @@ import {
   unpackLeadPage,
 } from "../adapters/leadAdapter";
 import { adaptAdvisorFilterOptions } from "../adapters/campaignAssignmentAdapter";
+import {
+  EMPTY_PROSPECT_DATE_RANGE,
+  serializeLocalDate,
+  type ProspectDateRange,
+} from "../utils/prospectDateRange";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -25,6 +30,7 @@ export function useProspects() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [leadStatus, setLeadStatusValue] = useState("ALL");
   const [advisorId, setAdvisorIdValue] = useState("ALL");
+  const [dateRange, setDateRangeValue] = useState<ProspectDateRange>(EMPTY_PROSPECT_DATE_RANGE);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(
@@ -46,7 +52,9 @@ export function useProspects() {
     ...(debouncedSearch && { search: debouncedSearch }),
     ...(leadStatus !== "ALL" && { status: leadStatus as "ACTIVE" | "INACTIVE" }),
     ...(assignedTo && { assigned_to: assignedTo }),
-  }), [assignedTo, debouncedSearch, leadStatus, requestedPage]);
+    ...(dateRange.from && { from_date: serializeLocalDate(dateRange.from) }),
+    ...(dateRange.to && { to_date: serializeLocalDate(dateRange.to) }),
+  }), [assignedTo, dateRange.from, dateRange.to, debouncedSearch, leadStatus, requestedPage]);
 
   const allowedCampaignsQuery = useQuery({
     queryKey: ["campaigns", "prospects-selector", 1, 100],
@@ -69,6 +77,8 @@ export function useProspects() {
       debouncedSearch,
       leadStatus,
       assignedTo || "all-advisors",
+      dateRange.from ? serializeLocalDate(dateRange.from) : "no-from-date",
+      dateRange.to ? serializeLocalDate(dateRange.to) : "no-to-date",
     ],
     queryFn: () => getAllLeads(leadQuery),
     enabled: Boolean(user),
@@ -91,7 +101,8 @@ export function useProspects() {
   const hasActiveFilters = Boolean(
     search.trim()
     || leadStatus !== "ALL"
-    || (canViewSeller && advisorId !== "ALL"),
+    || (canViewSeller && advisorId !== "ALL")
+    || Boolean(dateRange.from || dateRange.to)
   );
   const description = isSalesRep
     ? "Consulta, filtra y da seguimiento a tus prospectos asignados."
@@ -105,6 +116,7 @@ export function useProspects() {
     setDebouncedSearch("");
     setLeadStatusValue("ALL");
     setAdvisorIdValue("ALL");
+    setDateRangeValue(EMPTY_PROSPECT_DATE_RANGE);
     resetPage();
   };
 
@@ -122,6 +134,7 @@ export function useProspects() {
     search,
     leadStatus,
     advisorId,
+    dateRange,
     hasActiveFilters,
     setPage: setRequestedPage,
     setSearch: (value: string) => {
@@ -131,6 +144,7 @@ export function useProspects() {
     },
     setLeadStatus: (value: string) => { setLeadStatusValue(value); resetPage(); },
     setAdvisorId: (value: string) => { setAdvisorIdValue(value); resetPage(); },
+    setDateRange: (value: ProspectDateRange) => { setDateRangeValue(value); resetPage(); },
     clearFilters,
     retryLeads: () => leadsQuery.refetch(),
     isLoading: leadsQuery.isLoading,

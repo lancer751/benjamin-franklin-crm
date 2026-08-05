@@ -16,7 +16,6 @@ import {
   Receipt,
   Search,
   ShoppingCart,
-  Trash2,
 } from "lucide-react";
 import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
@@ -48,17 +47,14 @@ import { useOrdersView } from "../hooks/useOrdersView";
 import type { OrderListItem } from "../types";
 import {
   canCancelOrder,
-  canDeleteOrder,
   canRegisterPaymentFromList,
 } from "../utils/orderPermissions";
+import { ORDER_STATUSES, ORDER_STATUS_FILTER_LABELS } from "../orderStatus";
 
 const statusOptions = [
-  ["ALL", "Todos"],
-  ["PENDING", "Pendientes"],
-  ["COMPLETED", "Completadas"],
-  ["CANCELLED", "Canceladas"],
-  ["REFUNDED", "Reembolsadas"],
-] as const;
+  ["ALL", "Todos"] as const,
+  ...ORDER_STATUSES.map((status) => [status, ORDER_STATUS_FILTER_LABELS[status]] as const),
+];
 
 const ORDER_CREATION_OPTIONS = [
   { label: "Más recientes", value: "desc" },
@@ -301,21 +297,6 @@ export default function OrdersView() {
                       Anular
                     </DropdownMenuItem>
                   )}
-                  {canDeleteOrder(order, controller.permissions) && (
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        controller.setPendingAction({
-                          kind: "delete",
-                          order,
-                        });
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Eliminar
-                    </DropdownMenuItem>
-                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -508,14 +489,10 @@ export default function OrdersView() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {controller.pendingAction?.kind === "delete"
-                ? "¿Eliminar esta orden?"
-                : "¿Anular esta orden?"}
+              ¿Anular esta orden?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {controller.pendingAction?.kind === "delete"
-                ? "La eliminación es permanente y el backend puede rechazarla si existen pagos confirmados."
-                : "La orden pasará al estado Cancelada. Esta acción utiliza el flujo existente de actualización."}
+              La orden pasará al estado Cancelada. El backend puede rechazar la acción si existen pagos confirmados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -525,10 +502,7 @@ export default function OrdersView() {
             <AlertDialogAction
               onClick={controller.confirmPendingAction}
               disabled={controller.isMutating}
-              className={cn(
-                controller.pendingAction?.kind === "delete" &&
-                  "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-              )}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {controller.isMutating && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -64,6 +64,7 @@ export interface NormalizedLead {
   phones: NormalizedLeadPhone[];
   campaignsEngaging: NormalizedCampaignMember[];
   campaignCount: number;
+  assignedToCampaign: boolean;
 }
 
 export interface ProspectPresentationRow {
@@ -98,6 +99,32 @@ export interface LeadPage {
   page: number;
   limit: number;
 }
+
+export interface CampaignMembersResponse {
+  members: UnknownRecord[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+const finiteNumber = (value: unknown, fallback: number): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+/** Reads the current GET /api/campaigns/:campaignId/members response contract. */
+export const unpackCampaignMembers = (serverRes: unknown): CampaignMembersResponse => {
+  const envelope = isRecord(serverRes) && isRecord(serverRes.data) ? serverRes.data : null;
+
+  return {
+    members: envelope && Array.isArray(envelope.members)
+      ? envelope.members.filter(isRecord)
+      : [],
+    total: finiteNumber(envelope?.total, 0),
+    page: finiteNumber(envelope?.page, 1),
+    limit: finiteNumber(envelope?.limit, 20),
+  };
+};
 
 export const normalizeCampaignOptions = (serverRes: any): NormalizedAssignedCampaign[] => {
   const campaigns = serverRes?.data?.campaings
@@ -180,7 +207,7 @@ export const adaptProspectRows = (
       .filter(Boolean)
       .join(" ")
       .replace(/\s+/g, " ") || "Asesor sin nombre"
-    : "Sin asignar";
+    : "";
 
   return {
     id: lead.id,
@@ -260,6 +287,13 @@ export const sanitizePhones = (phones: any[] | null | undefined): NormalizedLead
   }));
 };
 
+export const getPreferredPhone = (
+  phones: NormalizedLeadPhone[] | null | undefined,
+): NormalizedLeadPhone | null => {
+  if (!phones?.length) return null;
+  return phones.find((phone) => phone.isPrincipal) ?? phones[0] ?? null;
+};
+
 /**
  * Adapts campaign members array (from getCampaignMembers) to NormalizedLead list.
  */
@@ -319,6 +353,7 @@ export const adaptCampaignMembers = (rawMembers: any[]): NormalizedLead[] => {
       phones,
       campaignsEngaging: [normalizedMember],
       campaignCount: readCampaignCount(lead),
+      assignedToCampaign: true,
     };
   });
 };
@@ -368,6 +403,7 @@ export const adaptLeads = (rawLeads: any[]): NormalizedLead[] => {
     const firstMember = campaignsEngaging?.[0];
     const courseName = firstMember?.campaign?.name || lead.primary_campaign_id || "Sin especificar";
 
+    const campaignCount = readCampaignCount(lead);
     return {
       id: lead.id || "",
       first_name,
@@ -384,7 +420,10 @@ export const adaptLeads = (rawLeads: any[]): NormalizedLead[] => {
       courseName,
       phones,
       campaignsEngaging,
-      campaignCount: readCampaignCount(lead),
+      campaignCount,
+      assignedToCampaign: typeof lead.assignedToCampaign === "boolean"
+        ? lead.assignedToCampaign
+        : campaignCount > 0,
     };
   });
 };

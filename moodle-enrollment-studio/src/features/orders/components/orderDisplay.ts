@@ -1,4 +1,4 @@
-import type { AttendanceMode } from "../types";
+import type { AttendanceMode, PaymentModality } from "../types";
 
 export function formatPEN(value: string | number): string {
   return new Intl.NumberFormat("es-PE", {
@@ -17,4 +17,12 @@ export function modeLabel(mode: AttendanceMode): string {
     HEREDADO: "Según edición",
   };
   return labels[mode];
+}
+
+export function paymentModalityLabel(modality: PaymentModality): string {
+  const labels: Record<PaymentModality, string> = {
+    FULL: "Pago al contado",
+    INSTALLMENTS: "Pago en cuotas",
+  };
+  return labels[modality];
 }

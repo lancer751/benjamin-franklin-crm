@@ -12,18 +12,19 @@ import {
 import {
   deleteOrder,
   getOrders,
-  updateOrder,
+  mapOrderApiError,
 } from "../services/orderService";
 import type { OrderCreationOrder, OrderListItem } from "../types";
 import {
   getOrderListPermissions,
   type OrderListPermissions,
 } from "../utils/orderPermissions";
+import { orderQueryKeys } from "../queryKeys";
 
 const EMPTY_ORDERS: OrderListItem[] = [];
 
 export interface PendingOrderAction {
-  kind: "cancel" | "delete";
+  kind: "cancel";
   order: OrderListItem;
 }
 
@@ -65,14 +66,14 @@ export function useOrdersView(): OrdersViewController {
     useState<PendingOrderAction | null>(null);
 
   const ordersQuery = useQuery({
-    queryKey: ["orders", "list-view", { page: 1, limit: 20, creationOrder }],
+    queryKey: orderQueryKeys.list({ page: 1, limit: 20, creation_order: creationOrder }),
     queryFn: async () => {
       const response = await getOrders({
         page: 1,
         limit: 20,
         creation_order: creationOrder,
       });
-      return response.data.map(mapOrderResponseToListItem);
+      return response.data.orders.map(mapOrderResponseToListItem);
     },
     placeholderData: keepPreviousData,
   });
@@ -88,38 +89,26 @@ export function useOrdersView(): OrdersViewController {
     [role],
   );
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteOrder,
-    onSuccess: async () => {
-      toast.success("Orden eliminada correctamente");
-      setPendingAction(null);
-      await queryClient.invalidateQueries({ queryKey: ["orders"] });
-    },
-    onError: () => {
-      toast.error("No se pudo eliminar la orden");
-    },
-  });
-
   const cancelMutation = useMutation({
-    mutationFn: (id: string) =>
-      updateOrder(id, { order_status: "CANCELLED" }),
+    mutationFn: deleteOrder,
     onSuccess: async () => {
       toast.success("Orden anulada correctamente");
       setPendingAction(null);
-      await queryClient.invalidateQueries({ queryKey: ["orders"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: orderQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ["payments"] }),
+        queryClient.invalidateQueries({ queryKey: ["seller-detail"] }),
+        queryClient.invalidateQueries({ queryKey: ["team-follow-up"] }),
+      ]);
     },
-    onError: () => {
-      toast.error("No se pudo anular la orden");
+    onError: (error) => {
+      toast.error(mapOrderApiError(error));
     },
   });
 
   const confirmPendingAction = () => {
     if (!pendingAction) return;
-    if (pendingAction.kind === "delete") {
-      deleteMutation.mutate(pendingAction.order.id);
-    } else {
-      cancelMutation.mutate(pendingAction.order.id);
-    }
+    cancelMutation.mutate(pendingAction.order.id);
   };
 
   return {
@@ -134,7 +123,7 @@ export function useOrdersView(): OrdersViewController {
     isLoading: ordersQuery.isLoading,
     isRefreshing: ordersQuery.isFetching && !ordersQuery.isLoading,
     isError: ordersQuery.isError,
-    isMutating: deleteMutation.isPending || cancelMutation.isPending,
+    isMutating: cancelMutation.isPending,
     setSearch,
     setStatusFilter,
     setCreationOrder,

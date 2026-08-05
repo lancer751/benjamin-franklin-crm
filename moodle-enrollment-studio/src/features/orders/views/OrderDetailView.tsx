@@ -1,11 +1,27 @@
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription, AlertTitle } from "@/core/components/ui/alert";
 import { Button } from "@/core/components/ui/button";
 import { Skeleton } from "@/core/components/ui/skeleton";
 import { useAuthStore } from "@/store/useAuthStore";
 import { OrderDetailContent } from "../components/detail/OrderDetailContent";
 import { useOrder } from "../hooks/useOrder";
+import { getCampaignById } from "@/features/campaigns/services/campaignService";
+import { campaignQueryKeys } from "@/features/campaigns/queryKeys";
+
+type UnknownRecord = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is UnknownRecord =>
+  typeof value === "object" && value !== null;
+
+const campaignNameFromResponse = (response: unknown): string | null => {
+  const body = isRecord(response) && isRecord(response.data) ? response.data : response;
+  if (!isRecord(body)) return null;
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const legacyName = typeof body.campaing_name === "string" ? body.campaing_name.trim() : "";
+  return name || legacyName || null;
+};
 
 function OrderDetailSkeleton() {
   return (
@@ -31,12 +47,18 @@ export default function OrderDetailView() {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.user?.role.name);
   const orderQuery = useOrder(id);
+  const order = orderQuery.data?.data;
+  const campaignId = order?.campaignId ?? "";
+  const campaignQuery = useQuery({
+    queryKey: campaignQueryKeys.detail(campaignId),
+    queryFn: () => getCampaignById(campaignId),
+    enabled: Boolean(campaignId),
+    staleTime: 5 * 60 * 1000,
+  });
 
   if (orderQuery.isLoading) {
     return <OrderDetailSkeleton />;
   }
-
-  const order = orderQuery.data?.data;
 
   if (orderQuery.isError || !order) {
     return (
@@ -68,6 +90,9 @@ export default function OrderDetailView() {
   return (
     <OrderDetailContent
       order={order}
+      campaignName={campaignNameFromResponse(campaignQuery.data)}
+      isCampaignLoading={Boolean(campaignId) && campaignQuery.isLoading}
+      isCampaignError={!campaignId || campaignQuery.isError}
       role={role}
       onBack={() => navigate("/ordenes")}
       onEdit={() => navigate(`/ordenes/${order.id}/editar`)}

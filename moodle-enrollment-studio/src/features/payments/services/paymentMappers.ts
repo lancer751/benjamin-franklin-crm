@@ -5,6 +5,7 @@ import type {
   PaymentEditFormValues,
   PaymentFormValues,
   PaymentListItem,
+  PaymentLeadResponse,
   PaymentOrderOption,
   PaymentResponse,
   UpdatePaymentPayload,
@@ -27,19 +28,26 @@ function fullName(person?: {
     .trim();
 }
 
+const resolvePaymentLead = (payment: PaymentResponse): PaymentLeadResponse | null => (
+  payment.order?.member?.lead ?? payment.order?.lead ?? null
+);
+
 export function mapPaymentResponseToListItem(
   payment: PaymentResponse,
 ): PaymentListItem {
+  const lead = resolvePaymentLead(payment);
   return {
     id: payment.id,
     transactionId: payment.transaccion_id?.trim() || null,
     orderId: payment.order_id,
     orderCode: payment.order?.order_code?.trim() || null,
+    memberId: payment.order?.member?.id ?? null,
+    campaignId: payment.order?.member?.campaing_id ?? null,
     orderTotal: moneyString(payment.order?.total_amount ?? 0),
     client: {
-      fullName: fullName(payment.order?.lead) || "Prospecto sin nombre",
-      email: payment.order?.lead?.email ?? null,
-      dni: payment.order?.lead?.dni ?? null,
+      fullName: fullName(lead) || "Prospecto no disponible",
+      email: lead?.email ?? null,
+      dni: lead?.dni ?? null,
     },
     method: payment.payment_method,
     status: payment.payment_status,
@@ -76,8 +84,8 @@ export function mapOrderResponseToPaymentOption(
     totalAmount: moneyString(order.total_amount),
     confirmedPaid,
     remainingBalance: Math.max(total - confirmedPaid, 0),
-    clientName: fullName(order.lead) || "Prospecto sin nombre",
-    clientEmail: order.lead.email ?? null,
+    clientName: fullName(order.member?.lead ?? order.lead) || "Prospecto no disponible",
+    clientEmail: (order.member?.lead ?? order.lead).email ?? null,
   };
 }
 

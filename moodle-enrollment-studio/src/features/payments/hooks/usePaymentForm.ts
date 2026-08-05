@@ -54,7 +54,7 @@ export function usePaymentForm(preselectedOrderId?: string | null) {
     queryKey: ["orders", "payment-options"],
     queryFn: async () => {
       const response = await getOrders();
-      return response.data.map(mapOrderResponseToPaymentOption);
+      return response.data.orders.map(mapOrderResponseToPaymentOption);
     },
   });
   const preselectedQuery = useQuery({

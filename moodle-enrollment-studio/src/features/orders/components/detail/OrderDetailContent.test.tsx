@@ -2,9 +2,11 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { OrderResponse } from "../../types";
 import { OrderDetailContent } from "./OrderDetailContent";
+import { adaptOrderResponse } from "../../services/orderAdapter";
 
-const baseOrder: OrderResponse = {
+const baseOrder = adaptOrderResponse({
   id: "54566a99-2980-4147-9f75-a61906cf8344",
+  member_id: "member-1",
   lead_id: "543fd75a-e25c-4eb3-96f0-1841d56a0fe7",
   generated_by: "fc31c497-79e5-4cc5-8200-c0083e914eb0",
   sub_total: "440",
@@ -27,6 +29,30 @@ const baseOrder: OrderResponse = {
     lead_status: "ACTIVE",
     created_at: "2026-07-01T10:00:00.000Z",
   },
+  member: {
+    id: "member-1",
+    campaing_id: "campaign-1",
+    lead: {
+      id: "543fd75a-e25c-4eb3-96f0-1841d56a0fe7",
+      first_name: "Rodrigo",
+      middle_name: "",
+      last_name: "Gaitán Arenas",
+      email: "rodrigo@example.com",
+      profession: "Estratega",
+      lead_status: "ACTIVE",
+      created_at: "2026-07-01T10:00:00.000Z",
+    },
+  },
+  assignedUser: {
+    id: "assigned-1",
+    first_name: "Miguel",
+    last_name: "Torres",
+  },
+  userCreator: {
+    id: "creator-1",
+    first_name: "Ana",
+    last_name: "Romero",
+  },
   seller: {
     id: "d191c618-33d0-44f7-8eaa-7f353bd3b6eb",
     sales_target: 11,
@@ -47,6 +73,9 @@ const baseOrder: OrderResponse = {
       id: "29ea97bd-27e8-43f6-8ba1-93fec8428990",
       product_id: "665d5b12-e051-47a0-ba6f-315cc6ad7a8e",
       price: "440",
+      base_price: "440",
+      discount_amount: "0",
+      payment_modality: "FULL",
       discount_code: null,
       product: {
         id: "665d5b12-e051-47a0-ba6f-315cc6ad7a8e",
@@ -63,7 +92,7 @@ const baseOrder: OrderResponse = {
   ],
   paymentPlans: [],
   payments: [],
-};
+});
 
 function renderDetail(
   order: OrderResponse = baseOrder,
@@ -74,7 +103,7 @@ function renderDetail(
     onEdit: vi.fn(),
     onRegisterPayment: vi.fn(),
   };
-  render(<OrderDetailContent order={order} role={role} {...props} />);
+  render(<OrderDetailContent order={order} role={role} campaignName="Campaña Textil" {...props} />);
   return props;
 }
 
@@ -103,17 +132,21 @@ describe("OrderDetailContent", () => {
     renderDetail();
 
     expect(screen.getByText("Miguel Torres")).toBeInTheDocument();
-    expect(screen.getByText("mtorres@bf.edu.pe")).toBeInTheDocument();
+    expect(screen.getByText("Ana Romero")).toBeInTheDocument();
+    expect(screen.getByText("Campaña Textil")).toBeInTheDocument();
     expect(screen.queryByText(/password/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/role_id/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Venta asistida")).not.toBeInTheDocument();
   });
 
-  it("muestra orden generada por el sistema cuando seller es null", () => {
-    renderDetail({ ...baseOrder, seller: null });
-    expect(
-      screen.getByText("Orden generada por el sistema"),
-    ).toBeInTheDocument();
+  it("muestra el fallback cuando no existe asesor asignado", () => {
+    renderDetail({
+      ...baseOrder,
+      seller: null,
+      assignedUser: null,
+      assignedUserName: "Asesor no asignado",
+    });
+    expect(screen.getByText("Asesor no asignado")).toBeInTheDocument();
   });
 
   it("renderiza múltiples productos sin inventar modalidad, categoría o edición", () => {
@@ -130,12 +163,20 @@ describe("OrderDetailContent", () => {
     renderDetail({
       ...baseOrder,
       orderDetails: [...baseOrder.orderDetails, secondProduct],
+      items: [
+        ...baseOrder.items,
+        {
+          ...baseOrder.items[0],
+          productId: secondProduct.product_id,
+          productName: secondProduct.product.name,
+        },
+      ],
     });
 
     expect(screen.getByText("Curso de Lectura de Planos")).toBeInTheDocument();
     expect(screen.getByText("Gestión de proyectos")).toBeInTheDocument();
     expect(screen.queryByText(/modalidad/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/categoría/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/categoría/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/edición/i)).not.toBeInTheDocument();
   });
 
@@ -263,7 +304,7 @@ describe("OrderDetailContent", () => {
 
     expect(screen.queryByText(baseOrder.id)).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("Información de auditoría"));
-    const audit = screen.getByText("ID de orden").parentElement;
+    const audit = screen.getByText("ID técnico").parentElement;
     expect(within(audit as HTMLElement).getByText(baseOrder.id)).toBeInTheDocument();
   });
 });

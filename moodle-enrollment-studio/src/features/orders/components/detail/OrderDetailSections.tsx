@@ -11,6 +11,7 @@ import {
   FileText,
   Mail,
   MapPin,
+  Megaphone,
   MoreHorizontal,
   Package,
   ReceiptText,
@@ -21,6 +22,7 @@ import {
 import { useState } from "react";
 import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
+import { Skeleton } from "@/core/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -40,7 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/core/components/ui/dropdown-menu";
 import { cn } from "@/core/lib/utils";
-import { formatPEN } from "../orderDisplay";
+import { formatPEN, paymentModalityLabel } from "../orderDisplay";
 import type { OrderPayment, OrderResponse } from "../../types";
 import {
   canManageOrders,
@@ -75,7 +77,7 @@ export function OrderDetailHeader({
 }: OrderDetailHeaderProps) {
   const canEdit = canManageOrders(role);
   const canPay = canRegisterOrderPayment(order, role);
-  const updatedDiffers = order.updated_at !== order.created_at;
+  const updatedDiffers = order.updatedAt !== order.createdAt;
 
   const actions = (
     <>
@@ -111,23 +113,23 @@ export function OrderDetailHeader({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                Orden {order.order_code}
+                Orden {order.orderCode}
               </h1>
               <Badge
                 variant="outline"
-                className={orderStatusStyles[order.order_status]}
+                className={orderStatusStyles[order.status]}
               >
-                {orderStatusLabels[order.order_status]}
+                {orderStatusLabels[order.status]}
               </Badge>
             </div>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <CalendarDays className="h-4 w-4" />
-                Creada el {formatOrderDate(order.created_at, true)}
+                Creada el {formatOrderDate(order.createdAt, true)}
               </span>
               {updatedDiffers && (
                 <span>
-                  Actualizada el {formatOrderDate(order.updated_at, true)}
+                  Actualizada el {formatOrderDate(order.updatedAt, true)}
                 </span>
               )}
             </div>
@@ -188,7 +190,6 @@ function DetailLine({
 
 export function OrderCustomerCard({ order }: { order: OrderResponse }) {
   const lead = order.lead;
-  const name = fullName(lead) || "Prospecto sin nombre";
 
   return (
     <Card className="h-full">
@@ -201,7 +202,7 @@ export function OrderCustomerCard({ order }: { order: OrderResponse }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-lg font-semibold">{name}</p>
+          <p className="text-lg font-semibold">{order.leadName}</p>
           {lead.lead_status && (
             <Badge variant="outline">
               {lead.lead_status === "ACTIVE" ? "Activo" : "Inactivo"}
@@ -209,11 +210,13 @@ export function OrderCustomerCard({ order }: { order: OrderResponse }) {
           )}
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <DetailLine
-            icon={<Mail className="h-4 w-4" />}
-            label="Correo"
-            value={lead.email || "No registrado"}
-          />
+          {lead.email && (
+            <DetailLine
+              icon={<Mail className="h-4 w-4" />}
+              label="Correo"
+              value={lead.email}
+            />
+          )}
           {lead.profession && (
             <DetailLine
               icon={<BriefcaseBusiness className="h-4 w-4" />}
@@ -255,6 +258,51 @@ export function OrderCustomerCard({ order }: { order: OrderResponse }) {
   );
 }
 
+export function OrderCommercialContextCard({
+  order,
+  campaignName,
+  isCampaignLoading,
+  isCampaignError,
+}: {
+  order: OrderResponse;
+  campaignName: string | null;
+  isCampaignLoading: boolean;
+  isCampaignError: boolean;
+}) {
+  return (
+    <Card className="h-full">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ShieldCheck className="h-5 w-5 text-primary" />
+          Contexto comercial
+        </CardTitle>
+        <CardDescription>Campaña y responsables de la orden</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4 sm:grid-cols-2">
+        <DetailLine
+          icon={<Megaphone className="h-4 w-4" />}
+          label="Campaña"
+          value={isCampaignLoading
+            ? <Skeleton className="h-5 w-40" />
+            : isCampaignError || !campaignName
+              ? "Campaña no disponible"
+              : campaignName}
+        />
+        <DetailLine
+          icon={<ShieldCheck className="h-4 w-4" />}
+          label="Asesor comercial"
+          value={order.assignedUserName}
+        />
+        <DetailLine
+          icon={<User className="h-4 w-4" />}
+          label="Creado por"
+          value={order.creatorName}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
 export function OrderSellerCard({ order }: { order: OrderResponse }) {
   const seller = order.seller;
   if (!seller?.user) {
@@ -267,7 +315,7 @@ export function OrderSellerCard({ order }: { order: OrderResponse }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm font-medium">Orden generada por el sistema</p>
+          <p className="text-sm font-medium">Sin asesor</p>
         </CardContent>
       </Card>
     );
@@ -292,7 +340,7 @@ export function OrderSellerCard({ order }: { order: OrderResponse }) {
           <ShieldCheck className="h-5 w-5 text-primary" />
           Asesor comercial
         </CardTitle>
-        <CardDescription>Asesor que generó la orden</CardDescription>
+        <CardDescription>Asesor asignado a la orden</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="flex items-center gap-3">
@@ -337,25 +385,26 @@ export function OrderProductsCard({ order }: { order: OrderResponse }) {
           Productos de la orden
         </CardTitle>
         <CardDescription>
-          {order.orderDetails.length}{" "}
-          {order.orderDetails.length === 1 ? "producto" : "productos"}
+          {order.items.length}{" "}
+          {order.items.length === 1 ? "producto" : "productos"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {order.orderDetails.map((detail) => {
-          const product = detail.product;
-          const hasInstallmentRange =
-            typeof product.installments_min_number === "number" &&
-            typeof product.installments_max_number === "number";
+        {order.items.length === 0 && (
+          <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
+            Producto no disponible
+          </p>
+        )}
+        {order.items.map((item, index) => {
           return (
             <article
-              key={detail.id}
+              key={`${item.productId}-${index}`}
               className="flex flex-col gap-4 rounded-xl border p-4 sm:flex-row"
             >
-              {product.image_url ? (
+              {item.imageUrl ? (
                 <img
-                  src={product.image_url}
-                  alt=""
+                  src={item.imageUrl}
+                  alt={item.productName}
                   className="h-24 w-full rounded-lg object-cover sm:h-20 sm:w-28"
                 />
               ) : (
@@ -366,53 +415,29 @@ export function OrderProductsCard({ order }: { order: OrderResponse }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h3 className="font-semibold leading-snug">{product.name}</h3>
-                    {product.short_description && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {product.short_description}
-                      </p>
-                    )}
+                    <h3 className="font-semibold leading-snug">{item.productName}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Categoría: {item.categoryName}
+                    </p>
                   </div>
                   <p className="shrink-0 text-lg font-bold">
-                    {formatPEN(detail.price)}
+                    {formatPEN(item.finalPrice)}
                   </p>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {product.sales_status && (
+                  {item.paymentModality && (
                     <Badge variant="outline">
-                      Comercial: {product.sales_status}
+                      {paymentModalityLabel(item.paymentModality)}
                     </Badge>
-                  )}
-                  {product.pricing_status && (
-                    <Badge variant="outline">
-                      Pricing: {product.pricing_status}
-                    </Badge>
-                  )}
-                  {hasInstallmentRange && (
-                    <span className="text-xs text-muted-foreground">
-                      Permite de {product.installments_min_number} a{" "}
-                      {product.installments_max_number} cuotas
-                    </span>
                   )}
                 </div>
-                {(detail.discount_code || product.brochure_url) && (
+                {item.discountCode && (
                   <div className="mt-3 flex flex-wrap gap-4 text-sm">
-                    {detail.discount_code && (
+                    {item.discountCode && (
                       <span>
                         Código de descuento:{" "}
-                        <strong>{detail.discount_code}</strong>
+                        <strong>{item.discountCode}</strong>
                       </span>
-                    )}
-                    {product.brochure_url && (
-                      <a
-                        href={product.brochure_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-                      >
-                        Ver brochure
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
                     )}
                   </div>
                 )}
@@ -439,15 +464,15 @@ export function OrderFinancialSummary({ order }: { order: OrderResponse }) {
         <CardDescription>Importes expresados en PEN</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <FinancialLine label="Subtotal" value={formatPEN(order.sub_total)} />
+        <FinancialLine label="Subtotal" value={formatPEN(order.subtotal)} />
         <FinancialLine
           label="Descuento"
-          value={`− ${formatPEN(order.discount || 0)}`}
+          value={`− ${formatPEN(order.discountAmount)}`}
         />
         <div className="border-t pt-3">
           <FinancialLine
             label="Total"
-            value={formatPEN(order.total_amount)}
+            value={formatPEN(order.total)}
             emphasis
           />
         </div>
@@ -678,21 +703,18 @@ export function OrderAuditSection({ order }: { order: OrderResponse }) {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="grid gap-3 border-t pt-4 sm:grid-cols-2">
-            <AuditValue label="ID de orden" value={order.id} />
-            <AuditValue label="ID de prospecto" value={order.lead_id} />
-            {order.generated_by && (
-              <AuditValue label="Generada por" value={order.generated_by} />
-            )}
+            <AuditValue label="Creado por" value={order.creatorName} copyable={false} />
             <AuditValue
               label="Fecha de creación"
-              value={formatOrderDate(order.created_at, true)}
+              value={formatOrderDate(order.createdAt, true)}
               copyable={false}
             />
             <AuditValue
               label="Última actualización"
-              value={formatOrderDate(order.updated_at, true)}
+              value={formatOrderDate(order.updatedAt, true)}
               copyable={false}
             />
+            <AuditValue label="ID técnico" value={order.id} />
           </CardContent>
         </CollapsibleContent>
       </Card>
@@ -713,7 +735,11 @@ function AuditValue({
     <div className="min-w-0 rounded-lg bg-muted/40 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <div className="mt-1 flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate text-xs">{value}</code>
+        {copyable ? (
+          <code className="min-w-0 flex-1 truncate text-xs">{value}</code>
+        ) : (
+          <span className="min-w-0 flex-1 text-sm font-medium">{value}</span>
+        )}
         {copyable && (
           <Button
             type="button"

@@ -17,8 +17,8 @@ export function getOrderListPermissions(
   return {
     canCreate: canWrite,
     canEdit: canWrite,
-    canCancel: canWrite,
-    canDelete: ["ADMIN", "SALES_SUPERVISOR"].includes(role ?? ""),
+    canCancel: ["ADMIN", "SALES_SUPERVISOR"].includes(role ?? ""),
+    canDelete: false,
     canRegisterPayment: canWrite,
   };
 }

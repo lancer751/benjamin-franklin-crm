@@ -13,7 +13,7 @@ const products: OrderProduct[] = [
     name: longName,
     sales_status: "ON_SALE",
     pricing_status: "VALID",
-    edition: { edition_code: "2026-II" },
+    edition: { edition_code: "2026-II", modality: "HIBRIDO" },
     prices: [{ attendance_mode: "VIRTUAL", cash_price: "1290.00" }],
   },
 ];
@@ -21,7 +21,8 @@ const products: OrderProduct[] = [
 function Harness() {
   const form = useForm<OrderFormValues>({
     defaultValues: {
-      lead_id: "",
+      leadId: "",
+      assigned_to: "",
       discount: "0.00",
       order_items: [
         {
@@ -56,8 +57,8 @@ describe("OrderItemRow", () => {
   it("usa una grilla responsive con producto como columna principal", () => {
     render(<Harness />);
 
-    expect(screen.getByTestId("order-item-row")).toHaveClass(
-      "xl:grid-cols-[minmax(260px,2fr)_minmax(150px,0.9fr)_minmax(130px,0.7fr)_minmax(180px,1fr)_40px]",
+    expect(screen.getByTestId("order-item-row").firstElementChild).toHaveClass(
+      "xl:grid-cols-[minmax(260px,2fr)_minmax(150px,0.9fr)_minmax(170px,1fr)_minmax(130px,0.7fr)_40px]",
     );
   });
 

@@ -38,7 +38,10 @@ import {
   isCampaignMemberStatus,
   type CampaignMemberStatus,
 } from "@/core/constants/campaignMemberStatus";
-import type { NormalizedLead } from "@/features/leads/adapters/leadAdapter";
+import {
+  getPreferredPhone,
+  type NormalizedLead,
+} from "@/features/leads/adapters/leadAdapter";
 import { interactionFormSchema, type InteractionFormValues } from "@/features/leads/schemas/interactionFormSchema";
 import { taskFormSchema, type TaskFormInput, type TaskFormValues } from "@/features/leads/schemas/taskFormSchema";
 import { INTERACTION_TYPE_OPTIONS } from "@/features/leads/utils/interactionType.constants";
@@ -176,10 +179,6 @@ export default function LeadDetailsSheet({
     && parsedEditValues.success
     && hasLeadChanges(initialEditData, parsedEditValues.data),
   );
-  const getPhone = (lead: NormalizedLead) => {
-    return lead.phones?.find((phone) => phone.isPrincipal)?.number || lead.phones?.[0]?.number || null;
-  };
-
   const formatSafeDate = (dateStr: string | null | undefined, pattern = "dd/MM/yyyy HH:mm") => {
     if (!dateStr) return "-";
     try {
@@ -339,7 +338,7 @@ export default function LeadDetailsSheet({
 
   const onSaveEdit = leadEditForm.handleSubmit((data) => updateLeadMutation.mutate(data));
 
-  const phone = selectedLead ? getPhone(selectedLead) : null;
+  const phone = selectedLead ? getPreferredPhone(selectedLead.phones)?.number || null : null;
   const displayInteractionCount = interactionCount === undefined
     ? interactions.length
     : Math.max(interactionCount, interactions.length);

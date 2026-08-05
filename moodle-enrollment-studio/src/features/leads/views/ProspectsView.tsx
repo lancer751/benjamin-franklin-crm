@@ -6,7 +6,6 @@ import { ProspectsDateRangeFilter } from "../components/prospects/ProspectsDateR
 import { ProspectsFilters } from "../components/prospects/ProspectsFilters";
 import { ProspectsTable } from "../components/prospects/ProspectsTable";
 import { useProspects } from "../hooks/useProspects";
-import { EMPTY_PROSPECT_DATE_RANGE } from "../utils/prospectDateRange";
 
 export const ProspectsView = () => {
   const navigate = useNavigate();
@@ -25,8 +24,9 @@ export const ProspectsView = () => {
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:self-start">
           <ProspectsDateRangeFilter
-            value={EMPTY_PROSPECT_DATE_RANGE}
-            isApplyDisabled
+            value={prospects.dateRange}
+            onApply={prospects.setDateRange}
+            isApplyDisabled={prospects.isFetching}
           />
           <Button onClick={() => navigate("/prospectos/nuevo")} className="w-full gap-2 sm:w-auto">
             <Plus className="h-4 w-4" aria-hidden="true" />

@@ -24,13 +24,14 @@ const lead: OrderLeadSummary = {
 function LeadHarness({ mode = "create" }: { mode?: "create" | "edit" }) {
   const form = useForm<OrderFormValues>({
     defaultValues: {
-      lead_id: mode === "edit" ? lead.id : "",
+      leadId: mode === "edit" ? lead.id : "",
+      assigned_to: "",
       discount: "0.00",
       order_items: [],
       order_status: "PENDING",
     },
   });
-  const leadId = useWatch({ control: form.control, name: "lead_id" });
+  const leadId = useWatch({ control: form.control, name: "leadId" });
 
   return (
     <>
@@ -103,7 +104,7 @@ describe("OrderLeadSection", () => {
     renderHarness();
     openAndType("an");
 
-    expect(await screen.findByText("Buscando prospectos…")).toBeInTheDocument();
+    expect(await screen.findByText("Buscando prospectos...")).toBeInTheDocument();
   });
 
   it("renderiza resultados útiles y guarda lead_id al seleccionar", async () => {

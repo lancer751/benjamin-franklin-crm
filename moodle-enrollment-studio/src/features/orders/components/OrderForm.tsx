@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
-import { Controller, useWatch } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import { Alert, AlertDescription } from "@/core/components/ui/alert";
 import { Button } from "@/core/components/ui/button";
-import { Input } from "@/core/components/ui/input";
-import { Label } from "@/core/components/ui/label";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useOrderLeadContext } from "../hooks/useOrderLeadContext";
 import { useOrderForm } from "../hooks/useOrderForm";
@@ -14,6 +12,8 @@ import type {
   OrderProduct,
   OrderResponse,
 } from "../types";
+import type { AdvisorFilterOption } from "@/features/leads/adapters/campaignAssignmentAdapter";
+import { OrderAssigneeSection } from "./OrderAssigneeSection";
 import { OrderItemsSection } from "./OrderItemsSection";
 import { OrderLeadSection } from "./OrderLeadSection";
 import { OrderStatusSection } from "./OrderStatusSection";
@@ -26,6 +26,8 @@ interface OrderFormProps {
   products: OrderProduct[];
   itemsEditable?: boolean;
   limitation?: string;
+  assigneeOptions?: AdvisorFilterOption[];
+  assigneesLoading?: boolean;
   isSubmitting: boolean;
   submitError?: string;
   onSubmit: (
@@ -42,6 +44,8 @@ export function OrderForm({
   products,
   itemsEditable = true,
   limitation,
+  assigneeOptions = [],
+  assigneesLoading,
   isSubmitting,
   submitError,
   onSubmit,
@@ -60,21 +64,28 @@ export function OrderForm({
     formState: { errors },
   } = controller.form;
   const authUserId = useAuthStore((state) => state.user?.id ?? "");
-  const leadId = useWatch({ control, name: "lead_id" });
+  const authRole = useAuthStore((state) => state.user?.role.name ?? "");
+  const leadId = useWatch({ control, name: "leadId" });
   const leadContextQuery = useOrderLeadContext(
     mode === "create" ? leadId : "",
   );
-  const campaigns = leadContextQuery.data?.matriculatedCampaigns ?? [];
+  const allCampaigns = leadContextQuery.data?.matriculatedCampaigns ?? [];
+  const campaigns = authRole === "SALES_REP"
+    ? allCampaigns.filter((campaign) => campaign.assignedUserId === authUserId)
+    : allCampaigns;
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
 
   useEffect(() => {
     setSelectedCampaignId("");
-  }, [leadId]);
+    if (mode === "create" && leadId) {
+      setValue("order_items", [{ product_id: "", attendance_mode: "", payment_modality: "FULL", discount_code: null }]);
+    }
+  }, [leadId, mode, setValue]);
 
   useEffect(() => {
     const campaign = campaigns[0];
     if (campaigns.length === 1 && campaign) {
-      setSelectedCampaignId(campaign.memberId || campaign.campaignId);
+      setSelectedCampaignId(campaign.memberId);
     } else {
       setSelectedCampaignId("");
     }
@@ -82,24 +93,23 @@ export function OrderForm({
 
   const selectedCampaign = campaigns.find(
     (campaign) =>
-      (campaign.memberId || campaign.campaignId) === selectedCampaignId,
+      campaign.memberId === selectedCampaignId,
   );
   const creationReady = Boolean(
     mode === "create" &&
       leadContextQuery.data &&
       !leadContextQuery.isFetching &&
-      selectedCampaign?.assignedUserId &&
-      authUserId,
+      selectedCampaign &&
+      (authRole !== "SALES_REP" || selectedCampaign.assignedUserId === authUserId),
   );
 
   const submitForm = (values: OrderFormValues) => {
     if (mode === "create") {
-      if (!selectedCampaign || !selectedCampaign.assignedUserId || !authUserId) {
+      if (!selectedCampaign) {
         return;
       }
       return onSubmit(values, {
         campaign: selectedCampaign,
-        generatedBy: authUserId,
       });
     }
     return onSubmit(values);
@@ -114,7 +124,7 @@ export function OrderForm({
         <OrderLeadSection
           mode={mode}
           control={control}
-          orderLead={order?.lead}
+          orderLead={order?.member.lead ?? order?.lead}
           leadContext={leadContextQuery.data}
           isLoadingLeadContext={
             mode === "create" && Boolean(leadId) && leadContextQuery.isFetching
@@ -144,44 +154,15 @@ export function OrderForm({
         />
 
         {mode === "edit" && (
-          <section className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm">
-            <div>
-              <h2 className="text-lg font-semibold">Descuento general</h2>
-              <p className="text-sm text-muted-foreground">
-                Se aplica sobre el subtotal completo de la orden.
-              </p>
-            </div>
-            <Controller
+          <>
+            <OrderAssigneeSection
               control={control}
-              name="discount"
-              render={({ field, fieldState }) => (
-                <div className="max-w-sm space-y-2">
-                  <Label htmlFor="order-discount">Monto en soles</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      S/
-                    </span>
-                    <Input
-                      {...field}
-                      id="order-discount"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      className="pl-9"
-                      disabled={!itemsEditable}
-                    />
-                  </div>
-                  {fieldState.error && (
-                    <p className="text-sm font-medium text-destructive">
-                      {fieldState.error.message}
-                    </p>
-                  )}
-                </div>
-              )}
+              options={assigneeOptions}
+              isLoading={assigneesLoading}
             />
-          </section>
+            <OrderStatusSection control={control} />
+          </>
         )}
-
-        {mode === "edit" && <OrderStatusSection control={control} />}
 
         {submitError && (
           <Alert variant="destructive">

@@ -45,7 +45,7 @@ export function ProspectsFilters({ controller }: ProspectsFiltersProps) {
             id="prospect-search"
             value={controller.search}
             onChange={(event) => controller.setSearch(event.target.value)}
-            placeholder="Buscar por nombre, correo, DNI o celular"
+            placeholder="Buscar por nombre, correo o celular"
             className="pl-9"
           />
         </div>

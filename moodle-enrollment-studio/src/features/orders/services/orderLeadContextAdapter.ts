@@ -42,14 +42,15 @@ function adaptMatriculatedCampaign(
     : isRecord(value.campaign)
       ? value.campaign
       : null;
-  if (!campaignId || !campaign) return null;
+  const memberId = stringValue(value.id);
+  if (!memberId || !campaignId || !campaign) return null;
 
   const assignedUser = isRecord(value.assignedUser)
     ? value.assignedUser
     : null;
 
   return {
-    memberId: stringValue(value.id),
+    memberId,
     campaignId,
     campaignName:
       normalizedText(campaign.name) || "Campaña sin nombre",
@@ -60,6 +61,8 @@ function adaptMatriculatedCampaign(
       assignedUser?.last_name,
     ),
     isPrimary: value.is_primary === true,
+    status: "MATRICULADO",
+    associatedAt: stringValue(value.created_at) || null,
   };
 }
 

@@ -10,6 +10,7 @@ import {
   reassignBulkCampaignMembers
 } from "../services/campaignService";
 import { toast } from "sonner";
+import { campaignQueryKeys } from "../queryKeys";
 
 export const useCampaignDetail = (id: string | undefined) => {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export const useCampaignDetail = (id: string | undefined) => {
 
   // Fetching detail data
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["campaign", id],
+    queryKey: campaignQueryKeys.detail(id ?? ""),
     queryFn: async () => {
       if (isMockId) {
         const mock = (globalThis as any).mockCampaigns?.find((c: any) => c.id === id);
@@ -72,7 +73,17 @@ export const useCampaignDetail = (id: string | undefined) => {
       // El backend puede devolver: array directo, { data: [] }, { data: { data: [] } }
       let memberList: any[] | null = null;
 
-      if (Array.isArray(response)) {
+      if (
+        response
+        && typeof response === "object"
+        && "data" in response
+        && response.data
+        && typeof response.data === "object"
+        && "members" in response.data
+        && Array.isArray(response.data.members)
+      ) {
+        memberList = response.data.members;
+      } else if (Array.isArray(response)) {
         // Caso A: la respuesta ES directamente el array
         memberList = response;
       } else if (response && Array.isArray((response as any).data)) {

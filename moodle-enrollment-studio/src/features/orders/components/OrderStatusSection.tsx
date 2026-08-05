@@ -10,13 +10,7 @@ import {
   SelectValue,
 } from "@/core/components/ui/select";
 import type { OrderFormValues, OrderStatus } from "../types";
-
-const labels: Record<OrderStatus, string> = {
-  PENDING: "Pendiente",
-  COMPLETED: "Completada",
-  CANCELLED: "Cancelada",
-  REFUNDED: "Reembolsada",
-};
+import { ORDER_STATUSES, ORDER_STATUS_LABELS } from "../orderStatus";
 
 export function OrderStatusSection({
   control,
@@ -46,9 +40,9 @@ export function OrderStatusSection({
             <SelectValue placeholder="Seleccionar estado" />
           </SelectTrigger>
           <SelectContent>
-            {(Object.keys(labels) as OrderStatus[]).map((status) => (
+            {ORDER_STATUSES.map((status) => (
               <SelectItem key={status} value={status}>
-                {labels[status]}
+                {ORDER_STATUS_LABELS[status]}
               </SelectItem>
             ))}
           </SelectContent>

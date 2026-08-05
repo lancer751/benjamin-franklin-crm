@@ -7,7 +7,7 @@ import {
   OrderPaymentPlanCard,
   OrderPaymentsHistory,
   OrderProductsCard,
-  OrderSellerCard,
+  OrderCommercialContextCard,
 } from "./OrderDetailSections";
 
 interface OrderDetailContentProps {
@@ -16,6 +16,9 @@ interface OrderDetailContentProps {
   onBack: () => void;
   onEdit: () => void;
   onRegisterPayment: () => void;
+  campaignName?: string | null;
+  isCampaignLoading?: boolean;
+  isCampaignError?: boolean;
 }
 
 export function OrderDetailContent({
@@ -24,6 +27,9 @@ export function OrderDetailContent({
   onBack,
   onEdit,
   onRegisterPayment,
+  campaignName = null,
+  isCampaignLoading = false,
+  isCampaignError = false,
 }: OrderDetailContentProps) {
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-10">
@@ -42,7 +48,12 @@ export function OrderDetailContent({
         <main className="min-w-0 space-y-6">
           <div className="grid gap-6 xl:grid-cols-2">
             <OrderCustomerCard order={order} />
-            <OrderSellerCard order={order} />
+            <OrderCommercialContextCard
+              order={order}
+              campaignName={campaignName}
+              isCampaignLoading={isCampaignLoading}
+              isCampaignError={isCampaignError}
+            />
           </div>
           <OrderProductsCard order={order} />
           <OrderPaymentsHistory order={order} />

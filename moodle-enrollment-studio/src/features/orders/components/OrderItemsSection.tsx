@@ -95,9 +95,9 @@ export function OrderItemsSection({
         )
       ) : (
         <div className="space-y-2">
-          {existingDetails?.map((detail) => (
+          {existingDetails?.map((detail, index) => (
             <div
-              key={detail.id}
+              key={detail.id || `${detail.product_id}-${index}`}
               className="flex items-center justify-between gap-4 rounded-lg border p-3"
             >
               <div className="min-w-0">

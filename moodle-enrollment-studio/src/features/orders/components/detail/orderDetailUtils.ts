@@ -3,13 +3,9 @@ import type {
   OrderResponse,
   OrderStatus,
 } from "../../types";
+import { ORDER_STATUS_LABELS } from "../../orderStatus";
 
-export const orderStatusLabels: Record<OrderStatus, string> = {
-  PENDING: "Pendiente",
-  COMPLETED: "Completada",
-  CANCELLED: "Cancelada",
-  REFUNDED: "Reembolsada",
-};
+export const orderStatusLabels = ORDER_STATUS_LABELS;
 
 export const orderStatusStyles: Record<OrderStatus, string> = {
   PENDING: "border-amber-200 bg-amber-50 text-amber-700",
@@ -70,6 +66,7 @@ export function fullName(
   return [person?.first_name, person?.middle_name, person?.last_name]
     .filter(Boolean)
     .join(" ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 

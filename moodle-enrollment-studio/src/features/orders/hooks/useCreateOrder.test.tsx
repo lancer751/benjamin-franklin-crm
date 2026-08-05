@@ -2,7 +2,8 @@ import type { PropsWithChildren } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CreateOrderPayload, OrderResponse } from "../types";
+import type { CreateOrderPayload } from "../types";
+import { adaptOrderResponse } from "../services/orderAdapter";
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -27,9 +28,8 @@ vi.mock("../services/orderService", async (importOriginal) => {
 import { useCreateOrder } from "./useCreateOrder";
 
 const payload: CreateOrderPayload = {
-  lead_id: "22222222-2222-4222-8222-222222222222",
+  member_id: "22222222-2222-4222-8222-222222222222",
   related_campaign: "33333333-3333-4333-8333-333333333333",
-  generated_by: "44444444-4444-4444-8444-444444444444",
   assigned_to: "55555555-5555-4555-8555-555555555555",
   order_items: [
     {
@@ -40,9 +40,9 @@ const payload: CreateOrderPayload = {
   ],
 };
 
-const order = {
+const order = adaptOrderResponse({
   id: "33333333-3333-4333-8333-333333333333",
-  lead_id: payload.lead_id,
+  member_id: payload.member_id,
   sub_total: "100.00",
   total_amount: "100.00",
   discount: "0.00",
@@ -51,13 +51,23 @@ const order = {
   created_at: "2026-07-23T00:00:00.000Z",
   updated_at: "2026-07-23T00:00:00.000Z",
   lead: {
-    id: payload.lead_id,
+    id: "66666666-6666-4666-8666-666666666666",
     first_name: "Ana",
     last_name: "Pérez",
     email: "ana@example.com",
   },
+  member: {
+    id: payload.member_id,
+    campaignId: payload.related_campaign,
+    lead: {
+      id: "66666666-6666-4666-8666-666666666666",
+      first_name: "Ana",
+      last_name: "PÃ©rez",
+      email: "ana@example.com",
+    },
+  },
   orderDetails: [],
-} satisfies OrderResponse;
+});
 
 describe("useCreateOrder", () => {
   beforeEach(() => {

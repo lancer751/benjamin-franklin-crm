@@ -43,6 +43,11 @@ export interface PaymentOrderResponse {
   total_amount: string | number;
   order_status?: string;
   lead?: PaymentLeadResponse | null;
+  member?: {
+    id?: string;
+    campaing_id?: string;
+    lead?: PaymentLeadResponse | null;
+  } | null;
   paymentPlans?: PaymentPlanResponse[];
 }
 
@@ -68,6 +73,8 @@ export interface PaymentListItem {
   transactionId: string | null;
   orderId: string;
   orderCode: string | null;
+  memberId: string | null;
+  campaignId: string | null;
   orderTotal: string;
   client: {
     fullName: string;

@@ -56,6 +56,10 @@ const sellerDirectory = (response: unknown): Map<string, CampaignSellerOption> =
     }),
   );
 
+export const adaptSellerOptions = (response: unknown): AdvisorFilterOption[] =>
+  Array.from(sellerDirectory(response).values())
+    .sort((first, second) => first.name.localeCompare(second.name, "es"));
+
 const adaptCampaign = (
   value: UnknownRecord,
   sellersByProfileId: Map<string, CampaignSellerOption>,
