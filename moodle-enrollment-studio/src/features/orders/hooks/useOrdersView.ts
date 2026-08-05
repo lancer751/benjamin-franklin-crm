@@ -14,12 +14,17 @@ import {
   getOrders,
   mapOrderApiError,
 } from "../services/orderService";
-import type { OrderCreationOrder, OrderListItem } from "../types";
+import type {
+  GetOrdersParams,
+  OrderCreationOrder,
+  OrderListItem,
+} from "../types";
 import {
   getOrderListPermissions,
   type OrderListPermissions,
 } from "../utils/orderPermissions";
 import { orderQueryKeys } from "../queryKeys";
+import { buildOrderListQuery, resolveOrderListScope } from "../orderListScope";
 
 const EMPTY_ORDERS: OrderListItem[] = [];
 
@@ -36,6 +41,7 @@ export interface OrdersViewController {
   search: string;
   statusFilter: OrderStatusFilter;
   creationOrder: OrderCreationOrder;
+  isSalesRep: boolean;
   pendingAction: PendingOrderAction | null;
   isLoading: boolean;
   isRefreshing: boolean;
@@ -56,7 +62,8 @@ export interface OrdersViewController {
 export function useOrdersView(): OrdersViewController {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const role = useAuthStore((state) => state.user?.role.name);
+  const user = useAuthStore((state) => state.user);
+  const role = user?.role.name;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<OrderStatusFilter>("ALL");
@@ -65,16 +72,29 @@ export function useOrdersView(): OrdersViewController {
   const [pendingAction, setPendingAction] =
     useState<PendingOrderAction | null>(null);
 
-  const ordersQuery = useQuery({
-    queryKey: orderQueryKeys.list({ page: 1, limit: 20, creation_order: creationOrder }),
-    queryFn: async () => {
-      const response = await getOrders({
+  const scope = useMemo(
+    () => resolveOrderListScope(role, user?.id),
+    [role, user?.id],
+  );
+  const queryParams = useMemo<GetOrdersParams>(
+    () =>
+      buildOrderListQuery({
         page: 1,
         limit: 20,
-        creation_order: creationOrder,
-      });
+        status: statusFilter,
+        creationOrder,
+        generatedBy: scope.generatedBy,
+      }),
+    [creationOrder, scope.generatedBy, statusFilter],
+  );
+
+  const ordersQuery = useQuery({
+    queryKey: orderQueryKeys.list(queryParams),
+    queryFn: async () => {
+      const response = await getOrders(queryParams);
       return response.data.orders.map(mapOrderResponseToListItem);
     },
+    enabled: scope.isReady,
     placeholderData: keepPreviousData,
   });
 
@@ -119,8 +139,9 @@ export function useOrdersView(): OrdersViewController {
     search,
     statusFilter,
     creationOrder,
+    isSalesRep: scope.isSalesRep,
     pendingAction,
-    isLoading: ordersQuery.isLoading,
+    isLoading: ordersQuery.isLoading || !scope.isReady,
     isRefreshing: ordersQuery.isFetching && !ordersQuery.isLoading,
     isError: ordersQuery.isError,
     isMutating: cancelMutation.isPending,

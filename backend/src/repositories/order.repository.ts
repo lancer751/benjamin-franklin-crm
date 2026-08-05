@@ -10,6 +10,7 @@ const orderInclude = {
       discount_amount: true,
       price: true,
       payment_modality: true,
+      attendance_mode: true,
       product: {
         select: {
           id: true,

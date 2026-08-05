@@ -55,7 +55,7 @@ function adaptMatriculatedCampaign(
     campaignName:
       normalizedText(campaign.name) || "Campaña sin nombre",
     platform: normalizedText(campaign.platform),
-    assignedUserId: stringValue(assignedUser?.id),
+    assignedUserId: stringValue(value.assigned_to) || stringValue(assignedUser?.id),
     assignedUserName: normalizedText(
       assignedUser?.first_name,
       assignedUser?.last_name,
@@ -91,5 +91,25 @@ export function adaptLeadToOrderContext(
     phone: primaryPhone(lead.phones),
     email: stringValue(lead.email),
     matriculatedCampaigns: campaigns,
+    hasUnavailableMatriculatedCampaign: false,
+  };
+}
+
+export function filterOrderLeadContextByAssignee(
+  context: OrderLeadContext,
+  assignedTo?: string,
+): OrderLeadContext {
+  const normalizedAssignedTo = stringValue(assignedTo);
+  if (!normalizedAssignedTo) return context;
+
+  const matriculatedCampaigns = context.matriculatedCampaigns.filter(
+    (campaign) => campaign.assignedUserId === normalizedAssignedTo,
+  );
+
+  return {
+    ...context,
+    matriculatedCampaigns,
+    hasUnavailableMatriculatedCampaign:
+      context.matriculatedCampaigns.length > matriculatedCampaigns.length,
   };
 }

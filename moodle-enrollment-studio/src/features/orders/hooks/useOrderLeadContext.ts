@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { getLeadById } from "@/features/leads/services/leadService";
-import { adaptLeadToOrderContext } from "../services/orderLeadContextAdapter";
+import {
+  adaptLeadToOrderContext,
+  filterOrderLeadContextByAssignee,
+} from "../services/orderLeadContextAdapter";
 import { orderQueryKeys } from "../queryKeys";
 
-export function useOrderLeadContext(leadId: string) {
+export function useOrderLeadContext(leadId: string, assignedTo?: string) {
   return useQuery({
     queryKey: orderQueryKeys.leadContext(leadId),
     queryFn: async () => {
@@ -14,6 +17,7 @@ export function useOrderLeadContext(leadId: string) {
       }
       return context;
     },
+    select: (context) => filterOrderLeadContextByAssignee(context, assignedTo),
     enabled: Boolean(leadId),
     retry: false,
   });

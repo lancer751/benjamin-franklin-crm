@@ -21,7 +21,19 @@ const lead: OrderLeadSummary = {
   phones: [{ number: "999111222", isPrincipal: true }],
 };
 
-function LeadHarness({ mode = "create" }: { mode?: "create" | "edit" }) {
+interface LeadHarnessProps {
+  mode?: "create" | "edit";
+  isSalesRep?: boolean;
+  leadSearchAssignedTo?: string;
+  isLeadSearchReady?: boolean;
+}
+
+function LeadHarness({
+  mode = "create",
+  isSalesRep,
+  leadSearchAssignedTo,
+  isLeadSearchReady,
+}: LeadHarnessProps) {
   const form = useForm<OrderFormValues>({
     defaultValues: {
       leadId: mode === "edit" ? lead.id : "",
@@ -39,19 +51,22 @@ function LeadHarness({ mode = "create" }: { mode?: "create" | "edit" }) {
         mode={mode}
         control={form.control}
         orderLead={mode === "edit" ? lead : undefined}
+        isSalesRep={isSalesRep}
+        leadSearchAssignedTo={leadSearchAssignedTo}
+        isLeadSearchReady={isLeadSearchReady}
       />
       <output data-testid="lead-id">{leadId}</output>
     </>
   );
 }
 
-function renderHarness(mode: "create" | "edit" = "create") {
+function renderHarness(props: LeadHarnessProps = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <LeadHarness mode={mode} />
+      <LeadHarness {...props} />
     </QueryClientProvider>,
   );
 }
@@ -93,10 +108,38 @@ describe("OrderLeadSection", () => {
     expect(searchOrderLeadsMock).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(searchOrderLeadsMock).toHaveBeenCalledWith(
-        "an",
+        { search: "an", assignedTo: undefined },
         expect.any(AbortSignal),
       ),
     );
+  });
+
+  it("incluye el User.id del asesor en la búsqueda", async () => {
+    searchOrderLeadsMock.mockResolvedValue([]);
+    renderHarness({
+      isSalesRep: true,
+      leadSearchAssignedTo: "user-ana",
+    });
+    openAndType("ana");
+
+    await waitFor(() =>
+      expect(searchOrderLeadsMock).toHaveBeenCalledWith(
+        { search: "ana", assignedTo: "user-ana" },
+        expect.any(AbortSignal),
+      ),
+    );
+  });
+
+  it("espera la sesión antes de buscar prospectos de un asesor", async () => {
+    renderHarness({ isSalesRep: true, isLeadSearchReady: false });
+    openAndType("ana");
+
+    expect(
+      await screen.findByText(
+        "Esperando la sesión para buscar prospectos asignados.",
+      ),
+    ).toBeInTheDocument();
+    expect(searchOrderLeadsMock).not.toHaveBeenCalled();
   });
 
   it("muestra loading durante la consulta", async () => {
@@ -133,7 +176,9 @@ describe("OrderLeadSection", () => {
     openAndType("nadie");
 
     expect(
-      await screen.findByText("No se encontraron prospectos."),
+      await screen.findByText(
+        "No se encontraron prospectos que coincidan con la búsqueda.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -150,7 +195,7 @@ describe("OrderLeadSection", () => {
   });
 
   it("muestra el prospecto en solo lectura durante la edición", () => {
-    renderHarness("edit");
+    renderHarness({ mode: "edit" });
 
     expect(screen.getByText("Ana Pérez")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();

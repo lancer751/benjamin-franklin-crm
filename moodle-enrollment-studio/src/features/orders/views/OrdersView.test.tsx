@@ -13,6 +13,9 @@ import OrdersView from "./OrdersView";
 
 const order: OrderListItem = {
   id: "54566a99-2980-4147-9f75-a61906cf8344",
+  memberId: "member-1",
+  leadId: "lead-1",
+  campaignId: "campaign-1",
   orderCode: "REFTGEL",
   status: "PENDING",
   subtotal: "460.00",
@@ -29,6 +32,7 @@ const order: OrderListItem = {
     email: "mtorres@bf.edu.pe",
     initials: "MT",
   },
+  creator: { fullName: "Miguel Torres" },
   products: [
     { name: "Curso de Lectura de Planos", price: "440.00" },
     { name: "Gestión de proyectos", price: "200.00" },
@@ -52,6 +56,7 @@ function makeController(
     search: "",
     statusFilter: "ALL",
     creationOrder: "desc",
+    isSalesRep: false,
     pendingAction: null,
     isLoading: false,
     isRefreshing: false,
@@ -109,9 +114,10 @@ describe("OrdersView", () => {
     fireEvent.change(screen.getByRole("searchbox"), {
       target: { value: "rodrigo" },
     });
-    fireEvent.change(screen.getByRole("combobox"), {
-      target: { value: "COMPLETED" },
-    });
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Filtrar por estado" }),
+      { target: { value: "COMPLETED" } },
+    );
 
     expect(controller.setSearch).toHaveBeenCalledWith("rodrigo");
     expect(controller.setStatusFilter).toHaveBeenCalledWith("COMPLETED");
@@ -128,6 +134,16 @@ describe("OrdersView", () => {
     expect(screen.getByText("Total vendido")).toBeInTheDocument();
     expect(screen.getByText("Solo órdenes completadas")).toBeInTheDocument();
     expect(screen.queryByText(/Ingresos confirmados/i)).not.toBeInTheDocument();
+  });
+
+  it("aclara que un representante ve las órdenes que registró", () => {
+    useOrdersViewMock.mockReturnValue(makeController({ isSalesRep: true }));
+    render(<OrdersView />);
+
+    expect(
+      screen.getByText("Consulta las órdenes que registraste."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Creada por")).not.toBeInTheDocument();
   });
 
   it("renderiza seller null y múltiples productos sin modalidad", () => {

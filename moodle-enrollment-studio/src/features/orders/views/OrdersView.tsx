@@ -319,7 +319,9 @@ export default function OrdersView() {
             Gestión de órdenes
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Consulta y administra las órdenes comerciales registradas.
+            {controller.isSalesRep
+              ? "Consulta las órdenes que registraste."
+              : "Consulta y administra las órdenes comerciales registradas."}
           </p>
         </div>
         {controller.permissions.canCreate && (
@@ -467,7 +469,7 @@ export default function OrdersView() {
         ) : (
           <div className="min-w-0 p-3 sm:p-5">
             <CustomTable
-              key={controller.creationOrder}
+              key={`${controller.statusFilter}-${controller.creationOrder}`}
               data={controller.filteredOrders}
               columns={columns}
               onRowClick={controller.navigateToDetail}

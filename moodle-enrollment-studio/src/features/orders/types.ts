@@ -6,7 +6,7 @@ export type OrderCreationOrder = "asc" | "desc";
 export interface GetOrdersParams {
   page?: number;
   limit?: number;
-  order_status?: string;
+  order_status?: OrderStatus;
   member_id?: string;
   generated_by?: string;
   creation_order?: OrderCreationOrder;
@@ -236,6 +236,7 @@ export interface OrderLeadContext {
   phone: string;
   email: string;
   matriculatedCampaigns: OrderMatriculatedCampaign[];
+  hasUnavailableMatriculatedCampaign: boolean;
 }
 
 export interface OrderCreationSubmissionContext {

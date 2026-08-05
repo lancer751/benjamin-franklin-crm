@@ -8,5 +8,7 @@ export const orderQueryKeys = {
   detail: (id: string) => ["orders", "detail", id] as const,
   leadContexts: () => ["orders", "lead-context"] as const,
   leadContext: (leadId: string) => ["orders", "lead-context", leadId] as const,
+  leadSearch: (params: { search: string; assignedTo?: string }) =>
+    ["orders", "lead-search", params] as const,
   products: ["orders", "products"] as const,
 };

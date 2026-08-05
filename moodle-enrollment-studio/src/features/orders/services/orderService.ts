@@ -134,7 +134,7 @@ export const getOrders = async ({
   generated_by,
   creation_order = "desc",
 }: GetOrdersParams = {}): Promise<OrderListResponse> => {
-  const normalizedOrderStatus = order_status?.trim();
+  const normalizedOrderStatus = order_status;
   const normalizedMemberId = member_id?.trim();
   const normalizedGeneratedBy = generated_by?.trim();
   const response = await api.orders.$get({
@@ -182,14 +182,21 @@ export const deleteOrder = async (
   return readResponse<{ success: true; message: string }>(response);
 };
 
+export interface SearchOrderLeadsParams {
+  search: string;
+  assignedTo?: string;
+}
+
 export async function searchOrderLeads(
-  search: string,
+  { search, assignedTo }: SearchOrderLeadsParams,
   signal?: AbortSignal,
 ): Promise<OrderLeadSummary[]> {
+  const normalizedAssignedTo = assignedTo?.trim();
   const result: unknown = await searchLeads({
     page: "1",
     limit: "10",
     search,
+    ...(normalizedAssignedTo ? { assigned_to: normalizedAssignedTo } : {}),
   }, signal);
   const data = isRecord(result) && isRecord(result.data) ? result.data : null;
   if (!data || !Array.isArray(data.leads)) {

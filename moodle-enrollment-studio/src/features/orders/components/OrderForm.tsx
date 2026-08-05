@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { useWatch } from "react-hook-form";
 import { Alert, AlertDescription } from "@/core/components/ui/alert";
 import { Button } from "@/core/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useOrderLeadContext } from "../hooks/useOrderLeadContext";
+import { resolveOrderLeadScope } from "../orderLeadScope";
 import { useOrderForm } from "../hooks/useOrderForm";
 import type {
   OrderCreationSubmissionContext,
@@ -63,21 +64,26 @@ export function OrderForm({
     handleSubmit,
     formState: { errors },
   } = controller.form;
-  const authUserId = useAuthStore((state) => state.user?.id ?? "");
-  const authRole = useAuthStore((state) => state.user?.role.name ?? "");
+  const authUser = useAuthStore((state) => state.user);
+  const leadScope = useMemo(
+    () => resolveOrderLeadScope(authUser?.role.name, authUser?.id),
+    [authUser?.id, authUser?.role.name],
+  );
   const leadId = useWatch({ control, name: "leadId" });
   const leadContextQuery = useOrderLeadContext(
     mode === "create" ? leadId : "",
+    leadScope.effectiveAssignedTo,
   );
-  const allCampaigns = leadContextQuery.data?.matriculatedCampaigns ?? [];
-  const campaigns = authRole === "SALES_REP"
-    ? allCampaigns.filter((campaign) => campaign.assignedUserId === authUserId)
-    : allCampaigns;
+  const campaigns = useMemo(
+    () => leadContextQuery.data?.matriculatedCampaigns ?? [],
+    [leadContextQuery.data?.matriculatedCampaigns],
+  );
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
 
   useEffect(() => {
     setSelectedCampaignId("");
     if (mode === "create" && leadId) {
+      setValue("assigned_to", "");
       setValue("order_items", [{ product_id: "", attendance_mode: "", payment_modality: "FULL", discount_code: null }]);
     }
   }, [leadId, mode, setValue]);
@@ -100,7 +106,8 @@ export function OrderForm({
       leadContextQuery.data &&
       !leadContextQuery.isFetching &&
       selectedCampaign &&
-      (authRole !== "SALES_REP" || selectedCampaign.assignedUserId === authUserId),
+      (!leadScope.isSalesRep ||
+        selectedCampaign.assignedUserId === leadScope.effectiveAssignedTo),
   );
 
   const submitForm = (values: OrderFormValues) => {
@@ -130,6 +137,9 @@ export function OrderForm({
             mode === "create" && Boolean(leadId) && leadContextQuery.isFetching
           }
           leadContextError={mode === "create" && leadContextQuery.isError}
+          isSalesRep={leadScope.isSalesRep}
+          leadSearchAssignedTo={leadScope.effectiveAssignedTo}
+          isLeadSearchReady={leadScope.isReady}
           selectedCampaignId={selectedCampaignId}
           onSelectedCampaignIdChange={setSelectedCampaignId}
           onRetryLeadContext={() => void leadContextQuery.refetch()}

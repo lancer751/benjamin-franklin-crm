@@ -35,6 +35,7 @@ import {
 } from "@/core/components/ui/select";
 import { cn } from "@/core/lib/utils";
 import { searchOrderLeads } from "../services/orderService";
+import { orderQueryKeys } from "../queryKeys";
 import type {
   OrderFormValues,
   OrderLeadContext,
@@ -51,6 +52,9 @@ interface OrderLeadSectionProps {
   selectedCampaignId?: string;
   onSelectedCampaignIdChange?: (memberId: string) => void;
   onRetryLeadContext?: () => void;
+  isSalesRep?: boolean;
+  leadSearchAssignedTo?: string;
+  isLeadSearchReady?: boolean;
 }
 
 function leadName(lead: OrderLeadSummary): string {
@@ -107,6 +111,9 @@ export function OrderLeadSection({
   selectedCampaignId = "",
   onSelectedCampaignIdChange,
   onRetryLeadContext,
+  isSalesRep = false,
+  leadSearchAssignedTo,
+  isLeadSearchReady = true,
 }: OrderLeadSectionProps) {
   const { field, fieldState } = useController({ control, name: "leadId" });
   const [open, setOpen] = useState(false);
@@ -125,9 +132,17 @@ export function OrderLeadSection({
   }, [search]);
 
   const query = useQuery({
-    queryKey: ["order-lead-search", debouncedSearch],
-    queryFn: ({ signal }) => searchOrderLeads(debouncedSearch, signal),
-    enabled: mode === "create" && debouncedSearch.length >= 2,
+    queryKey: orderQueryKeys.leadSearch({
+      search: debouncedSearch,
+      ...(leadSearchAssignedTo ? { assignedTo: leadSearchAssignedTo } : {}),
+    }),
+    queryFn: ({ signal }) =>
+      searchOrderLeads(
+        { search: debouncedSearch, assignedTo: leadSearchAssignedTo },
+        signal,
+      ),
+    enabled:
+      mode === "create" && debouncedSearch.length >= 2 && isLeadSearchReady,
     staleTime: 30_000,
     retry: false,
   });
@@ -203,6 +218,13 @@ export function OrderLeadSection({
                         Escribe al menos 2 caracteres.
                       </div>
                     )}
+                    {!query.isFetching &&
+                      debouncedSearch.length >= 2 &&
+                      !isLeadSearchReady && (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Esperando la sesión para buscar prospectos asignados.
+                        </div>
+                      )}
                     {!query.isFetching && query.isError && (
                       <div className="p-4 text-center text-sm text-destructive">
                         No se pudo consultar los prospectos. Inténtalo nuevamente.
@@ -210,9 +232,14 @@ export function OrderLeadSection({
                     )}
                     {!query.isFetching &&
                       !query.isError &&
-                      debouncedSearch.length >= 2 && (
+                      debouncedSearch.length >= 2 &&
+                      isLeadSearchReady && (
                         <>
-                          <CommandEmpty>No se encontraron prospectos.</CommandEmpty>
+                          <CommandEmpty>
+                            {isSalesRep
+                              ? "No se encontraron prospectos asignados que coincidan con la búsqueda."
+                              : "No se encontraron prospectos que coincidan con la búsqueda."}
+                          </CommandEmpty>
                           <CommandGroup>
                             {leads.map((lead) => (
                               <CommandItem
@@ -321,11 +348,14 @@ export function OrderLeadSection({
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>
-                  Este prospecto no tiene una matrícula habilitada para generar
-                  una orden.
+                  {isSalesRep && leadContext.hasUnavailableMatriculatedCampaign
+                    ? "No tienes una matrícula asignada de este prospecto disponible para generar la orden."
+                    : "Este prospecto no tiene una campaña matriculada disponible para generar una orden."}
                 </AlertTitle>
                 <AlertDescription>
-                  Debe estar en la etapa “Matriculado” dentro de una campaña.
+                  {isSalesRep && leadContext.hasUnavailableMatriculatedCampaign
+                    ? "Las matrículas disponibles están asignadas a otro asesor."
+                    : "Debe estar en la etapa “Matriculado” dentro de una campaña."}
                 </AlertDescription>
               </Alert>
             )}
