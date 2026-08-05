@@ -12,8 +12,8 @@ import { useCampaignDetail } from "@/features/campaigns/hooks/useCampaignDetail"
 import { CampaignDetailHeader } from "@/features/campaigns/components/CampaignDetailHeader";
 import { useAuthStore } from "@/store/useAuthStore";
 import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
-import { ModalityMap, translateEnum } from "@/core/utils/dictionaries";
 import { formatCampaignCurrency } from "@/features/campaigns/utils/campaignCurrency";
+import { adaptCampaignDetail } from "@/features/campaigns/adapters/campaignDetailAdapter";
 import {
   Dialog,
   DialogContent,
@@ -213,6 +213,8 @@ const CampaignDetailView = () => {
     return campaign.sellersOnCampaign || campaign.sellers || [];
   }, [campaign]);
 
+  const campaignDetail = useMemo(() => adaptCampaignDetail(campaign), [campaign]);
+
   const assignedSellerIds = useMemo(() => {
     return sellersList.map((s: any) => s.seller_id || s.seller?.id || s.id) || [];
   }, [sellersList]);
@@ -315,12 +317,6 @@ const CampaignDetailView = () => {
     : "No asignado";
   const supervisorEmail = supervisorUser?.email || "No asignado";
 
-  const attendanceModeLabels: Record<string, string> = {
-    VIRTUAL: "Virtual",
-    PRESENCIAL: "Presencial",
-    HEREDADO: "Heredado",
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -364,30 +360,41 @@ const CampaignDetailView = () => {
 
               <div className="border-t border-slate-100 pt-3 mt-3">
                 <h4 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">
-                  COSTOS DE LA CAMPAÑA
+                  MODALIDAD Y PRECIOS
                 </h4>
                 <div className="space-y-1 divide-y divide-slate-50">
-                  {campaign.relatedProduct?.prices && campaign.relatedProduct.prices.length > 0 ? (
-                    campaign.relatedProduct.prices.map((price: any, idx: number) => {
-                      const rawMode = price.attendance_mode === "HEREDADO"
-                        ? campaign.relatedProduct?.edition?.modality || ""
-                        : price.attendance_mode || "";
-                      const translatedMode = translateEnum(rawMode, ModalityMap) || rawMode;
-                      return (
-                        <div key={idx} className="flex justify-between items-center py-2 first:pt-0 last:pb-0">
-                          <span className="text-slate-600 font-medium text-sm">
-                            {translatedMode}:
-                          </span>
-                          <span className="text-slate-900 font-bold text-sm">
-                            {formatCampaignCurrency(price.cash_price)} Contado
-                          </span>
+                  {campaignDetail.productPricing.prices.length > 0 ? (
+                    campaignDetail.productPricing.prices.map((price, index) => (
+                      <div key={`${price.modalityLabel}-${index}`} className="py-2 first:pt-0 last:pb-0">
+                        <span className="block text-slate-600 font-medium text-sm">
+                          {price.modalityLabel}
+                        </span>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                          {price.cashPrice !== null && (
+                            <span className="text-slate-900 font-bold">
+                              Contado: {formatCampaignCurrency(price.cashPrice)}
+                            </span>
+                          )}
+                          {price.installmentPrice !== null && (
+                            <span className="text-slate-600 font-semibold">
+                              Cuotas: {formatCampaignCurrency(price.installmentPrice)}
+                            </span>
+                          )}
                         </div>
-                      );
-                    })
+                      </div>
+                    ))
                   ) : (
                     <p className="text-xs text-slate-500 py-2 text-center">
                       No hay precios configurados para este producto.
                     </p>
+                  )}
+                  {campaignDetail.productPricing.enrollmentFee !== null && (
+                    <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-100">
+                      <span className="text-slate-600 font-medium text-sm">Matrícula</span>
+                      <span className="text-slate-900 font-bold text-sm">
+                        {formatCampaignCurrency(campaignDetail.productPricing.enrollmentFee)}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -438,6 +445,7 @@ const CampaignDetailView = () => {
                     <tr className="border-b border-slate-100 text-slate-400 text-left">
                       <th className="py-3 text-xs font-bold uppercase tracking-wider">Asesor</th>
                       <th className="py-3 text-xs font-bold uppercase tracking-wider">Asignación</th>
+                      <th className="py-3 text-xs font-bold uppercase tracking-wider">Prospectos asignados</th>
                       <th className="py-3 text-xs font-bold uppercase tracking-wider">Total de Órdenes</th>
                       <th className="py-3 text-right text-xs font-bold uppercase tracking-wider">Acción</th>
                     </tr>
@@ -447,13 +455,14 @@ const CampaignDetailView = () => {
                       const seller = campaignSeller.seller || campaignSeller;
                       if (!seller) return null;
                       const sellerId = seller.id;
-                      const sellerName = seller.user
-                        ? `${seller.user.first_name || ""} ${seller.user.last_name || ""}`.trim()
-                        : `Asesor ${sellerId?.slice(0, 4) || ""}`;
+                      const advisor = campaignDetail.advisors.find(
+                        (item) => item.campaignSellerId === campaignSeller.id,
+                      );
+                      const sellerName = advisor?.fullName || `Asesor ${sellerId?.slice(0, 4) || ""}`;
                       const initials = sellerName
                         ? sellerName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
                         : "AS";
-                      const assignedAt = campaignSeller.assigned_at || campaignSeller.createdAt || null;
+                      const assignedAt = advisor?.assignedAt || campaignSeller.createdAt || null;
                       const formattedDate = assignedAt
                         ? new Date(assignedAt).toLocaleDateString("es-PE", {
                             day: "2-digit",
@@ -461,7 +470,7 @@ const CampaignDetailView = () => {
                             year: "numeric",
                           })
                         : "N/D";
-                      const totalOrders = seller.total_orders || 0;
+                      const totalOrders = advisor?.totalOrders ?? seller.total_orders ?? 0;
 
                       return (
                         <tr key={campaignSeller.id || sellerId} className="hover:bg-slate-50/50 transition-colors">
@@ -473,6 +482,9 @@ const CampaignDetailView = () => {
                           </td>
                           <td className="py-3 text-slate-500 text-xs font-medium">
                             {formattedDate}
+                          </td>
+                          <td className="py-3 text-slate-500 font-semibold">
+                            {advisor?.assignedLeadsCount ?? "—"}
                           </td>
                           <td className="py-3 text-slate-500 font-semibold">
                             {totalOrders}

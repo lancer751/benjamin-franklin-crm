@@ -5,6 +5,47 @@ export type ProductSalesStatus =
   | "COMPLETED"
   | "CANCELLED";
 
+export interface ProductAssignedProfessor {
+  professor_id: string;
+  assignedAt?: string | null;
+  professors?: {
+    id: string;
+    name?: string | null;
+    lastname?: string | null;
+    profession?: string | null;
+    is_active?: boolean | null;
+  } | null;
+}
+
+interface ProductBenefitReference {
+  id?: string;
+  name?: string;
+  description?: string | null;
+  icon_name?: string | null;
+}
+
+interface ProductFaqReference {
+  id?: string;
+  question?: string;
+  answer?: string;
+}
+
+interface ProductCertificationReference {
+  id?: string;
+  title?: string;
+  description?: string | null;
+  image_url?: string | null;
+  imageUrl?: string | null;
+  issuing_authority?: string | null;
+  issuingAuthority?: string | null;
+  registry_validity?: string | null;
+  registryValidity?: string | null;
+  has_digital?: boolean | null;
+  hasDigital?: boolean | null;
+  has_physical?: boolean | null;
+  hasPhysical?: boolean | null;
+}
+
 export interface BackendProductResponse {
   id: string;
   name: string;
@@ -43,6 +84,7 @@ export interface BackendProductResponse {
       id: string;
       name: string;
     } | null;
+    assigned_professors?: ProductAssignedProfessor[] | null;
   } | null;
   prices?: {
     attendance_mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO";
@@ -50,35 +92,37 @@ export interface BackendProductResponse {
     installment_price: number | string;
   }[];
   relatedBenefits?: {
+    id?: string;
     benefit_id: string;
     description?: string | null;
-    benefit?: {
-      id: string;
-      name: string;
-      description?: string | null;
-      icon_name?: string | null;
-    } | null;
+    name?: string;
+    icon_name?: string | null;
+    benefit?: ProductBenefitReference | null;
+    benefits?: ProductBenefitReference | null;
   }[];
   frequentQuestions?: {
+    id?: string;
     faq_id: string;
-    faq?: {
-      id: string;
-      question: string;
-      answer: string;
-    } | null;
+    question?: string;
+    answer?: string;
+    faq?: ProductFaqReference | null;
   }[];
   relatedCertifications?: {
+    id?: string;
     certification_id: string;
-    certification?: {
-      id: string;
-      title: string;
-      description?: string | null;
-      image_url?: string | null;
-      issuing_authority?: string | null;
-      registry_validity?: string | null;
-      has_digital?: boolean | null;
-      has_physical?: boolean | null;
-    } | null;
+    certification?: ProductCertificationReference | null;
+    title?: string;
+    description?: string | null;
+    image_url?: string | null;
+    imageUrl?: string | null;
+    issuing_authority?: string | null;
+    issuingAuthority?: string | null;
+    registry_validity?: string | null;
+    registryValidity?: string | null;
+    has_digital?: boolean | null;
+    hasDigital?: boolean | null;
+    has_physical?: boolean | null;
+    hasPhysical?: boolean | null;
   }[];
 }
 
@@ -120,6 +164,7 @@ export interface UIProduct {
       id: string;
       name: string;
     } | null;
+    assigned_professors?: ProductAssignedProfessor[] | null;
   } | null;
   prices: {
     attendance_mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO";

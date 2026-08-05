@@ -57,41 +57,103 @@ export function campaignRepository(prisma: PrismaClient) {
       return { campaings, total, page, limit };
     },
     async findById(id: string) {
-      return prisma.campaing.findUnique({
-        where: { id },
+  const campaign = await prisma.campaing.findUnique({
+    where: { id },
+    include: {
+      relatedProduct: {
+        select: {
+          id: true,
+          name: true,
+          sales_status: true,
+          enrollment_fee: true,
+          image_url: true,
+          prices: {
+            select: {
+              attendance_mode: true,
+              cash_price: true,
+              installment_price: true,
+            },
+          },
+          edition: {
+            select: {
+              modality: true,
+              start_date: true,
+              end_date: true,
+              hours_amount: true,
+              classes_number: true,
+              duration_unit: true,
+              duration_value: true,
+            },
+          },
+        },
+      },
+      assignedSupervisor: {
+        select: {
+          user: {
+            select: {
+              id: true,
+              first_name: true,
+              last_name: true,
+              email: true,
+            },
+          },
+        },
+      },
+      sellersOnCampaign: {
         include: {
-          relatedProduct: {
+          seller: {
             select: {
-              name: true,
-              sales_status: true,
-              prices: { select: { attendance_mode: true, cash_price: true } },
-              image_url: true
-            },
-          },
-          assignedSupervisor: {
-            select: {
+              id: true,
+              total_orders: true,
               user: {
-                select: { first_name: true, last_name: true, email: true },
-              },
-            },
-          },
-          sellersOnCampaign: {
-            include: {
-              seller: {
                 select: {
                   id: true,
-                  total_orders: true,
-                  user: { select: { first_name: true, last_name: true } },
+                  first_name: true,
+                  last_name: true,
+                  is_active: true,
                 },
               },
             },
           },
-          _count: {
-            select: { leadsOnCampaign: true, sellersOnCampaign: true },
-          },
         },
-      });
+      },
+      _count: {
+        select: {
+          leadsOnCampaign: true,
+          sellersOnCampaign: true,
+        },
+      },
     },
+  });
+
+  if (!campaign) return null;
+
+  const assignedCounts = await prisma.campaignMember.groupBy({
+    by: ["assigned_to"],
+    where: {
+      campaing_id: id,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  const countByUserId = new Map(
+    assignedCounts.map((item) => [
+      item.assigned_to,
+      item._count._all,
+    ]),
+  );
+
+  return {
+    ...campaign,
+    sellersOnCampaign: campaign.sellersOnCampaign.map((item) => ({
+      ...item,
+      assigned_leads_count:
+        countByUserId.get(item.seller.user.id) ?? 0,
+    })),
+  };
+},
     async create(data: CreateCampaignInput) {
       const product = await prisma.product.findUnique({
         where: { id: data.product_id },

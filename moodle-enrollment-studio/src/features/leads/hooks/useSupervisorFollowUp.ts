@@ -216,6 +216,7 @@ export const useSupervisorFollowUp = () => {
     retryMembers: membersQuery.refetch,
     canFilterByAdvisor,
     isSalesRep,
+    role,
     kpis,
     isLoadingSellers: sellersQuery.isLoading,
     isErrorSellers: sellersQuery.isError,

@@ -13,55 +13,76 @@ import {
 export const productGeneralRoutes = new Hono<ContextWithPrisma>()
   .get("/", async (c) => {
     const products = await c.get("prisma").product.findMany({
+  select: {
+    id: true,
+    image_url: true,
+    name: true,
+    sales_status: true,
+    enrollment_fee: true,
+
+    category: {
+      omit: {
+        created_at: true,
+        updated_at: true,
+      },
+    },
+
+    prices: {
+      omit: {
+        id: true,
+        product_id: true,
+      },
+    },
+
+    edition: {
       select: {
         id: true,
-        image_url: true,
-        name: true,
-        sales_status: true,
-        category: {
-          omit: {
-            created_at: true,
-            updated_at: true,
-          },
-        },
-        prices: {
-          omit: {
-            id: true,
-            product_id: true,
-          },
-        },
-        edition: {
+        start_date: true,
+        end_date: true,
+        schedules: {
           select: {
-            id: true,
-            start_date: true,
-            end_date: true,
-            schedules: {
+            day_of_week: true,
+            type: true,
+            slots: {
               select: {
-                day_of_week: true,
-                type: true,
-                slots: {
-                  select: {
-                    start_time: true,
-                    end_time: true,
-                  },
-                },
+                start_time: true,
+                end_time: true,
               },
             },
-            modality: true,
-            hours_amount: true,
-            classes_number: true,
-            edition_number: true,
-            edition_code: true,
           },
         },
-        pricing_status: true,
-        updated_at: true,
-        created_at: true,
+        modality: true,
+        hours_amount: true,
+        classes_number: true,
+        edition_number: true,
+        edition_code: true,
+        assigned_professors: {
+  select: {
+    professor_id: true,
+    assignedAt: true,
+    professors: {
+      select: {
+        id: true,
+        name: true,
+        lastname: true,
+        profession: true,
+        is_active: true,
       },
-      orderBy: {
-        created_at: "desc",
+    },
+  },
+},
       },
-    });
+    },
+
+    pricing_status: true,
+    updated_at: true,
+    created_at: true,
+  },
+
+  orderBy: {
+    created_at: "desc",
+  },
+});
     return c.json(products, 200);
   })
   .get(UUID_ROUTE, async (c) => {

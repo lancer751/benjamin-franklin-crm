@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { ArrowLeft, BookOpen, Calendar, CheckCircle2, ChevronLeft, ChevronRight, Layers, Loader2, Phone, TrendingUp, Users, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { Input } from "@/core/components/ui/input";
+import { Checkbox } from "@/core/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/core/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
@@ -17,8 +19,12 @@ import {
 import { LEAD_STATUS_OPTIONS, getLeadStatusLabel, isLeadStatus } from "../utils/prospectDisplay";
 import { useSupervisorFollowUp, type TeamFollowUpMode } from "../hooks/useSupervisorFollowUp";
 import { useSupervisorMemberDrawer } from "../hooks/useSupervisorMemberDrawer";
+import { useCampaignMemberReassignment } from "../hooks/useCampaignMemberReassignment";
 import type { TeamFollowUpMemberRow } from "../adapters/teamFollowUpAdapter";
 import type { NormalizedLead } from "../adapters/leadAdapter";
+import type { AdvisorFilterOption } from "../adapters/campaignAssignmentAdapter";
+import { CampaignMemberReassignmentDialog } from "../components/CampaignMemberReassignmentDialog";
+import { canReassignCampaignMembers, mapCampaignMemberReassignmentError } from "../utils/campaignMemberReassignment";
 import LeadDetailsSheet from "@/features/campaigns/views/seller/components/LeadDetailsSheet";
 
 const formatDateTime = (value: string): string => {
@@ -67,7 +73,14 @@ const SupervisorFollowUpView = () => {
   const isCampaignMode = followUp.mode === "CAMPAIGN";
   const [selectedMember, setSelectedMember] = useState<TeamFollowUpMemberRow | null>(null);
   const [drawerLead, setDrawerLead] = useState<NormalizedLead | null>(null);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [reassignmentMembers, setReassignmentMembers] = useState<TeamFollowUpMemberRow[]>([]);
   const drawer = useSupervisorMemberDrawer(selectedMember);
+  const reassignment = useCampaignMemberReassignment();
+  const canReassign = canReassignCampaignMembers(followUp.role);
+  const selectedMembers = followUp.memberRows.filter((member) => selectedMemberIds.includes(member.memberId));
+  const areAllVisibleMembersSelected = followUp.memberRows.length > 0 && followUp.memberRows.every((member) => selectedMemberIds.includes(member.memberId));
+  const hasPartialSelection = selectedMemberIds.length > 0 && !areAllVisibleMembersSelected;
 
   const openMemberDrawer = (member: TeamFollowUpMemberRow) => {
     setSelectedMember(member);
@@ -81,7 +94,78 @@ const SupervisorFollowUpView = () => {
   const handleModeChange = (value: string) => {
     if (value === "ALL" || value === "UNASSIGNED" || value === "CAMPAIGN") {
       followUp.selectMode(value as TeamFollowUpMode);
+      setSelectedMemberIds([]);
+      setReassignmentMembers([]);
     }
+  };
+
+  const handleCampaignChange = (campaignId: string) => {
+    followUp.selectCampaign(campaignId);
+    setSelectedMemberIds([]);
+    setReassignmentMembers([]);
+  };
+
+  const handleCampaignPageChange = (page: number) => {
+    followUp.setCampaignPage(page);
+    setSelectedMemberIds([]);
+  };
+
+  const handleCampaignAdvisorChange = (advisorUserId: string) => {
+    followUp.setCampaignAdvisorUserId(advisorUserId);
+    setSelectedMemberIds([]);
+  };
+
+  const handleCampaignStatusChange = (status: string) => {
+    if (status === "ALL" || isCampaignMemberStatus(status)) {
+      followUp.setCampaignMemberStatus(status);
+      setSelectedMemberIds([]);
+    }
+  };
+
+  const toggleMemberSelection = (memberId: string, checked: boolean) => {
+    setSelectedMemberIds((current) => checked
+      ? Array.from(new Set([...current, memberId]))
+      : current.filter((id) => id !== memberId));
+  };
+
+  const toggleVisibleSelection = (checked: boolean) => {
+    setSelectedMemberIds(checked ? followUp.memberRows.map((member) => member.memberId) : []);
+  };
+
+  const openBulkReassignment = () => {
+    if (!followUp.selectedCampaign || selectedMembers.length === 0 || selectedMembers.some((member) => member.campaignId !== followUp.selectedCampaign?.id)) {
+      toast.error("Solo puedes reasignar prospectos de una misma campaña en esta vista.");
+      return;
+    }
+    setReassignmentMembers(selectedMembers);
+  };
+
+  const confirmReassignment = (advisor: AdvisorFilterOption) => {
+    const [firstMember] = reassignmentMembers;
+    if (!firstMember || !followUp.selectedCampaign) return;
+    const onSuccess = () => {
+      const count = reassignmentMembers.length;
+      toast.success(count === 1
+        ? `${firstMember.prospectName} fue reasignado a ${advisor.name}.`
+        : `${count} prospectos fueron reasignados a ${advisor.name}.`);
+      setSelectedMemberIds([]);
+      setReassignmentMembers([]);
+    };
+    const onError = (error: unknown) => toast.error(mapCampaignMemberReassignmentError(error));
+
+    if (reassignmentMembers.length === 1) {
+      reassignment.reassignOne.mutate({
+        campaignId: firstMember.campaignId,
+        memberId: firstMember.memberId,
+        assignedTo: advisor.userId,
+      }, { onSuccess, onError });
+      return;
+    }
+    reassignment.reassignMany.mutate({
+      campaignId: followUp.selectedCampaign.id,
+      memberIds: reassignmentMembers.map((member) => member.memberId),
+      assignedTo: advisor.userId,
+    }, { onSuccess, onError });
   };
 
   return (
@@ -142,7 +226,7 @@ const SupervisorFollowUpView = () => {
             {isCampaignMode && (
               <div className="w-full space-y-1 lg:w-[320px]">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Seleccionar campaña</label>
-                <Select value={followUp.selectedCampaignId || undefined} onValueChange={followUp.selectCampaign} disabled={followUp.isLoadingCampaigns || followUp.isErrorCampaigns || followUp.campaigns.length === 0}>
+                <Select value={followUp.selectedCampaignId || undefined} onValueChange={handleCampaignChange} disabled={followUp.isLoadingCampaigns || followUp.isErrorCampaigns || followUp.campaigns.length === 0}>
                   <SelectTrigger className="bg-white"><SelectValue placeholder={followUp.isLoadingCampaigns ? "Cargando campañas…" : "Selecciona una campaña"} /></SelectTrigger>
                   <SelectContent>
                     {followUp.campaigns.map((campaign) => <SelectItem key={campaign.id} value={campaign.id}>{campaign.name}</SelectItem>)}
@@ -180,7 +264,7 @@ const SupervisorFollowUpView = () => {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Asesor</label>
-                  <Select value={followUp.campaignAdvisorUserId} onValueChange={followUp.setCampaignAdvisorUserId} disabled={!followUp.selectedCampaign || followUp.campaignAdvisors.length === 0 || followUp.isSalesRep}>
+                  <Select value={followUp.campaignAdvisorUserId} onValueChange={handleCampaignAdvisorChange} disabled={!followUp.selectedCampaign || followUp.campaignAdvisors.length === 0 || followUp.isSalesRep}>
                     <SelectTrigger className="bg-white"><SelectValue placeholder="Todos los asesores" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">Todos los asesores</SelectItem>
@@ -190,7 +274,7 @@ const SupervisorFollowUpView = () => {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Tipificación</label>
-                  <Select value={followUp.campaignMemberStatus} onValueChange={(value) => { if (value === "ALL" || isCampaignMemberStatus(value)) followUp.setCampaignMemberStatus(value); }} disabled={!followUp.selectedCampaign}>
+                  <Select value={followUp.campaignMemberStatus} onValueChange={handleCampaignStatusChange} disabled={!followUp.selectedCampaign}>
                     <SelectTrigger className="bg-white"><SelectValue placeholder="Todas las tipificaciones" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ALL">Todas las tipificaciones</SelectItem>
@@ -213,16 +297,26 @@ const SupervisorFollowUpView = () => {
                 <div className="space-y-3 px-4 py-16 text-center"><p className="text-sm text-rose-700">No fue posible consultar los prospectos de esta campaña.</p><Button type="button" variant="outline" onClick={() => followUp.retryMembers()}>Reintentar</Button></div>
               ) : (
                 <>
+                  {canReassign && selectedMemberIds.length > 0 && (
+                    <div className="flex flex-col gap-3 border-b bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="text-sm font-medium">{selectedMemberIds.length} prospecto{selectedMemberIds.length === 1 ? "" : "s"} seleccionado{selectedMemberIds.length === 1 ? "" : "s"}</span>
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" size="sm" onClick={openBulkReassignment}>Reasignar asesor</Button>
+                        <Button type="button" size="sm" variant="outline" onClick={() => setSelectedMemberIds([])}>Limpiar selección</Button>
+                      </div>
+                    </div>
+                  )}
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader><TableRow>
+                        {canReassign && <TableHead className="w-12"><Checkbox aria-label="Seleccionar prospectos visibles" checked={areAllVisibleMembersSelected ? true : hasPartialSelection ? "indeterminate" : false} onCheckedChange={(checked) => toggleVisibleSelection(checked === true)} /></TableHead>}
                         <TableHead><span className="flex items-center gap-1"><Calendar className="h-4 w-4" />Fecha/hora de asociación</span></TableHead>
                         <TableHead><span className="flex items-center gap-1"><BookOpen className="h-4 w-4" />Curso o programa</span></TableHead>
                         <TableHead><span className="flex items-center gap-1"><Phone className="h-4 w-4" />Celular principal</span></TableHead>
-                        <TableHead>Prospecto</TableHead><TableHead>Tipificación</TableHead><TableHead>Asesor</TableHead>
+                        <TableHead>Prospecto</TableHead><TableHead>Tipificación</TableHead><TableHead>Asesor actual</TableHead>{canReassign && <TableHead>Acciones</TableHead>}
                       </TableRow></TableHeader>
                       <TableBody>
-                        {followUp.memberRows.length === 0 ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">No hay prospectos para los filtros seleccionados.</TableCell></TableRow> : followUp.memberRows.map((member) => (
+                        {followUp.memberRows.length === 0 ? <TableRow><TableCell colSpan={canReassign ? 8 : 6} className="py-12 text-center text-muted-foreground">No hay prospectos para los filtros seleccionados.</TableCell></TableRow> : followUp.memberRows.map((member) => (
                           <TableRow
                             key={member.id}
                             tabIndex={0}
@@ -237,13 +331,15 @@ const SupervisorFollowUpView = () => {
                               }
                             }}
                           >
+                            {canReassign && <TableCell onClick={(event) => event.stopPropagation()}><Checkbox aria-label={`Seleccionar ${member.prospectName}`} checked={selectedMemberIds.includes(member.memberId)} onCheckedChange={(checked) => toggleMemberSelection(member.memberId, checked === true)} /></TableCell>}
                             <TableCell>{formatDateTime(member.associatedAt)}</TableCell><TableCell className="font-medium">{member.programName}</TableCell><TableCell>{member.phone}</TableCell><TableCell>{member.prospectName}</TableCell><TableCell><MemberStatusBadge status={member.memberStatus} /></TableCell><TableCell>{member.advisorName || "No disponible"}</TableCell>
+                            {canReassign && <TableCell onClick={(event) => event.stopPropagation()}><Button type="button" size="sm" variant="outline" onClick={() => setReassignmentMembers([member])}>Reasignar asesor</Button></TableCell>}
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </div>
-                  <Pagination page={followUp.campaignPage} totalPages={followUp.memberTotalPages} isFetching={followUp.isFetchingMembers} onPageChange={followUp.setCampaignPage} />
+                  <Pagination page={followUp.campaignPage} totalPages={followUp.memberTotalPages} isFetching={followUp.isFetchingMembers} onPageChange={handleCampaignPageChange} />
                 </>
               )}
             </>
@@ -287,6 +383,19 @@ const SupervisorFollowUpView = () => {
         selectedCampaignId={selectedMember?.campaignId ?? ""}
         interactionCount={selectedMember?.interactionCount}
         capabilities={{ ...drawer.capabilities, canEditLead: false }}
+      />
+      <CampaignMemberReassignmentDialog
+        open={reassignmentMembers.length > 0}
+        members={reassignmentMembers}
+        campaignName={followUp.selectedCampaign?.name ?? "Campaña"}
+        advisors={followUp.campaignAdvisors}
+        isPending={reassignment.reassignOne.isPending || reassignment.reassignMany.isPending}
+        onOpenChange={(open) => {
+          if (!open && !reassignment.reassignOne.isPending && !reassignment.reassignMany.isPending) {
+            setReassignmentMembers([]);
+          }
+        }}
+        onConfirm={confirmReassignment}
       />
     </div>
   );

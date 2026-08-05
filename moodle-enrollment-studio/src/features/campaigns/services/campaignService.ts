@@ -1,6 +1,5 @@
 import { api } from "@/core/lib/api";
 import { InferRequestType, InferResponseType } from "hono/client";
-import type { SuccessResponse } from "@/app";
 
 // ==========================================
 // INFERENCIA DE TIPOS ESTRICTA DESDE HONO
@@ -30,6 +29,37 @@ export class CampaignServiceError extends Error {
     super(safeMessage || "Campaign service request failed");
     this.name = "CampaignServiceError";
   }
+}
+
+const errorMessageFrom = (body: unknown): string | undefined => {
+  if (!body || typeof body !== "object") return undefined;
+  const message = Reflect.get(body, "message");
+  return typeof message === "string" ? message : undefined;
+};
+
+interface CampaignSuccessResponse {
+  success: boolean;
+  message?: string;
+}
+
+const readCampaignResponse = async (response: Response): Promise<unknown> => {
+  const body: unknown = await response.json();
+  if (!response.ok) {
+    throw new CampaignServiceError(response.status, errorMessageFrom(body));
+  }
+  return body;
+};
+
+export interface ReassignCampaignMemberParams {
+  campaignId: string;
+  memberId: string;
+  assignedTo: string;
+}
+
+export interface ReassignCampaignMembersBulkParams {
+  campaignId: string;
+  memberIds: string[];
+  assignedTo: string;
 }
 
 // Endpoints para el Supervisor (Matriz Excalidraw)
@@ -122,11 +152,20 @@ export const assignSellersToCampaign = async (id: string, data: AssignSellersReq
 /**
  * Permite al supervisor remover a un vendedor del flujo de leads de la campaña
  */
-export const removeSellerFromCampaign = async (id: string, sellerId: string): Promise<SuccessResponse> => {
+export const removeSellerFromCampaign = async (id: string, sellerId: string): Promise<CampaignSuccessResponse> => {
   const res = await api.campaigns[":id"]["sellers"][":sellerId"].$delete({
     param: { id, sellerId }
   });
-  return await res.json() as SuccessResponse;
+  const body: unknown = await res.json();
+  if (!body || typeof body !== "object") {
+    return { success: false, message: "Respuesta inesperada del servidor." };
+  }
+  const success = Reflect.get(body, "success");
+  const message = Reflect.get(body, "message");
+  return {
+    success: success === true,
+    ...(typeof message === "string" ? { message } : {}),
+  };
 };
 
 /**
@@ -146,21 +185,25 @@ export const getCampaignMembers = async (
 /**
  * Reasignar un miembro (lead) de la campaña a otro asesor
  */
-export const reassignCampaignMember = async (campaignId: string, memberId: string, data: { assigned_to: string }) => {
+export const reassignCampaignMember = async ({
+  campaignId,
+  memberId,
+  assignedTo,
+}: ReassignCampaignMemberParams): Promise<unknown> => {
   const res = await api.campaigns[":campaignId"]["members"][":memberId"]["reassign"].$patch({
     param: { campaignId, memberId },
-    json: data
+    json: { assigned_to: assignedTo },
   });
-  return await res.json();
+  return readCampaignResponse(res);
 };
 
 /**
  * Reasignar de manera masiva múltiples miembros de la campaña a otro asesor
  */
 export const reassignBulkCampaignMembers = async (campaignId: string, data: { member_ids: string[]; assigned_to: string }) => {
-  const res = await (api.campaigns as any)[":campaignId"].members["reassign-bulk"].$patch({
+  const res = await api.campaigns[":campaignId"].members["reassign-bulk"].$patch({
     param: { campaignId },
     json: data
   });
-  return await res.json();
+  return readCampaignResponse(res);
 };

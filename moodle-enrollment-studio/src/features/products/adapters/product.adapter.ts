@@ -1,6 +1,33 @@
 import type { CreateProductInput } from "../services/productService";
 import type { ProductFormValues } from "../schemas";
-import { BackendProductResponse, UIProduct } from "../types/product.types";
+import {
+  BackendProductResponse,
+  ProductAssignedProfessor,
+  UIProduct,
+} from "../types/product.types";
+
+export const getActiveProfessorNames = (
+  assignedProfessors: ProductAssignedProfessor[] | null | undefined,
+): string[] =>
+  (assignedProfessors ?? []).flatMap(({ professors }) => {
+    if (!professors?.is_active) return [];
+
+    const fullName = [professors.name, professors.lastname]
+      .filter((name): name is string => Boolean(name?.trim()))
+      .join(" ");
+
+    return fullName ? [fullName] : [];
+  });
+
+export const getAssignedProfessorsLabel = (
+  assignedProfessors: ProductAssignedProfessor[] | null | undefined,
+): string => {
+  const professorNames = getActiveProfessorNames(assignedProfessors);
+
+  return professorNames.length > 0
+    ? professorNames.join(" · ")
+    : "Profesor por asignar";
+};
 
 export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
   const category = data.category
@@ -24,6 +51,7 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
         duration_unit: data.edition.duration_unit || "",
         classes_number: data.edition.classes_number != null ? Number(data.edition.classes_number) : null,
         hours_amount: data.edition.hours_amount != null ? Number(data.edition.hours_amount) : null,
+        assigned_professors: data.edition.assigned_professors ?? null,
         course: data.edition.course
           ? {
               id: data.edition.course.id || "",
@@ -40,7 +68,7 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
   }));
 
   // ✅ CORREGIDO: Mapeo directo y defensivo compatible con Prisma anidado
-  const benefits = (data.relatedBenefits || []).map((rb: any) => ({
+  const benefits = (data.relatedBenefits || []).map((rb) => ({
     id: rb.benefits?.id || rb.benefit?.id || rb.id || rb.benefit_id || "",
     description: rb.benefits?.description || rb.benefit?.description || rb.description || "",
     name: rb.benefits?.name || rb.benefit?.name || rb.name || "",
@@ -48,14 +76,14 @@ export const adaptProductToUI = (data: BackendProductResponse): UIProduct => {
   }));
 
   // ✅ CORREGIDO: Mapeo de FAQs compatible con Prisma anidado
-  const faqs = (data.frequentQuestions || []).map((fq: any) => ({
+  const faqs = (data.frequentQuestions || []).map((fq) => ({
     id: fq.faq?.id || fq.id || fq.faq_id || "",
     question: fq.faq?.question || fq.question || "",
     answer: fq.faq?.answer || fq.answer || "",
   }));
 
   // ✅ CORREGIDO: Mapeo de Certificación compatible con Prisma anidado
-  const certObj = (data.relatedCertifications?.[0]?.certification || data.relatedCertifications?.[0]) as any;
+  const certObj = data.relatedCertifications?.[0]?.certification || data.relatedCertifications?.[0];
   const certification = certObj
     ? {
         id: certObj.id || "",

@@ -30,6 +30,16 @@ import ProductStatusBadge from "@/features/products/components/shared/ProductSta
 import { CustomTable } from "@/core/components/CustomTable";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PRODUCT_PERMISSIONS, RoleAccess } from "../utils/productPermissions";
+import type { BackendProductResponse } from "../types/product.types";
+import { getAssignedProfessorsLabel } from "../adapters/product.adapter";
+import { useCategories } from "../hooks/useCategories";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/components/ui/select";
 
 const ProductsView = () => {
   const user = useAuthStore((state) => state.user);
@@ -42,15 +52,18 @@ const ProductsView = () => {
     isError, 
     stats, 
     searchQuery, 
+    selectedCategoryId,
+    isCategoryEmpty,
     actions, 
     modals 
   } = useProductsView();
+  const { categories, isLoading: isCategoriesLoading } = useCategories();
 
   const catalogStats = useMemo(() => {
     let onSale = 0;
     let published = 0;
     let draft = 0;
-    products.forEach((p: any) => {
+    products.forEach((p) => {
       if (p.sales_status === "ON_SALE") onSale++;
       else if (p.sales_status === "PUBLISHED") published++;
       else if (p.sales_status === "DRAFT") draft++;
@@ -78,7 +91,7 @@ const ProductsView = () => {
   };
 
   // 1. Columnas declaradas con useMemo para alto rendimiento y soporte CustomTable
-  const columns = useMemo<ColumnDef<any>[]>(
+  const columns = useMemo<ColumnDef<BackendProductResponse>[]>(
     () => [
       {
         header: "Programa Académico",
@@ -97,7 +110,7 @@ const ProductsView = () => {
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <User size={12} className="shrink-0" />
                   <span className="truncate max-w-[180px]">
-                    {p.edition?.teacher_fullname || "Profesor por asignar"}
+                    {getAssignedProfessorsLabel(p.edition?.assigned_professors)}
                   </span>
                 </div>
               </div>
@@ -176,8 +189,8 @@ const ProductsView = () => {
           }
 
           if (prices.length >= 2) {
-            const virtualPrice = prices.find((pr: any) => pr.attendance_mode === "VIRTUAL") || prices[0];
-            const presencialPrice = prices.find((pr: any) => pr.attendance_mode === "PRESENCIAL") || prices[1];
+            const virtualPrice = prices.find((price) => price.attendance_mode === "VIRTUAL") || prices[0];
+            const presencialPrice = prices.find((price) => price.attendance_mode === "PRESENCIAL") || prices[1];
 
             const vCash = Number(virtualPrice.cash_price || 0).toFixed(2);
             const vInstallment = Number(virtualPrice.installment_price || 0).toFixed(2);
@@ -262,7 +275,7 @@ const ProductsView = () => {
         },
       },
     ],
-    [actions.navigate, actions.handleDeleteRequest, permissions, role]
+    [actions, permissions, role]
   );
 
   return (
@@ -342,8 +355,30 @@ const ProductsView = () => {
 
       {/* --- TABLE --- */}
       <div className="rounded-xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex flex-col gap-3 px-6 py-4 border-b border-border sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-bold text-foreground">Todos los Productos</h2>
+          <div className="flex items-center gap-3">
+            <label htmlFor="products-category-filter" className="text-xs font-semibold text-muted-foreground">
+              Categoría
+            </label>
+            <Select
+              value={selectedCategoryId || "all"}
+              onValueChange={(value) => actions.setSelectedCategoryId(value === "all" ? "" : value)}
+              disabled={isCategoriesLoading}
+            >
+              <SelectTrigger id="products-category-filter" className="h-9 w-full min-w-[210px] sm:w-[240px]">
+                <SelectValue placeholder="Todas las categorías" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las categorías</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {isLoading ? (
@@ -358,11 +393,18 @@ const ProductsView = () => {
         ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <GraduationCap className="h-12 w-12 mb-4 opacity-20" />
-            <p>{searchQuery ? "No se encontraron productos coincidentes." : "No hay productos registrados."}</p>
+            <p>
+              {isCategoryEmpty
+                ? "No hay productos en esta categoría."
+                : searchQuery
+                  ? "No se encontraron productos coincidentes."
+                  : "No hay productos registrados."}
+            </p>
           </div>
         ) : (
           <div className="p-6 bg-white">
             <CustomTable 
+              key={selectedCategoryId}
               data={products} 
               columns={columns} 
               onRowClick={(p) => actions.navigate(`/productos/${p.id}`)}
