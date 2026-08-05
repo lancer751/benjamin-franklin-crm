@@ -781,6 +781,13 @@ export function leadRepository(prisma: PrismaClient) {
       return prisma.tasks.findMany({
         where: { campaign_member_id: memberId },
         select: {
+          id: true,
+          title: true,
+          content: true,
+          is_done: true,
+          due_date: true,
+          campaign_member_id: true,
+          created_by: true,
           author: {
             select: {
               first_name: true,

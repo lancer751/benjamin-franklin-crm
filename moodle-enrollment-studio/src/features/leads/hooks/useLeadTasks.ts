@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { requireSuccess, taskDateInput, unwrapDetailList } from "../adapters/leadDetailAdapter";
-import type { LeadTask } from "../components/lead-detail/leadDetail.types";
+import { adaptLeadTasks, requireSuccess, taskDateInput } from "../adapters/leadDetailAdapter";
+import type { LeadTaskViewModel } from "../components/lead-detail/leadDetail.types";
 import type { TaskFormValues } from "../schemas/taskFormSchema";
 import { createMemberTask, deleteMemberTask, getMemberTasks, updateMemberTask, type MemberTaskUpdatePayload } from "../services/leadService";
 import { mapTaskFormToPayload } from "../utils/leadActionPayloadMappers";
@@ -34,15 +34,15 @@ export function useLeadTasks(campaignId: string, memberId: string, creatorUserId
     },
     onSuccess: async () => { await refresh(); toast.success("Tarea eliminada correctamente."); },
   });
-  const updateFromForm = (task: LeadTask, data: TaskFormValues, done: () => void) => {
+  const updateFromForm = (task: LeadTaskViewModel, data: TaskFormValues, done: () => void) => {
     const mapped = mapTaskFormToPayload(data);
     const payload: MemberTaskUpdatePayload = {};
     if ((task.title || "") !== mapped.title) payload.title = mapped.title;
     if ((task.content || "") !== mapped.content) payload.content = mapped.content;
-    const currentDate = taskDateInput(task.due_date);
+    const currentDate = taskDateInput(task.dueDate);
     if (currentDate !== data.due_date) payload.due_date = mapped.due_date;
     if (task.id && Object.keys(payload).length > 0) updateMutation.mutate({ taskId: task.id, payload }, { onSuccess: done });
     else done();
   };
-  return { query, tasks: unwrapDetailList<LeadTask>(query.data, "tasks"), createMutation, updateMutation, deleteMutation, updateFromForm };
+  return { query, tasks: adaptLeadTasks(query.data), createMutation, updateMutation, deleteMutation, updateFromForm };
 }

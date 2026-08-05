@@ -56,3 +56,17 @@ export interface LeadTask {
   updated_at?: string | null;
   author?: PersonName | null;
 }
+
+export interface LeadTaskViewModel {
+  id: string;
+  title: string;
+  content: string;
+  isDone: boolean;
+  dueDate: string | null;
+  author: {
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}

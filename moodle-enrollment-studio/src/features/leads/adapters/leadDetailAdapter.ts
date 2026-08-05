@@ -1,6 +1,11 @@
 import { isCampaignMemberStatus, type CampaignMemberStatus } from "@/core/constants/campaignMemberStatus";
 import { isLeadStatus, type LeadStatus } from "../utils/prospectDisplay";
-import type { LeadPhone, LeadTask, PersonName } from "../components/lead-detail/leadDetail.types";
+import type {
+  LeadPhone,
+  LeadTask,
+  LeadTaskViewModel,
+  PersonName,
+} from "../components/lead-detail/leadDetail.types";
 import { adaptLeadInteractions, type LeadInteractionViewModel } from "./leadInteractionAdapter";
 import { getApiErrorMessage } from "../utils/getApiErrorMessage";
 import {
@@ -147,6 +152,32 @@ export const adaptSellerAvailableCampaigns = (
 ): CampaignDialogOption[] => {
   return adaptSellerCampaignAssignments(response, userId, sellerProfileId);
 };
+
+const adaptLeadTask = (task: LeadTask): LeadTaskViewModel | null => {
+  const id = stringValue(task.id).trim();
+  if (!id) return null;
+
+  return {
+    id,
+    title: stringValue(task.title).trim(),
+    content: stringValue(task.content).trim(),
+    isDone: task.is_done === true,
+    dueDate: nullableString(task.due_date),
+    author: task.author
+      ? {
+          firstName: nullableString(task.author.first_name),
+          lastName: nullableString(task.author.last_name),
+        }
+      : null,
+    createdAt: stringValue(task.created_at),
+    updatedAt: stringValue(task.updated_at),
+  };
+};
+
+export const adaptLeadTasks = (response: unknown): LeadTaskViewModel[] =>
+  unwrapDetailList<LeadTask>(response, "tasks")
+    .map(adaptLeadTask)
+    .filter((task): task is LeadTaskViewModel => task !== null);
 
 export const createdMemberIdFrom = (response: unknown) => {
   if (!isRecord(response) || !isRecord(response.data)) return "";

@@ -1,4 +1,8 @@
-import type { LeadPhone, PersonName } from "./leadDetail.types";
+import type {
+  LeadPhone,
+  LeadTaskViewModel,
+  PersonName,
+} from "./leadDetail.types";
 import { INTERACTION_TYPE_LABELS } from "../../utils/interactionType.constants";
 
 const labels: Record<string, string> = {
@@ -23,6 +27,21 @@ export const formatLeadDate = (value?: string | null, withTime = false) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "No especificado";
   return new Intl.DateTimeFormat("es-PE", withTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" }).format(date);
+};
+export const taskAuthorName = (task: LeadTaskViewModel) => {
+  const name = [task.author?.firstName, task.author?.lastName]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.trim().replace(/\s+/g, " "))
+    .filter(Boolean)
+    .join(" ");
+  return name || "Usuario no disponible";
+};
+export const taskWasUpdated = (task: LeadTaskViewModel) => {
+  const createdAt = new Date(task.createdAt);
+  const updatedAt = new Date(task.updatedAt);
+  return !Number.isNaN(createdAt.getTime()) &&
+    !Number.isNaN(updatedAt.getTime()) &&
+    createdAt.getTime() !== updatedAt.getTime();
 };
 export const principalPhoneFrom = (phones: LeadPhone[]) => phones.find((phone) => phone.isPrincipal || phone.is_principal) ?? phones[0];
 export const isValidPhone = (phone?: string | null) => (phone?.replace(/\D/g, "").length ?? 0) >= 7;

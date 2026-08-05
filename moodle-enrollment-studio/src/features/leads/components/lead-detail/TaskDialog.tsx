@@ -10,12 +10,12 @@ import { Label } from "@/core/components/ui/label";
 import { Textarea } from "@/core/components/ui/textarea";
 import { taskDateInput } from "../../adapters/leadDetailAdapter";
 import { taskFormSchema, type TaskFormInput, type TaskFormValues } from "../../schemas/taskFormSchema";
-import type { LeadTask } from "./leadDetail.types";
+import type { LeadTaskViewModel } from "./leadDetail.types";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  task?: LeadTask | null;
+  task?: LeadTaskViewModel | null;
   isPending: boolean;
   error?: string;
   onSubmit: (data: TaskFormValues, done: () => void) => void;
@@ -37,8 +37,8 @@ export function TaskDialog({ open, onOpenChange, task, isPending, error, onSubmi
     form.reset({
       title: task?.title || "",
       content: task?.content || "",
-      due_date: taskDateInput(task?.due_date),
-      is_done: Boolean(task?.is_done),
+      due_date: taskDateInput(task?.dueDate),
+      is_done: task?.isDone ?? false,
     });
   }, [form, open, task]);
 
