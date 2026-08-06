@@ -9,6 +9,7 @@ import {
 import { getSellers } from "@/features/users/services/userService";
 import type { CampaignMemberStatus } from "@/core/constants/campaignMemberStatus";
 import { adaptCampaignAssignments, adaptAdvisorFilterOptions } from "../adapters/campaignAssignmentAdapter";
+import { adaptSellerTeamList, type SellerTeamCardModel } from "@/features/users/adapters/seller.adapter";
 import { adaptLeads, adaptProspectRows, unpackLeadPage } from "../adapters/leadAdapter";
 import { adaptTeamFollowUpMemberPage } from "../adapters/teamFollowUpAdapter";
 import { getAllLeads, type LeadListQuery } from "../services/leadService";
@@ -16,6 +17,8 @@ import { calculateSupervisorKPIs } from "../utils/leadLogic";
 import type { LeadStatus } from "../utils/prospectDisplay";
 
 export type TeamFollowUpMode = "ALL" | "UNASSIGNED" | "CAMPAIGN";
+export type SellerStatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
+export type SellerSortOption = "default" | "leads" | "matriculated" | "orders" | "name";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -44,6 +47,11 @@ export const useSupervisorFollowUp = () => {
   const [campaignAdvisorUserId, setCampaignAdvisorUserIdValue] = useState("ALL");
   const [campaignMemberStatus, setCampaignMemberStatusValue] = useState<CampaignMemberStatus | "ALL">("ALL");
   const [campaignPage, setCampaignPage] = useState(1);
+
+  // Seller panel controls state
+  const [sellerSearch, setSellerSearch] = useState("");
+  const [sellerStatusFilter, setSellerStatusFilter] = useState<SellerStatusFilter>("ALL");
+  const [sellerSortBy, setSellerSortBy] = useState<SellerSortOption>("default");
 
   useEffect(() => {
     const timeoutId = window.setTimeout(
@@ -161,12 +169,85 @@ export const useSupervisorFollowUp = () => {
 
   const rawSellers = useMemo(() => recordsFromResponse(sellersQuery.data), [sellersQuery.data]);
   const kpis = useMemo(() => calculateSupervisorKPIs(rawSellers), [rawSellers]);
+  const sellerCards = useMemo(() => adaptSellerTeamList(sellersQuery.data), [sellersQuery.data]);
+
+  // Filtered & sorted seller list for compact panel
+  const filteredAndSortedSellers = useMemo(() => {
+    const query = sellerSearch.trim().toLowerCase();
+    const filtered = sellerCards.filter((seller) => {
+      if (sellerStatusFilter === "ACTIVE" && !seller.isActive) return false;
+      if (sellerStatusFilter === "INACTIVE" && seller.isActive) return false;
+      if (!query) return true;
+      const nameMatch = seller.fullName.toLowerCase().includes(query);
+      const emailMatch = seller.corporateEmail ? seller.corporateEmail.toLowerCase().includes(query) : false;
+      return nameMatch || emailMatch;
+    });
+
+    return filtered.sort((a, b) => {
+      if (sellerSortBy === "leads") {
+        return b.totalLeads - a.totalLeads || a.fullName.localeCompare(b.fullName, "es");
+      }
+      if (sellerSortBy === "matriculated") {
+        return b.totalMatriculated - a.totalMatriculated || a.fullName.localeCompare(b.fullName, "es");
+      }
+      if (sellerSortBy === "orders") {
+        return b.totalOrders - a.totalOrders || a.fullName.localeCompare(b.fullName, "es");
+      }
+      if (sellerSortBy === "name") {
+        return a.fullName.localeCompare(b.fullName, "es");
+      }
+      // Default: Active w/ leads desc -> Active w/o leads -> Inactive at end
+      if (a.isActive !== b.isActive) {
+        return a.isActive ? -1 : 1;
+      }
+      if (a.isActive && b.isActive) {
+        if (b.totalLeads !== a.totalLeads) {
+          return b.totalLeads - a.totalLeads;
+        }
+      }
+      return a.fullName.localeCompare(b.fullName, "es");
+    });
+  }, [sellerCards, sellerSearch, sellerStatusFilter, sellerSortBy]);
+
+  // Selected seller logic
+  const selectedSellerUserId = mode === "CAMPAIGN"
+    ? (campaignAdvisorUserId !== "ALL" ? campaignAdvisorUserId : null)
+    : (leadAdvisorUserId !== "ALL" && leadAdvisorUserId !== "UNASSIGNED" ? leadAdvisorUserId : null);
+
+  const selectedSeller = useMemo<SellerTeamCardModel | null>(() => {
+    if (!selectedSellerUserId) return null;
+    return sellerCards.find((seller) => seller.userId === selectedSellerUserId) || null;
+  }, [sellerCards, selectedSellerUserId]);
+
+  const selectSeller = (userId: string) => {
+    if (selectedSellerUserId === userId) {
+      // Toggle off if clicking same seller
+      setLeadAdvisorUserIdValue("ALL");
+      setCampaignAdvisorUserIdValue("ALL");
+    } else {
+      setLeadAdvisorUserIdValue(userId);
+      setCampaignAdvisorUserIdValue(userId);
+      if (mode === "UNASSIGNED") {
+        setMode("ALL");
+      }
+    }
+    setLeadPage(1);
+    setCampaignPage(1);
+  };
+
+  const clearSellerSelection = () => {
+    setLeadAdvisorUserIdValue("ALL");
+    setCampaignAdvisorUserIdValue("ALL");
+    setLeadPage(1);
+    setCampaignPage(1);
+  };
 
   const selectMode = (nextMode: TeamFollowUpMode) => {
     setMode(nextMode);
     setLeadPage(1);
     setCampaignPage(1);
   };
+
   const selectCampaign = (campaignId: string) => {
     setSelectedCampaignIdValue(campaignId);
     setCampaignAdvisorUserIdValue("ALL");
@@ -218,6 +299,18 @@ export const useSupervisorFollowUp = () => {
     isSalesRep,
     role,
     kpis,
+    sellerCards,
+    filteredAndSortedSellers,
+    sellerSearch,
+    setSellerSearch,
+    sellerStatusFilter,
+    setSellerStatusFilter,
+    sellerSortBy,
+    setSellerSortBy,
+    selectedSellerUserId,
+    selectedSeller,
+    selectSeller,
+    clearSellerSelection,
     isLoadingSellers: sellersQuery.isLoading,
     isErrorSellers: sellersQuery.isError,
   };

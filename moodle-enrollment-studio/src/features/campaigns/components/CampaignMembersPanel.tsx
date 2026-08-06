@@ -75,6 +75,7 @@ export interface CampaignMembersPanelProps {
   sellers?: AdvisorFilterOption[];
   variant?: "team-follow-up" | "campaign-detail";
   title?: string;
+  initialAdvisorUserId?: string;
 }
 
 export const CampaignMembersPanel = ({
@@ -83,6 +84,7 @@ export const CampaignMembersPanel = ({
   sellers = [],
   variant = "campaign-detail",
   title,
+  initialAdvisorUserId,
 }: CampaignMembersPanelProps) => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -91,7 +93,7 @@ export const CampaignMembersPanel = ({
   const authenticatedUserId = user?.id ?? "";
   const canReassign = canReassignCampaignMembers(role);
 
-  const [campaignAdvisorUserId, setCampaignAdvisorUserId] = useState("ALL");
+  const [campaignAdvisorUserId, setCampaignAdvisorUserId] = useState(initialAdvisorUserId ?? "ALL");
   const [campaignMemberStatus, setCampaignMemberStatus] = useState<CampaignMemberStatus | "ALL">("ALL");
   const [campaignPage, setCampaignPage] = useState(1);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
