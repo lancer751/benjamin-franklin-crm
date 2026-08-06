@@ -251,18 +251,26 @@ export const lookupLeadExact = async (query: {
   email?: string;
   campaignId: string;
   sellerProfileId: string;
-}): Promise<LeadLookupResponse> => {
+}, signal?: AbortSignal): Promise<LeadLookupResponse> => {
   if (!query.sellerProfileId) {
     throw new Error("No se encontró el SellerProfile.id del usuario autenticado");
   }
-  const res = await (api.leads as any).lookup.$get({
+  const lookupClient = (api.leads as unknown as {
+    lookup: {
+      $get: (
+        args: { query: Record<string, string> },
+        options?: { init: { signal: AbortSignal } },
+      ) => Promise<Response>;
+    };
+  }).lookup;
+  const res = await lookupClient.$get({
     query: {
       ...(query.phone && { phone: query.phone }),
       ...(query.email && { email: query.email }),
       campaign_id: query.campaignId,
       seller_id: query.sellerProfileId,
     },
-  });
+  }, signal ? { init: { signal } } : undefined);
   const body = await res.json() as LeadLookupResponse & { error?: string };
   if (!res.ok && body.code !== "LEAD_IDENTITY_CONFLICT") {
     throw new Error(body.message || body.error || "No fue posible buscar el prospecto.");

@@ -244,8 +244,15 @@ export const CampaignMembersPanel = ({
               type="button"
               size="sm"
               onClick={() => {
-                const returnTo = encodeURIComponent(`/campanas/${campaignId}`);
-                navigate(`/prospectos/nuevo?campaignId=${encodeURIComponent(campaignId)}&returnTo=${returnTo}`);
+                const params = new URLSearchParams();
+                params.set("campaignId", campaignId);
+                if (initialAdvisorUserId) {
+                  params.set("advisorUserId", initialAdvisorUserId);
+                  params.set("returnTo", `/users/sellers/${initialAdvisorUserId}`);
+                } else {
+                  params.set("returnTo", `/campanas/${campaignId}`);
+                }
+                navigate(`/prospectos/nuevo?${params.toString()}`);
               }}
               aria-label="Registrar nuevo prospecto en esta campaña"
               className="gap-1.5 font-semibold"

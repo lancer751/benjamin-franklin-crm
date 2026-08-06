@@ -1,49 +1,58 @@
-import { useEffect, useMemo, useState } from "react";
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm, type UseFormReturn } from "react-hook-form";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getCampaignById, getCampaigns } from "@/features/campaigns/services/campaignService";
-import { getSellerCampaigns, getSellers } from "@/features/users/services/userService";
+import {
+  getCampaignById,
+  getCampaigns,
+} from "@/features/campaigns/services/campaignService";
+import { getSellers, getSellerCampaigns } from "@/features/users/services/userService";
+import {
+  adaptAllowedCampaigns,
+  adaptSellerCampaigns,
+  type LeadQuickCampaignOption,
+  type LeadQuickSellerOption,
+} from "../adapters/leadQuickFormAdapter";
+import {
+  leadQuickFormSchema,
+  defaultLeadQuickFormValues,
+  type LeadQuickFormData,
+  type LeadQuickFormInput,
+} from "../schemas/leadQuickFormSchema";
 import {
   addLeadToCampaign,
   createLead,
   createMemberInteraction,
   lookupLeadExact,
-  type LeadLookupResponse,
 } from "../services/leadService";
-import { useManualLeadLookup } from "./useManualLeadRegistration";
+import { buildCreateLeadPayload } from "../adapters/leadQuickFormAdapter";
 import { mapInteractionFormToPayload } from "../utils/leadActionPayloadMappers";
-import {
-  adaptAllowedCampaigns,
-  adaptSellerCampaigns,
-  buildCreateLeadPayload,
-  type LeadQuickCampaignOption,
-  type LeadQuickSellerOption,
-} from "../adapters/leadQuickFormAdapter";
-import {
-  defaultLeadQuickFormValues,
-  leadQuickFormSchema,
-  type LeadQuickFormData,
-  type LeadQuickFormInput,
-} from "../schemas/leadQuickFormSchema";
+import { interpretLeadLookup, useManualLeadLookup } from "./useManualLeadRegistration";
 
-interface PartialProgress {
-  leadId: string;
-  memberId?: string;
+interface MutationResponse {
+  success?: boolean;
+  data?: { id?: string };
+  message?: string;
+  error?: string;
 }
 
-export type LeadQuickFormApi = UseFormReturn<LeadQuickFormInput, unknown, LeadQuickFormData>;
+const asMutationResponse = (value: unknown): MutationResponse =>
+  value && typeof value === "object" ? value as MutationResponse : {};
 
-const isConflictLookup = (lookup?: LeadLookupResponse) => (
-  lookup?.success === false && lookup.code === "LEAD_IDENTITY_CONFLICT"
-);
+const requireCreatedId = (value: unknown, fallbackMessage: string): string => {
+  const response = asMutationResponse(value);
+  if (response.success && response.data?.id) return response.data.id;
+  throw new Error(response.message || response.error || fallbackMessage);
+};
 
-const duplicateLeadMessage = (message: string) => (
-  /already registered|ya (?:está|existe)|unique|duplicad/i.test(message)
-);
+class LeadAlreadyInCampaignError extends Error {
+  constructor(public readonly leadId: string) {
+    super("Este prospecto ya pertenece a la campaña seleccionada.");
+  }
+}
 
 export function useLeadCreationFlow() {
   const navigate = useNavigate();
@@ -60,12 +69,14 @@ export function useLeadCreationFlow() {
   const authenticatedUserId = user?.id || "";
 
   const urlCampaignId = searchParams.get("campaignId")?.trim() || "";
+  const urlAdvisorUserId = searchParams.get("advisorUserId")?.trim() || "";
   const rawReturnTo = searchParams.get("returnTo")?.trim() || "";
   const safeReturnTo = rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : "";
   const isContextualMode = Boolean(urlCampaignId);
+  const isContextualAdvisorMode = Boolean(urlCampaignId && urlAdvisorUserId);
 
-  const [partialProgress, setPartialProgress] = useState<PartialProgress | null>(null);
   const [flowError, setFlowError] = useState("");
+  const submitLock = useRef(false);
 
   const form = useForm<LeadQuickFormInput, unknown, LeadQuickFormData>({
     resolver: standardSchemaResolver(leadQuickFormSchema),
@@ -118,6 +129,16 @@ export function useLeadCreationFlow() {
       return [{ userId, sellerProfileId, name }];
     }).sort((first, second) => first.name.localeCompare(second.name, "es"));
   }, [contextualCampaignData]);
+
+  // Advisor validation for contextual advisor mode
+  const contextualAdvisorOption = useMemo(() => {
+    if (!urlAdvisorUserId) return null;
+    return contextualSellers.find((seller) => seller.userId === urlAdvisorUserId) || null;
+  }, [contextualSellers, urlAdvisorUserId]);
+
+  const isAdvisorValidInCampaign = isContextualAdvisorMode
+    ? Boolean(contextualAdvisorOption)
+    : true;
 
   // Global Queries (only if not in contextual mode)
   const sellerCampaignsQuery = useQuery({
@@ -178,8 +199,23 @@ export function useLeadCreationFlow() {
     }
   }, [authenticatedUserId, form, isSalesRep]);
 
-  // Contextual single seller auto-selection & validation
+  // Contextual single seller / specific advisor auto-selection & validation
   useEffect(() => {
+    if (isContextualAdvisorMode && !contextualCampaignQuery.isLoading && canChooseSeller && !isSalesRep) {
+      if (contextualAdvisorOption) {
+        if (form.getValues("sellerId") !== contextualAdvisorOption.userId) {
+          form.setValue("sellerId", contextualAdvisorOption.userId, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }
+        form.clearErrors("sellerId");
+      } else {
+        form.setValue("sellerId", "", { shouldDirty: true });
+      }
+      return;
+    }
+
     if (isContextualMode && !contextualCampaignQuery.isLoading && canChooseSeller && !isSalesRep) {
       if (contextualSellers.length === 1) {
         const singleSeller = contextualSellers[0];
@@ -220,10 +256,9 @@ export function useLeadCreationFlow() {
         form.clearErrors("sellerId");
       }
     }
-  }, [campaignId, canChooseSeller, contextualCampaignQuery.isLoading, contextualSellers, form, isContextualMode, isLoadingSellers, isSalesRep, sellerOptions, sellerOptionsError]);
+  }, [campaignId, canChooseSeller, contextualAdvisorOption, contextualCampaignQuery.isLoading, contextualSellers, form, isContextualAdvisorMode, isContextualMode, isLoadingSellers, isSalesRep, sellerOptions, sellerOptionsError]);
 
   useEffect(() => {
-    setPartialProgress(null);
     setFlowError("");
   }, [campaignId, selectedAssignedUserId, values.cellphone, values.email]);
 
@@ -239,9 +274,13 @@ export function useLeadCreationFlow() {
     Boolean(campaignId && selectedSellerProfileId),
   );
   const lookup = lookupState.lookup;
-  const hasIdentityConflict = isConflictLookup(lookup);
+  const leadLookupState = lookupState.state;
+  const hasIdentityConflict = leadLookupState.status === "error"
+    && leadLookupState.message.includes("pertenecen a prospectos diferentes");
   const existingLead = lookup?.success && lookup.data?.found ? lookup.data.lead : null;
-  const existingMemberId = lookup?.success ? lookup.data?.campaign_member_id || null : null;
+  const existingMemberId = leadLookupState.status === "existing-in-campaign"
+    ? leadLookupState.campaignMemberId
+    : null;
 
   const registrationMutation = useMutation({
     mutationFn: async (data: LeadQuickFormData) => {
@@ -259,114 +298,77 @@ export function useLeadCreationFlow() {
         campaignId: data.campaignId,
         sellerProfileId,
       };
-      const currentLookup = await lookupLeadExact(lookupArgs);
-      if (isConflictLookup(currentLookup)) {
-        throw new Error("El celular y el correo pertenecen a prospectos diferentes. Verifica los datos.");
+
+      const confirmedLookup = interpretLeadLookup(await lookupLeadExact(lookupArgs));
+      if (confirmedLookup.status === "error") throw new Error(confirmedLookup.message);
+      if (confirmedLookup.status === "idle" || confirmedLookup.status === "loading") {
+        throw new Error("No fue posible confirmar el estado actual del prospecto.");
+      }
+      if (confirmedLookup.status === "existing-in-campaign") {
+        throw new LeadAlreadyInCampaignError(confirmedLookup.leadId);
       }
 
-      let leadId = partialProgress?.leadId || currentLookup.data?.lead?.id;
-      let memberId = partialProgress?.memberId || currentLookup.data?.campaign_member_id || undefined;
-      let createdThisAttempt = false;
+      const mode: "created" | "linked" = confirmedLookup.status === "new" ? "created" : "linked";
+      const leadId = confirmedLookup.status === "existing-unassigned"
+        ? confirmedLookup.leadId
+        : requireCreatedId(
+          await createLead(buildCreateLeadPayload(data) as Parameters<typeof createLead>[0]),
+          "No se pudo crear el prospecto.",
+        );
 
-      if (!leadId) {
-        let leadResponse: {
-          success?: boolean;
-          data?: { id?: string };
-          message?: string;
-          error?: string;
-        } | undefined;
-        try {
-          const payload = buildCreateLeadPayload(data) as Parameters<typeof createLead>[0];
-          leadResponse = await createLead(payload) as unknown as typeof leadResponse;
-        } catch {
-          const recoveredLookup = await lookupLeadExact(lookupArgs);
-          if (recoveredLookup.data?.lead?.id) {
-            leadId = recoveredLookup.data.lead.id;
-            memberId = recoveredLookup.data.campaign_member_id || undefined;
-          } else {
-            throw new Error("No se pudo crear el prospecto.");
-          }
-        }
-        if (leadResponse?.success && leadResponse.data?.id) {
-          leadId = leadResponse.data.id;
-          createdThisAttempt = true;
-        } else if (!leadId) {
-          const message = leadResponse?.message || leadResponse?.error || "No se pudo crear el prospecto.";
-          if (!duplicateLeadMessage(message)) throw new Error(message);
-          const recoveredLookup = await lookupLeadExact(lookupArgs);
-          if (isConflictLookup(recoveredLookup) || !recoveredLookup.data?.lead?.id) {
-            throw new Error("El prospecto ya existe, pero no fue posible recuperarlo de forma segura.");
-          }
-          leadId = recoveredLookup.data.lead.id;
-          memberId = recoveredLookup.data.campaign_member_id || undefined;
-        }
-      }
-
-      if (!memberId) {
-        let memberResponse: { success?: boolean; data?: { id?: string }; message?: string; error?: string } | undefined;
-        try {
-          memberResponse = await addLeadToCampaign(data.campaignId, {
-            lead_id: leadId,
-            campaing_id: data.campaignId,
-            assigned_to: assignedUserId,
-            source: data.source,
-            is_primary: true,
-          }) as typeof memberResponse;
-        } catch {
-          const recoveredLookup = await lookupLeadExact(lookupArgs);
-          memberId = recoveredLookup.data?.campaign_member_id || undefined;
-        }
-
-        if (memberResponse?.success && memberResponse.data?.id) {
-          memberId = memberResponse.data.id;
-        } else if (!memberId) {
-          const recoveredLookup = await lookupLeadExact(lookupArgs);
-          memberId = recoveredLookup.data?.campaign_member_id || undefined;
-          if (!memberId) {
-            setPartialProgress({ leadId });
-            throw new Error(createdThisAttempt
-              ? "El prospecto fue creado, pero no se pudo asociar a la campaña."
-              : memberResponse?.message || memberResponse?.error || "No se pudo asociar el prospecto a la campaña.");
-          }
-        }
-      }
+      const memberId = requireCreatedId(await addLeadToCampaign(data.campaignId, {
+        lead_id: leadId,
+        campaing_id: data.campaignId,
+        assigned_to: assignedUserId,
+        source: data.source,
+        is_primary: true,
+      }), "No se pudo asociar el prospecto a la campaña.");
 
       try {
         const interactionPayload = mapInteractionFormToPayload({
           notes: data.notes,
           type: data.interactionType,
         });
-        const interactionResponse = await createMemberInteraction(
+        const interactionResponse = asMutationResponse(await createMemberInteraction(
           data.campaignId,
           memberId,
           interactionPayload.notes,
           interactionPayload.type,
           authenticatedUserId,
-        ) as { success?: boolean };
-        if (!interactionResponse.success) throw new Error("Interaction request failed");
-      } catch {
-        setPartialProgress({ leadId, memberId });
-        throw new Error("El prospecto fue registrado y asociado a la campaña, pero no se pudo guardar la interacción inicial.");
+        ));
+        if (!interactionResponse.success) {
+          throw new Error(interactionResponse.message || interactionResponse.error || "No se pudo guardar la interacción inicial.");
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "No se pudo guardar la interacción inicial.";
+        throw new Error(`El prospecto fue asociado a la campaña, pero no se pudo guardar la interacción inicial: ${message}`);
       }
 
-      return { leadId, memberId };
+      return { leadId, memberId, mode };
     },
     onMutate: () => setFlowError(""),
-    onError: (error) => setFlowError(error instanceof Error ? error.message : "No se pudo registrar el prospecto."),
-    onSuccess: async ({ leadId }) => {
-      setPartialProgress(null);
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "No se pudo registrar el prospecto.";
+      setFlowError(message);
+      if (error instanceof LeadAlreadyInCampaignError) toast.warning(message);
+    },
+    onSettled: () => { submitLock.current = false; },
+    onSuccess: async ({ leadId, mode }) => {
       const targetCampaignId = campaignId || urlCampaignId;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["leads"] }),
-        queryClient.invalidateQueries({ queryKey: ["all-leads"] }),
         queryClient.invalidateQueries({ queryKey: ["campaign-members", targetCampaignId] }),
         queryClient.invalidateQueries({ queryKey: ["team-follow-up", "campaign-members", targetCampaignId] }),
         queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", targetCampaignId, selectedSellerProfileId] }),
         queryClient.invalidateQueries({ queryKey: ["campaign", targetCampaignId] }),
-        queryClient.invalidateQueries({ queryKey: ["campaigns"] }),
+        urlAdvisorUserId
+          ? queryClient.invalidateQueries({ queryKey: ["seller-detail", urlAdvisorUserId] })
+          : Promise.resolve(),
         queryClient.invalidateQueries({ queryKey: ["lead", leadId] }),
       ]);
-      toast.success("Prospecto registrado correctamente.");
+      toast.success(mode === "created"
+        ? "Prospecto registrado y asociado a la campaña."
+        : "Prospecto existente asociado a la campaña.");
       if (safeReturnTo) {
         navigate(safeReturnTo);
       } else if (isContextualMode && targetCampaignId) {
@@ -380,21 +382,19 @@ export function useLeadCreationFlow() {
   const schemaIsValid = leadQuickFormSchema.safeParse(values).success;
   const sellerIsValid = isSalesRep
     ? Boolean(authenticatedUserId && authenticatedSellerProfileId)
-    : Boolean(values.sellerId && sellerOptions.some((seller) => seller.userId === values.sellerId));
+    : Boolean(values.sellerId && sellerOptions.some((seller) => seller.userId === values.sellerId)) && isAdvisorValidInCampaign;
   const canSubmit = schemaIsValid
     && sellerIsValid
     && !isLoadingSellers
     && !sellerOptionsError
-    && !hasIdentityConflict
-    && !lookupState.isSearching
+    && (leadLookupState.status === "new" || leadLookupState.status === "existing-unassigned")
     && !registrationMutation.isPending;
-  const actionLabel = partialProgress?.memberId
-    ? "Reintentar interacción"
-    : existingMemberId
-      ? "Registrar interacción"
-      : existingLead
-        ? "Añadir a campaña"
-        : "Registrar prospecto";
+  const actionLabel = leadLookupState.status === "existing-in-campaign"
+    ? "Ya está en la campaña"
+    : leadLookupState.status === "existing-unassigned"
+      ? "Agregar a la campaña"
+      : "Registrar prospecto";
+  const pendingLabel = leadLookupState.status === "existing-unassigned" ? "Agregando…" : "Registrando…";
 
   return {
     form,
@@ -402,6 +402,9 @@ export function useLeadCreationFlow() {
     isSalesRep,
     canChooseSeller,
     isContextualMode,
+    isContextualAdvisorMode,
+    isAdvisorValidInCampaign,
+    contextualSellerName: contextualAdvisorOption?.name || "",
     contextualCampaignName,
     safeReturnTo,
     campaigns,
@@ -411,25 +414,21 @@ export function useLeadCreationFlow() {
     isLoadingCampaigns: isContextualMode ? contextualCampaignQuery.isLoading : (isSalesRep ? sellerCampaignsQuery.isLoading : allowedCampaignsQuery.isLoading),
     campaignError: isContextualMode ? contextualCampaignQuery.isError : (isSalesRep ? sellerCampaignsQuery.isError : allowedCampaignsQuery.isError),
     lookup,
+    lookupState,
+    leadLookupState,
+    hasIdentityConflict,
     existingLead,
     existingMemberId,
-    hasIdentityConflict,
-    isSearching: lookupState.isSearching,
-    isLookupError: lookupState.isLookupError,
-    hasLookupCriteria: lookupState.canLookup,
     flowError,
-    actionLabel,
     canSubmit,
-    isPending: registrationMutation.isPending,
-    hasPartialInteraction: Boolean(partialProgress?.memberId),
-    setCampaign: (id: string) => {
-      form.setValue("campaignId", id, { shouldDirty: true, shouldValidate: true });
-      if (!isSalesRep && !isContextualMode) {
-        form.setValue("sellerId", "", { shouldDirty: true });
-        form.clearErrors("sellerId");
-      }
-    },
-    submit: form.handleSubmit((data) => registrationMutation.mutate(data)),
+    actionLabel,
+    pendingLabel,
+    isRegistering: registrationMutation.isPending,
+    onSubmit: form.handleSubmit((data) => {
+      if (submitLock.current || registrationMutation.isPending) return;
+      submitLock.current = true;
+      registrationMutation.mutate(data);
+    }),
     cancel: () => {
       if (safeReturnTo) {
         navigate(safeReturnTo);
@@ -438,6 +437,10 @@ export function useLeadCreationFlow() {
       } else {
         navigate("/prospectos");
       }
+    },
+    setCampaign: (newCampaignId: string) => {
+      form.setValue("campaignId", newCampaignId, { shouldDirty: true, shouldValidate: true });
+      if (!isSalesRep) form.setValue("sellerId", "", { shouldDirty: true });
     },
   };
 }

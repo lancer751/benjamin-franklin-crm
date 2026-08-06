@@ -28,6 +28,36 @@ interface LookupValues {
   email: string;
 }
 
+export type LeadLookupState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "new" }
+  | { status: "existing-unassigned"; leadId: string; leadName: string; matchedBy: string | null }
+  | { status: "existing-in-campaign"; leadId: string; campaignMemberId: string; leadName: string; matchedBy: string | null }
+  | { status: "error"; message: string };
+
+export const interpretLeadLookup = (lookup: LeadLookupResponse): LeadLookupState => {
+  if (!lookup.success) {
+    return {
+      status: "error",
+      message: lookup.code === "LEAD_IDENTITY_CONFLICT"
+        ? "El celular y el correo pertenecen a prospectos diferentes. Verifica los datos."
+        : lookup.message || "No fue posible comprobar si el prospecto ya existe.",
+    };
+  }
+  if (!lookup.data?.found) return { status: "new" };
+  if (!lookup.data.lead?.id) {
+    return { status: "error", message: "El lookup encontró un prospecto sin un identificador válido." };
+  }
+  const leadName = [lookup.data.lead.first_name, lookup.data.lead.last_name]
+    .filter((value): value is string => Boolean(value))
+    .join(" ") || "Prospecto sin nombre";
+  const common = { leadId: lookup.data.lead.id, leadName, matchedBy: lookup.data.matchedBy };
+  return lookup.data.campaign_member_id
+    ? { status: "existing-in-campaign", ...common, campaignMemberId: lookup.data.campaign_member_id }
+    : { status: "existing-unassigned", ...common };
+};
+
 export function useManualLeadLookup(
   values: LookupValues,
   campaignId: string,
@@ -66,12 +96,12 @@ export function useManualLeadLookup(
       debouncedLookup?.phone ?? "",
       debouncedLookup?.email ?? "",
     ],
-    queryFn: () => lookupLeadExact({
+    queryFn: ({ signal }) => lookupLeadExact({
       phone: debouncedLookup?.phone,
       email: debouncedLookup?.email,
       campaignId,
       sellerProfileId: sellerProfileId!,
-    }),
+    }, signal),
     enabled: Boolean(enabled && campaignId && sellerProfileId && debouncedLookup),
   });
 
@@ -81,8 +111,20 @@ export function useManualLeadLookup(
     && debouncedLookup.email === validEmail,
   );
 
+  const lookup = lookupIsCurrent ? lookupQuery.data : undefined;
+  const state: LeadLookupState = !canLookup
+    ? { status: "idle" }
+    : !lookupIsCurrent || isDebouncing || lookupQuery.isFetching
+      ? { status: "loading" }
+      : lookupQuery.isError
+        ? { status: "error", message: lookupQuery.error instanceof Error ? lookupQuery.error.message : "No fue posible comprobar si el prospecto ya existe." }
+        : lookup
+          ? interpretLeadLookup(lookup)
+          : { status: "idle" };
+
   return {
-    lookup: lookupIsCurrent ? lookupQuery.data : undefined,
+    lookup,
+    state,
     isSearching: canLookup && (!lookupIsCurrent || isDebouncing || lookupQuery.isFetching),
     isLookupError: lookupQuery.isError,
     canLookup,
@@ -113,7 +155,7 @@ export function useManualLeadRegistration(
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: ManualLeadData) => {
+    mutationFn: async (data: ManualLeadData & { dni?: string }) => {
       if (!sellerProfileId || !assignedUserId) {
         throw new Error("No se identificó al asesor de ventas.");
       }
@@ -134,6 +176,7 @@ export function useManualLeadRegistration(
           first_name: data.first_name,
           last_name: data.last_name,
           email: data.email,
+          dni: data.dni,
           phones: [{ number: data.cellphone, type: "WHATSAPP", isPrincipal: true }],
           lead_status: "ACTIVE",
           gender: "NOT_SPECIFIED",
