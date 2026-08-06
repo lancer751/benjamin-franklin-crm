@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, type UseFormReturn } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getCampaigns } from "@/features/campaigns/services/campaignService";
+import { getCampaignById, getCampaigns } from "@/features/campaigns/services/campaignService";
 import { getSellerCampaigns, getSellers } from "@/features/users/services/userService";
 import {
   addLeadToCampaign,
@@ -20,6 +20,8 @@ import {
   adaptAllowedCampaigns,
   adaptSellerCampaigns,
   buildCreateLeadPayload,
+  type LeadQuickCampaignOption,
+  type LeadQuickSellerOption,
 } from "../adapters/leadQuickFormAdapter";
 import {
   defaultLeadQuickFormValues,
@@ -45,6 +47,7 @@ const duplicateLeadMessage = (message: string) => (
 
 export function useLeadCreationFlow() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const role = user?.role?.name ?? "";
@@ -55,6 +58,12 @@ export function useLeadCreationFlow() {
     || role === "MARKETING";
   const authenticatedSellerProfileId = user?.seller?.id || "";
   const authenticatedUserId = user?.id || "";
+
+  const urlCampaignId = searchParams.get("campaignId")?.trim() || "";
+  const rawReturnTo = searchParams.get("returnTo")?.trim() || "";
+  const safeReturnTo = rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : "";
+  const isContextualMode = Boolean(urlCampaignId);
+
   const [partialProgress, setPartialProgress] = useState<PartialProgress | null>(null);
   const [flowError, setFlowError] = useState("");
 
@@ -70,36 +79,98 @@ export function useLeadCreationFlow() {
   const campaignId = values.campaignId;
   const selectedAssignedUserId = isSalesRep ? authenticatedUserId : values.sellerId;
 
+  // Contextual Campaign Fetch
+  const contextualCampaignQuery = useQuery({
+    queryKey: ["campaign", urlCampaignId],
+    queryFn: () => getCampaignById(urlCampaignId),
+    enabled: isContextualMode && Boolean(user),
+  });
+
+  const contextualCampaignData = useMemo(() => {
+    if (!contextualCampaignQuery.data) return null;
+    const res = contextualCampaignQuery.data as Record<string, unknown>;
+    return (res.data as Record<string, unknown>) || res;
+  }, [contextualCampaignQuery.data]);
+
+  const contextualCampaignName = useMemo(() => {
+    if (!contextualCampaignData) return "Campaña";
+    return (contextualCampaignData.name as string) || "Campaña";
+  }, [contextualCampaignData]);
+
+  const contextualSellers: LeadQuickSellerOption[] = useMemo(() => {
+    if (!contextualCampaignData || !Array.isArray(contextualCampaignData.sellersOnCampaign)) return [];
+    return contextualCampaignData.sellersOnCampaign.flatMap((cs: unknown) => {
+      if (typeof cs !== "object" || cs === null) return [];
+      const assignment = cs as Record<string, unknown>;
+      const seller = typeof assignment.seller === "object" && assignment.seller !== null
+        ? (assignment.seller as Record<string, unknown>)
+        : {};
+      const userObj = typeof seller.user === "object" && seller.user !== null
+        ? (seller.user as Record<string, unknown>)
+        : {};
+      if (userObj.is_active === false) return [];
+      const userId = typeof userObj.id === "string" ? userObj.id : typeof seller.user_id === "string" ? seller.user_id : "";
+      const sellerProfileId = typeof assignment.seller_id === "string" ? assignment.seller_id : typeof seller.id === "string" ? seller.id : "";
+      if (!userId || !sellerProfileId) return [];
+      const firstName = typeof userObj.first_name === "string" ? userObj.first_name : "";
+      const lastName = typeof userObj.last_name === "string" ? userObj.last_name : "";
+      const name = `${firstName} ${lastName}`.trim() || "Asesor sin nombre";
+      return [{ userId, sellerProfileId, name }];
+    }).sort((first, second) => first.name.localeCompare(second.name, "es"));
+  }, [contextualCampaignData]);
+
+  // Global Queries (only if not in contextual mode)
   const sellerCampaignsQuery = useQuery({
     queryKey: ["seller-campaigns", authenticatedSellerProfileId],
     queryFn: () => getSellerCampaigns(authenticatedSellerProfileId),
-    enabled: isSalesRep && Boolean(authenticatedSellerProfileId),
+    enabled: !isContextualMode && isSalesRep && Boolean(authenticatedSellerProfileId),
   });
   const allowedCampaignsQuery = useQuery({
     queryKey: ["campaigns", "lead-quick-form", 1, 100],
     queryFn: () => getCampaigns({ page: "1", limit: "100" }),
-    enabled: Boolean(user) && !isSalesRep,
+    enabled: !isContextualMode && Boolean(user) && !isSalesRep,
   });
   const sellersQuery = useQuery({
     queryKey: ["users", "sellers", "campaign-assignment"],
     queryFn: getSellers,
-    enabled: Boolean(user) && canChooseSeller && !isSalesRep,
+    enabled: !isContextualMode && Boolean(user) && canChooseSeller && !isSalesRep,
   });
 
-  const campaigns = useMemo(
-    () => isSalesRep
+  const campaigns = useMemo<LeadQuickCampaignOption[]>(() => {
+    if (isContextualMode) {
+      return [{
+        id: urlCampaignId,
+        name: contextualCampaignName,
+        platform: "",
+        sellers: contextualSellers,
+      }];
+    }
+    return isSalesRep
       ? adaptSellerCampaigns(sellerCampaignsQuery.data)
-      : adaptAllowedCampaigns(allowedCampaignsQuery.data, sellersQuery.data),
-    [allowedCampaignsQuery.data, isSalesRep, sellerCampaignsQuery.data, sellersQuery.data],
-  );
+      : adaptAllowedCampaigns(allowedCampaignsQuery.data, sellersQuery.data);
+  }, [allowedCampaignsQuery.data, isContextualMode, isSalesRep, sellerCampaignsQuery.data, sellersQuery.data, urlCampaignId, contextualCampaignName, contextualSellers]);
+
   const selectedCampaign = campaigns.find((campaign) => campaign.id === campaignId);
-  const sellerOptions = canChooseSeller ? selectedCampaign?.sellers || [] : [];
-  const isLoadingSellers = canChooseSeller
-    && Boolean(campaignId)
-    && (allowedCampaignsQuery.isLoading || sellersQuery.isLoading);
-  const sellerOptionsError = canChooseSeller
-    && Boolean(campaignId)
-    && (allowedCampaignsQuery.isError || sellersQuery.isError);
+
+  const sellerOptions = useMemo<LeadQuickSellerOption[]>(() => {
+    if (isContextualMode) return contextualSellers;
+    return canChooseSeller ? selectedCampaign?.sellers || [] : [];
+  }, [canChooseSeller, isContextualMode, contextualSellers, selectedCampaign?.sellers]);
+
+  const isLoadingSellers = isContextualMode
+    ? contextualCampaignQuery.isLoading
+    : (canChooseSeller && Boolean(campaignId) && (allowedCampaignsQuery.isLoading || sellersQuery.isLoading));
+
+  const sellerOptionsError = isContextualMode
+    ? (contextualCampaignQuery.isError || (!contextualCampaignQuery.isLoading && !contextualCampaignData))
+    : (canChooseSeller && Boolean(campaignId) && (allowedCampaignsQuery.isError || sellersQuery.isError));
+
+  // Initialize campaign value in contextual mode
+  useEffect(() => {
+    if (urlCampaignId) {
+      form.setValue("campaignId", urlCampaignId, { shouldValidate: true });
+    }
+  }, [urlCampaignId, form]);
 
   useEffect(() => {
     if (isSalesRep && authenticatedUserId) {
@@ -107,25 +178,49 @@ export function useLeadCreationFlow() {
     }
   }, [authenticatedUserId, form, isSalesRep]);
 
+  // Contextual single seller auto-selection & validation
   useEffect(() => {
-    if (!canChooseSeller || !campaignId || isLoadingSellers || sellerOptionsError) return;
-    const currentSellerId = form.getValues("sellerId") || "";
-    if (sellerOptions.length === 1) {
-      const onlySeller = sellerOptions[0];
-      if (currentSellerId !== onlySeller.userId) {
-        form.setValue("sellerId", onlySeller.userId, {
-          shouldDirty: true,
-          shouldValidate: true,
-        });
+    if (isContextualMode && !contextualCampaignQuery.isLoading && canChooseSeller && !isSalesRep) {
+      if (contextualSellers.length === 1) {
+        const singleSeller = contextualSellers[0];
+        if (form.getValues("sellerId") !== singleSeller.userId) {
+          form.setValue("sellerId", singleSeller.userId, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }
+        form.clearErrors("sellerId");
+        return;
       }
-      form.clearErrors("sellerId");
+      if (contextualSellers.length > 1) {
+        const currentSellerId = form.getValues("sellerId") || "";
+        if (currentSellerId && !contextualSellers.some((seller) => seller.userId === currentSellerId)) {
+          form.setValue("sellerId", "", { shouldDirty: true });
+          form.clearErrors("sellerId");
+        }
+      }
       return;
     }
-    if (currentSellerId && !sellerOptions.some((seller) => seller.userId === currentSellerId)) {
-      form.setValue("sellerId", "", { shouldDirty: true });
-      form.clearErrors("sellerId");
+
+    if (!isContextualMode && canChooseSeller && campaignId && !isLoadingSellers && !sellerOptionsError) {
+      const currentSellerId = form.getValues("sellerId") || "";
+      if (sellerOptions.length === 1) {
+        const onlySeller = sellerOptions[0];
+        if (currentSellerId !== onlySeller.userId) {
+          form.setValue("sellerId", onlySeller.userId, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }
+        form.clearErrors("sellerId");
+        return;
+      }
+      if (currentSellerId && !sellerOptions.some((seller) => seller.userId === currentSellerId)) {
+        form.setValue("sellerId", "", { shouldDirty: true });
+        form.clearErrors("sellerId");
+      }
     }
-  }, [campaignId, canChooseSeller, form, isLoadingSellers, sellerOptions, sellerOptionsError]);
+  }, [campaignId, canChooseSeller, contextualCampaignQuery.isLoading, contextualSellers, form, isContextualMode, isLoadingSellers, isSalesRep, sellerOptions, sellerOptionsError]);
 
   useEffect(() => {
     setPartialProgress(null);
@@ -260,14 +355,25 @@ export function useLeadCreationFlow() {
     onError: (error) => setFlowError(error instanceof Error ? error.message : "No se pudo registrar el prospecto."),
     onSuccess: async ({ leadId }) => {
       setPartialProgress(null);
+      const targetCampaignId = campaignId || urlCampaignId;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["leads"] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-members", campaignId] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", campaignId, selectedSellerProfileId] }),
+        queryClient.invalidateQueries({ queryKey: ["all-leads"] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-members", targetCampaignId] }),
+        queryClient.invalidateQueries({ queryKey: ["team-follow-up", "campaign-members", targetCampaignId] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", targetCampaignId, selectedSellerProfileId] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign", targetCampaignId] }),
+        queryClient.invalidateQueries({ queryKey: ["campaigns"] }),
         queryClient.invalidateQueries({ queryKey: ["lead", leadId] }),
       ]);
       toast.success("Prospecto registrado correctamente.");
-      navigate(`/prospectos/${leadId}`);
+      if (safeReturnTo) {
+        navigate(safeReturnTo);
+      } else if (isContextualMode && targetCampaignId) {
+        navigate(`/campanas/${targetCampaignId}`);
+      } else {
+        navigate(`/prospectos/${leadId}`);
+      }
     },
   });
 
@@ -295,12 +401,15 @@ export function useLeadCreationFlow() {
     role,
     isSalesRep,
     canChooseSeller,
+    isContextualMode,
+    contextualCampaignName,
+    safeReturnTo,
     campaigns,
     sellerOptions,
     isLoadingSellers,
     sellerOptionsError,
-    isLoadingCampaigns: isSalesRep ? sellerCampaignsQuery.isLoading : allowedCampaignsQuery.isLoading,
-    campaignError: isSalesRep ? sellerCampaignsQuery.isError : allowedCampaignsQuery.isError,
+    isLoadingCampaigns: isContextualMode ? contextualCampaignQuery.isLoading : (isSalesRep ? sellerCampaignsQuery.isLoading : allowedCampaignsQuery.isLoading),
+    campaignError: isContextualMode ? contextualCampaignQuery.isError : (isSalesRep ? sellerCampaignsQuery.isError : allowedCampaignsQuery.isError),
     lookup,
     existingLead,
     existingMemberId,
@@ -315,13 +424,21 @@ export function useLeadCreationFlow() {
     hasPartialInteraction: Boolean(partialProgress?.memberId),
     setCampaign: (id: string) => {
       form.setValue("campaignId", id, { shouldDirty: true, shouldValidate: true });
-      if (!isSalesRep) {
+      if (!isSalesRep && !isContextualMode) {
         form.setValue("sellerId", "", { shouldDirty: true });
         form.clearErrors("sellerId");
       }
     },
     submit: form.handleSubmit((data) => registrationMutation.mutate(data)),
-    cancel: () => navigate("/prospectos"),
+    cancel: () => {
+      if (safeReturnTo) {
+        navigate(safeReturnTo);
+      } else if (isContextualMode && urlCampaignId) {
+        navigate(`/campanas/${urlCampaignId}`);
+      } else {
+        navigate("/prospectos");
+      }
+    },
   };
 }
 

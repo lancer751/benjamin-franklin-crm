@@ -16,9 +16,17 @@ export function LeadQuickForm() {
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:py-8">
       <header className="space-y-3">
         <Button type="button" variant="ghost" className="-ml-3 w-fit" onClick={controller.cancel}>
-          <ArrowLeft className="h-4 w-4" />Volver a prospectos
+          <ArrowLeft className="h-4 w-4" />
+          {controller.isContextualMode ? "Volver a la campaña" : "Volver a prospectos"}
         </Button>
-        <div><h1 className="text-2xl font-bold tracking-tight">Nuevo prospecto</h1><p className="mt-1 text-sm text-muted-foreground">Registra los datos principales, asígnalo a una campaña y deja constancia del primer contacto.</p></div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Nuevo prospecto</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {controller.isContextualMode
+              ? `Registra un prospecto para la campaña ${controller.contextualCampaignName}.`
+              : "Registra los datos principales, asígnalo a una campaña y deja constancia del primer contacto."}
+          </p>
+        </div>
       </header>
       <Form {...controller.form}>
         <form onSubmit={controller.submit} className="space-y-5" noValidate>

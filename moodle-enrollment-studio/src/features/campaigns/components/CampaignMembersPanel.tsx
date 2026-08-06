@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { BookOpen, Calendar, ChevronLeft, ChevronRight, Loader2, Phone } from "lucide-react";
+import { BookOpen, Calendar, ChevronLeft, ChevronRight, Loader2, Phone, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Badge } from "@/core/components/ui/badge";
@@ -83,6 +84,7 @@ export const CampaignMembersPanel = ({
   variant = "campaign-detail",
   title,
 }: CampaignMembersPanelProps) => {
+  const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const role = user?.role?.name ?? "";
   const isSalesRep = role === "SALES_REP";
@@ -233,7 +235,24 @@ export const CampaignMembersPanel = ({
               : `${memberPageData.total} prospecto${memberPageData.total === 1 ? "" : "s"} asociado${memberPageData.total === 1 ? "" : "s"} según el backend.`}
           </p>
         </div>
-        {membersQuery.isFetching && <Loader2 className="h-4 w-4 animate-spin text-primary" aria-label="Actualizando" />}
+        <div className="flex flex-wrap items-center gap-3">
+          {membersQuery.isFetching && <Loader2 className="h-4 w-4 animate-spin text-primary" aria-label="Actualizando" />}
+          {variant === "campaign-detail" && campaignId && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                const returnTo = encodeURIComponent(`/campanas/${campaignId}`);
+                navigate(`/prospectos/nuevo?campaignId=${encodeURIComponent(campaignId)}&returnTo=${returnTo}`);
+              }}
+              aria-label="Registrar nuevo prospecto en esta campaña"
+              className="gap-1.5 font-semibold"
+            >
+              <Plus size={16} />
+              Nuevo prospecto
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 border-b bg-slate-50/60 p-4 sm:grid-cols-2 lg:grid-cols-4">

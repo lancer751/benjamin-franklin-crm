@@ -49,32 +49,44 @@ export function LeadCommercialFields({ controller }: { controller: LeadCreationC
           description="Selecciona primero la campaña y luego el asesor responsable."
         />
 
-        <FormField control={form.control} name="campaignId" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Campaña <span className="text-destructive">*</span></FormLabel>
-            <FormControl>
-              <select
-                className={selectClass}
-                value={field.value}
-                disabled={controller.isLoadingCampaigns}
-                onChange={(event) => controller.setCampaign(event.target.value)}
-              >
-                <option value="">
-                  {controller.isLoadingCampaigns ? "Cargando campañas…" : "Seleccionar campaña"}
-                </option>
-                {controller.campaigns.map((campaign) => (
-                  <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
-                ))}
-              </select>
-            </FormControl>
-            <FormMessage />
-            {controller.campaignError && (
-              <p role="alert" className="text-sm text-destructive">
-                No fue posible cargar las campañas.
+        {controller.isContextualMode ? (
+          <div className="space-y-1">
+            <FormLabel>Campaña</FormLabel>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+              <p className="font-bold text-slate-800 text-sm">
+                {controller.contextualCampaignName || "Cargando campaña..."}
               </p>
-            )}
-          </FormItem>
-        )} />
+              <p className="mt-0.5 text-xs text-slate-500">Seleccionada desde el detalle de campaña</p>
+            </div>
+          </div>
+        ) : (
+          <FormField control={form.control} name="campaignId" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Campaña <span className="text-destructive">*</span></FormLabel>
+              <FormControl>
+                <select
+                  className={selectClass}
+                  value={field.value}
+                  disabled={controller.isLoadingCampaigns}
+                  onChange={(event) => controller.setCampaign(event.target.value)}
+                >
+                  <option value="">
+                    {controller.isLoadingCampaigns ? "Cargando campañas…" : "Seleccionar campaña"}
+                  </option>
+                  {controller.campaigns.map((campaign) => (
+                    <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+                  ))}
+                </select>
+              </FormControl>
+              <FormMessage />
+              {controller.campaignError && (
+                <p role="alert" className="text-sm text-destructive">
+                  No fue posible cargar las campañas.
+                </p>
+              )}
+            </FormItem>
+          )} />
+        )}
 
         {controller.canChooseSeller && (
           <FormField control={form.control} name="sellerId" render={({ field }) => {
