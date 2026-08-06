@@ -42,17 +42,6 @@ export function LeadAdditionalFields({ defaultOpen = false }: LeadAdditionalFiel
             />
             <FormField
               control={form.control}
-              name="dni"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-slate-600">DNI</FormLabel>
-                  <FormControl><Input className="h-8 text-sm" inputMode="numeric" maxLength={8} placeholder="12345678" {...field} /></FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="gender"
               render={({ field }) => (
                 <FormItem>
@@ -128,7 +117,7 @@ export function LeadAdditionalFields({ defaultOpen = false }: LeadAdditionalFiel
                     <FormItem>
                       <FormLabel className="text-sm font-medium">Número</FormLabel>
                       <FormControl><Input className="h-8 text-sm" inputMode="numeric" placeholder="987654321" {...field} /></FormControl>
-                  <FormMessage className="text-xs" />
+                      <FormMessage className="text-xs" />
                     </FormItem>
                   )}
                 />
@@ -144,7 +133,7 @@ export function LeadAdditionalFields({ defaultOpen = false }: LeadAdditionalFiel
                           <option value="TELEPHONE">Teléfono</option>
                         </select>
                       </FormControl>
-                  <FormMessage className="text-xs" />
+                      <FormMessage className="text-xs" />
                     </FormItem>
                   )}
                 />

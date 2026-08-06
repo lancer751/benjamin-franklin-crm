@@ -14,13 +14,13 @@ export function LeadPrimaryFields() {
         <p className="text-sm text-slate-500">Información esencial para identificar y contactar al prospecto.</p>
       </div>
 
-      {/* Grid: Fila 1 (Celular, Nombre, Apellido) / Fila 2 (Correo) */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      {/* Grid: Fila 1 (Celular, DNI, Nombre, Apellido) / Fila 2 (Correo electrónico) */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <FormField
           control={form.control}
           name="cellphone"
           render={({ field }) => (
-            <FormItem className="sm:col-span-1">
+            <FormItem className="col-span-1">
               <FormLabel className="text-sm font-semibold">
                 Celular <span className="text-destructive">*</span>
               </FormLabel>
@@ -39,9 +39,32 @@ export function LeadPrimaryFields() {
         />
         <FormField
           control={form.control}
+          name="dni"
+          render={({ field }) => (
+            <FormItem className="col-span-1">
+              <FormLabel className="text-sm font-semibold">DNI</FormLabel>
+              <FormControl>
+                <Input
+                  className="h-9 text-sm"
+                  inputMode="numeric"
+                  maxLength={8}
+                  placeholder="12345678"
+                  value={field.value ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    field.onChange(value);
+                  }}
+                />
+              </FormControl>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
           name="first_name"
           render={({ field }) => (
-            <FormItem className="sm:col-span-1">
+            <FormItem className="col-span-1">
               <FormLabel className="text-sm font-semibold">Nombre</FormLabel>
               <FormControl>
                 <Input
@@ -59,7 +82,7 @@ export function LeadPrimaryFields() {
           control={form.control}
           name="last_name"
           render={({ field }) => (
-            <FormItem className="sm:col-span-1">
+            <FormItem className="col-span-1">
               <FormLabel className="text-sm font-semibold">Apellido</FormLabel>
               <FormControl>
                 <Input
@@ -77,7 +100,7 @@ export function LeadPrimaryFields() {
           control={form.control}
           name="email"
           render={({ field }) => (
-            <FormItem className="sm:col-span-3">
+            <FormItem className="sm:col-span-2 lg:col-span-4">
               <FormLabel className="text-sm font-semibold">Correo electrónico</FormLabel>
               <FormControl>
                 <Input
