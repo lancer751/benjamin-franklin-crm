@@ -25,6 +25,8 @@ export function useCampaignMemberReassignment() {
       queryClient.invalidateQueries({ queryKey: ["campaign-members", campaignId] }),
       queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", campaignId] }),
       queryClient.invalidateQueries({ queryKey: ["campaigns", "team-follow-up"] }),
+      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] }),
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] }),
     ]);
   };
 

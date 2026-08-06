@@ -14,6 +14,8 @@ import { useAuthStore } from "@/store/useAuthStore";
 import ProductStatusBadge from "@/features/products/components/shared/ProductStatusBadge";
 import { formatCampaignCurrency } from "@/features/campaigns/utils/campaignCurrency";
 import { adaptCampaignDetail } from "@/features/campaigns/adapters/campaignDetailAdapter";
+import { adaptCampaignSellersOnCampaign } from "@/features/leads/adapters/campaignAssignmentAdapter";
+import { CampaignMembersPanel } from "@/features/campaigns/components/CampaignMembersPanel";
 import {
   Dialog,
   DialogContent,
@@ -214,6 +216,11 @@ const CampaignDetailView = () => {
   }, [campaign]);
 
   const campaignDetail = useMemo(() => adaptCampaignDetail(campaign), [campaign]);
+
+  const campaignAdvisors = useMemo(
+    () => adaptCampaignSellersOnCampaign(campaign?.sellersOnCampaign),
+    [campaign?.sellersOnCampaign]
+  );
 
   const assignedSellerIds = useMemo(() => {
     return sellersList.map((s: any) => s.seller_id || s.seller?.id || s.id) || [];
@@ -568,68 +575,13 @@ const CampaignDetailView = () => {
       </div>
 
       {/* Members / Leads Table */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Leads / Prospectos de la Campaña</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 border-t">
-          {!campaign.members || campaign.members.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 px-6 text-center text-muted-foreground bg-card">
-              <Users size={48} className="mb-4 opacity-25 text-primary" />
-              <p className="text-sm font-medium max-w-md">
-                Se identificaron {campaign._count?.leadsOnCampaign || 0} leads captados en esta campaña.
-                Accede al Seguimiento de Equipo para auditar su gestión en tiempo real.
-              </p>
-            </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Prospecto
-                  </th>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Teléfono
-                  </th>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Estado
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {campaign.members.map((member: any) => (
-                  <tr
-                    key={member.id}
-                    className="border-b border-border hover:bg-muted/5 transition-colors"
-                  >
-                    <td className="px-6 py-4 font-medium text-foreground">
-                      {`${member.first_name || ""} ${member.middle_name || ""} ${
-                        member.last_name || ""
-                      }`.trim() || "S/N"}
-                    </td>
-                    <td className="px-6 py-4 text-muted-foreground">{member.email || "N/D"}</td>
-                    <td className="px-6 py-4 text-muted-foreground">{member.phone || "N/D"}</td>
-                    <td className="px-6 py-4">
-                      <Badge
-                        variant="outline"
-                        className={
-                          member.lead_status === "ACTIVE"
-                            ? "text-emerald-600 border-emerald-200 bg-emerald-50/50"
-                            : ""
-                        }
-                      >
-                        {member.lead_status || "N/D"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
+      <Card className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+        <CampaignMembersPanel
+          campaignId={campaign.id}
+          campaignName={campaign.name || campaign.relatedProduct?.name}
+          sellers={campaignAdvisors}
+          variant="campaign-detail"
+        />
       </Card>
 
       {/* Modal para Asignar Vendedores */}

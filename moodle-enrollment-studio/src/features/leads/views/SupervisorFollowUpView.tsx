@@ -1,31 +1,14 @@
-import { useState } from "react";
-import { ArrowLeft, BookOpen, Calendar, CheckCircle2, ChevronLeft, ChevronRight, Layers, Loader2, Phone, TrendingUp, Users, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Layers, Loader2, TrendingUp, Users, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { Input } from "@/core/components/ui/input";
-import { Checkbox } from "@/core/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/core/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
-import {
-  CAMPAIGN_MEMBER_STATUS_CONFIG,
-  CAMPAIGN_MEMBER_STATUS_OPTIONS,
-  getCampaignMemberStatusLabel,
-  isCampaignMemberStatus,
-} from "@/core/constants/campaignMemberStatus";
 import { LEAD_STATUS_OPTIONS, getLeadStatusLabel, isLeadStatus } from "../utils/prospectDisplay";
 import { useSupervisorFollowUp, type TeamFollowUpMode } from "../hooks/useSupervisorFollowUp";
-import { useSupervisorMemberDrawer } from "../hooks/useSupervisorMemberDrawer";
-import { useCampaignMemberReassignment } from "../hooks/useCampaignMemberReassignment";
-import type { TeamFollowUpMemberRow } from "../adapters/teamFollowUpAdapter";
-import type { NormalizedLead } from "../adapters/leadAdapter";
-import type { AdvisorFilterOption } from "../adapters/campaignAssignmentAdapter";
-import { CampaignMemberReassignmentDialog } from "../components/CampaignMemberReassignmentDialog";
-import { canReassignCampaignMembers, mapCampaignMemberReassignmentError } from "../utils/campaignMemberReassignment";
-import LeadDetailsSheet from "@/features/campaigns/views/seller/components/LeadDetailsSheet";
+import { CampaignMembersPanel } from "@/features/campaigns/components/CampaignMembersPanel";
 
 const formatDateTime = (value: string): string => {
   if (!value) return "No disponible";
@@ -35,15 +18,6 @@ const formatDateTime = (value: string): string => {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
-};
-
-const MemberStatusBadge = ({ status }: { status: string }) => {
-  const config = isCampaignMemberStatus(status) ? CAMPAIGN_MEMBER_STATUS_CONFIG[status] : null;
-  return (
-    <Badge variant="outline" className={config?.badgeClassName}>
-      {getCampaignMemberStatusLabel(status, "No disponible")}
-    </Badge>
-  );
 };
 
 interface PaginationProps {
@@ -71,101 +45,15 @@ const SupervisorFollowUpView = () => {
   const navigate = useNavigate();
   const followUp = useSupervisorFollowUp();
   const isCampaignMode = followUp.mode === "CAMPAIGN";
-  const [selectedMember, setSelectedMember] = useState<TeamFollowUpMemberRow | null>(null);
-  const [drawerLead, setDrawerLead] = useState<NormalizedLead | null>(null);
-  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
-  const [reassignmentMembers, setReassignmentMembers] = useState<TeamFollowUpMemberRow[]>([]);
-  const drawer = useSupervisorMemberDrawer(selectedMember);
-  const reassignment = useCampaignMemberReassignment();
-  const canReassign = canReassignCampaignMembers(followUp.role);
-  const selectedMembers = followUp.memberRows.filter((member) => selectedMemberIds.includes(member.memberId));
-  const areAllVisibleMembersSelected = followUp.memberRows.length > 0 && followUp.memberRows.every((member) => selectedMemberIds.includes(member.memberId));
-  const hasPartialSelection = selectedMemberIds.length > 0 && !areAllVisibleMembersSelected;
-
-  const openMemberDrawer = (member: TeamFollowUpMemberRow) => {
-    setSelectedMember(member);
-    setDrawerLead(member.drawerLead);
-  };
-  const closeMemberDrawer = () => {
-    setSelectedMember(null);
-    setDrawerLead(null);
-  };
 
   const handleModeChange = (value: string) => {
     if (value === "ALL" || value === "UNASSIGNED" || value === "CAMPAIGN") {
       followUp.selectMode(value as TeamFollowUpMode);
-      setSelectedMemberIds([]);
-      setReassignmentMembers([]);
     }
   };
 
   const handleCampaignChange = (campaignId: string) => {
     followUp.selectCampaign(campaignId);
-    setSelectedMemberIds([]);
-    setReassignmentMembers([]);
-  };
-
-  const handleCampaignPageChange = (page: number) => {
-    followUp.setCampaignPage(page);
-    setSelectedMemberIds([]);
-  };
-
-  const handleCampaignAdvisorChange = (advisorUserId: string) => {
-    followUp.setCampaignAdvisorUserId(advisorUserId);
-    setSelectedMemberIds([]);
-  };
-
-  const handleCampaignStatusChange = (status: string) => {
-    if (status === "ALL" || isCampaignMemberStatus(status)) {
-      followUp.setCampaignMemberStatus(status);
-      setSelectedMemberIds([]);
-    }
-  };
-
-  const toggleMemberSelection = (memberId: string, checked: boolean) => {
-    setSelectedMemberIds((current) => checked
-      ? Array.from(new Set([...current, memberId]))
-      : current.filter((id) => id !== memberId));
-  };
-
-  const toggleVisibleSelection = (checked: boolean) => {
-    setSelectedMemberIds(checked ? followUp.memberRows.map((member) => member.memberId) : []);
-  };
-
-  const openBulkReassignment = () => {
-    if (!followUp.selectedCampaign || selectedMembers.length === 0 || selectedMembers.some((member) => member.campaignId !== followUp.selectedCampaign?.id)) {
-      toast.error("Solo puedes reasignar prospectos de una misma campaña en esta vista.");
-      return;
-    }
-    setReassignmentMembers(selectedMembers);
-  };
-
-  const confirmReassignment = (advisor: AdvisorFilterOption) => {
-    const [firstMember] = reassignmentMembers;
-    if (!firstMember || !followUp.selectedCampaign) return;
-    const onSuccess = () => {
-      const count = reassignmentMembers.length;
-      toast.success(count === 1
-        ? `${firstMember.prospectName} fue reasignado a ${advisor.name}.`
-        : `${count} prospectos fueron reasignados a ${advisor.name}.`);
-      setSelectedMemberIds([]);
-      setReassignmentMembers([]);
-    };
-    const onError = (error: unknown) => toast.error(mapCampaignMemberReassignmentError(error));
-
-    if (reassignmentMembers.length === 1) {
-      reassignment.reassignOne.mutate({
-        campaignId: firstMember.campaignId,
-        memberId: firstMember.memberId,
-        assignedTo: advisor.userId,
-      }, { onSuccess, onError });
-      return;
-    }
-    reassignment.reassignMany.mutate({
-      campaignId: followUp.selectedCampaign.id,
-      memberIds: reassignmentMembers.map((member) => member.memberId),
-      assignedTo: advisor.userId,
-    }, { onSuccess, onError });
   };
 
   return (
@@ -238,113 +126,27 @@ const SupervisorFollowUpView = () => {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 border-b bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="font-semibold text-slate-900">
-                {followUp.mode === "ALL" ? "Todos los leads" : followUp.mode === "UNASSIGNED" ? "Leads sin asignar" : followUp.selectedCampaign?.name ?? "Por campaña"}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {isCampaignMode
-                  ? followUp.selectedCampaign
-                    ? `${followUp.memberTotal} prospectos asociados según el backend.`
-                    : "Selecciona una campaña para consultar sus prospectos."
-                  : `${followUp.leadTotal} prospectos encontrados.`}
-              </p>
-            </div>
-            {(followUp.isFetchingLeads || followUp.isFetchingMembers) && <Loader2 className="h-4 w-4 animate-spin text-primary" aria-label="Actualizando" />}
-          </div>
-
           {isCampaignMode ? (
-            <>
-              <div className="grid grid-cols-1 gap-3 border-b bg-slate-50/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Buscar prospecto</label>
-                  <Input disabled placeholder="No disponible en este endpoint" className="bg-white" />
-                  <p className="text-[10px] text-muted-foreground">La API de miembros no admite búsqueda.</p>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Asesor</label>
-                  <Select value={followUp.campaignAdvisorUserId} onValueChange={handleCampaignAdvisorChange} disabled={!followUp.selectedCampaign || followUp.campaignAdvisors.length === 0 || followUp.isSalesRep}>
-                    <SelectTrigger className="bg-white"><SelectValue placeholder="Todos los asesores" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">Todos los asesores</SelectItem>
-                      {followUp.campaignAdvisors.map((advisor) => <SelectItem key={advisor.userId} value={advisor.userId}>{advisor.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Tipificación</label>
-                  <Select value={followUp.campaignMemberStatus} onValueChange={handleCampaignStatusChange} disabled={!followUp.selectedCampaign}>
-                    <SelectTrigger className="bg-white"><SelectValue placeholder="Todas las tipificaciones" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">Todas las tipificaciones</SelectItem>
-                      {CAMPAIGN_MEMBER_STATUS_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Rango de fecha</label>
-                  <Select disabled><SelectTrigger className="bg-white"><SelectValue placeholder="No disponible" /></SelectTrigger></Select>
-                  <p className="text-[10px] text-muted-foreground">La API de miembros no admite fechas.</p>
-                </div>
-              </div>
-
-              {!followUp.selectedCampaign ? (
-                <div className="px-4 py-16 text-center text-sm text-muted-foreground">Selecciona una campaña para consultar sus prospectos.</div>
-              ) : followUp.isLoadingMembers ? (
-                <div className="flex items-center justify-center gap-2 px-4 py-16 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Cargando prospectos de la campaña…</div>
-              ) : followUp.isErrorMembers ? (
-                <div className="space-y-3 px-4 py-16 text-center"><p className="text-sm text-rose-700">No fue posible consultar los prospectos de esta campaña.</p><Button type="button" variant="outline" onClick={() => followUp.retryMembers()}>Reintentar</Button></div>
-              ) : (
-                <>
-                  {canReassign && selectedMemberIds.length > 0 && (
-                    <div className="flex flex-col gap-3 border-b bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                      <span className="text-sm font-medium">{selectedMemberIds.length} prospecto{selectedMemberIds.length === 1 ? "" : "s"} seleccionado{selectedMemberIds.length === 1 ? "" : "s"}</span>
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="button" size="sm" onClick={openBulkReassignment}>Reasignar asesor</Button>
-                        <Button type="button" size="sm" variant="outline" onClick={() => setSelectedMemberIds([])}>Limpiar selección</Button>
-                      </div>
-                    </div>
-                  )}
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader><TableRow>
-                        {canReassign && <TableHead className="w-12"><Checkbox aria-label="Seleccionar prospectos visibles" checked={areAllVisibleMembersSelected ? true : hasPartialSelection ? "indeterminate" : false} onCheckedChange={(checked) => toggleVisibleSelection(checked === true)} /></TableHead>}
-                        <TableHead><span className="flex items-center gap-1"><Calendar className="h-4 w-4" />Fecha/hora de asociación</span></TableHead>
-                        <TableHead><span className="flex items-center gap-1"><BookOpen className="h-4 w-4" />Curso o programa</span></TableHead>
-                        <TableHead><span className="flex items-center gap-1"><Phone className="h-4 w-4" />Celular principal</span></TableHead>
-                        <TableHead>Prospecto</TableHead><TableHead>Tipificación</TableHead><TableHead>Asesor actual</TableHead>{canReassign && <TableHead>Acciones</TableHead>}
-                      </TableRow></TableHeader>
-                      <TableBody>
-                        {followUp.memberRows.length === 0 ? <TableRow><TableCell colSpan={canReassign ? 8 : 6} className="py-12 text-center text-muted-foreground">No hay prospectos para los filtros seleccionados.</TableCell></TableRow> : followUp.memberRows.map((member) => (
-                          <TableRow
-                            key={member.id}
-                            tabIndex={0}
-                            role="button"
-                            aria-label={`Ver gestión de ${member.prospectName} en ${member.programName}`}
-                            className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-                            onClick={() => openMemberDrawer(member)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                openMemberDrawer(member);
-                              }
-                            }}
-                          >
-                            {canReassign && <TableCell onClick={(event) => event.stopPropagation()}><Checkbox aria-label={`Seleccionar ${member.prospectName}`} checked={selectedMemberIds.includes(member.memberId)} onCheckedChange={(checked) => toggleMemberSelection(member.memberId, checked === true)} /></TableCell>}
-                            <TableCell>{formatDateTime(member.associatedAt)}</TableCell><TableCell className="font-medium">{member.programName}</TableCell><TableCell>{member.phone}</TableCell><TableCell>{member.prospectName}</TableCell><TableCell><MemberStatusBadge status={member.memberStatus} /></TableCell><TableCell>{member.advisorName || "No disponible"}</TableCell>
-                            {canReassign && <TableCell onClick={(event) => event.stopPropagation()}><Button type="button" size="sm" variant="outline" onClick={() => setReassignmentMembers([member])}>Reasignar asesor</Button></TableCell>}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  <Pagination page={followUp.campaignPage} totalPages={followUp.memberTotalPages} isFetching={followUp.isFetchingMembers} onPageChange={handleCampaignPageChange} />
-                </>
-              )}
-            </>
+            <CampaignMembersPanel
+              campaignId={followUp.selectedCampaignId}
+              campaignName={followUp.selectedCampaign?.name}
+              sellers={followUp.campaignAdvisors}
+              variant="team-follow-up"
+            />
           ) : (
             <>
+              <div className="flex flex-col gap-3 border-b bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-semibold text-slate-900">
+                    {followUp.mode === "ALL" ? "Todos los leads" : "Leads sin asignar"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {`${followUp.leadTotal} prospectos encontrados.`}
+                  </p>
+                </div>
+                {followUp.isFetchingLeads && <Loader2 className="h-4 w-4 animate-spin text-primary" aria-label="Actualizando" />}
+              </div>
+
               <div className="grid grid-cols-1 gap-3 border-b bg-slate-50/60 p-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-1"><label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Buscar prospecto</label><Input value={followUp.leadSearch} onChange={(event) => followUp.setLeadSearch(event.target.value)} placeholder="Nombre, correo, DNI o celular" className="bg-white" /></div>
                 <div className="space-y-1"><label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Estado del lead</label><Select value={followUp.leadStatus} onValueChange={(value) => { if (value === "ALL" || isLeadStatus(value)) followUp.setLeadStatus(value); }}><SelectTrigger className="bg-white"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">Todos los estados</SelectItem>{LEAD_STATUS_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
@@ -361,42 +163,6 @@ const SupervisorFollowUpView = () => {
           )}
         </Tabs>
       </Card>
-
-      <LeadDetailsSheet
-        selectedLead={drawerLead}
-        setSelectedLead={setDrawerLead}
-        onClose={closeMemberDrawer}
-        onStatusChange={drawer.changeStatus}
-        isStatusPending={drawer.statusMutation.isPending}
-        interactions={drawer.interactions}
-        isLoadingInteractions={drawer.interactionsQuery.isLoading}
-        isErrorInteractions={drawer.interactionsQuery.isError}
-        onRetryInteractions={() => void drawer.interactionsQuery.refetch()}
-        createInteractionMutation={drawer.createInteractionMutation}
-        tasks={drawer.tasks}
-        isLoadingTasks={drawer.tasksQuery.isLoading}
-        isErrorTasks={drawer.tasksQuery.isError}
-        onRetryTasks={() => void drawer.tasksQuery.refetch()}
-        createTaskMutation={drawer.createTaskMutation}
-        updateTaskMutation={drawer.updateTaskMutation}
-        deleteTaskMutation={drawer.deleteTaskMutation}
-        selectedCampaignId={selectedMember?.campaignId ?? ""}
-        interactionCount={selectedMember?.interactionCount}
-        capabilities={{ ...drawer.capabilities, canEditLead: false }}
-      />
-      <CampaignMemberReassignmentDialog
-        open={reassignmentMembers.length > 0}
-        members={reassignmentMembers}
-        campaignName={followUp.selectedCampaign?.name ?? "Campaña"}
-        advisors={followUp.campaignAdvisors}
-        isPending={reassignment.reassignOne.isPending || reassignment.reassignMany.isPending}
-        onOpenChange={(open) => {
-          if (!open && !reassignment.reassignOne.isPending && !reassignment.reassignMany.isPending) {
-            setReassignmentMembers([]);
-          }
-        }}
-        onConfirm={confirmReassignment}
-      />
     </div>
   );
 };
