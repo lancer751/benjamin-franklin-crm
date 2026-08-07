@@ -1,131 +1,66 @@
 import { describe, expect, it } from "vitest";
-import type { PaymentFormValues, PaymentResponse } from "../types";
-import {
-  generateInstallments,
-  mapEditFormToPayload,
-  mapPaymentFormToCreatePayload,
-  mapPaymentResponseToDetail,
-  mapPaymentResponseToListItem,
-} from "./paymentMappers";
+import type { PaymentResponse } from "../types";
+import { mapPaymentResponseToDetail, mapPaymentResponseToListItem } from "./paymentMappers";
 
 const response: PaymentResponse = {
   id: "payment-1",
   order_id: "order-1",
+  scheduled_payment_id: "installment-1",
   payment_date: "2026-07-24T15:30:00.000Z",
-  amount: "440",
+  amount: "220",
   payment_method: "YAPE",
-  payment_status: "CONFIRMED",
-  type: "FULL",
+  payment_status: "PENDING",
+  type: "INSTALLMENTS",
   currency: "PEN",
   transaccion_id: "YAPE-123",
+  payment_receipt: "payment-evidence/key.pdf",
   created_at: "2026-07-24T15:31:00.000Z",
   updated_at: "2026-07-24T15:31:00.000Z",
-  order: {
-    id: "order-1",
-    order_code: "REFTGEL",
-    total_amount: "440",
-    lead: {
-      first_name: "Rodrigo",
-      middle_name: "",
-      last_name: "Gaitán",
-      email: "rodrigo@example.com",
-      dni: "12345678",
-    },
-    paymentPlans: [],
-  },
-  schedulePayment: null,
+  order: { id: "order-1", order_code: "REFTGEL", total_amount: "440", member: { lead: { id: "lead-1", first_name: "Rodrigo", last_name: "Gaitán" } } },
+  schedulePayment: { id: "installment-1", due_date: "2026-08-24", due_amount: "220", number: 1, status: "PENDING", payment_plan: { orderDetail: { id: "detail-1", product: { id: "product-1", name: "Lectura de planos" } } } },
+  creator: { id: "user-1", first_name: "Ana", last_name: "Romero" },
+  reviewer: null,
 };
 
-function formValues(type: "FULL" | "INSTALLMENTS"): PaymentFormValues {
-  return {
-    orderId: "order-1",
-    paymentDate: "2026-07-24T15:30",
-    amount: type === "FULL" ? "440" : "146.67",
-    paymentMethod: "YAPE",
-    paymentStatus: "CONFIRMED",
-    type,
-    currency: "pen",
-    transactionId: " YAPE-123 ",
-    paymentPlan: {
-      totalInstallments: "3",
-      totalAmount: "440",
-      startDate: "2026-07-24",
-      scheduledPayments: generateInstallments("440", "3", "2026-07-24"),
-    },
-  };
-}
-
 describe("payment mappers", () => {
-  it("crea un PaymentListItem seguro y legible", () => {
-    const unsafeResponse = {
+  it("normaliza contexto, cuota y auditoría", () => {
+    expect(mapPaymentResponseToListItem(response)).toMatchObject({
+      status: "PENDING",
+      clientName: "Rodrigo Gaitán",
+      productName: "Lectura de planos",
+      installmentLabel: "Cuota 1",
+      registeredBy: "Ana Romero",
+      orderDetailId: "detail-1",
+    });
+  });
+
+  it("mantiene la key privada del comprobante solo en detalle", () => {
+    expect(mapPaymentResponseToDetail(response).receiptKey).toBe("payment-evidence/key.pdf");
+    expect(mapPaymentResponseToListItem(response)).not.toHaveProperty("receiptKey");
+  });
+
+  it("presenta la primera obligación como matrícula cuando el producto la incluye", () => {
+    const paymentWithEnrollment: PaymentResponse = {
       ...response,
-      password: "secret",
-      role_id: "role-1",
-    };
-    const mapped = mapPaymentResponseToListItem(unsafeResponse);
-
-    expect(mapped).toMatchObject({
-      id: "payment-1",
-      transactionId: "YAPE-123",
-      orderCode: "REFTGEL",
-      amount: "440.00",
-      client: {
-        fullName: "Rodrigo Gaitán",
-        email: "rodrigo@example.com",
+      schedulePayment: {
+        ...response.schedulePayment!,
+        payment_plan: {
+          orderDetail: {
+            id: "detail-1",
+            product: {
+              id: "product-1",
+              name: "Lectura de planos",
+              enrollment_fee: "600.00",
+            },
+          },
+        },
       },
-    });
-    expect(JSON.stringify(mapped)).not.toContain("password");
-    expect(JSON.stringify(mapped)).not.toContain("role_id");
-  });
-
-  it("mapea detalle, cuota y planes sin inventar campos", () => {
-    expect(mapPaymentResponseToDetail(response)).toMatchObject({
-      scheduledPayment: null,
-      paymentPlans: [],
-      updatedAt: response.updated_at,
-    });
-  });
-
-  it("FULL no envía payment_plan y normaliza strings decimales", () => {
-    const payload = mapPaymentFormToCreatePayload(formValues("FULL"));
-    expect(payload.amount).toBe("440.00");
-    expect(payload.currency).toBe("PEN");
-    expect(payload.transaccion_id).toBe("YAPE-123");
-    expect(payload).not.toHaveProperty("payment_plan");
-  });
-
-  it("INSTALLMENTS envía el plan exacto, incluyendo number requerido por schema", () => {
-    const payload = mapPaymentFormToCreatePayload(formValues("INSTALLMENTS"));
-    expect(payload.payment_plan).toMatchObject({
-      order_id: "order-1",
-      total_installments: 3,
-      total_amount: "440.00",
-    });
-    expect(payload.payment_plan?.scheduled_payments).toHaveLength(3);
-    expect(payload.payment_plan?.scheduled_payments[0].number).toBe(1);
-    expect(payload.payment_plan?.scheduled_payments[2].number).toBe(3);
-  });
-
-  it("distribuye cuotas y ajusta la última para mantener suma exacta", () => {
-    const installments = generateInstallments("440", "3", "2026-07-24");
-    expect(installments.map((item) => item.dueAmount)).toEqual([
-      "146.67",
-      "146.67",
-      "146.66",
-    ]);
-    expect(
-      installments.reduce((sum, item) => sum + Number(item.dueAmount), 0),
-    ).toBe(440);
-  });
-
-  it("PUT solo contiene campos modificados permitidos", () => {
-    const initial = {
-      paymentDate: "2026-07-24T15:30",
-      transactionId: "OLD",
-      currency: "PEN",
     };
-    expect(
-      mapEditFormToPayload({ ...initial, transactionId: "NEW" }, initial),
-    ).toEqual({ transaccion_id: "NEW" });
+
+    expect(mapPaymentResponseToListItem(paymentWithEnrollment).installmentLabel).toBe("Matrícula");
+    expect(mapPaymentResponseToListItem({
+      ...paymentWithEnrollment,
+      schedulePayment: { ...paymentWithEnrollment.schedulePayment!, number: 2 },
+    }).installmentLabel).toBe("Cuota 1");
   });
 });

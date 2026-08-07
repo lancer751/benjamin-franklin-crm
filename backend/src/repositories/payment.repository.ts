@@ -4,14 +4,48 @@ import type { CreatePaymentInput, PaymentQuery, UpdatePaymentStatusInput } from 
 import { assertEvidenceExists } from "@/lib/storage";
 
 type Tx = Prisma.TransactionClient;
+type PaymentDb = Pick<PrismaClient, "scheduledPayment" | "payment" | "orderDetail">;
 
 const paymentInclude = {
-    order: { select: { id: true, order_code: true, member_id: true, assigned_to: true } },
-    schedulePayment: true,
-    orderDetail: { include: { product: true } },
+    order: {
+        select: {
+            id: true,
+            order_code: true,
+            member_id: true,
+            assigned_to: true,
+            total_amount: true,
+            member: {
+                select: {
+                    id: true,
+                    campaing_id: true,
+                    lead: { select: { id: true, first_name: true, last_name: true, email: true, dni: true } },
+                },
+            },
+        },
+    },
+    schedulePayment: {
+        select: {
+            id: true,
+            due_date: true,
+            due_amount: true,
+            number: true,
+            status: true,
+            payment_plan_id: true,
+            payment_plan: {
+                select: {
+                    orderDetail: {
+                        select: { id: true, product: { select: { id: true, name: true, enrollment_fee: true } } },
+                    },
+                },
+            },
+        },
+    },
+    orderDetail: { select: { id: true, product: { select: { id: true, name: true, enrollment_fee: true } } } },
+    creator: { select: { id: true, first_name: true, last_name: true } },
+    reviewer: { select: { id: true, first_name: true, last_name: true } },
 } as const;
 
-async function resolveTarget(prisma: PrismaClient, orderId: string, target: CreatePaymentInput["target"]) {
+async function resolveTarget(prisma: PaymentDb, orderId: string, target: CreatePaymentInput["target"]) {
     if (target.type === "SCHEDULED_INSTALLMENT") {
         const sp = await prisma.scheduledPayment.findUnique({
             where: { id: target.scheduled_payment_id },
@@ -21,6 +55,18 @@ async function resolveTarget(prisma: PrismaClient, orderId: string, target: Crea
         if (sp.status === "PAID") throw new HTTPException(409, { message: "Esta cuota ya fue pagada" });
         if (sp.payment_plan.orderDetail.order_id !== orderId) {
             throw new HTTPException(400, { message: "La cuota no pertenece a esta orden" });
+        }
+        const existing = await prisma.payment.findFirst({
+            where: {
+                scheduled_payment_id: sp.id,
+                payment_status: { in: ["PENDING", "CONFIRMED"] },
+            },
+            select: { id: true },
+        });
+        if (existing) {
+            throw new HTTPException(409, {
+                message: "Esta cuota ya tiene un pago registrado o pendiente de validación",
+            });
         }
         return { scheduled_payment_id: sp.id, order_detail_id: null as string | null, expectedAmount: Number(sp.due_amount) };
     }
@@ -87,45 +133,60 @@ export function paymentRepository(prisma: PrismaClient) {
         async create(authUser: { userId: string; role: string }, data: CreatePaymentInput) {
             await assertEvidenceExists(data.payment_receipt);
 
-            const order = await prisma.order.findUnique({
-                where: { id: data.order_id },
-                select: { id: true, order_status: true, assigned_to: true },
-            });
-            if (!order) throw new HTTPException(404, { message: "Order not found" });
-            if (authUser.role === "SALES_REP" && order.assigned_to !== authUser.userId) {
-                throw new HTTPException(403, { message: "No tienes acceso a esta orden" });
-            }
-            if (order.order_status === "CANCELLED" || order.order_status === "REFUNDED") {
-                throw new HTTPException(400, { message: `No se pueden registrar pagos en una orden ${order.order_status}` });
-            }
+            return prisma.$transaction(async (tx) => {
+                const targetId = data.target.type === "SCHEDULED_INSTALLMENT"
+                    ? data.target.scheduled_payment_id
+                    : data.target.order_detail_id;
+                const lockKey = `payment-target:${targetId}`;
+                await tx.$queryRaw<Array<{ pg_advisory_xact_lock: unknown }>>
+                    `SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
 
-            const resolved = await resolveTarget(prisma, data.order_id, data.target);
-            if (Number(data.amount) !== resolved.expectedAmount) {
-                throw new HTTPException(400, { message: `El monto debe ser ${resolved.expectedAmount.toFixed(2)}` });
-            }
+                const order = await tx.order.findUnique({
+                    where: { id: data.order_id },
+                    select: { id: true, order_status: true, assigned_to: true },
+                });
+                if (!order) throw new HTTPException(404, { message: "Order not found" });
+                if (authUser.role === "SALES_REP" && order.assigned_to !== authUser.userId) {
+                    throw new HTTPException(403, { message: "No tienes acceso a esta orden" });
+                }
+                if (order.order_status === "CANCELLED" || order.order_status === "REFUNDED") {
+                    throw new HTTPException(400, { message: `No se pueden registrar pagos en una orden ${order.order_status}` });
+                }
 
-            return prisma.payment.create({
-                data: {
-                    order_id: data.order_id,
-                    created_by: authUser.userId,
-                    payment_date: data.payment_date,
-                    amount: data.amount,
-                    payment_method: data.payment_method,
-                    payment_status: "PENDING",
-                    type: data.target.type === "SCHEDULED_INSTALLMENT" ? "INSTALLMENTS" : "FULL",
-                    currency: data.currency,
-                    transaccion_id: data.transaccion_id,
-                    payment_receipt: data.payment_receipt,
-                    scheduled_payment_id: resolved.scheduled_payment_id,
-                    order_detail_id: resolved.order_detail_id,
-                },
-                include: paymentInclude,
+                const resolved = await resolveTarget(tx, data.order_id, data.target);
+                if (Number(data.amount) !== resolved.expectedAmount) {
+                    throw new HTTPException(400, { message: `El monto debe ser ${resolved.expectedAmount.toFixed(2)}` });
+                }
+
+                return tx.payment.create({
+                    data: {
+                        order_id: data.order_id,
+                        created_by: authUser.userId,
+                        payment_date: data.payment_date,
+                        amount: data.amount,
+                        payment_method: data.payment_method,
+                        payment_status: "PENDING",
+                        type: data.target.type === "SCHEDULED_INSTALLMENT" ? "INSTALLMENTS" : "FULL",
+                        currency: data.currency,
+                        transaccion_id: data.transaccion_id,
+                        payment_receipt: data.payment_receipt,
+                        scheduled_payment_id: resolved.scheduled_payment_id,
+                        order_detail_id: resolved.order_detail_id,
+                    },
+                    include: paymentInclude,
+                });
             });
         },
 
-        async cancel(id: string) {
-            const payment = await prisma.payment.findUnique({ where: { id }, select: { id: true, payment_status: true } });
+        async cancel(id: string, authUser: { userId: string; role: string }) {
+            const payment = await prisma.payment.findUnique({
+                where: { id },
+                select: { id: true, payment_status: true, order: { select: { assigned_to: true } } },
+            });
             if (!payment) throw new HTTPException(404, { message: "Payment not found" });
+            if (authUser.role === "SALES_REP" && payment.order.assigned_to !== authUser.userId) {
+                throw new HTTPException(403, { message: "No tienes acceso a este pago" });
+            }
             if (payment.payment_status !== "PENDING") {
                 throw new HTTPException(400, { message: "Solo se pueden eliminar pagos PENDING" });
             }
@@ -139,7 +200,9 @@ export function paymentRepository(prisma: PrismaClient) {
             });
             if (!payment) throw new HTTPException(404, { message: "Payment not found" });
             if (payment.payment_status !== "PENDING") {
-                throw new HTTPException(400, { message: `No se puede modificar un pago ${payment.payment_status}` });
+                throw new HTTPException(409, {
+                    message: `No se puede cambiar un pago ${payment.payment_status} a ${data.payment_status}`,
+                });
             }
 
             return prisma.$transaction(async (tx) => {

@@ -4,7 +4,6 @@ import {
   OrderCustomerCard,
   OrderDetailHeader,
   OrderFinancialSummary,
-  OrderPaymentPlanCard,
   OrderPaymentsHistory,
   OrderProductsCard,
   OrderCommercialContextCard,
@@ -55,9 +54,8 @@ export function OrderDetailContent({
               isCampaignError={isCampaignError}
             />
           </div>
-          <OrderProductsCard order={order} />
+          <OrderProductsCard order={order} role={role} />
           <OrderPaymentsHistory order={order} />
-          <OrderPaymentPlanCard order={order} />
         </main>
 
         <aside className="min-w-0 space-y-6 lg:sticky lg:top-6 lg:self-start">

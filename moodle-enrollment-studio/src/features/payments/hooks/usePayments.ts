@@ -2,38 +2,30 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { orderQueryKeys } from "@/features/orders/queryKeys";
 import { useAuthStore } from "@/store/useAuthStore";
+import { paymentPlanKeys, paymentsKeys } from "../queryKeys";
 import {
   createPayment,
   deletePayment,
   getPaymentById,
+  getPaymentReceiptUrl,
   getPayments,
   mapPaymentApiError,
-  updatePayment,
+  requestEvidenceUpload,
   updatePaymentStatus,
+  uploadEvidence,
 } from "../services/paymentService";
-import {
-  mapPaymentResponseToDetail,
-  mapPaymentResponseToListItem,
-} from "../services/paymentMappers";
+import { mapPaymentResponseToDetail, mapPaymentResponseToListItem } from "../services/paymentMappers";
 import type {
   CreatePaymentPayload,
   PaymentDetail,
   PaymentListItem,
   PaymentMethod,
   PaymentStatus,
-  PaymentType,
-  UpdatePaymentPayload,
   UpdatePaymentStatusPayload,
 } from "../types";
-import {
-  calculatePaymentMetrics,
-  filterPayments,
-  getPaymentPermissions,
-  type PaymentFilter,
-  type PaymentMethodFilter,
-  type PaymentTypeFilter,
-} from "../utils/paymentLogic";
+import { normalizePaymentSearch } from "../utils/paymentLogic";
 
 const EMPTY_PAYMENTS: PaymentListItem[] = [];
 
@@ -41,71 +33,59 @@ export function invalidatePaymentQueries(
   queryClient: ReturnType<typeof useQueryClient>,
   paymentId?: string,
   orderId?: string,
+  detailId?: string,
 ) {
-  void queryClient.invalidateQueries({ queryKey: ["payments"] });
-  if (paymentId) {
-    void queryClient.invalidateQueries({
-      queryKey: ["payments", "detail", paymentId],
-    });
-  }
-  void queryClient.invalidateQueries({ queryKey: ["orders"] });
-  if (orderId) {
-    void queryClient.invalidateQueries({ queryKey: ["order", orderId] });
-  }
+  void queryClient.invalidateQueries({ queryKey: paymentsKeys.all });
+  if (paymentId) void queryClient.invalidateQueries({ queryKey: paymentsKeys.detail(paymentId) });
+  void queryClient.invalidateQueries({ queryKey: orderQueryKeys.all });
+  if (orderId) void queryClient.invalidateQueries({ queryKey: orderQueryKeys.detail(orderId) });
+  if (orderId && detailId) void queryClient.invalidateQueries({ queryKey: paymentPlanKeys.detail(orderId, detailId) });
 }
 
 export function usePaymentsView() {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.user?.role.name);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<PaymentFilter>("ALL");
-  const [method, setMethod] = useState<PaymentMethodFilter>("ALL");
-  const [type, setType] = useState<PaymentTypeFilter>("ALL");
-
+  const [status, setStatus] = useState<"ALL" | PaymentStatus>(role === "COLLECTIONS" ? "PENDING" : "ALL");
+  const filters = useMemo(() => ({ limit: 100, ...(status !== "ALL" && { payment_status: status }) }), [status]);
   const query = useQuery({
-    queryKey: ["payments", "list-view"],
+    queryKey: paymentsKeys.list(filters),
     queryFn: async () => {
-      const response = await getPayments();
-      return response.data.map(mapPaymentResponseToListItem);
+      const response = await getPayments(filters);
+      return response.data.payments.map(mapPaymentResponseToListItem);
     },
   });
   const payments = query.data ?? EMPTY_PAYMENTS;
-  const filteredPayments = useMemo(
-    () => filterPayments(payments, search, status, method, type),
-    [payments, search, status, method, type],
-  );
+  const filteredPayments = useMemo(() => {
+    const needle = normalizePaymentSearch(search);
+    if (!needle) return payments;
+    return payments.filter((payment) => normalizePaymentSearch([
+      payment.transactionId,
+      payment.orderCode,
+      payment.clientName,
+      payment.productName,
+      payment.registeredBy,
+    ].filter(Boolean).join(" ")).includes(needle));
+  }, [payments, search]);
 
   return {
     payments,
     filteredPayments,
-    metrics: useMemo(() => calculatePaymentMetrics(payments), [payments]),
     permissions: getPaymentPermissions(role),
     search,
     status,
-    method,
-    type,
     isLoading: query.isLoading,
     isError: query.isError,
     setSearch,
     setStatus,
-    setMethod,
-    setType,
     retry: () => void query.refetch(),
-    clearFilters: () => {
-      setSearch("");
-      setStatus("ALL");
-      setMethod("ALL");
-      setType("ALL");
-    },
-    navigateToCreate: () => navigate("/pagos/nuevo"),
-    navigateToDetail: (payment: PaymentListItem) =>
-      navigate(`/pagos/${payment.id}`),
+    navigateToDetail: (payment: PaymentListItem) => navigate(`/pagos/${payment.id}`),
   };
 }
 
 export function usePayment(id?: string) {
   return useQuery({
-    queryKey: ["payments", "detail", id],
+    queryKey: paymentsKeys.detail(id ?? ""),
     enabled: Boolean(id),
     queryFn: async (): Promise<PaymentDetail> => {
       const response = await getPaymentById(id as string);
@@ -114,47 +94,32 @@ export function usePayment(id?: string) {
   });
 }
 
-export function useCreatePayment() {
+export function useRegisterPayment() {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   return useMutation({
-    mutationFn: (payload: CreatePaymentPayload) => createPayment(payload),
+    mutationFn: async ({ payload, file }: { payload: Omit<CreatePaymentPayload, "payment_receipt">; file: File }) => {
+      const upload = await requestEvidenceUpload({
+        file_name: file.name,
+        content_type: file.type as "image/jpeg" | "image/png" | "image/webp" | "application/pdf",
+      });
+      await uploadEvidence(file, upload);
+      return createPayment({ ...payload, payment_receipt: upload.key });
+    },
     onSuccess: (response) => {
-      invalidatePaymentQueries(
-        queryClient,
-        response.data.id,
-        response.data.order_id,
-      );
-      toast.success("Pago registrado correctamente");
-      navigate(`/pagos/${response.data.id}`);
+      invalidatePaymentQueries(queryClient, response.data.id, response.data.order_id, response.data.order_detail_id ?? undefined);
+      toast.success("Pago registrado. Pendiente de validación.");
     },
     onError: (error) => toast.error(mapPaymentApiError(error)),
   });
 }
 
-export function useUpdatePayment(payment?: PaymentListItem | PaymentDetail) {
+export function useReviewPayment(payment?: PaymentListItem | PaymentDetail) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: UpdatePaymentPayload) =>
-      updatePayment(payment?.id ?? "", payload),
-    onSuccess: () => {
-      invalidatePaymentQueries(queryClient, payment?.id, payment?.orderId);
-      toast.success("Referencia de pago actualizada");
-    },
-    onError: (error) => toast.error(mapPaymentApiError(error)),
-  });
-}
-
-export function useUpdatePaymentStatus(
-  payment?: PaymentListItem | PaymentDetail,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: UpdatePaymentStatusPayload) =>
-      updatePaymentStatus(payment?.id ?? "", payload),
-    onSuccess: () => {
-      invalidatePaymentQueries(queryClient, payment?.id, payment?.orderId);
-      toast.success("Estado del pago actualizado");
+    mutationFn: (payload: UpdatePaymentStatusPayload) => updatePaymentStatus(payment?.id ?? "", payload),
+    onSuccess: (_, variables) => {
+      invalidatePaymentQueries(queryClient, payment?.id, payment?.orderId, payment?.orderDetailId ?? undefined);
+      toast.success(variables.payment_status === "CONFIRMED" ? "Pago confirmado." : "Pago rechazado.");
     },
     onError: (error) => toast.error(mapPaymentApiError(error)),
   });
@@ -166,7 +131,7 @@ export function useDeletePayment(payment?: PaymentListItem | PaymentDetail) {
   return useMutation({
     mutationFn: () => deletePayment(payment?.id ?? ""),
     onSuccess: () => {
-      invalidatePaymentQueries(queryClient, payment?.id, payment?.orderId);
+      invalidatePaymentQueries(queryClient, payment?.id, payment?.orderId, payment?.orderDetailId ?? undefined);
       toast.success("Pago eliminado correctamente");
       navigate("/pagos");
     },
@@ -174,16 +139,23 @@ export function useDeletePayment(payment?: PaymentListItem | PaymentDetail) {
   });
 }
 
-export const paymentMethods: PaymentMethod[] = [
-  "YAPE",
-  "ONLINE",
-  "POS",
-  "CASH",
-  "BANK_TRANSFER",
-];
-export const paymentStatuses: PaymentStatus[] = [
-  "CONFIRMED",
-  "REFUNDED",
-  "FAILED",
-];
-export const paymentTypes: PaymentType[] = ["FULL", "INSTALLMENTS"];
+export function usePaymentReceipt(id?: string) {
+  return useQuery({
+    queryKey: [...paymentsKeys.detail(id ?? ""), "receipt"],
+    enabled: false,
+    queryFn: () => getPaymentReceiptUrl(id as string),
+  });
+}
+
+export function getPaymentPermissions(role?: string) {
+  const canAccess = ["ADMIN", "SALES_REP", "SALES_SUPERVISOR", "COLLECTIONS"].includes(role ?? "");
+  return {
+    canAccess,
+    canCreate: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"].includes(role ?? ""),
+    canReview: ["ADMIN", "SALES_SUPERVISOR", "COLLECTIONS"].includes(role ?? ""),
+    canDelete: ["ADMIN", "SALES_REP", "SALES_SUPERVISOR"].includes(role ?? ""),
+  };
+}
+
+export const paymentMethods: PaymentMethod[] = ["YAPE", "BANK_TRANSFER", "POS", "CASH", "ONLINE"];
+export const paymentStatuses: PaymentStatus[] = ["PENDING", "CONFIRMED", "FAILED", "REFUNDED"];

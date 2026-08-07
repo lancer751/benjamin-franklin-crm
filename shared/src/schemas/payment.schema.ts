@@ -9,7 +9,13 @@ export const PaymentMethodSchema = z.enum([
   "CASH",
   "BANK_TRANSFER",
 ]);
-export const PaymentStatusSchema = z.enum(["CONFIRMED", "REFUNDED", "FAILED"]);
+export const PaymentStatusSchema = z.enum([
+  "PENDING",
+  "CONFIRMED",
+  "FAILED",
+  "REFUNDED",
+]);
+export const PaymentReviewStatusSchema = z.enum(["CONFIRMED", "FAILED"]);
 export const PaymentTypeSchema = z.enum(["FULL", "INSTALLMENTS"]);
 export const PaymentPlanStatusSchema = z.enum([
   "COMPLETED",
@@ -40,15 +46,10 @@ export const CreatePaymentSchema = z.object({
   target: PaymentTargetSchema,
 });
 
-export const UpdatePaymentStatusSchema = z
-  .object({
-    payment_status: z.enum(["CONFIRMED", "FAILED", "REFUNDED"]),
-    rejection_reason: z.string().min(4).optional(),
-  })
-  .refine((d) => d.payment_status !== "FAILED" || !!d.rejection_reason, {
-    message: "rejection_reason es requerido al marcar un pago como FAILED",
-    path: ["rejection_reason"],
-  });
+// Motivo de rechazo no se persiste porque Payment no tiene ese campo actualmente.
+export const UpdatePaymentStatusSchema = z.object({
+  payment_status: PaymentReviewStatusSchema,
+});
 
 export const PaymentQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),

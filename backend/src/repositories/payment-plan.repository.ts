@@ -59,7 +59,11 @@ async function loadDetailForScheduling(prisma: PrismaClient, orderId: string, de
         where: { id: detailId, order_id: orderId },
         include: {
             product: { include: { edition: true } },
-            paymentPlan: { include: { installments: true } },
+            paymentPlan: {
+                include: {
+                    installments: { include: { payments: { select: { id: true } } } },
+                },
+            },
         },
     });
     if (!detail) throw new HTTPException(404, { message: "Order item not found on this order" });
@@ -125,7 +129,7 @@ export function paymentPlanRepository(prisma: PrismaClient) {
         async replace(orderId: string, detailId: string, input: CreatePaymentScheduleInput) {
             const detail = await loadDetailForScheduling(prisma, orderId, detailId);
             if (!detail.paymentPlan) throw new HTTPException(404, { message: "This item has no payment schedule yet" });
-            if (detail.paymentPlan.installments.some((i) => i.status !== "PENDING")) {
+            if (detail.paymentPlan.installments.some((i) => i.status !== "PENDING" || i.payments.length > 0)) {
                 throw new HTTPException(409, { message: "No se puede modificar un cronograma que ya tiene pagos registrados" });
             }
 
@@ -161,11 +165,17 @@ export function paymentPlanRepository(prisma: PrismaClient) {
         async cancel(orderId: string, detailId: string) {
             const detail = await prisma.orderDetail.findFirst({
                 where: { id: detailId, order_id: orderId },
-                include: { paymentPlan: { include: { installments: true } } },
+                include: {
+                    paymentPlan: {
+                        include: {
+                            installments: { include: { payments: { select: { id: true } } } },
+                        },
+                    },
+                },
             });
             if (!detail) throw new HTTPException(404, { message: "Order item not found on this order" });
             if (!detail.paymentPlan) throw new HTTPException(404, { message: "This item has no payment schedule" });
-            if (detail.paymentPlan.installments.some((i) => i.status !== "PENDING")) {
+            if (detail.paymentPlan.installments.some((i) => i.status !== "PENDING" || i.payments.length > 0)) {
                 throw new HTTPException(409, { message: "No se puede eliminar un cronograma con pagos ya registrados" });
             }
 

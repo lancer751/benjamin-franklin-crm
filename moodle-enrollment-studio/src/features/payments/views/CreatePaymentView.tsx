@@ -1,32 +1,20 @@
-import { ArrowLeft } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, ShoppingCart } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/core/components/ui/button";
-import PaymentForm from "../components/PaymentForm";
 
 export default function CreatePaymentView() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
   return (
-    <div className="space-y-6">
-      <header className="flex items-start gap-3">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label="Volver a pagos"
-          onClick={() => navigate("/pagos")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Registrar pago</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Registra un pago completo o configura un plan de cuotas.
-          </p>
-        </div>
-      </header>
-      <PaymentForm preselectedOrderId={searchParams.get("orderId")} />
+    <div className="mx-auto max-w-2xl rounded-xl border bg-card p-8 text-center">
+      <ShoppingCart className="mx-auto h-10 w-10 text-primary" />
+      <h1 className="mt-4 text-xl font-bold">Registra el pago desde la orden</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Selecciona la cuota o el producto correspondiente para mantener el monto y el destino del pago protegidos.
+      </p>
+      <div className="mt-6 flex justify-center gap-2">
+        <Button variant="outline" onClick={() => navigate("/pagos")}><ArrowLeft className="mr-2 h-4 w-4" />Volver</Button>
+        <Button onClick={() => navigate("/ordenes")}>Ir a órdenes</Button>
+      </div>
     </div>
   );
 }

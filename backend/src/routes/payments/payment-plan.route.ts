@@ -33,14 +33,14 @@ export const paymentPlanRoutes = new Hono<ContextWithPrisma>()
         return c.json<SuccessResponse<typeof plan>>({ success: true, message: "Payment schedule retrieved", data: plan }, 200);
     })
 
-    .post("/", zValidator("param", ParamsSchema), zValidator("json", CreatePaymentScheduleSchema), async (c) => {
+    .post("/", verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"), zValidator("param", ParamsSchema), zValidator("json", CreatePaymentScheduleSchema), async (c) => {
         const { id, detailId } = c.req.valid("param");
         await assertOrderAccess(c.get("prisma"), id, c.var.authUser);
         const plan = await paymentPlanRepository(c.get("prisma")).create(id, detailId, c.req.valid("json"));
         return c.json<SuccessResponse<typeof plan>>({ success: true, message: "Payment schedule created", data: plan }, 201);
     })
 
-    .put("/", zValidator("param", ParamsSchema), zValidator("json", CreatePaymentScheduleSchema), async (c) => {
+    .put("/", verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"), zValidator("param", ParamsSchema), zValidator("json", CreatePaymentScheduleSchema), async (c) => {
         const { id, detailId } = c.req.valid("param");
         await assertOrderAccess(c.get("prisma"), id, c.var.authUser);
         const plan = await paymentPlanRepository(c.get("prisma")).replace(id, detailId, c.req.valid("json"));

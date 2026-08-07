@@ -64,7 +64,7 @@ export const canAccess = (userRole: string, permission: string): boolean => {
     // COLLECTIONS (Cobranzas) has access to Orders and Finance dashboards
     COLLECTIONS: [
       "commercial:view", "orders:view",
-      "admin:view", "finance:view"
+      "admin:view", "finance:view", "payments:view"
     ]
   };
 

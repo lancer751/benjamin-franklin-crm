@@ -66,7 +66,12 @@ export const paymentRoutes = new Hono<ContextWithPrisma>()
     },
   )
 
-  .delete("/:id", zValidator("param", UUIDParam), async (c) => {
-    await paymentRepository(c.get("prisma")).cancel(c.req.valid("param").id);
+  .delete(
+    "/:id",
+    verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"),
+    zValidator("param", UUIDParam),
+    async (c) => {
+    await paymentRepository(c.get("prisma")).cancel(c.req.valid("param").id, c.var.authUser);
     return c.json<SuccessResponse>({ success: true, message: "Payment deleted" }, 200);
-  });
+    },
+  );

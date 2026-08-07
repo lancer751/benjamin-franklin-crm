@@ -25,6 +25,6 @@ describe("menú de pagos", () => {
     expect(canAccess("SALES_REP", "payments:view")).toBe(true);
     expect(canAccess("SALES_SUPERVISOR", "payments:view")).toBe(true);
     expect(canAccess("MARKETING", "payments:view")).toBe(false);
-    expect(canAccess("COLLECTIONS", "payments:view")).toBe(false);
+    expect(canAccess("COLLECTIONS", "payments:view")).toBe(true);
   });
 });
