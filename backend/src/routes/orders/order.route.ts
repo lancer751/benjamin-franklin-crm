@@ -9,14 +9,14 @@ import { verifyUserAccessAuth, verifyUserRoleAccess } from "@/middlewares/auth.m
 import { CreateOrderSchema, UpdateOrderSchema, OrderQuerySchema } from "shared";
 import { orderItemsRecordData, generateUniqueOrderCode, updateOrderItems } from "./handlers/order.handler";
 import { orderRepository } from "@/repositories/order.repository";
+import { paymentPlanRoutes } from "../payments/payment-plan.route";
 
-const UUIDParam = z.object({ id: z.string().uuid().length(36) });
+const UUIDParam = z.object({ id: z.uuid().length(36) });
 
 export const orderRoutes = new Hono<ContextWithPrisma>()
   .use(withPrisma)
   .use(verifyUserAccessAuth)
   .use(verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR", "MARKETING", "COLLECTIONS"))
-
   .get("/", zValidator("query", OrderQuerySchema), async (c) => {
     const result = await orderRepository(c.get("prisma")).findMany(c.req.valid("query"));
     return c.json<SuccessResponse<typeof result>>({ success: true, message: "Orders retrieved", data: result }, 200);
@@ -82,7 +82,6 @@ export const orderRoutes = new Hono<ContextWithPrisma>()
       return c.json<SuccessResponse<typeof order>>({ success: true, message: "Order created successfully", data: order }, 201);
     },
   )
-
   .put(
     "/:id",
     verifyUserRoleAccess("ADMIN", "SALES_REP", "SALES_SUPERVISOR"),
@@ -110,4 +109,5 @@ export const orderRoutes = new Hono<ContextWithPrisma>()
       const order = await orderRepository(c.get("prisma")).cancel(c.req.valid("param").id);
       return c.json<SuccessResponse<typeof order>>({ success: true, message: "Order cancelled", data: order }, 200);
     },
-  );
+  )
+  .route("/:id/details/:detailId/schedule", paymentPlanRoutes)
