@@ -289,16 +289,21 @@ Body:
 
 ```json
 {
-  "lead_id": "11111111-1111-1111-1111-111111111111",
-  "discount": "50.00",
+  "member_id": "11111111-1111-1111-1111-111111111111",
+  "related_campaign": "22222222-2222-2222-2222-222222222222",
+  "assigned_to": "33333333-3333-3333-3333-333333333333",
   "order_items": [
     {
       "product_id": "44444444-4444-4444-4444-444444444444",
-      "attendance_mode": "HEREDADO"
+      "attendance_mode": "HEREDADO",
+      "payment_modality": "FULL",
+      "discount_code": "BF2026"
     }
   ]
 }
 ```
+
+> Nota: las órdenes ahora se crean sobre un `member_id` de campaña y su `related_campaign`, no sobre `lead_id`. Además, el backend valida que el miembro esté en estado `MATRICULADO` y solo permite a un `SALES_REP` crear órdenes para su propio miembro.
 
 ## Payment example
 
@@ -313,25 +318,54 @@ Body:
 ```json
 {
   "order_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "payment_date": "2026-07-18",
-  "amount": 300,
+  "payment_date": "2026-07-18T15:30:00Z",
+  "amount": "300.00",
   "payment_method": "ONLINE",
-  "payment_status": "CONFIRMED",
-  "type": "INSTALLMENTS",
   "currency": "PEN",
-  "payment_plan": {
-    "total_installments": 4,
-    "total_amount": 1200,
-    "start_date": "2026-07-18",
-    "scheduled_payments": [
-      {
-        "due_date": "2026-08-18",
-        "due_amount": 300
-      }
-    ]
+  "transaccion_id": "TXN123456789",
+  "payment_receipt": "uploads/payments/receipt-12345.pdf",
+  "target": {
+    "type": "SCHEDULED_INSTALLMENT",
+    "scheduled_payment_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
   }
 }
 ```
+
+> Nota: el backend registra pagos como `PENDING` y luego actualiza su estado con `PATCH /api/payments/:id/status`. Para pagos de cuotas programadas se usa `target.type = "SCHEDULED_INSTALLMENT"`; para pago único de un ítem asincrónico se usa `target.type = "FULL_CASH"`.
+
+## Implementación en moodle-enrollment-studio
+
+### Ordenes
+- El cliente debe enviar `member_id`, `related_campaign`, `assigned_to` y `order_items` en el payload de creación de orden.
+- Cada item de `order_items` debe incluir `product_id`, `attendance_mode`, `payment_modality` y opcionalmente `discount_code`.
+- El esquema de validación en `moodle-enrollment-studio/src/features/orders/schemas/orderFormSchema.ts` ya valida:
+  - sólo `HEREDADO` para productos no híbridos
+  - sólo `VIRTUAL`/`PRESENCIAL` para productos híbridos
+  - `INSTALLMENTS` sólo cuando el producto admite cuota
+  - el descuento no supera el subtotal
+- El mapeo real se realiza en `moodle-enrollment-studio/src/features/orders/services/orderMappers.ts` con `mapCreateFormToPayload` y `mapUpdateFormToPayload`.
+- Para actualizar órdenes, el cliente envía sólo los campos cambiados: `order_items`, `assigned_to` y/o `order_status`.
+- Si la orden ya tiene un cronograma de pagos, el backend rechazará cambios en `order_items` y el cliente debe mostrar el mensaje de error apropiado.
+
+### Pagos
+- El cliente debe crear pagos con `POST /api/payments` usando el payload esperado por `CreatePaymentSchema`.
+- En `moodle-enrollment-studio/src/features/payments/services/paymentMappers.ts`, `mapPaymentFormToCreatePayload` construye:
+  - `payment_date` como ISO
+  - `amount` como string decimal
+  - `currency` en mayúsculas
+  - `payment_receipt` como clave de almacenamiento
+  - `target` con `SCHEDULED_INSTALLMENT` o `FULL_CASH`
+- El hook `moodle-enrollment-studio/src/features/payments/hooks/usePaymentForm.ts` precarga la orden seleccionada y calcula el saldo restante.
+- Para pagos en cuotas, `generateInstallments` crea `scheduled_payments` y el payload se envía al backend como parte de `payment_plan`.
+- El backend crea el pago en estado `PENDING`; luego el estado se actualiza con `PATCH /api/payments/:id/status`.
+
+### Archivos clave
+- `moodle-enrollment-studio/src/features/orders/services/orderService.ts`
+- `moodle-enrollment-studio/src/features/orders/services/orderMappers.ts`
+- `moodle-enrollment-studio/src/features/orders/schemas/orderFormSchema.ts`
+- `moodle-enrollment-studio/src/features/payments/services/paymentService.ts`
+- `moodle-enrollment-studio/src/features/payments/services/paymentMappers.ts`
+- `moodle-enrollment-studio/src/features/payments/hooks/usePaymentForm.ts`
 
 ## Academic edition example
 

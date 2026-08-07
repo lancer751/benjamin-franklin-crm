@@ -609,26 +609,20 @@ POST /api/orders
 Content-Type: application/json
 ```
 
-Creates a new order with multiple products.
+Creates a new order for a campaign member with one or more products.
 
 Request Body:
 
 ```json
 {
-  "lead_id": "550e8400-e29b-41d4-a716-446655440000",
-  "generated_by": "seller_profile_user_id_here",
-  "sub_total": 599.98,
-  "total_amount": 559.98,
-  "discount": 40.00,
+  "member_id": "550e8400-e29b-41d4-a716-446655440000",
+  "related_campaign": "660e8400-e29b-41d4-a716-446655440111",
+  "assigned_to": "770e8400-e29b-41d4-a716-446655440222",
   "order_items": [
     {
       "product_id": "bb0e8400-e29b-41d4-a716-446655440006",
-      "price": 299.99,
-      "discount_code": null
-    },
-    {
-      "product_id": "cc0e8400-e29b-41d4-a716-446655440007",
-      "price": 299.99,
+      "attendance_mode": "HEREDADO",
+      "payment_modality": "FULL",
       "discount_code": "SAVE20"
     }
   ]
@@ -639,15 +633,23 @@ Request Body:
 
 | Field | Type | Required | Rules |
 |-------|------|----------|-------|
-| `lead_id` | UUID | Yes | Must exist in database |
-| `generated_by` | UUID | No | Seller profile user_id |
-| `sub_total` | decimal | Yes | Must be positive |
-| `total_amount` | decimal | Yes | Must be ≤ sub_total |
-| `discount` | decimal | No | Default 0, must be ≥ 0 |
-| `order_items` | array | Yes | Min 1 item, max unlimited |
+| `member_id` | UUID | Yes | Must exist and belong to `related_campaign` |
+| `related_campaign` | UUID | Yes | Must match the campaign of the member |
+| `assigned_to` | UUID | No | Must reference an active user if provided |
+| `order_items` | array | Yes | At least 1 item |
 | `order_items[].product_id` | UUID | Yes | Must exist |
-| `order_items[].price` | decimal | Yes | Must be positive |
-| `order_items[].discount_code` | string | No | Max 7 characters |
+| `order_items[].attendance_mode` | enum | Yes | `HEREDADO`, `VIRTUAL`, or `PRESENCIAL` |
+| `order_items[].payment_modality` | enum | Yes | `FULL` or `INSTALLMENTS` |
+| `order_items[].discount_code` | string | No | 7-char code validated against product and date |
+
+**Rules:**
+
+- The backend sets `generated_by` from the authenticated user.
+- Only campaign members with status `MATRICULADO` can generate orders.
+- A `SALES_REP` may only create orders for members assigned to them.
+- Hybrid products require explicit `VIRTUAL` or `PRESENCIAL` attendance modes.
+- Asynchronous products only accept `FULL` payments and do not include enrollment fee pricing.
+- Discount codes are validated for activation, expiry, product match and usage limit.
 
 Response (201):
 
@@ -673,37 +675,49 @@ PUT /api/orders/:id
 Content-Type: application/json
 ```
 
-Updates order details and items.
+Updates order items, assignee, or status.
 
 Request Body (optional fields):
 
 ```json
 {
-  "total_amount": 499.98,
-  "discount": 60.00,
   "order_status": "COMPLETED",
+  "assigned_to": "770e8400-e29b-41d4-a716-446655440222",
   "order_items": [
     {
       "product_id": "bb0e8400-e29b-41d4-a716-446655440006",
-      "price": 249.99
+      "attendance_mode": "HEREDADO",
+      "payment_modality": "FULL",
+      "discount_code": "SAVE20"
     }
   ]
 }
 ```
 
-Status Codes: `200` Success, `404` Order not found
+**Important:**
+
+- `order_items` can only be edited if the order has no associated payment schedule.
+- `order_status` will be rejected if the order has unpaid balance when moving to `COMPLETED`.
+- `assigned_to` is validated against an active user.
+
+Status Codes: `200` Success, `404` Order not found, `409` Conflict
 
 ---
 
-**Delete an Order**
+**Cancel an Order**
 
 ```
 DELETE /api/orders/:id
 ```
 
-Deletes an order and its associated order details.
+Cancels the order and keeps the record for audit.
 
-Status Codes: `200` Success, `404` Order not found
+**Important:**
+
+- Only `ADMIN` and `SALES_SUPERVISOR` may cancel orders.
+- Orders with confirmed payments cannot be canceled; create a refund instead.
+
+Status Codes: `200` Success, `404` Order not found, `400` Bad Request
 
 ---
 
@@ -1258,66 +1272,47 @@ Example Response:
 
 ---
 
-**Create Manual Payment**
+**Create Payment**
 
 ```
-POST /api/payments/manual
+POST /api/payments
 Content-Type: application/json
 ```
 
-Records a payment manually (cash, transfer, POS, etc.) and optionally creates a payment plan for installments.
+Records a payment and attaches it to a scheduled installment or a full-cash order item.
 
-Request Body (for full payment):
+Request Body (scheduled installment payment):
 
 ```json
 {
   "order_id": "990e8400-e29b-41d4-a716-446655440004",
   "payment_date": "2026-04-08T15:30:00Z",
-  "amount": 279.99,
-  "payment_method": "BANK_TRANSFER",
-  "payment_status": "CONFIRMED",
-  "type": "FULL",
+  "amount": "93.33",
+  "payment_method": "CASH",
   "currency": "USD",
-  "transaccion_id": "TXN123456789"
+  "transaccion_id": "TXN123456789",
+  "payment_receipt": "uploads/payments/receipt-12345.pdf",
+  "target": {
+    "type": "SCHEDULED_INSTALLMENT",
+    "scheduled_payment_id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+  }
 }
 ```
 
-Request Body (for installment payments):
+Request Body (full cash payment for an ASINCRONICO order item):
 
 ```json
 {
   "order_id": "990e8400-e29b-41d4-a716-446655440004",
   "payment_date": "2026-04-08T15:30:00Z",
-  "amount": 93.33,
-  "payment_method": "CASH",
-  "payment_status": "CONFIRMED",
-  "type": "INSTALLMENTS",
+  "amount": "279.99",
+  "payment_method": "BANK_TRANSFER",
   "currency": "USD",
-  "payment_plan": {
-    "total_installments": 3,
-    "total_amount": 279.99,
-    "start_date": "2026-04-08T00:00:00Z",
-    "payment_plan_status": "PENDING",
-    "scheduled_payments": [
-      {
-        "number": 1,
-        "amount": 93.33,
-        "due_date": "2026-04-08T00:00:00Z",
-        "status": "PENDING"
-      },
-      {
-        "number": 2,
-        "amount": 93.33,
-        "due_date": "2026-05-08T00:00:00Z",
-        "status": "PENDING"
-      },
-      {
-        "number": 3,
-        "amount": 93.33,
-        "due_date": "2026-06-08T00:00:00Z",
-        "status": "PENDING"
-      }
-    ]
+  "transaccion_id": "TXN123456789",
+  "payment_receipt": "uploads/payments/receipt-56789.pdf",
+  "target": {
+    "type": "FULL_CASH",
+    "order_detail_id": "dddddddd-dddd-dddd-dddd-dddddddddddd"
   }
 }
 ```
@@ -1328,13 +1323,19 @@ Request Body (for installment payments):
 |-------|------|----------|-------|
 | `order_id` | UUID | Yes | Must exist |
 | `payment_date` | datetime | Yes | ISO 8601 format |
-| `amount` | decimal | Yes | Must be positive |
-| `payment_method` | enum | Yes | CASH, BANK_TRANSFER, ONLINE, POS, YAPE |
-| `payment_status` | enum | Yes | PENDING, CONFIRMED, FAILED, REFUNDED |
-| `type` | enum | Yes | FULL or INSTALLMENTS |
-| `currency` | string | No | Default: USD |
-| `transaccion_id` | string | No | External payment gateway ID |
-| `payment_plan` | object | If type=INSTALLMENTS | Payment plan details with scheduled payments |
+| `amount` | string | Yes | Must be positive and match the expected amount |
+| `payment_method` | enum | Yes | YAPE, ONLINE, POS, CASH, BANK_TRANSFER |
+| `currency` | string | Yes | 3-letter currency code |
+| `transaccion_id` | string | No | External payment reference |
+| `payment_receipt` | string | Yes | Storage key for the uploaded receipt |
+| `target` | object | Yes | `SCHEDULED_INSTALLMENT` or `FULL_CASH` |
+
+**Rules:**
+
+- The backend creates payments in `PENDING` status.
+- `payment_receipt` must already exist in storage before calling the endpoint.
+- `SCHEDULED_INSTALLMENT` targets a scheduled payment from a payment plan.
+- `FULL_CASH` targets an ASINCRONICO order item that is paid in full.
 
 Response (201):
 
@@ -1345,8 +1346,8 @@ Response (201):
   "data": {
     "id": "44i0e840-0e29-b41d-4a71-6446655440014",
     "order_id": "990e8400-e29b-41d4-a716-446655440004",
-    "amount": 279.99,
-    "payment_status": "CONFIRMED"
+    "amount": "93.33",
+    "payment_status": "PENDING"
   }
 }
 ```
