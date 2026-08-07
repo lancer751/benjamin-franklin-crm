@@ -1,31 +1,15 @@
-import { useState } from "react";
-import { ArrowLeft, BookOpen, Calendar, CheckCircle2, ChevronLeft, ChevronRight, Layers, Loader2, Phone, TrendingUp, Users, XCircle } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Filter, Loader2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/core/components/ui/card";
+import { Card } from "@/core/components/ui/card";
 import { Input } from "@/core/components/ui/input";
-import { Checkbox } from "@/core/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/core/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/core/components/ui/tabs";
-import {
-  CAMPAIGN_MEMBER_STATUS_CONFIG,
-  CAMPAIGN_MEMBER_STATUS_OPTIONS,
-  getCampaignMemberStatusLabel,
-  isCampaignMemberStatus,
-} from "@/core/constants/campaignMemberStatus";
+import { SellerTeamPanel } from "@/features/users/components/SellerTeamPanel";
 import { LEAD_STATUS_OPTIONS, getLeadStatusLabel, isLeadStatus } from "../utils/prospectDisplay";
 import { useSupervisorFollowUp, type TeamFollowUpMode } from "../hooks/useSupervisorFollowUp";
-import { useSupervisorMemberDrawer } from "../hooks/useSupervisorMemberDrawer";
-import { useCampaignMemberReassignment } from "../hooks/useCampaignMemberReassignment";
-import type { TeamFollowUpMemberRow } from "../adapters/teamFollowUpAdapter";
-import type { NormalizedLead } from "../adapters/leadAdapter";
-import type { AdvisorFilterOption } from "../adapters/campaignAssignmentAdapter";
-import { CampaignMemberReassignmentDialog } from "../components/CampaignMemberReassignmentDialog";
-import { canReassignCampaignMembers, mapCampaignMemberReassignmentError } from "../utils/campaignMemberReassignment";
-import LeadDetailsSheet from "@/features/campaigns/views/seller/components/LeadDetailsSheet";
+import { CampaignMembersPanel } from "@/features/campaigns/components/CampaignMembersPanel";
 
 const formatDateTime = (value: string): string => {
   if (!value) return "No disponible";
@@ -35,15 +19,6 @@ const formatDateTime = (value: string): string => {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
-};
-
-const MemberStatusBadge = ({ status }: { status: string }) => {
-  const config = isCampaignMemberStatus(status) ? CAMPAIGN_MEMBER_STATUS_CONFIG[status] : null;
-  return (
-    <Badge variant="outline" className={config?.badgeClassName}>
-      {getCampaignMemberStatusLabel(status, "No disponible")}
-    </Badge>
-  );
 };
 
 interface PaginationProps {
@@ -71,332 +46,305 @@ const SupervisorFollowUpView = () => {
   const navigate = useNavigate();
   const followUp = useSupervisorFollowUp();
   const isCampaignMode = followUp.mode === "CAMPAIGN";
-  const [selectedMember, setSelectedMember] = useState<TeamFollowUpMemberRow | null>(null);
-  const [drawerLead, setDrawerLead] = useState<NormalizedLead | null>(null);
-  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
-  const [reassignmentMembers, setReassignmentMembers] = useState<TeamFollowUpMemberRow[]>([]);
-  const drawer = useSupervisorMemberDrawer(selectedMember);
-  const reassignment = useCampaignMemberReassignment();
-  const canReassign = canReassignCampaignMembers(followUp.role);
-  const selectedMembers = followUp.memberRows.filter((member) => selectedMemberIds.includes(member.memberId));
-  const areAllVisibleMembersSelected = followUp.memberRows.length > 0 && followUp.memberRows.every((member) => selectedMemberIds.includes(member.memberId));
-  const hasPartialSelection = selectedMemberIds.length > 0 && !areAllVisibleMembersSelected;
-
-  const openMemberDrawer = (member: TeamFollowUpMemberRow) => {
-    setSelectedMember(member);
-    setDrawerLead(member.drawerLead);
-  };
-  const closeMemberDrawer = () => {
-    setSelectedMember(null);
-    setDrawerLead(null);
-  };
 
   const handleModeChange = (value: string) => {
     if (value === "ALL" || value === "UNASSIGNED" || value === "CAMPAIGN") {
       followUp.selectMode(value as TeamFollowUpMode);
-      setSelectedMemberIds([]);
-      setReassignmentMembers([]);
     }
   };
 
   const handleCampaignChange = (campaignId: string) => {
     followUp.selectCampaign(campaignId);
-    setSelectedMemberIds([]);
-    setReassignmentMembers([]);
   };
 
-  const handleCampaignPageChange = (page: number) => {
-    followUp.setCampaignPage(page);
-    setSelectedMemberIds([]);
-  };
-
-  const handleCampaignAdvisorChange = (advisorUserId: string) => {
-    followUp.setCampaignAdvisorUserId(advisorUserId);
-    setSelectedMemberIds([]);
-  };
-
-  const handleCampaignStatusChange = (status: string) => {
-    if (status === "ALL" || isCampaignMemberStatus(status)) {
-      followUp.setCampaignMemberStatus(status);
-      setSelectedMemberIds([]);
-    }
-  };
-
-  const toggleMemberSelection = (memberId: string, checked: boolean) => {
-    setSelectedMemberIds((current) => checked
-      ? Array.from(new Set([...current, memberId]))
-      : current.filter((id) => id !== memberId));
-  };
-
-  const toggleVisibleSelection = (checked: boolean) => {
-    setSelectedMemberIds(checked ? followUp.memberRows.map((member) => member.memberId) : []);
-  };
-
-  const openBulkReassignment = () => {
-    if (!followUp.selectedCampaign || selectedMembers.length === 0 || selectedMembers.some((member) => member.campaignId !== followUp.selectedCampaign?.id)) {
-      toast.error("Solo puedes reasignar prospectos de una misma campaña en esta vista.");
-      return;
-    }
-    setReassignmentMembers(selectedMembers);
-  };
-
-  const confirmReassignment = (advisor: AdvisorFilterOption) => {
-    const [firstMember] = reassignmentMembers;
-    if (!firstMember || !followUp.selectedCampaign) return;
-    const onSuccess = () => {
-      const count = reassignmentMembers.length;
-      toast.success(count === 1
-        ? `${firstMember.prospectName} fue reasignado a ${advisor.name}.`
-        : `${count} prospectos fueron reasignados a ${advisor.name}.`);
-      setSelectedMemberIds([]);
-      setReassignmentMembers([]);
-    };
-    const onError = (error: unknown) => toast.error(mapCampaignMemberReassignmentError(error));
-
-    if (reassignmentMembers.length === 1) {
-      reassignment.reassignOne.mutate({
-        campaignId: firstMember.campaignId,
-        memberId: firstMember.memberId,
-        assignedTo: advisor.userId,
-      }, { onSuccess, onError });
-      return;
-    }
-    reassignment.reassignMany.mutate({
-      campaignId: followUp.selectedCampaign.id,
-      memberIds: reassignmentMembers.map((member) => member.memberId),
-      assignedTo: advisor.userId,
-    }, { onSuccess, onError });
-  };
+  // Compact summary metrics derived from sellerCards
+  const activeSellersCount = followUp.sellerCards.filter((s) => s.isActive).length;
+  const totalLeadsSum = followUp.sellerCards.reduce((acc, s) => acc + s.totalLeads, 0);
+  const totalMatriculatedSum = followUp.sellerCards.reduce((acc, s) => acc + s.totalMatriculated, 0);
+  const totalOrdersSum = followUp.sellerCards.reduce((acc, s) => acc + s.totalOrders, 0);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 fade-in">
+      {/* Page header */}
       <div className="flex items-center gap-4">
-        <button type="button" onClick={() => navigate(-1)} className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100" aria-label="Volver">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100"
+          aria-label="Volver"
+        >
           <ArrowLeft size={20} />
         </button>
         <div>
           <h1 className="text-2xl font-bold text-foreground">Seguimiento de Equipo de Ventas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Supervisa los prospectos generales y la gestión comercial dentro de cada campaña.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Supervisa la actividad de tus asesores comerciales y gestiona los prospectos por vendedor o campaña.
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="rounded-xl border-border/60 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Asesores activos</CardTitle>
-            <Users size={16} className="text-sky-600" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{followUp.isLoadingSellers ? "…" : followUp.isErrorSellers ? "No disponible" : followUp.kpis.activeSellers}</div></CardContent>
-        </Card>
-        <Card className="rounded-xl border-border/60 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Conversión del equipo</CardTitle>
-            <TrendingUp size={16} className="text-emerald-600" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">No disponible</div></CardContent>
-        </Card>
-        <Card className="rounded-xl border-border/60 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ventas realizadas</CardTitle>
-            <Layers size={16} className="text-amber-600" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{followUp.isLoadingSellers ? "…" : followUp.isErrorSellers ? "No disponible" : Math.trunc(followUp.kpis.totalSales).toLocaleString("es-PE")}</div></CardContent>
-        </Card>
-        <Card className="rounded-xl border-border/60 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Órdenes acumuladas</CardTitle>
-            <div className="flex gap-1"><CheckCircle2 size={14} className="text-emerald-600" /><XCircle size={14} className="text-rose-600" /></div>
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{followUp.isLoadingSellers ? "…" : followUp.isErrorSellers ? "No disponible" : `${followUp.kpis.completedOrders} / ${followUp.kpis.cancelledOrders}`}</div></CardContent>
-        </Card>
-      </div>
+      {/* ===== SECCIÓN COMPACTA: ASESORES DEL EQUIPO ===== */}
+      <section aria-labelledby="team-section-title" className="space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-2">
+          <div>
+            <h2
+              id="team-section-title"
+              className="text-xs font-bold uppercase tracking-widest text-slate-500"
+            >
+              Asesores del equipo
+            </h2>
+          </div>
 
+          {/* Compact horizontal summary strip */}
+          {!followUp.isLoadingSellers && !followUp.isErrorSellers && followUp.sellerCards.length > 0 && (
+            <div className="flex flex-wrap items-center gap-4 rounded-lg bg-slate-100/70 px-3 py-1.5 text-xs text-slate-600">
+              <div>
+                Total asesores: <strong className="text-slate-800">{followUp.sellerCards.length}</strong>
+              </div>
+              <div className="h-3 w-px bg-slate-300" />
+              <div>
+                Activos: <strong className="text-emerald-700">{activeSellersCount}</strong>
+              </div>
+              <div className="h-3 w-px bg-slate-300" />
+              <div>
+                Leads: <strong className="text-slate-800">{totalLeadsSum.toLocaleString("es-PE")}</strong>
+              </div>
+              <div className="h-3 w-px bg-slate-300" />
+              <div>
+                Matriculados: <strong className="text-emerald-700">{totalMatriculatedSum.toLocaleString("es-PE")}</strong>
+              </div>
+              <div className="h-3 w-px bg-slate-300" />
+              <div>
+                Órdenes: <strong className="text-slate-800">{totalOrdersSum.toLocaleString("es-PE")}</strong>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Panel de asesores compacto con tabla, filtros y ordenamiento */}
+        <SellerTeamPanel
+          sellers={followUp.filteredAndSortedSellers}
+          selectedSellerUserId={followUp.selectedSellerUserId}
+          onSelectSeller={followUp.selectSeller}
+          search={followUp.sellerSearch}
+          onSearchChange={followUp.setSellerSearch}
+          statusFilter={followUp.sellerStatusFilter}
+          onStatusFilterChange={followUp.setSellerStatusFilter}
+          sortBy={followUp.sellerSortBy}
+          onSortByChange={followUp.setSellerSortBy}
+          isLoading={followUp.isLoadingSellers}
+          isError={followUp.isErrorSellers}
+        />
+      </section>
+
+      {/* ===== BANNER CONTEXTUAL CUANDO HAY UN ASESOR SELECCIONADO ===== */}
+      {followUp.selectedSeller && (
+        <div className="flex flex-col gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-900 sm:flex-row sm:items-center sm:justify-between shadow-sm">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 shrink-0 text-primary" />
+            <span>
+              Mostrando prospectos asignados a{" "}
+              <strong className="font-bold text-slate-900">
+                {followUp.selectedSeller.fullName}
+              </strong>
+              {followUp.selectedSeller.corporateEmail && (
+                <span className="text-slate-500 ml-1">({followUp.selectedSeller.corporateEmail})</span>
+              )}
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={followUp.clearSellerSelection}
+            className="h-7 border-sky-300 bg-white text-xs font-medium text-sky-800 hover:bg-sky-100 gap-1"
+          >
+            <X className="h-3.5 w-3.5" /> Quitar filtro
+          </Button>
+        </div>
+      )}
+
+      {/* ===== SECCIÓN INFERIOR: LEADS / CAMPAÑA ===== */}
       <Card className="overflow-hidden rounded-xl border-border/60 bg-white shadow-sm">
         <Tabs value={followUp.mode} onValueChange={handleModeChange}>
           <div className="flex flex-col gap-4 border-b bg-slate-50 p-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
-              <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Control de asignación y seguimiento</span>
+              <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Control de asignación y seguimiento
+              </span>
               <TabsList className="grid h-auto w-full grid-cols-1 gap-1 bg-slate-200/60 p-1 sm:grid-cols-3 lg:w-auto">
-                <TabsTrigger value="ALL" className="px-4 py-2 text-xs font-semibold uppercase">Todos los leads</TabsTrigger>
-                <TabsTrigger value="UNASSIGNED" className="px-4 py-2 text-xs font-semibold uppercase">Sin asignar</TabsTrigger>
-                <TabsTrigger value="CAMPAIGN" className="px-4 py-2 text-xs font-semibold uppercase">Por campaña</TabsTrigger>
+                <TabsTrigger value="ALL" className="px-4 py-2 text-xs font-semibold uppercase">
+                  Todos los leads
+                </TabsTrigger>
+                <TabsTrigger value="UNASSIGNED" className="px-4 py-2 text-xs font-semibold uppercase">
+                  Sin asignar
+                </TabsTrigger>
+                <TabsTrigger value="CAMPAIGN" className="px-4 py-2 text-xs font-semibold uppercase">
+                  Por campaña
+                </TabsTrigger>
               </TabsList>
             </div>
 
             {isCampaignMode && (
               <div className="w-full space-y-1 lg:w-[320px]">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Seleccionar campaña</label>
-                <Select value={followUp.selectedCampaignId || undefined} onValueChange={handleCampaignChange} disabled={followUp.isLoadingCampaigns || followUp.isErrorCampaigns || followUp.campaigns.length === 0}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder={followUp.isLoadingCampaigns ? "Cargando campañas…" : "Selecciona una campaña"} /></SelectTrigger>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Seleccionar campaña
+                </label>
+                <Select
+                  value={followUp.selectedCampaignId || undefined}
+                  onValueChange={handleCampaignChange}
+                  disabled={followUp.isLoadingCampaigns || followUp.isErrorCampaigns || followUp.campaigns.length === 0}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder={followUp.isLoadingCampaigns ? "Cargando campañas…" : "Selecciona una campaña"} />
+                  </SelectTrigger>
                   <SelectContent>
-                    {followUp.campaigns.map((campaign) => <SelectItem key={campaign.id} value={campaign.id}>{campaign.name}</SelectItem>)}
+                    {followUp.campaigns.map((campaign) => (
+                      <SelectItem key={campaign.id} value={campaign.id}>{campaign.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                {followUp.isErrorCampaigns && <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={followUp.retryCampaigns}>Reintentar carga de campañas</Button>}
-                {!followUp.isLoadingCampaigns && !followUp.isErrorCampaigns && followUp.campaigns.length === 0 && <p className="text-xs text-muted-foreground">No hay campañas activas disponibles.</p>}
+                {followUp.isErrorCampaigns && (
+                  <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={followUp.retryCampaigns}>
+                    Reintentar carga de campañas
+                  </Button>
+                )}
+                {!followUp.isLoadingCampaigns && !followUp.isErrorCampaigns && followUp.campaigns.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No hay campañas activas disponibles.</p>
+                )}
               </div>
             )}
           </div>
 
-          <div className="flex flex-col gap-3 border-b bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="font-semibold text-slate-900">
-                {followUp.mode === "ALL" ? "Todos los leads" : followUp.mode === "UNASSIGNED" ? "Leads sin asignar" : followUp.selectedCampaign?.name ?? "Por campaña"}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {isCampaignMode
-                  ? followUp.selectedCampaign
-                    ? `${followUp.memberTotal} prospectos asociados según el backend.`
-                    : "Selecciona una campaña para consultar sus prospectos."
-                  : `${followUp.leadTotal} prospectos encontrados.`}
-              </p>
-            </div>
-            {(followUp.isFetchingLeads || followUp.isFetchingMembers) && <Loader2 className="h-4 w-4 animate-spin text-primary" aria-label="Actualizando" />}
-          </div>
-
           {isCampaignMode ? (
+            <CampaignMembersPanel
+              campaignId={followUp.selectedCampaignId}
+              campaignName={followUp.selectedCampaign?.name}
+              sellers={followUp.campaignAdvisors}
+              variant="team-follow-up"
+            />
+          ) : (
             <>
-              <div className="grid grid-cols-1 gap-3 border-b bg-slate-50/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="flex flex-col gap-3 border-b bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-semibold text-slate-900">
+                    {followUp.mode === "ALL" ? "Todos los leads" : "Leads sin asignar"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {`${followUp.leadTotal} prospectos encontrados.`}
+                  </p>
+                </div>
+                {followUp.isFetchingLeads && <Loader2 className="h-4 w-4 animate-spin text-primary" aria-label="Actualizando" />}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 border-b bg-slate-50/60 p-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Buscar prospecto</label>
-                  <Input disabled placeholder="No disponible en este endpoint" className="bg-white" />
-                  <p className="text-[10px] text-muted-foreground">La API de miembros no admite búsqueda.</p>
+                  <Input
+                    value={followUp.leadSearch}
+                    onChange={(event) => followUp.setLeadSearch(event.target.value)}
+                    placeholder="Nombre, correo, DNI o celular"
+                    className="bg-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Estado del lead</label>
+                  <Select
+                    value={followUp.leadStatus}
+                    onValueChange={(value) => {
+                      if (value === "ALL" || isLeadStatus(value)) followUp.setLeadStatus(value);
+                    }}
+                  >
+                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Todos los estados</SelectItem>
+                      {LEAD_STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Asesor</label>
-                  <Select value={followUp.campaignAdvisorUserId} onValueChange={handleCampaignAdvisorChange} disabled={!followUp.selectedCampaign || followUp.campaignAdvisors.length === 0 || followUp.isSalesRep}>
-                    <SelectTrigger className="bg-white"><SelectValue placeholder="Todos los asesores" /></SelectTrigger>
+                  <Select
+                    value={followUp.mode === "UNASSIGNED" ? "UNASSIGNED" : followUp.leadAdvisorUserId}
+                    onValueChange={followUp.setLeadAdvisorUserId}
+                    disabled={followUp.mode === "UNASSIGNED" || !followUp.canFilterByAdvisor}
+                  >
+                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ALL">Todos los asesores</SelectItem>
-                      {followUp.campaignAdvisors.map((advisor) => <SelectItem key={advisor.userId} value={advisor.userId}>{advisor.name}</SelectItem>)}
+                      {followUp.mode === "UNASSIGNED" ? (
+                        <SelectItem value="UNASSIGNED">Sin asignar</SelectItem>
+                      ) : (
+                        <>
+                          <SelectItem value="ALL">Todos los asesores</SelectItem>
+                          {followUp.allAdvisors.map((advisor) => (
+                            <SelectItem key={advisor.userId} value={advisor.userId}>{advisor.name}</SelectItem>
+                          ))}
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Tipificación</label>
-                  <Select value={followUp.campaignMemberStatus} onValueChange={handleCampaignStatusChange} disabled={!followUp.selectedCampaign}>
-                    <SelectTrigger className="bg-white"><SelectValue placeholder="Todas las tipificaciones" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">Todas las tipificaciones</SelectItem>
-                      {CAMPAIGN_MEMBER_STATUS_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Rango de fecha</label>
-                  <Select disabled><SelectTrigger className="bg-white"><SelectValue placeholder="No disponible" /></SelectTrigger></Select>
-                  <p className="text-[10px] text-muted-foreground">La API de miembros no admite fechas.</p>
                 </div>
               </div>
 
-              {!followUp.selectedCampaign ? (
-                <div className="px-4 py-16 text-center text-sm text-muted-foreground">Selecciona una campaña para consultar sus prospectos.</div>
-              ) : followUp.isLoadingMembers ? (
-                <div className="flex items-center justify-center gap-2 px-4 py-16 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Cargando prospectos de la campaña…</div>
-              ) : followUp.isErrorMembers ? (
-                <div className="space-y-3 px-4 py-16 text-center"><p className="text-sm text-rose-700">No fue posible consultar los prospectos de esta campaña.</p><Button type="button" variant="outline" onClick={() => followUp.retryMembers()}>Reintentar</Button></div>
+              {followUp.isLoadingLeads ? (
+                <div className="flex items-center justify-center gap-2 px-4 py-16 text-sm text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" /> Cargando leads…
+                </div>
+              ) : followUp.isErrorLeads ? (
+                <div className="space-y-3 px-4 py-16 text-center">
+                  <p className="text-sm text-rose-700">No fue posible consultar los leads.</p>
+                  <Button type="button" variant="outline" onClick={() => followUp.retryLeads()}>Reintentar</Button>
+                </div>
               ) : (
                 <>
-                  {canReassign && selectedMemberIds.length > 0 && (
-                    <div className="flex flex-col gap-3 border-b bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                      <span className="text-sm font-medium">{selectedMemberIds.length} prospecto{selectedMemberIds.length === 1 ? "" : "s"} seleccionado{selectedMemberIds.length === 1 ? "" : "s"}</span>
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="button" size="sm" onClick={openBulkReassignment}>Reasignar asesor</Button>
-                        <Button type="button" size="sm" variant="outline" onClick={() => setSelectedMemberIds([])}>Limpiar selección</Button>
-                      </div>
-                    </div>
-                  )}
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader><TableRow>
-                        {canReassign && <TableHead className="w-12"><Checkbox aria-label="Seleccionar prospectos visibles" checked={areAllVisibleMembersSelected ? true : hasPartialSelection ? "indeterminate" : false} onCheckedChange={(checked) => toggleVisibleSelection(checked === true)} /></TableHead>}
-                        <TableHead><span className="flex items-center gap-1"><Calendar className="h-4 w-4" />Fecha/hora de asociación</span></TableHead>
-                        <TableHead><span className="flex items-center gap-1"><BookOpen className="h-4 w-4" />Curso o programa</span></TableHead>
-                        <TableHead><span className="flex items-center gap-1"><Phone className="h-4 w-4" />Celular principal</span></TableHead>
-                        <TableHead>Prospecto</TableHead><TableHead>Tipificación</TableHead><TableHead>Asesor actual</TableHead>{canReassign && <TableHead>Acciones</TableHead>}
-                      </TableRow></TableHeader>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Registro</TableHead>
+                          <TableHead>Prospecto</TableHead>
+                          <TableHead>Correo</TableHead>
+                          <TableHead>Celular</TableHead>
+                          <TableHead>Estado general</TableHead>
+                          <TableHead>Asesor</TableHead>
+                        </TableRow>
+                      </TableHeader>
                       <TableBody>
-                        {followUp.memberRows.length === 0 ? <TableRow><TableCell colSpan={canReassign ? 8 : 6} className="py-12 text-center text-muted-foreground">No hay prospectos para los filtros seleccionados.</TableCell></TableRow> : followUp.memberRows.map((member) => (
-                          <TableRow
-                            key={member.id}
-                            tabIndex={0}
-                            role="button"
-                            aria-label={`Ver gestión de ${member.prospectName} en ${member.programName}`}
-                            className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-                            onClick={() => openMemberDrawer(member)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                openMemberDrawer(member);
-                              }
-                            }}
-                          >
-                            {canReassign && <TableCell onClick={(event) => event.stopPropagation()}><Checkbox aria-label={`Seleccionar ${member.prospectName}`} checked={selectedMemberIds.includes(member.memberId)} onCheckedChange={(checked) => toggleMemberSelection(member.memberId, checked === true)} /></TableCell>}
-                            <TableCell>{formatDateTime(member.associatedAt)}</TableCell><TableCell className="font-medium">{member.programName}</TableCell><TableCell>{member.phone}</TableCell><TableCell>{member.prospectName}</TableCell><TableCell><MemberStatusBadge status={member.memberStatus} /></TableCell><TableCell>{member.advisorName || "No disponible"}</TableCell>
-                            {canReassign && <TableCell onClick={(event) => event.stopPropagation()}><Button type="button" size="sm" variant="outline" onClick={() => setReassignmentMembers([member])}>Reasignar asesor</Button></TableCell>}
+                        {followUp.leadRows.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
+                              No se encontraron leads.
+                            </TableCell>
                           </TableRow>
-                        ))}
+                        ) : (
+                          followUp.leadRows.map((lead) => (
+                            <TableRow key={lead.id}>
+                              <TableCell>{formatDateTime(lead.createdAt)}</TableCell>
+                              <TableCell className="font-medium">{lead.fullName || "No disponible"}</TableCell>
+                              <TableCell>{lead.email || "No disponible"}</TableCell>
+                              <TableCell>{lead.phone || "No disponible"}</TableCell>
+                              <TableCell>{getLeadStatusLabel(lead.leadStatus)}</TableCell>
+                              <TableCell>{lead.sellerName || "No disponible"}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
-                  <Pagination page={followUp.campaignPage} totalPages={followUp.memberTotalPages} isFetching={followUp.isFetchingMembers} onPageChange={handleCampaignPageChange} />
+                  <Pagination
+                    page={followUp.leadPage}
+                    totalPages={followUp.leadTotalPages}
+                    isFetching={followUp.isFetchingLeads}
+                    onPageChange={followUp.setLeadPage}
+                  />
                 </>
               )}
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 gap-3 border-b bg-slate-50/60 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="space-y-1"><label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Buscar prospecto</label><Input value={followUp.leadSearch} onChange={(event) => followUp.setLeadSearch(event.target.value)} placeholder="Nombre, correo, DNI o celular" className="bg-white" /></div>
-                <div className="space-y-1"><label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Estado del lead</label><Select value={followUp.leadStatus} onValueChange={(value) => { if (value === "ALL" || isLeadStatus(value)) followUp.setLeadStatus(value); }}><SelectTrigger className="bg-white"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">Todos los estados</SelectItem>{LEAD_STATUS_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-1"><label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Asesor</label><Select value={followUp.mode === "UNASSIGNED" ? "UNASSIGNED" : followUp.leadAdvisorUserId} onValueChange={followUp.setLeadAdvisorUserId} disabled={followUp.mode === "UNASSIGNED" || !followUp.canFilterByAdvisor}><SelectTrigger className="bg-white"><SelectValue /></SelectTrigger><SelectContent>{followUp.mode === "UNASSIGNED" ? <SelectItem value="UNASSIGNED">Sin asignar</SelectItem> : <><SelectItem value="ALL">Todos los asesores</SelectItem>{followUp.allAdvisors.map((advisor) => <SelectItem key={advisor.userId} value={advisor.userId}>{advisor.name}</SelectItem>)}</>}</SelectContent></Select></div>
-              </div>
-
-              {followUp.isLoadingLeads ? <div className="flex items-center justify-center gap-2 px-4 py-16 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Cargando leads…</div> : followUp.isErrorLeads ? <div className="space-y-3 px-4 py-16 text-center"><p className="text-sm text-rose-700">No fue posible consultar los leads.</p><Button type="button" variant="outline" onClick={() => followUp.retryLeads()}>Reintentar</Button></div> : <>
-                <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Registro</TableHead><TableHead>Prospecto</TableHead><TableHead>Correo</TableHead><TableHead>Celular</TableHead><TableHead>Estado general</TableHead><TableHead>Asesor</TableHead></TableRow></TableHeader><TableBody>
-                  {followUp.leadRows.length === 0 ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">No se encontraron leads.</TableCell></TableRow> : followUp.leadRows.map((lead) => <TableRow key={lead.id}><TableCell>{formatDateTime(lead.createdAt)}</TableCell><TableCell className="font-medium">{lead.fullName || "No disponible"}</TableCell><TableCell>{lead.email || "No disponible"}</TableCell><TableCell>{lead.phone || "No disponible"}</TableCell><TableCell>{getLeadStatusLabel(lead.leadStatus)}</TableCell><TableCell>{lead.sellerName || "No disponible"}</TableCell></TableRow>)}
-                </TableBody></Table></div>
-                <Pagination page={followUp.leadPage} totalPages={followUp.leadTotalPages} isFetching={followUp.isFetchingLeads} onPageChange={followUp.setLeadPage} />
-              </>}
             </>
           )}
         </Tabs>
       </Card>
-
-      <LeadDetailsSheet
-        selectedLead={drawerLead}
-        setSelectedLead={setDrawerLead}
-        onClose={closeMemberDrawer}
-        onStatusChange={drawer.changeStatus}
-        isStatusPending={drawer.statusMutation.isPending}
-        interactions={drawer.interactions}
-        isLoadingInteractions={drawer.interactionsQuery.isLoading}
-        isErrorInteractions={drawer.interactionsQuery.isError}
-        onRetryInteractions={() => void drawer.interactionsQuery.refetch()}
-        createInteractionMutation={drawer.createInteractionMutation}
-        tasks={drawer.tasks}
-        isLoadingTasks={drawer.tasksQuery.isLoading}
-        isErrorTasks={drawer.tasksQuery.isError}
-        onRetryTasks={() => void drawer.tasksQuery.refetch()}
-        createTaskMutation={drawer.createTaskMutation}
-        updateTaskMutation={drawer.updateTaskMutation}
-        deleteTaskMutation={drawer.deleteTaskMutation}
-        selectedCampaignId={selectedMember?.campaignId ?? ""}
-        interactionCount={selectedMember?.interactionCount}
-        capabilities={{ ...drawer.capabilities, canEditLead: false }}
-      />
-      <CampaignMemberReassignmentDialog
-        open={reassignmentMembers.length > 0}
-        members={reassignmentMembers}
-        campaignName={followUp.selectedCampaign?.name ?? "Campaña"}
-        advisors={followUp.campaignAdvisors}
-        isPending={reassignment.reassignOne.isPending || reassignment.reassignMany.isPending}
-        onOpenChange={(open) => {
-          if (!open && !reassignment.reassignOne.isPending && !reassignment.reassignMany.isPending) {
-            setReassignmentMembers([]);
-          }
-        }}
-        onConfirm={confirmReassignment}
-      />
     </div>
   );
 };

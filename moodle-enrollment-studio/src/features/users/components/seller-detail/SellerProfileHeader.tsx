@@ -1,16 +1,14 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Mail, Phone, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Mail, Phone, ShieldCheck } from "lucide-react";
 import { Badge } from "@/core/components/ui/badge";
-import { Button } from "@/core/components/ui/button";
 import type { CleanSellerProfile } from "../../adapters/seller.adapter";
 
 interface Props {
   seller: CleanSellerProfile;
   isSelfView: boolean;
-  onRefresh: () => void;
 }
 
-export function SellerProfileHeader({ seller, isSelfView, onRefresh }: Props) {
+export function SellerProfileHeader({ seller, isSelfView }: Props) {
   return (
     <div className="space-y-3">
       <Link
@@ -31,9 +29,12 @@ export function SellerProfileHeader({ seller, isSelfView, onRefresh }: Props) {
               <h1 className="truncate text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
                 {seller.fullName}
               </h1>
-              <Badge className={seller.isActive
-                ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50"
-                : "border border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-100"}
+              <Badge
+                className={
+                  seller.isActive
+                    ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50"
+                    : "border border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-100"
+                }
               >
                 <ShieldCheck className="mr-1 h-3 w-3" />
                 {seller.isActive ? "Activo" : "Inactivo"}
@@ -52,9 +53,6 @@ export function SellerProfileHeader({ seller, isSelfView, onRefresh }: Props) {
             </div>
           </div>
         </div>
-        <Button onClick={onRefresh} variant="outline" size="sm" className="self-end sm:self-auto">
-          <RefreshCw className="h-4 w-4" /> Actualizar
-        </Button>
       </section>
     </div>
   );

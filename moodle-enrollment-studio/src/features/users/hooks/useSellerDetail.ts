@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getSellerCampaigns, getSellerProfileById } from "../services/userService";
+import { getSellerProfileById } from "../services/userService";
 import { adaptSellerProfile } from "../adapters/seller.adapter";
 
 export function useSellerDetail(sellerUserId?: string) {
@@ -18,21 +18,10 @@ export function useSellerDetail(sellerUserId?: string) {
     enabled: hasSellerId,
   });
 
-  const sellerProfileId = sellerQuery.data?.data?.id;
-
-  const campaignsQuery = useQuery({
-    queryKey: ["seller-campaigns", sellerProfileId],
-    queryFn: () => {
-      if (!sellerProfileId) throw new Error("Seller profile ID is required");
-      return getSellerCampaigns(sellerProfileId);
-    },
-    enabled: Boolean(sellerProfileId),
-  });
-
   const seller = useMemo(() => {
-    if (!sellerQuery.data?.data) return null;
-    return adaptSellerProfile(sellerQuery.data.data, campaignsQuery.data);
-  }, [sellerQuery.data, campaignsQuery.data]);
+    if (!sellerQuery.data) return null;
+    return adaptSellerProfile(sellerQuery.data);
+  }, [sellerQuery.data]);
 
   return {
     seller,
@@ -40,17 +29,16 @@ export function useSellerDetail(sellerUserId?: string) {
     isProfileLoading: sellerQuery.isLoading,
     isProfileError:
       hasSellerId &&
-      (sellerQuery.isError || (!sellerQuery.isLoading && !sellerQuery.data?.data)),
-    isCampaignsLoading: Boolean(sellerProfileId) && campaignsQuery.isLoading,
-    isCampaignsError: campaignsQuery.isError,
+      (sellerQuery.isError || (!sellerQuery.isLoading && !sellerQuery.data)),
+    isCampaignsLoading: false,
+    isCampaignsError: false,
     refetch: () => {
       if (!id) return;
       void sellerQuery.refetch();
-      if (sellerProfileId) void campaignsQuery.refetch();
     },
     refetchCampaigns: () => {
-      if (!sellerProfileId) return;
-      void campaignsQuery.refetch();
+      if (!id) return;
+      void sellerQuery.refetch();
     },
   };
 }

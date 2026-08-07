@@ -149,3 +149,18 @@ export const adaptSellerCampaignAssignments = (
     }];
   });
 };
+
+export const adaptCampaignSellersOnCampaign = (sellersOnCampaign: unknown): AdvisorFilterOption[] => {
+  if (!Array.isArray(sellersOnCampaign)) return [];
+  return sellersOnCampaign.flatMap((assignment) => {
+    if (!isRecord(assignment)) return [];
+    const seller = isRecord(assignment.seller) ? assignment.seller : {};
+    const user = isRecord(seller.user) ? seller.user : {};
+    const sellerProfileId = stringValue(assignment.seller_id) || stringValue(seller.id);
+    const userId = stringValue(seller.user_id) || stringValue(user.id);
+    if (!userId || !sellerProfileId) return [];
+    const name = normalizeName(user.first_name, user.last_name);
+    return [{ userId, sellerProfileId, name }];
+  }).sort((first, second) => first.name.localeCompare(second.name, "es"));
+};
+

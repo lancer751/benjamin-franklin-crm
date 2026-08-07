@@ -1,14 +1,35 @@
 export const LEAD_STATUSES = [
-  "NEW", "ATTEMPTED_CONTACT", "CONTACTED", "QUALIFIED", "UNQUALIFIED",
-  "FOLLOW_UP", "ON_HOLD", "WON", "LOST",
+  "NUEVO", "CONTACTADO", "NO_CONTACTADO", "NEGOCIACION",
+  "SEGUIMIENTO", "EN_ESPERA", "MATRICULADO", "PERDIDO",
 ] as const;
 
 export const LEAD_SOURCES = [
   "FACEBOOK", "INSTAGRAM", "TIKTOK", "WHATSAPP", "WEBSITE",
 ] as const;
 
-export type LeadStatus = (typeof LEAD_STATUSES)[number];
+export type LeadStatusKey = (typeof LEAD_STATUSES)[number];
+export type LeadStatus = string;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
+
+export const LEAD_STATUS_LABELS: Record<string, string> = {
+  NUEVO: "Nuevo",
+  NEW: "Nuevo",
+  CONTACTADO: "Contactado",
+  CONTACTED: "Contactado",
+  NO_CONTACTADO: "No contactado",
+  ATTEMPTED_CONTACT: "No contactado",
+  UNQUALIFIED: "No contactado",
+  NEGOCIACION: "Negociación",
+  QUALIFIED: "Negociación",
+  SEGUIMIENTO: "Seguimiento",
+  FOLLOW_UP: "Seguimiento",
+  EN_ESPERA: "En espera",
+  ON_HOLD: "En espera",
+  MATRICULADO: "Matriculado",
+  WON: "Matriculado",
+  PERDIDO: "Perdido",
+  LOST: "Perdido",
+};
 
 export interface CleanCampaignMember {
   id: string;
@@ -22,6 +43,7 @@ export interface CleanCampaignMember {
 
 export interface CleanAssignedCampaign {
   id: string;
+  campaignId: string;
   name: string;
   platform: string;
   status: string;
@@ -29,7 +51,17 @@ export interface CleanAssignedCampaign {
   isOrganic: boolean;
   startDate: string | null;
   endDate: string | null;
+  assignedAt: string | null;
   assignedLeads: number;
+  totalLeads: number;
+  totalMatriculated: number;
+  conversionRate: number;
+}
+
+export interface LeadStatusBreakdownItem {
+  key: string;
+  label: string;
+  count: number;
 }
 
 export interface CleanSellerProfile {
@@ -43,6 +75,8 @@ export interface CleanSellerProfile {
   salesTarget: number;
   totalSales: number;
   totalOrders: number;
+  totalLeads: number;
+  totalMatriculated: number;
   completedOrders: number;
   canceledOrders: number;
   returnRate: number;
@@ -51,83 +85,17 @@ export interface CleanSellerProfile {
   assignedOrders: Array<{ id: string; status: string; totalAmount: number }>;
   recentLeadActivity: CleanCampaignMember[];
   campaigns: CleanAssignedCampaign[];
-  leadStatusCounts: Record<LeadStatus, number>;
-  leadSourceCounts: Record<LeadSource, number>;
+  leadStatusCounts: Record<string, number>;
+  leadStatusList: LeadStatusBreakdownItem[];
+  leadSourceCounts: Record<string, number>;
   conversionRate: number;
   goalCompletion: number;
   activeCampaigns: number;
 }
 
-interface RawSellerProfile {
-  id?: string | null;
-  user_id?: string | null;
-  sales_target?: number | string | null;
-  total_sales?: number | string | null;
-  total_orders?: number | string | null;
-  completed_orders?: number | string | null;
-  canceled_orders?: number | string | null;
-  return_rate?: number | string | null;
-  response_time_avg?: number | string | null;
-  user?: {
-    first_name?: string | null;
-    middle_name?: string | null;
-    last_name?: string | null;
-    email?: string | null;
-    corporate_email?: string | null;
-    cellphone?: string | null;
-    corporate_cellphone?: string | null;
-    is_active?: boolean | null;
-    assignedOrders?: Array<{
-      id?: string | null;
-      order_status?: string | null;
-      total_amount?: number | string | null;
-    }> | null;
-    campaignMembers?: RawSellerProfile["campaignMembers"];
-    _count?: { assignedOrders?: number; campaignMembers?: number } | null;
-  } | null;
-  campaignMembers?: Array<{
-    id?: string | null;
-    lead_id?: string | null;
-    campaing_id?: string | null;
-    status?: string | null;
-    source?: string | null;
-    created_at?: string | Date | null;
-    updated_at?: string | Date | null;
-  }> | null;
-}
-
-interface RawCampaignsResponse {
-  assignedCampaing?: Array<{
-    campaign?: {
-      id?: string | null;
-      name?: string | null;
-      initial_budget?: number | string | null;
-      status?: string | null;
-      start_date?: string | Date | null;
-      end_date?: string | Date | null;
-      platform?: string | null;
-      is_organic?: boolean | null;
-    } | null;
-  }> | null;
-}
-
 const toNumber = (value: number | string | null | undefined): number => {
   const parsed = typeof value === "string" ? Number.parseFloat(value) : Number(value);
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-};
-
-const createZeroCounts = <T extends readonly string[]>(values: T) =>
-  Object.fromEntries(values.map((value) => [value, 0])) as Record<T[number], number>;
-
-const countKnownValues = <T extends readonly string[]>(
-  values: T,
-  currentValues: string[],
-): Record<T[number], number> => {
-  const counts = createZeroCounts(values);
-  currentValues.forEach((value) => {
-    if (value in counts) counts[value as T[number]] += 1;
-  });
-  return counts;
 };
 
 const toIsoString = (value: string | Date | null | undefined): string | null => {
@@ -136,96 +104,275 @@ const toIsoString = (value: string | Date | null | undefined): string | null => 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 };
 
-const getTimestamp = (value: string | null): number => {
-  if (!value) return 0;
-  const timestamp = new Date(value).getTime();
-  return Number.isNaN(timestamp) ? 0 : timestamp;
-};
-
 export function adaptSellerProfile(
   rawSellerData: unknown,
-  rawCampaignsData?: unknown,
 ): CleanSellerProfile {
-  const rawSeller = (rawSellerData ?? {}) as RawSellerProfile;
-  const rawCampaigns = (rawCampaignsData ?? {}) as RawCampaignsResponse;
-  const user = rawSeller.user ?? {};
+  let root = (rawSellerData ?? {}) as Record<string, unknown>;
+  if (root.data && typeof root.data === "object" && root.data !== null) {
+    root = root.data as Record<string, unknown>;
+  }
 
-  const campaignMembers: CleanCampaignMember[] = (rawSeller.campaignMembers ?? user.campaignMembers ?? []).map(
-    (member) => ({
-      id: member.id ?? "",
-      leadId: member.lead_id ?? "",
-      campaignId: member.campaing_id ?? "",
-      status: member.status ?? "",
-      source: member.source ?? "",
-      createdAt: toIsoString(member.created_at),
-      updatedAt: toIsoString(member.updated_at),
-    }),
-  );
+  // 1. Seller object
+  const sellerObj = (root.seller ?? root) as Record<string, unknown>;
+  const userObj = (sellerObj.user && typeof sellerObj.user === "object" ? sellerObj.user : sellerObj) as Record<string, unknown>;
 
-  const campaigns: CleanAssignedCampaign[] = (rawCampaigns.assignedCampaing ?? [])
-    .map((assignment) => assignment.campaign)
-    .filter((campaign): campaign is NonNullable<typeof campaign> => Boolean(campaign?.id))
-    .map((campaign) => ({
-      id: campaign.id ?? "",
-      name: campaign.name?.trim() || "Sin información",
-      platform: campaign.platform?.trim() || "No disponible",
-      status: campaign.status?.trim() || "No disponible",
-      initialBudget: toNumber(campaign.initial_budget),
-      isOrganic: campaign.is_organic ?? false,
-      startDate: toIsoString(campaign.start_date),
-      endDate: toIsoString(campaign.end_date),
-      assignedLeads: campaignMembers.filter((member) => member.campaignId === campaign.id).length,
-    }));
-
-  const nameParts = [user.first_name, user.middle_name, user.last_name]
-    .map((name) => name?.trim())
-    .filter((name): name is string => Boolean(name));
+  const firstName = (userObj.first_name as string)?.trim() ?? "";
+  const middleName = (userObj.middle_name as string)?.trim() ?? "";
+  const lastName = (userObj.last_name as string)?.trim() ?? "";
+  const nameParts = [firstName, middleName, lastName].filter(Boolean);
   const fullName = nameParts.join(" ") || "Asesor de ventas";
-  const salesTarget = Math.trunc(toNumber(rawSeller.sales_target));
-  const totalSales = Math.trunc(toNumber(rawSeller.total_sales));
-  const leadStatusCounts = countKnownValues(
-    LEAD_STATUSES,
-    campaignMembers.map((member) => member.status),
-  );
-  const totalLeads = campaignMembers.length;
-  const assignedOrders = (user.assignedOrders ?? []).map((order) => ({
-    id: order.id ?? "",
-    status: order.order_status ?? "",
-    totalAmount: toNumber(order.total_amount),
-  }));
+
+  const initials = [firstName, lastName]
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "AV";
+
+  const email = (userObj.corporate_email as string)?.trim()
+    || (userObj.email as string)?.trim()
+    || "Sin información";
+
+  const phone = (userObj.corporate_cellphone as string)?.trim()
+    || (userObj.cellphone as string)?.trim()
+    || null;
+
+  const isActive = userObj.is_active === true;
+  const id = (sellerObj.id as string) || (userObj.id as string) || "";
+  const userId = (sellerObj.user_id as string) || (userObj.id as string) || id;
+
+  // 2. Metrics object (strictly from data.metrics)
+  const metricsObj = (root.metrics ?? sellerObj.metrics ?? {}) as Record<string, unknown>;
+
+  const salesTarget = Math.trunc(toNumber(metricsObj.sales_target));
+  const totalSales = Math.trunc(toNumber(metricsObj.total_sales));
+  const totalLeads = Math.trunc(toNumber(metricsObj.total_leads));
+  const totalMatriculated = Math.trunc(toNumber(metricsObj.total_matriculated));
+  const conversionRate = toNumber(metricsObj.conversion_rate);
+  const totalOrders = Math.trunc(toNumber(metricsObj.total_orders));
+  const activeCampaigns = Math.trunc(toNumber(metricsObj.active_campaigns));
+  const goalCompletion = salesTarget > 0 ? (totalSales / salesTarget) * 100 : 0;
+
+  // 3. Lead Status Breakdown (strictly from data.lead_status_breakdown)
+  const rawBreakdown = (root.lead_status_breakdown ?? sellerObj.lead_status_breakdown ?? {}) as Record<string, unknown>;
+
+  const leadStatusCounts: Record<string, number> = {};
+  const leadStatusList: LeadStatusBreakdownItem[] = [];
+
+  if (typeof rawBreakdown === "object" && rawBreakdown !== null) {
+    if (Array.isArray(rawBreakdown)) {
+      rawBreakdown.forEach((item: unknown) => {
+        if (item && typeof item === "object") {
+          const rec = item as Record<string, unknown>;
+          const k = String(rec.status || "").toUpperCase();
+          const count = Math.trunc(toNumber(rec.count));
+          if (k) {
+            leadStatusCounts[k] = count;
+            leadStatusList.push({
+              key: k,
+              label: LEAD_STATUS_LABELS[k] ?? k,
+              count,
+            });
+          }
+        }
+      });
+    } else {
+      Object.entries(rawBreakdown).forEach(([k, val]) => {
+        const keyUpper = k.toUpperCase();
+        const count = Math.trunc(toNumber(val));
+        leadStatusCounts[keyUpper] = count;
+        leadStatusList.push({
+          key: keyUpper,
+          label: LEAD_STATUS_LABELS[keyUpper] ?? keyUpper,
+          count,
+        });
+      });
+    }
+  }
+
+  // Ensure standard breakdown list entries exist
+  const defaultKeys = ["NUEVO", "CONTACTADO", "NO_CONTACTADO", "NEGOCIACION", "SEGUIMIENTO", "EN_ESPERA", "MATRICULADO", "PERDIDO"];
+  defaultKeys.forEach((key) => {
+    if (!(key in leadStatusCounts)) {
+      const aliasMap: Record<string, string> = {
+        NUEVO: "NEW",
+        CONTACTADO: "CONTACTED",
+        NO_CONTACTADO: "ATTEMPTED_CONTACT",
+        NEGOCIACION: "QUALIFIED",
+        SEGUIMIENTO: "FOLLOW_UP",
+        EN_ESPERA: "ON_HOLD",
+        MATRICULADO: "WON",
+        PERDIDO: "LOST",
+      };
+      const alias = aliasMap[key];
+      const aliasCount = alias && alias in leadStatusCounts ? leadStatusCounts[alias] : 0;
+      leadStatusCounts[key] = aliasCount;
+      if (!leadStatusList.some((item) => item.key === key)) {
+        leadStatusList.push({
+          key,
+          label: LEAD_STATUS_LABELS[key] ?? key,
+          count: aliasCount,
+        });
+      }
+    }
+  });
+
+  // 4. Assigned Campaigns (strictly from data.assigned_campaigns)
+  const rawCampaignList = (root.assigned_campaigns ?? root.assignedCampaing ?? sellerObj.assigned_campaigns ?? []) as unknown[];
+
+  const campaigns: CleanAssignedCampaign[] = rawCampaignList.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const rec = item as Record<string, unknown>;
+    const cObj = (rec.campaign && typeof rec.campaign === "object" ? rec.campaign : rec) as Record<string, unknown>;
+    const cMetrics = (rec.metrics && typeof rec.metrics === "object" ? rec.metrics : (cObj.metrics && typeof cObj.metrics === "object" ? cObj.metrics : {})) as Record<string, unknown>;
+
+    const id = (rec.id as string) || (cObj.id as string) || (rec.campaign_id as string) || "";
+    if (!id) return [];
+    const campaignId = (rec.campaign_id as string) || (cObj.id as string) || id;
+    const name = (cObj.name as string)?.trim() || (rec.name as string)?.trim() || "Campaña sin nombre";
+    const platform = (cObj.platform as string)?.trim() || "No disponible";
+    const status = (cObj.status as string)?.trim() || (rec.status as string)?.trim() || "ACTIVE";
+    const assignedAt = toIsoString((rec.assigned_at as string | Date) || (rec.created_at as string | Date) || (cObj.start_date as string | Date));
+
+    // Read strictly from campaign.metrics!
+    const cLeads = Math.trunc(toNumber(cMetrics.total_leads));
+    const cMatriculated = Math.trunc(toNumber(cMetrics.total_matriculated));
+    const cConversion = typeof cMetrics.conversion_rate === "number"
+      ? cMetrics.conversion_rate
+      : (cLeads > 0 ? (cMatriculated / cLeads) * 100 : 0);
+
+    return [{
+      id,
+      campaignId,
+      name,
+      platform,
+      status,
+      initialBudget: 0,
+      isOrganic: false,
+      startDate: assignedAt,
+      endDate: null,
+      assignedAt,
+      assignedLeads: cLeads,
+      totalLeads: cLeads,
+      totalMatriculated: cMatriculated,
+      conversionRate: cConversion,
+    }];
+  });
 
   return {
-    id: rawSeller.id ?? "",
-    userId: rawSeller.user_id ?? "",
+    id,
+    userId,
     fullName,
-    initials: nameParts.slice(0, 2).map((name) => name[0]).join("").toUpperCase() || "AV",
-    email: user.corporate_email?.trim() || user.email?.trim() || "Sin información",
-    phone: user.corporate_cellphone?.trim() || user.cellphone?.trim() || null,
-    isActive: user.is_active ?? false,
+    initials,
+    email,
+    phone,
+    isActive,
     salesTarget,
     totalSales,
-    totalOrders: rawSeller.total_orders == null ? assignedOrders.length : Math.trunc(toNumber(rawSeller.total_orders)),
-    completedOrders: rawSeller.completed_orders == null
-      ? assignedOrders.filter((order) => order.status === "COMPLETED").length
-      : Math.trunc(toNumber(rawSeller.completed_orders)),
-    canceledOrders: rawSeller.canceled_orders == null
-      ? assignedOrders.filter((order) => order.status === "CANCELLED").length
-      : Math.trunc(toNumber(rawSeller.canceled_orders)),
-    returnRate: toNumber(rawSeller.return_rate),
-    responseTimeAvgSeconds: toNumber(rawSeller.response_time_avg),
-    campaignMembers,
-    assignedOrders,
-    recentLeadActivity: [...campaignMembers]
-      .sort((a, b) => getTimestamp(b.updatedAt ?? b.createdAt) - getTimestamp(a.updatedAt ?? a.createdAt))
-      .slice(0, 5),
+    totalOrders,
+    totalLeads,
+    totalMatriculated,
+    completedOrders: 0,
+    canceledOrders: 0,
+    returnRate: 0,
+    responseTimeAvgSeconds: 0,
+    campaignMembers: [],
+    assignedOrders: [],
+    recentLeadActivity: [],
     campaigns,
     leadStatusCounts,
-    leadSourceCounts: countKnownValues(
-      LEAD_SOURCES,
-      campaignMembers.map((member) => member.source),
-    ),
-    conversionRate: totalLeads > 0 ? (leadStatusCounts.WON / totalLeads) * 100 : 0,
-    goalCompletion: salesTarget > 0 ? (totalSales / salesTarget) * 100 : 0,
-    activeCampaigns: campaigns.filter((campaign) => campaign.status === "ACTIVE").length,
+    leadStatusList,
+    leadSourceCounts: {},
+    conversionRate,
+    goalCompletion,
+    activeCampaigns: activeCampaigns || campaigns.filter((c) => c.status === "ACTIVE").length,
   };
+}
+
+// ---------------------------------------------------------------------------
+// SellerTeamCardModel — normalised shape for the team overview cards
+// ---------------------------------------------------------------------------
+
+export interface SellerTeamCardModel {
+  sellerProfileId: string;
+  userId: string;
+  fullName: string;
+  initials: string;
+  isActive: boolean;
+  totalLeads: number;
+  totalMatriculated: number;
+  totalOrders: number;
+  activeCampaigns: number;
+  salesTarget: number;
+  corporateEmail: string | null;
+}
+
+interface RawTeamSeller {
+  id?: string | null;
+  user_id?: string | null;
+  sales_target?: number | string | null;
+  total_orders?: number | string | null;
+  user?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    corporate_email?: string | null;
+    email?: string | null;
+    is_active?: boolean | null;
+  } | null;
+  assignedCampaing?: Array<{
+    campaign_id?: string | null;
+    campaign?: {
+      id?: string | null;
+      name?: string | null;
+      status?: string | null;
+    } | null;
+  }> | null;
+  metrics?: {
+    total_leads?: number | null;
+    total_matriculated?: number | null;
+  } | null;
+}
+
+export function adaptSellerTeamCard(raw: unknown): SellerTeamCardModel {
+  const seller = (raw ?? {}) as RawTeamSeller;
+  const user = seller.user ?? {};
+
+  const firstName = user.first_name?.trim() ?? "";
+  const lastName = user.last_name?.trim() ?? "";
+  const nameParts = [firstName, lastName].filter(Boolean);
+  const fullName = nameParts.join(" ") || "Asesor de ventas";
+
+  const initials = nameParts
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "AV";
+
+  const activeCampaigns = (seller.assignedCampaing ?? []).filter(
+    (item) => item?.campaign?.status === "ACTIVE",
+  ).length;
+
+  return {
+    sellerProfileId: typeof seller.id === "string" ? seller.id : "",
+    userId: typeof seller.user_id === "string" ? seller.user_id : "",
+    fullName,
+    initials,
+    isActive: user.is_active === true,
+    totalLeads: typeof seller.metrics?.total_leads === "number" ? Math.max(0, seller.metrics.total_leads) : 0,
+    totalMatriculated: typeof seller.metrics?.total_matriculated === "number" ? Math.max(0, seller.metrics.total_matriculated) : 0,
+    totalOrders: toNumber(seller.total_orders),
+    activeCampaigns,
+    salesTarget: Math.trunc(toNumber(seller.sales_target)),
+    corporateEmail: user.corporate_email?.trim() || user.email?.trim() || null,
+  };
+}
+
+export function adaptSellerTeamList(response: unknown): SellerTeamCardModel[] {
+  let items: unknown[] = [];
+  if (Array.isArray(response)) {
+    items = response;
+  } else if (typeof response === "object" && response !== null) {
+    const data = Reflect.get(response as object, "data");
+    if (Array.isArray(data)) items = data;
+  }
+  return items.map(adaptSellerTeamCard);
 }
