@@ -14,6 +14,7 @@ import { Input } from "@/core/components/ui/input";
 import { Textarea } from "@/core/components/ui/textarea";
 import { Button } from "@/core/components/ui/button";
 import { Skeleton } from "@/core/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/core/components/ui/tooltip";
 import { cn } from "@/core/lib/utils";
 import { 
   Phone, 
@@ -106,6 +107,7 @@ interface LeadDetailsSheetProps {
   onRetryInteractions?: () => void;
   isErrorTasks?: boolean;
   onRetryTasks?: () => void;
+  onEditLead?: () => void;
 }
 
 const DEFAULT_CAPABILITIES: LeadDrawerCapabilities = {
@@ -138,6 +140,7 @@ export default function LeadDetailsSheet({
   onRetryInteractions,
   isErrorTasks = false,
   onRetryTasks,
+  onEditLead,
 }: LeadDetailsSheetProps) {
   const [activeTab, setActiveTab] = useState<"interactions" | "tasks">("interactions");
 
@@ -362,15 +365,22 @@ export default function LeadDetailsSheet({
                         <SheetTitle className="text-md font-extrabold text-foreground truncate flex items-center gap-2">
                           <span>{[selectedLead.first_name, selectedLead.middle_name, selectedLead.last_name].filter(Boolean).join(" ").replace(/\s+/g, " ").trim() || "Prospecto sin nombre"}</span>
                           {capabilities.canEditLead && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-5 w-5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md shrink-0"
-                              onClick={beginLeadEdit}
-                              title="Editar información"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md shrink-0"
+                                    onClick={onEditLead ?? beginLeadEdit}
+                                    aria-label={onEditLead ? "Editar prospecto" : "Editar información"}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{onEditLead ? "Editar prospecto" : "Editar información"}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </SheetTitle>
                         <SheetDescription className="text-xs text-muted-foreground truncate">

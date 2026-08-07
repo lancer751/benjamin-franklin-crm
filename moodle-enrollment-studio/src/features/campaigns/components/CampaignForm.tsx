@@ -31,6 +31,7 @@ import {
 import { MultiSellerSelect, type SellerOption } from "./MultiSellerSelect";
 import { SearchableCombobox, type ComboboxOption } from "./SearchableCombobox";
 import { formatCampaignCurrency } from "../utils/campaignCurrency";
+import { campaignQueryKeys } from "../queryKeys";
 
 interface CampaignFormProps {
   onCancel: () => void;
@@ -298,7 +299,7 @@ export default function CampaignForm({ onCancel, onSuccess, initialData }: Campa
       if (!isEdit) return createCampaign(parsed);
 
       const updateResult = await updateCampaign(initialData.id, {
-        campaing_name: parsed.name,
+        name: parsed.name,
         initial_budget: parsed.initial_budget,
         start_date: parsed.start_date,
         end_date: parsed.end_date,
@@ -317,9 +318,13 @@ export default function CampaignForm({ onCancel, onSuccess, initialData }: Campa
 
       return updateResult;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
-      queryClient.invalidateQueries({ queryKey: ["campaign", initialData?.id] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: campaignQueryKeys.all }),
+        ...(initialData?.id
+          ? [queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(initialData.id) })]
+          : []),
+      ]);
       toast.success(isEdit ? "Campaña actualizada exitosamente" : "Campaña creada exitosamente");
       reset(defaultValues);
       setChannel("NONE");
