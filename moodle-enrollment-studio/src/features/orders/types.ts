@@ -77,12 +77,15 @@ export interface OrderDetailResponse {
     pricing_status?: string;
     installments_min_number?: number | null;
     installments_max_number?: number | null;
+    enrollment_fee?: string | number | null;
+    edition?: { modality?: string | null } | null;
     category?: { name?: string | null } | null;
   };
   paymentPlan?: OrderPaymentPlan | null;
 }
 
 export interface OrderDisplayItem {
+  detailId: string;
   productId: string;
   productName: string;
   categoryName: string;
@@ -93,6 +96,11 @@ export interface OrderDisplayItem {
   paymentModality: PaymentModality | null;
   discountCode: string | null;
   paymentPlan: OrderPaymentPlan | null;
+  attendanceMode: AttendanceMode | null;
+  editionModality: string | null;
+  enrollmentFee: string;
+  installmentsMin: number;
+  installmentsMax: number;
 }
 
 export interface OrderInstallment {
@@ -101,6 +109,11 @@ export interface OrderInstallment {
   due_date: string;
   due_amount: string | number;
   status: string;
+  payments?: Array<{
+    id: string;
+    payment_status: string;
+    payment_date?: string;
+  }>;
 }
 
 export interface OrderPayment {
@@ -113,6 +126,8 @@ export interface OrderPayment {
   currency?: string | null;
   transaccion_id?: string | null;
   payment_receipt?: string | null;
+  scheduled_payment_id?: string | null;
+  order_detail_id?: string | null;
 }
 
 export interface OrderPaymentPlan {

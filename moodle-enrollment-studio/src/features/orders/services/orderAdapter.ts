@@ -64,6 +64,12 @@ function adaptPaymentPlan(value: unknown): OrderPaymentPlan | null {
       due_date: text(item.due_date),
       due_amount: text(item.due_amount) || number(item.due_amount).toFixed(2),
       status: text(item.status) || "PENDING",
+      payments: Array.isArray(item.payments) ? item.payments.flatMap((payment) =>
+        isRecord(payment) && text(payment.id) ? [{
+          id: text(payment.id),
+          payment_status: text(payment.payment_status),
+          ...(text(payment.payment_date) && { payment_date: text(payment.payment_date) }),
+        }] : []) : [],
     }] : []) : [],
   };
 }
@@ -87,6 +93,10 @@ function adaptOrderDetail(value: unknown): OrderDetailResponse | null {
       id: productId,
       name: text(product.name) || "Producto no disponible",
       image_url: nullableText(product.image_url),
+      installments_min_number: number(product.installments_min_number),
+      installments_max_number: number(product.installments_max_number),
+      enrollment_fee: text(product.enrollment_fee) || number(product.enrollment_fee).toFixed(2),
+      edition: isRecord(product.edition) ? { modality: nullableText(product.edition.modality) } : null,
       category: category ? { name: nullableText(category.name) } : null,
     },
     paymentPlan,
@@ -102,6 +112,7 @@ function adaptDisplayItem(value: unknown): OrderDisplayItem | null {
   if (!productId) return null;
 
   return {
+    detailId: text(value.id),
     productId,
     productName: text(product?.name) || "Producto no disponible",
     categoryName: text(category?.name) || "Sin categoría",
@@ -112,6 +123,11 @@ function adaptDisplayItem(value: unknown): OrderDisplayItem | null {
     paymentModality: isPaymentModality(value.payment_modality) ? value.payment_modality : null,
     discountCode: text(discountCode?.code) || text(value.discount_code) || null,
     paymentPlan: adaptPaymentPlan(value.paymentPlan),
+    attendanceMode: isAttendanceMode(value.attendance_mode) ? value.attendance_mode : null,
+    editionModality: product && isRecord(product.edition) ? nullableText(product.edition.modality) : null,
+    enrollmentFee: text(product?.enrollment_fee) || number(product?.enrollment_fee).toFixed(2),
+    installmentsMin: number(product?.installments_min_number, 1),
+    installmentsMax: number(product?.installments_max_number, 1),
   };
 }
 
@@ -127,6 +143,8 @@ function adaptPayment(value: unknown): OrderPayment | null {
     currency: nullableText(value.currency),
     transaccion_id: nullableText(value.transaccion_id),
     payment_receipt: nullableText(value.payment_receipt),
+    scheduled_payment_id: nullableText(value.scheduled_payment_id),
+    order_detail_id: nullableText(value.order_detail_id),
   };
 }
 

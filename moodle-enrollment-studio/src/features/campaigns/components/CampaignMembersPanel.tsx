@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { BookOpen, Calendar, ChevronLeft, ChevronRight, Loader2, Phone, Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { BookOpen, Calendar, ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Phone, Plus } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Badge } from "@/core/components/ui/badge";
@@ -9,6 +9,7 @@ import { Input } from "@/core/components/ui/input";
 import { Checkbox } from "@/core/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/core/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/core/components/ui/tooltip";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
   CAMPAIGN_MEMBER_STATUS_CONFIG,
@@ -87,6 +88,7 @@ export const CampaignMembersPanel = ({
   initialAdvisorUserId,
 }: CampaignMembersPanelProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const role = user?.role?.name ?? "";
   const isSalesRep = role === "SALES_REP";
@@ -186,6 +188,17 @@ export const CampaignMembersPanel = ({
   const closeMemberDrawer = () => {
     setSelectedMember(null);
     setDrawerLead(null);
+  };
+
+  const openLeadDetail = (leadId: string) => {
+    navigate(`/prospectos/${leadId}`);
+  };
+
+  const openLeadEdit = (leadId: string) => {
+    const params = new URLSearchParams({
+      returnTo: `${location.pathname}${location.search}`,
+    });
+    navigate(`/prospectos/${leadId}/editar?${params.toString()}`);
   };
 
   const openBulkReassignment = () => {
@@ -319,14 +332,15 @@ export const CampaignMembersPanel = ({
               <TableHeader><TableRow>
                 {canReassign && <TableHead className="w-12"><Checkbox aria-label="Seleccionar prospectos visibles" checked={areAllVisibleMembersSelected ? true : hasPartialSelection ? "indeterminate" : false} onCheckedChange={(checked) => toggleVisibleSelection(checked === true)} /></TableHead>}
                 <TableHead><span className="flex items-center gap-1"><Calendar className="h-4 w-4" />Fecha/hora de asociación</span></TableHead>
+                <TableHead>Prospecto</TableHead>
                 <TableHead><span className="flex items-center gap-1"><BookOpen className="h-4 w-4" />Curso o programa</span></TableHead>
                 <TableHead><span className="flex items-center gap-1"><Phone className="h-4 w-4" />Celular principal</span></TableHead>
-                <TableHead>Prospecto</TableHead><TableHead>Tipificación</TableHead><TableHead>Asesor actual</TableHead>{canReassign && <TableHead>Acciones</TableHead>}
+                <TableHead>Tipificación</TableHead><TableHead>Asesor actual</TableHead><TableHead>Acciones</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {memberRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={canReassign ? 8 : 6} className="py-12 text-center text-muted-foreground">
+                    <TableCell colSpan={canReassign ? 8 : 7} className="py-12 text-center text-muted-foreground">
                       {hasActiveFilters ? "No se encontraron prospectos con los filtros actuales." : "No hay prospectos asociados a esta campaña."}
                     </TableCell>
                   </TableRow>
@@ -346,8 +360,29 @@ export const CampaignMembersPanel = ({
                     }}
                   >
                     {canReassign && <TableCell onClick={(event) => event.stopPropagation()}><Checkbox aria-label={`Seleccionar ${member.prospectName}`} checked={selectedMemberIds.includes(member.memberId)} onCheckedChange={(checked) => toggleMemberSelection(member.memberId, checked === true)} /></TableCell>}
-                    <TableCell>{formatDateTime(member.associatedAt)}</TableCell><TableCell className="font-medium">{member.programName}</TableCell><TableCell>{member.phone}</TableCell><TableCell>{member.prospectName}</TableCell><TableCell><MemberStatusBadge status={member.memberStatus} /></TableCell><TableCell>{member.advisorName || "No disponible"}</TableCell>
-                    {canReassign && <TableCell onClick={(event) => event.stopPropagation()}><Button type="button" size="sm" variant="outline" onClick={() => setReassignmentMembers([member])}>Reasignar asesor</Button></TableCell>}
+                    <TableCell>{formatDateTime(member.associatedAt)}</TableCell><TableCell className="font-medium">{member.prospectName}</TableCell><TableCell>{member.programName}</TableCell><TableCell>{member.phone}</TableCell><TableCell><MemberStatusBadge status={member.memberStatus} /></TableCell><TableCell>{member.advisorName || "No disponible"}</TableCell>
+                    <TableCell onClick={(event) => event.stopPropagation()}>
+                      <TooltipProvider delayDuration={200}>
+                        <div className="flex items-center gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label={`Ver detalle de ${member.prospectName}`} onClick={() => openLeadDetail(member.leadId)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Ver detalle</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button type="button" size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar prospecto ${member.prospectName}`} onClick={() => openLeadEdit(member.leadId)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar prospecto</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -377,7 +412,8 @@ export const CampaignMembersPanel = ({
         deleteTaskMutation={drawer.deleteTaskMutation}
         selectedCampaignId={selectedMember?.campaignId ?? ""}
         interactionCount={selectedMember?.interactionCount}
-        capabilities={{ ...drawer.capabilities, canEditLead: false }}
+        capabilities={drawer.capabilities}
+        onEditLead={() => selectedMember?.leadId && openLeadEdit(selectedMember.leadId)}
       />
       <CampaignMemberReassignmentDialog
         open={reassignmentMembers.length > 0}

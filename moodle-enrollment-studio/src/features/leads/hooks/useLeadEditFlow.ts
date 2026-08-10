@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { buildUpdateLeadPayload, hasLeadChanges, mapLeadToFormValues, unwrapLeadForEdit } from "../adapters/leadQuickFormAdapter";
 import { getLeadById, updateLead } from "../services/leadService";
@@ -16,8 +16,13 @@ const responseError = (response: unknown, fallback: string) => {
 
 export function useLeadEditFlow(id: string) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [initialData, setInitialData] = useState<LeadFieldsData | null>(null);
+  const rawReturnTo = searchParams.get("returnTo")?.trim() || "";
+  const returnTo = rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//")
+    ? rawReturnTo
+    : `/prospectos/${id}`;
 
   const form = useForm<LeadFieldsInput, unknown, LeadFieldsData>({
     resolver: standardSchemaResolver(leadFieldsSchema),
@@ -77,13 +82,13 @@ export function useLeadEditFlow(id: string) {
         queryClient.invalidateQueries({ queryKey: ["leads"] }),
       ]);
       toast.success("Prospecto actualizado correctamente.");
-      navigate(`/prospectos/${id}`);
+      navigate(returnTo);
     },
   });
 
   const cancel = () => {
     if (hasChanges && !window.confirm("Tienes cambios sin guardar. ¿Deseas salir de todas formas?")) return;
-    navigate(`/prospectos/${id}`);
+    navigate(returnTo);
   };
 
   const queryMessage = leadQuery.error instanceof Error ? leadQuery.error.message : "No fue posible cargar este prospecto.";
@@ -108,7 +113,7 @@ export function useLeadEditFlow(id: string) {
     canSubmit: Boolean(initialData && parsedValues.success && hasChanges && !mutation.isPending),
     retry: () => void leadQuery.refetch(),
     cancel,
-    back: () => navigate(`/prospectos/${id}`),
+    back: () => navigate(returnTo),
     submit: form.handleSubmit((data) => mutation.mutate(data)),
   };
 }

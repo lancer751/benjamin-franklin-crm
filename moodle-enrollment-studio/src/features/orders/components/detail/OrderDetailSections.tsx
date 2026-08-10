@@ -5,7 +5,6 @@ import {
   ChevronDown,
   CircleDollarSign,
   Copy,
-  CreditCard,
   Edit,
   ExternalLink,
   FileText,
@@ -20,6 +19,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
 import { Skeleton } from "@/core/components/ui/skeleton";
@@ -44,9 +44,12 @@ import {
 import { cn } from "@/core/lib/utils";
 import { formatPEN, paymentModalityLabel } from "../orderDisplay";
 import type { OrderPayment, OrderResponse } from "../../types";
+import { RegisterPaymentDialog } from "@/features/payments/components/RegisterPaymentDialog";
+import { PaymentScheduleDialog } from "@/features/payments/components/PaymentScheduleDialog";
+import { useDeletePaymentSchedule } from "@/features/payments/hooks/usePaymentPlan";
+import { scheduledObligationLabel } from "@/features/payments/utils/paymentSchedulePresentation";
 import {
   canManageOrders,
-  canRegisterOrderPayment,
   confirmedPaymentsTotal,
   formatOrderDate,
   fullName,
@@ -59,6 +62,21 @@ import {
   paymentTypeLabels,
   planStatusLabels,
 } from "./orderDetailUtils";
+
+const editionModalityLabels: Record<string, string> = {
+  ASINCRONICO: "Asincrónica",
+  SINCRONICO: "Sincrónica",
+  VIRTUAL: "Virtual",
+  PRESENCIAL: "Presencial",
+  HIBRIDO: "Híbrida",
+  HYBRID: "Híbrida",
+};
+
+function readableModality(value: string): string {
+  return editionModalityLabels[value.toUpperCase()] ?? value
+    .toLocaleLowerCase("es-PE")
+    .replace(/^./, (character) => character.toLocaleUpperCase("es-PE"));
+}
 
 interface OrderDetailHeaderProps {
   order: OrderResponse;
@@ -73,10 +91,8 @@ export function OrderDetailHeader({
   role,
   onBack,
   onEdit,
-  onRegisterPayment,
 }: OrderDetailHeaderProps) {
   const canEdit = canManageOrders(role);
-  const canPay = canRegisterOrderPayment(order, role);
   const updatedDiffers = order.updatedAt !== order.createdAt;
 
   const actions = (
@@ -85,12 +101,6 @@ export function OrderDetailHeader({
         <Button type="button" variant="outline" onClick={onEdit}>
           <Edit className="mr-2 h-4 w-4" />
           Editar
-        </Button>
-      )}
-      {canPay && (
-        <Button type="button" onClick={onRegisterPayment}>
-          <CreditCard className="mr-2 h-4 w-4" />
-          Registrar pago
         </Button>
       )}
     </>
@@ -137,7 +147,7 @@ export function OrderDetailHeader({
         </div>
 
         <div className="hidden shrink-0 gap-2 sm:flex">{actions}</div>
-        {(canEdit || canPay) && (
+        {canEdit && (
           <div className="sm:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -151,12 +161,6 @@ export function OrderDetailHeader({
                   <DropdownMenuItem onSelect={onEdit}>
                     <Edit className="mr-2 h-4 w-4" />
                     Editar
-                  </DropdownMenuItem>
-                )}
-                {canPay && (
-                  <DropdownMenuItem onSelect={onRegisterPayment}>
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Registrar pago
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -376,8 +380,16 @@ export function OrderSellerCard({ order }: { order: OrderResponse }) {
   );
 }
 
-export function OrderProductsCard({ order }: { order: OrderResponse }) {
+export function OrderProductsCard({ order, role }: { order: OrderResponse; role?: string }) {
+  const navigate = useNavigate();
+  const [paymentTarget, setPaymentTarget] = useState<{ item: OrderResponse["items"][number]; installment?: NonNullable<OrderResponse["items"][number]["paymentPlan"]>["installments"][number] } | null>(null);
+  const [scheduleItem, setScheduleItem] = useState<OrderResponse["items"][number] | null>(null);
+  const [deleteItem, setDeleteItem] = useState<OrderResponse["items"][number] | null>(null);
+  const deleteSchedule = useDeletePaymentSchedule(order.id, deleteItem?.detailId ?? "");
+  const canWrite = canManageOrders(role) && order.order_status === "PENDING";
+  const canCancelSchedule = role === "ADMIN" || role === "SALES_SUPERVISOR";
   return (
+    <>
     <Card>
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-base">
@@ -430,6 +442,17 @@ export function OrderProductsCard({ order }: { order: OrderResponse }) {
                       {paymentModalityLabel(item.paymentModality)}
                     </Badge>
                   )}
+                  {item.attendanceMode && item.editionModality && readableModality(item.attendanceMode) !== readableModality(item.editionModality) ? (
+                    <>
+                      <Badge variant="outline">Asistencia: {readableModality(item.attendanceMode)}</Badge>
+                      <Badge variant="secondary">Modalidad: {readableModality(item.editionModality)}</Badge>
+                    </>
+                  ) : (
+                    <>
+                      {item.attendanceMode && <Badge variant="outline">{readableModality(item.attendanceMode)}</Badge>}
+                      {!item.attendanceMode && item.editionModality && <Badge variant="secondary">{readableModality(item.editionModality)}</Badge>}
+                    </>
+                  )}
                 </div>
                 {item.discountCode && (
                   <div className="mt-3 flex flex-wrap gap-4 text-sm">
@@ -441,12 +464,48 @@ export function OrderProductsCard({ order }: { order: OrderResponse }) {
                     )}
                   </div>
                 )}
+                {Number(item.enrollmentFee) > 0 && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Matrícula incluida: <strong className="text-foreground">{formatPEN(item.enrollmentFee)}</strong>
+                  </p>
+                )}
+                {item.paymentPlan ? (
+                  <div className="mt-4 space-y-2 border-t pt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold">Cronograma · {planStatusLabels[item.paymentPlan.status] ?? item.paymentPlan.status}</p>
+                      {canWrite && item.paymentPlan.installments.every((installment) => installment.status === "PENDING" && (installment.payments?.length ?? 0) === 0) && (
+                        <div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setScheduleItem(item)}>Editar cronograma</Button>{canCancelSchedule && <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteItem(item)}>Cancelar cronograma</Button>}</div>
+                      )}
+                    </div>
+                    {item.paymentPlan.installments.map((installment) => {
+                      const pendingPayment = installment.payments?.find((payment) => payment.payment_status === "PENDING");
+                      const confirmedPayment = installment.payments?.find((payment) => payment.payment_status === "CONFIRMED");
+                      return <div key={installment.id ?? installment.number} className="grid gap-2 rounded-lg bg-muted/40 p-3 text-sm sm:grid-cols-[90px_1fr_auto_auto] sm:items-center">
+                        <span className="font-medium">{scheduledObligationLabel(installment.number, item.enrollmentFee)}</span>
+                        <span className="text-muted-foreground">Vence {formatOrderDate(installment.due_date)} · {formatPEN(installment.due_amount)}</span>
+                        <Badge variant="outline">{installmentStatusLabels[installment.status] ?? installment.status}</Badge>
+                        {pendingPayment ? <Button size="sm" variant="outline" onClick={() => navigate(`/pagos/${pendingPayment.id}`)}>Pago pendiente de validación</Button>
+                          : confirmedPayment ? <Button size="sm" variant="outline" onClick={() => navigate(`/pagos/${confirmedPayment.id}`)}>Ver pago</Button>
+                          : canWrite && installment.status === "PENDING" ? <Button size="sm" onClick={() => setPaymentTarget({ item, installment })}>Registrar pago</Button> : null}
+                      </div>;
+                    })}
+                    {item.paymentPlan.installments.some((installment) => installment.status !== "PENDING" || (installment.payments?.length ?? 0) > 0) && <p className="text-xs text-muted-foreground">El cronograma ya tiene pagos registrados y no puede modificarse.</p>}
+                  </div>
+                ) : item.editionModality === "ASINCRONICO" ? (
+                  canWrite && !order.payments?.some((payment) => payment.order_detail_id === item.detailId && ["PENDING", "CONFIRMED"].includes(payment.payment_status ?? "")) && <Button className="mt-4" size="sm" onClick={() => setPaymentTarget({ item })}>Registrar pago completo</Button>
+                ) : canWrite ? (
+                  <Button className="mt-4" size="sm" variant="outline" onClick={() => setScheduleItem(item)}>Crear cronograma</Button>
+                ) : null}
               </div>
             </article>
           );
         })}
       </CardContent>
     </Card>
+    <RegisterPaymentDialog order={order} item={paymentTarget?.item ?? null} installment={paymentTarget?.installment ?? null} open={Boolean(paymentTarget)} onClose={() => setPaymentTarget(null)} />
+    <PaymentScheduleDialog orderId={order.id} item={scheduleItem} open={Boolean(scheduleItem)} onClose={() => setScheduleItem(null)} />
+    {deleteItem && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-md rounded-xl bg-background p-6 shadow-xl"><h2 className="font-semibold">Cancelar cronograma</h2><p className="mt-2 text-sm text-muted-foreground">Se eliminará el cronograma de {deleteItem.productName}. Esta acción solo es posible si no tiene pagos.</p><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={() => setDeleteItem(null)}>Volver</Button><Button variant="destructive" disabled={deleteSchedule.isPending} onClick={() => deleteSchedule.mutate(undefined, { onSuccess: () => setDeleteItem(null) })}>{deleteSchedule.isPending ? "Cancelando..." : "Cancelar cronograma"}</Button></div></div></div>}
+    </>
   );
 }
 
@@ -556,6 +615,7 @@ export function OrderPaymentsHistory({ order }: { order: OrderResponse }) {
 }
 
 function PaymentRow({ payment }: { payment: OrderPayment }) {
+  const navigate = useNavigate();
   return (
     <article className="rounded-xl border p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -591,16 +651,15 @@ function PaymentRow({ payment }: { payment: OrderPayment }) {
         {payment.transaccion_id && (
           <span>Transacción: {payment.transaccion_id}</span>
         )}
-        {payment.payment_receipt && (
-          <a
-            href={payment.payment_receipt}
-            target="_blank"
-            rel="noreferrer"
+        {payment.id && (
+          <button
+            type="button"
+            onClick={() => navigate(`/pagos/${payment.id}`)}
             className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
           >
-            Ver comprobante
+            Ver pago y comprobante
             <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+          </button>
         )}
       </div>
     </article>
@@ -624,7 +683,10 @@ export function OrderPaymentPlanCard({ order }: { order: OrderResponse }) {
           </p>
         ) : (
           <div className="space-y-4">
-            {plans.map((plan, planIndex) => (
+            {plans.map((plan, planIndex) => {
+              const relatedItem = order.items.find((item) => item.paymentPlan?.id && item.paymentPlan.id === plan.id)
+                ?? order.items.filter((item) => item.paymentPlan)[planIndex];
+              return (
               <div
                 key={plan.id ?? `${plan.start_date}-${planIndex}`}
                 className="rounded-xl border p-4"
@@ -648,7 +710,7 @@ export function OrderPaymentPlanCard({ order }: { order: OrderResponse }) {
                       className="grid gap-2 rounded-lg bg-muted/40 p-3 text-sm sm:grid-cols-[80px_1fr_auto_auto] sm:items-center"
                     >
                       <span className="font-medium">
-                        Cuota {installment.number}
+                        {scheduledObligationLabel(installment.number, relatedItem?.enrollmentFee ?? 0)}
                       </span>
                       <span className="text-muted-foreground">
                         Vence {formatOrderDate(installment.due_date)}
@@ -664,7 +726,8 @@ export function OrderPaymentPlanCard({ order }: { order: OrderResponse }) {
                   ))}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

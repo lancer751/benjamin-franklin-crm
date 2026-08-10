@@ -84,7 +84,7 @@ enum CampaignMemberStatus {
   NUEVO
   CONTACTADO
   NO_CONTACTADO
-  NEGOCIACION 
+  NEGOCIACION
   SEGUIMIENTO
   EN_ESPERA
   MATRICULADO
@@ -148,7 +148,7 @@ model SalesSupervisorProfile {
 
   // team management
   // team_name   String?
-  max_sellers Int     @default(10)
+  max_sellers Int @default(10)
 
   // // permissions / supervision scope
   // can_assign_leads        Boolean @default(true)
@@ -221,8 +221,10 @@ model User {
   orderAuthors         Order[]                 @relation("ORDER_CREATORS")
   assignedOrders       Order[]                 @relation("ORDERS_ASSIGNED_TO")
   campaignMembers      CampaignMember[]
-  LeadInteraction  LeadInteraction[]
-  createdTasks     Tasks[]
+  LeadInteraction      LeadInteraction[]
+  createdTasks         Tasks[]
+  createdPayments      Payment[]               @relation("PAYMENT_CREATOR")
+  reviewedPayments     Payment[]               @relation("PAYMENT_REVIEWER")
 }
 
 enum PhoneType {
@@ -259,8 +261,7 @@ model CampaignMember {
   assignedUser     User?             @relation(fields: [assigned_to], references: [id])
   leadInteractions LeadInteraction[]
   tasks            Tasks[]
-  orders              Order[]
-
+  orders           Order[]
 
   @@unique([lead_id, campaing_id])
   @@index([status])
@@ -335,7 +336,7 @@ model LeadInteraction {
 
   lead           Lead           @relation(fields: [lead_id], references: [id])
   campaignMember CampaignMember @relation(fields: [campaing_id], references: [id])
-  userCreator         User? @relation(fields: [created_by], references: [id])
+  userCreator    User?          @relation(fields: [created_by], references: [id])
 }
 
 model Tasks {
@@ -348,9 +349,9 @@ model Tasks {
   created_by         String // NEW — seller who owns the task
 
   campaignMember CampaignMember @relation(fields: [campaign_member_id], references: [id])
-  author         User  @relation(fields: [created_by], references: [id])
-  created_at          DateTime   @default(now())
-  updated_at          DateTime   @updatedAt
+  author         User           @relation(fields: [created_by], references: [id])
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
 }
 
 enum CourseType {
@@ -579,7 +580,7 @@ model Product {
   updated_at              DateTime             @updatedAt
   brochure_url            String?
   pricing_status          ProductPricingStatus @default(VALID)
-  enrollment_fee    Decimal?       @db.Decimal(10, 2) // amount to pay if the lead wants to enroll to an edition and pay later the full price, however if the edition is of type ASINCRONICO it has to be null
+  enrollment_fee          Decimal?             @db.Decimal(10, 2) // amount to pay if the lead wants to enroll to an edition and pay later the full price, however if the edition is of type ASINCRONICO it has to be null
 
   orders_details        OrderDetail[]
   edition               Edition                   @relation(fields: [edition_id], references: [id])
@@ -647,7 +648,7 @@ model ProductPrice {
   product_id        String
   attendance_mode   AttendanceMode // select between virtual or presencial when the edition has a HIBRID modalitity in frontend if not take the attendance mode from the edition modality and set it to the price
   cash_price        Decimal        @db.Decimal(10, 2)
-  installment_price        Decimal?        @db.Decimal(10, 2)
+  installment_price Decimal?       @db.Decimal(10, 2)
 
   product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
 
@@ -699,9 +700,9 @@ model Order {
   updated_at DateTime @updatedAt
 
   // relations
-  member       CampaignMember  @relation(fields: [member_id], references: [id])
-  userCreator  User? @relation("ORDER_CREATORS", fields: [generated_by], references: [id])
-  assignedUser User? @relation("ORDERS_ASSIGNED_TO", fields: [assigned_to], references: [id])
+  member       CampaignMember @relation(fields: [member_id], references: [id])
+  userCreator  User?          @relation("ORDER_CREATORS", fields: [generated_by], references: [id])
+  assignedUser User?          @relation("ORDERS_ASSIGNED_TO", fields: [assigned_to], references: [id])
 
   orderDetails OrderDetail[]
   payments     Payment[]
@@ -729,6 +730,7 @@ model OrderDetail {
   order        Order         @relation(fields: [order_id], references: [id])
   discountCode DiscountCode? @relation(fields: [discount_code_id], references: [id])
   paymentPlan  PaymentPlan?
+  payments     Payment[]
 }
 
 enum PaymentType {
@@ -739,21 +741,28 @@ enum PaymentType {
 model Payment {
   id                   String        @id @default(uuid()) @db.Char(36)
   order_id             String
-  scheduled_payment_id String?
+  scheduled_payment_id String? // target SCHEDULED_INSTALLMENT
+  created_by           String // User.id — quién registró el pago
+  reviewed_by          String? // User.id — quién lo confirmó/rechazó
   payment_date         DateTime
   amount               Decimal       @db.Decimal(10, 2)
   payment_method       PaymentMethod
   payment_status       PaymentStatus
   type                 PaymentType
-  payment_receipt      String?
+  payment_receipt      String
   currency             String?       @db.Char(3)
   transaccion_id       String? // from payment gateway
   created_at           DateTime      @default(now())
   updated_at           DateTime      @updatedAt
+  order_detail_id      String?
 
+  orderDetail     OrderDetail?      @relation(fields: [order_detail_id], references: [id])
   schedulePayment ScheduledPayment? @relation(fields: [scheduled_payment_id], references: [id])
   order           Order             @relation(fields: [order_id], references: [id])
+  creator         User              @relation("PAYMENT_CREATOR", fields: [created_by], references: [id])
+  reviewer        User?             @relation("PAYMENT_REVIEWER", fields: [reviewed_by], references: [id])
 
+  @@index([order_id])
   @@index([payment_status])
 }
 
@@ -770,10 +779,8 @@ model PaymentPlan {
   total_amount       Decimal            @db.Decimal(10, 2)
   start_date         DateTime
   status             PaymentPlanStatus  @default(PENDING)
-  order              OrderDetail        @relation(fields: [order_detail_id], references: [id])
+  orderDetail        OrderDetail        @relation(fields: [order_detail_id], references: [id])
   installments       ScheduledPayment[]
-
-  @@index([order_detail_id])
 }
 
 enum InstallmentStatus {
@@ -796,4 +803,6 @@ model ScheduledPayment {
   payments     Payment[]
 
   @@unique([payment_plan_id, number])
+  @@index([status])
+  @@index([due_date])
 }

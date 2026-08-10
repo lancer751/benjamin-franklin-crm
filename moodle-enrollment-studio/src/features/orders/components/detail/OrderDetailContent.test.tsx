@@ -1,5 +1,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
+vi.mock("@/features/payments/components/RegisterPaymentDialog", () => ({ RegisterPaymentDialog: () => null }));
+vi.mock("@/features/payments/components/PaymentScheduleDialog", () => ({ PaymentScheduleDialog: () => null }));
+vi.mock("@/features/payments/hooks/usePaymentPlan", () => ({
+  useDeletePaymentSchedule: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 import type { OrderResponse } from "../../types";
 import { OrderDetailContent } from "./OrderDetailContent";
 import { adaptOrderResponse } from "../../services/orderAdapter";
@@ -114,7 +121,7 @@ describe("OrderDetailContent", () => {
     expect(screen.getByText("Orden REFTGEL")).toBeInTheDocument();
     expect(screen.getByText("Pendiente")).toBeInTheDocument();
     expect(screen.getAllByText("Editar").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Registrar pago").length).toBeGreaterThan(0);
+    expect(screen.getByText("Crear cronograma")).toBeInTheDocument();
   });
 
   it("renderiza el prospecto sin inventar teléfono ni opcionales nulos", () => {
@@ -225,14 +232,30 @@ describe("OrderDetailContent", () => {
     expect(
       screen.getByText("Aún no se han registrado pagos para esta orden."),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("No existe un plan de pagos asociado."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Crear cronograma")).toBeInTheDocument();
   });
 
   it("renderiza pagos y cuotas existentes con sus traducciones", () => {
     renderDetail({
       ...baseOrder,
+      items: baseOrder.items.map((item) => ({
+        ...item,
+        paymentPlan: {
+          id: "plan-1",
+          total_installments: 2,
+          total_amount: "440",
+          start_date: "2026-07-24T10:00:00.000Z",
+          status: "PENDING",
+          installments: [{
+            id: "installment-1",
+            number: 1,
+            due_date: "2026-08-24T10:00:00.000Z",
+            due_amount: "220",
+            status: "PENDING",
+            payments: [],
+          }],
+        },
+      })),
       payments: [
         {
           id: "payment-1",
@@ -272,6 +295,49 @@ describe("OrderDetailContent", () => {
     expect(screen.getByText("Transacción: TX-123")).toBeInTheDocument();
     expect(screen.getByText("Cuota 1")).toBeInTheDocument();
     expect(screen.getByText(/Vence 24 ago\.? 2026/)).toBeInTheDocument();
+  });
+
+  it("presenta matrícula, reinicia las cuotas y evita modalidades duplicadas", () => {
+    renderDetail({
+      ...baseOrder,
+      items: baseOrder.items.map((item) => ({
+        ...item,
+        enrollmentFee: "100.00",
+        attendanceMode: "VIRTUAL",
+        editionModality: "VIRTUAL",
+        paymentPlan: {
+          id: "plan-enrollment",
+          total_installments: 2,
+          total_amount: "440.00",
+          start_date: "2026-08-11T12:00:00.000Z",
+          status: "PENDING",
+          installments: [
+            {
+              id: "enrollment",
+              number: 1,
+              due_date: "2026-08-11T12:00:00.000Z",
+              due_amount: "100.00",
+              status: "PENDING",
+              payments: [],
+            },
+            {
+              id: "first-installment",
+              number: 2,
+              due_date: "2026-09-11T12:00:00.000Z",
+              due_amount: "340.00",
+              status: "PENDING",
+              payments: [],
+            },
+          ],
+        },
+      })),
+      paymentPlans: [],
+    });
+
+    expect(screen.getByText("Matrícula")).toBeInTheDocument();
+    expect(screen.getByText("Cuota 1")).toBeInTheDocument();
+    expect(screen.getAllByText("Virtual")).toHaveLength(1);
+    expect(screen.queryByText("VIRTUAL")).not.toBeInTheDocument();
   });
 
   it("oculta acciones de escritura para roles sin permiso", () => {

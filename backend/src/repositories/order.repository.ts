@@ -5,6 +5,7 @@ import type { OrderQuery } from "shared";
 const orderInclude = {
   orderDetails: {
     select: {
+      id: true,
       order_id: true,
       base_price: true,
       discount_amount: true,
@@ -19,8 +20,25 @@ const orderInclude = {
             select: { name: true },
           },
           image_url: true,
+          enrollment_fee: true,
+          installments_min_number: true,
+          installments_max_number: true,
+          edition: { select: { modality: true } },
         }
-      }, discountCode: true, paymentPlan: { include: { installments: true } }
+      },
+      discountCode: true,
+      paymentPlan: {
+        include: {
+          installments: {
+            orderBy: { number: "asc" as const },
+            include: {
+              payments: {
+                select: { id: true, payment_status: true, payment_date: true },
+              },
+            },
+          },
+        },
+      }
     }
   },
   member: {

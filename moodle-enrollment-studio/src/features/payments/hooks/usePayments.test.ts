@@ -7,7 +7,7 @@ describe("invalidatePaymentQueries", () => {
     const queryClient = new QueryClient();
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
 
-    invalidatePaymentQueries(queryClient, "payment-1", "order-1");
+    invalidatePaymentQueries(queryClient, "payment-1", "order-1", "detail-1");
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["payments"] });
     expect(invalidate).toHaveBeenCalledWith({
@@ -15,7 +15,10 @@ describe("invalidatePaymentQueries", () => {
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["orders"] });
     expect(invalidate).toHaveBeenCalledWith({
-      queryKey: ["order", "order-1"],
+      queryKey: ["orders", "detail", "order-1"],
+    });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["payment-plans", "order-1", "detail-1"],
     });
   });
 });
