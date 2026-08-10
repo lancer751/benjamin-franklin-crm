@@ -5,6 +5,7 @@ import { useSearchStore } from "@/store/useSearchStore";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import type { BackendProductResponse } from "../types/product.types";
+import { productKeys } from "../queryKeys";
 
 type ProductCatalogFilterItem = Pick<BackendProductResponse, "name" | "category">;
 
@@ -39,7 +40,7 @@ export const useProductsView = () => {
   }, [setPlaceholder, setSearchQuery]);
 
   const { data: productsRes, isLoading, isError } = useQuery({
-    queryKey: ["products"],
+    queryKey: productKeys.list(),
     queryFn: getProducts,
   });
 
@@ -51,7 +52,7 @@ export const useProductsView = () => {
   const deleteMutation = useMutation({
     mutationFn: deleteProduct,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: productKeys.lists() });
       toast.success("Producto eliminado exitosamente");
       setShowDeleteAlert(false);
       setProductToDelete(null);

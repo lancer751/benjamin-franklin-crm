@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCampaigns, deleteCampaign } from "../services/campaignService";
 import { toast } from "sonner";
+import { campaignQueryKeys } from "../queryKeys";
 
 export const useCampaigns = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -12,7 +13,7 @@ export const useCampaigns = () => {
 
   // 1. Fetching de Datos Reales del Backend
   const { data: campaignsRes, isLoading, isError } = useQuery({
-    queryKey: ["campaigns"],
+    queryKey: campaignQueryKeys.list(),
     queryFn: () => getCampaigns(),
   });
 
@@ -31,7 +32,7 @@ export const useCampaigns = () => {
     mutationFn: deleteCampaign,
     onSuccess: () => {
       toast.success("Campaña eliminada exitosamente");
-      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      queryClient.invalidateQueries({ queryKey: campaignQueryKeys.lists() });
       setCampaignToDelete(null);
     },
     onError: (err) => {

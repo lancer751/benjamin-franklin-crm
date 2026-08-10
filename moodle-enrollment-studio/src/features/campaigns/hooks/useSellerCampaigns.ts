@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getSellerCampaigns } from "@/features/users/services/userService";
+import { sellerKeys } from "@/features/users/queryKeys";
 
 export const useSellerCampaigns = () => {
   const { user } = useAuthStore();
@@ -8,7 +9,7 @@ export const useSellerCampaigns = () => {
   const sellerId = user?.seller?.id;
 
   const { data: res, isLoading, isError, refetch } = useQuery({
-    queryKey: ["seller-campaigns", sellerId],
+    queryKey: sellerKeys.campaigns(sellerId ?? ""),
     queryFn: () => {
       if (!sellerId) throw new Error("Seller profile ID is required");
       return getSellerCampaigns(sellerId);

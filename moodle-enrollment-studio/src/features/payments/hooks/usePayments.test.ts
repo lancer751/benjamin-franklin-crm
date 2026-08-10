@@ -1,6 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { invalidatePaymentQueries } from "./usePayments";
+import { orderQueryKeys } from "@/features/orders/queryKeys";
+import { paymentPlanKeys, paymentsKeys } from "../queryKeys";
 
 describe("invalidatePaymentQueries", () => {
   it("invalida listado, detalle de pago, orden y opciones", () => {
@@ -9,16 +11,16 @@ describe("invalidatePaymentQueries", () => {
 
     invalidatePaymentQueries(queryClient, "payment-1", "order-1", "detail-1");
 
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["payments"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: paymentsKeys.lists() });
     expect(invalidate).toHaveBeenCalledWith({
-      queryKey: ["payments", "detail", "payment-1"],
+      queryKey: paymentsKeys.detail("payment-1"),
     });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["orders"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: orderQueryKeys.lists() });
     expect(invalidate).toHaveBeenCalledWith({
-      queryKey: ["orders", "detail", "order-1"],
+      queryKey: orderQueryKeys.detail("order-1"),
     });
     expect(invalidate).toHaveBeenCalledWith({
-      queryKey: ["payment-plans", "order-1", "detail-1"],
+      queryKey: paymentPlanKeys.detail("order-1", "detail-1"),
     });
   });
 });

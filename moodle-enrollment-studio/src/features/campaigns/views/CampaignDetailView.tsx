@@ -16,6 +16,7 @@ import { formatCampaignCurrency } from "@/features/campaigns/utils/campaignCurre
 import { adaptCampaignDetail } from "@/features/campaigns/adapters/campaignDetailAdapter";
 import { adaptCampaignSellersOnCampaign } from "@/features/leads/adapters/campaignAssignmentAdapter";
 import { CampaignMembersPanel } from "@/features/campaigns/components/CampaignMembersPanel";
+import { sellerKeys } from "@/features/users/queryKeys";
 import {
   Dialog,
   DialogContent,
@@ -51,7 +52,7 @@ const AssignSellersModal = ({
 
   // Obtener todos los asesores disponibles en el sistema
   const { data: sellersRes, isLoading } = useQuery({
-    queryKey: ["sellers"],
+    queryKey: sellerKeys.list(),
     queryFn: getSellers,
     enabled: open,
   });

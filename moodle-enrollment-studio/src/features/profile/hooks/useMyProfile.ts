@@ -14,6 +14,7 @@ import {
   mapUserAccountProfile,
 } from "../mappers/profileMapper";
 import type { MyProfileData } from "../types/profile.types";
+import { sellerKeys, supervisorKeys, userKeys } from "@/features/users/queryKeys";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -62,7 +63,7 @@ export function useMyProfile() {
     : undefined;
 
   const userQuery = useQuery({
-    queryKey: ["user", userId],
+    queryKey: userKeys.detail(userId ?? ""),
     queryFn: () => {
       if (!userId) throw new Error("Se requiere un identificador de usuario válido.");
       return getUserById(userId);
@@ -72,7 +73,7 @@ export function useMyProfile() {
   });
 
   const supervisorQuery = useQuery({
-    queryKey: ["supervisorProfile", userId],
+    queryKey: supervisorKeys.detail(userId ?? ""),
     queryFn: () => {
       if (!userId) throw new Error("Se requiere un identificador de usuario válido.");
       return getSalesSupervisorByUserId(userId);
@@ -82,7 +83,7 @@ export function useMyProfile() {
   });
 
   const sellerQuery = useQuery({
-    queryKey: ["sellerProfile", userId],
+    queryKey: sellerKeys.detail(userId ?? ""),
     queryFn: () => {
       if (!userId) throw new Error("Se requiere un identificador de usuario válido.");
       return getSellerById(userId);
@@ -144,4 +145,3 @@ export function useMyProfile() {
     isSpecificProfileMissing,
   };
 }
-

@@ -7,6 +7,9 @@ import {
 } from "../services/orderService";
 import type { UpdateOrderPayload } from "../types";
 import { orderQueryKeys } from "../queryKeys";
+import { paymentsKeys } from "@/features/payments/queryKeys";
+import { campaignMemberKeys, leadKeys } from "@/features/leads/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
 
 export function useUpdateOrder(id: string) {
   const queryClient = useQueryClient();
@@ -16,10 +19,11 @@ export function useUpdateOrder(id: string) {
     mutationFn: (payload: UpdateOrderPayload) => updateOrder(id, payload),
     onSuccess: async (response) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: orderQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: ["payments"] }),
-        queryClient.invalidateQueries({ queryKey: ["seller-detail"] }),
-        queryClient.invalidateQueries({ queryKey: ["team-follow-up"] }),
+        queryClient.invalidateQueries({ queryKey: orderQueryKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: paymentsKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: sellerKeys.details() }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
       ]);
       queryClient.setQueryData(orderQueryKeys.detail(id), response);
       toast.success("Orden actualizada correctamente");

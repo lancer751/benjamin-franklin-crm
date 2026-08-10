@@ -34,6 +34,7 @@ import {
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateLead, type MemberTaskUpdatePayload } from "@/features/leads/services/leadService";
+import { campaignMemberKeys, leadKeys } from "@/features/leads/queryKeys";
 import {
   CAMPAIGN_MEMBER_STATUS_OPTIONS,
   isCampaignMemberStatus,
@@ -303,12 +304,9 @@ export default function LeadDetailsSheet({
       setInitialEditData(data);
       setIsEditing(false);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["lead", leadId] }),
-        queryClient.invalidateQueries({ queryKey: ["leads"] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-members"] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-members-seller"] }),
-        queryClient.invalidateQueries({ queryKey: ["team-follow-up", "leads"] }),
-        queryClient.invalidateQueries({ queryKey: ["team-follow-up", "campaign-members"] }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.detail(leadId) }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
       ]);
       toast.success("Prospecto actualizado correctamente.");
     },

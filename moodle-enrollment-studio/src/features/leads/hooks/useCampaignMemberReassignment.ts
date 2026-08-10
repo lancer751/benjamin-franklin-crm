@@ -5,6 +5,9 @@ import {
   type ReassignCampaignMemberParams,
   type ReassignCampaignMembersBulkParams,
 } from "@/features/campaigns/services/campaignService";
+import { campaignQueryKeys } from "@/features/campaigns/queryKeys";
+import { campaignMemberKeys } from "../queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
 
 const isSuccessResponse = (response: unknown): boolean =>
   typeof response === "object" && response !== null && Reflect.get(response, "success") === true;
@@ -21,12 +24,10 @@ export function useCampaignMemberReassignment() {
   const queryClient = useQueryClient();
   const refresh = async (campaignId: string) => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["team-follow-up", "campaign-members", campaignId] }),
-      queryClient.invalidateQueries({ queryKey: ["campaign-members", campaignId] }),
-      queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", campaignId] }),
-      queryClient.invalidateQueries({ queryKey: ["campaigns", "team-follow-up"] }),
-      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] }),
-      queryClient.invalidateQueries({ queryKey: ["campaigns"] }),
+      queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
+      queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(campaignId) }),
+      queryClient.invalidateQueries({ queryKey: campaignQueryKeys.lists() }),
+      queryClient.invalidateQueries({ queryKey: sellerKeys.details() }),
     ]);
   };
 

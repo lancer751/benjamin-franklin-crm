@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
 import { createLead, updateLead, getLeadById, type UpdateLeadReq } from "../services/leadService";
 import { leadFormSchema, type LeadFormValues, defaultLeadFormValues } from "../schemas/leadFormSchema";
+import { leadKeys } from "../queryKeys";
 
 export const useLeadForm = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,7 +24,7 @@ export const useLeadForm = () => {
   });
 
   const { data: leadRes, isLoading: isLoadingLead, isError: isErrorLead } = useQuery({
-    queryKey: ["lead", id],
+    queryKey: leadKeys.detail(id ?? ""),
     queryFn: () => getLeadById(id as string),
     enabled: !!id,
   });
@@ -105,8 +106,8 @@ export const useLeadForm = () => {
     toast.promise(mutationPromise, {
       loading: mode === "create" ? "Creando prospecto..." : "Actualizando prospecto...",
       success: () => {
-        queryClient.invalidateQueries({ queryKey: ["leads"] });
-        if (id) queryClient.invalidateQueries({ queryKey: ["lead", id] });
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
+        if (id) queryClient.invalidateQueries({ queryKey: leadKeys.detail(id) });
         navigate("/prospectos");
         return mode === "create" ? "Prospecto creado exitosamente" : "Prospecto actualizado correctamente";
       },

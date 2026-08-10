@@ -4,6 +4,7 @@ import { AlertTriangle, Award, Plus, X } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import EntitySelectorModal from "../shared/EntitySelectorModal";
 import { getCertifications } from "../../services/certificationService";
+import { certificationKeys } from "../../queryKeys";
 
 interface CertificationsSelectorProps {
   selectedIds: string[];
@@ -12,7 +13,7 @@ interface CertificationsSelectorProps {
 
 const CertificationsSelector = ({ selectedIds, onChange }: CertificationsSelectorProps) => {
   const [open, setOpen] = useState(false);
-  const { data, isLoading, isError } = useQuery({ queryKey: ["certifications"], queryFn: getCertifications });
+  const { data, isLoading, isError } = useQuery({ queryKey: certificationKeys.list(), queryFn: getCertifications });
   const certifications = (data as any)?.data || [];
   const selected = certifications.filter((item: any) => selectedIds.includes(item.id));
 

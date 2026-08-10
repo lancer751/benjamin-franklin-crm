@@ -35,9 +35,9 @@ export function invalidatePaymentQueries(
   orderId?: string,
   detailId?: string,
 ) {
-  void queryClient.invalidateQueries({ queryKey: paymentsKeys.all });
+  void queryClient.invalidateQueries({ queryKey: paymentsKeys.lists() });
   if (paymentId) void queryClient.invalidateQueries({ queryKey: paymentsKeys.detail(paymentId) });
-  void queryClient.invalidateQueries({ queryKey: orderQueryKeys.all });
+  void queryClient.invalidateQueries({ queryKey: orderQueryKeys.lists() });
   if (orderId) void queryClient.invalidateQueries({ queryKey: orderQueryKeys.detail(orderId) });
   if (orderId && detailId) void queryClient.invalidateQueries({ queryKey: paymentPlanKeys.detail(orderId, detailId) });
 }
@@ -141,7 +141,7 @@ export function useDeletePayment(payment?: PaymentListItem | PaymentDetail) {
 
 export function usePaymentReceipt(id?: string) {
   return useQuery({
-    queryKey: [...paymentsKeys.detail(id ?? ""), "receipt"],
+    queryKey: paymentsKeys.receipt(id ?? ""),
     enabled: false,
     queryFn: () => getPaymentReceiptUrl(id as string),
   });

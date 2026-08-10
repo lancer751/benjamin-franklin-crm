@@ -5,6 +5,9 @@ import { getCampaigns } from "@/features/campaigns/services/campaignService";
 import { getSellerCampaigns, getSellers } from "@/features/users/services/userService";
 import { adaptAvailableCampaigns, adaptSellerAvailableCampaigns, createdMemberIdFrom, requireSuccess } from "../adapters/leadDetailAdapter";
 import { addLeadToCampaign } from "../services/leadService";
+import { campaignQueryKeys } from "@/features/campaigns/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
+import { campaignMemberKeys, leadKeys } from "../queryKeys";
 
 interface AddCampaignInput { campaignId: string; sellerId: string; source: "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "WHATSAPP" | "WEBSITE" }
 
@@ -19,17 +22,17 @@ export function useAddLeadToCampaign(
   const queryClient = useQueryClient();
   const isSalesRep = role === "SALES_REP";
   const campaignsQuery = useQuery({
-    queryKey: ["campaigns", "lead-detail", 1, 100],
+    queryKey: campaignQueryKeys.list({ page: "1", limit: "100" }),
     queryFn: () => getCampaigns({ page: "1", limit: "100" }),
     enabled: !isSalesRep,
   });
   const sellerCampaignsQuery = useQuery({
-    queryKey: ["seller-campaigns", authenticatedSellerProfileId],
+    queryKey: sellerKeys.campaigns(authenticatedSellerProfileId),
     queryFn: () => getSellerCampaigns(authenticatedSellerProfileId),
     enabled: isSalesRep && Boolean(authenticatedSellerProfileId),
   });
   const sellersQuery = useQuery({
-    queryKey: ["users", "sellers", "campaign-assignment"],
+    queryKey: sellerKeys.list(),
     queryFn: getSellers,
     enabled: !isSalesRep,
   });
@@ -74,10 +77,12 @@ export function useAddLeadToCampaign(
       requireSuccess(response, "No fue posible agregar el prospecto a la campaña.");
       return response;
     },
-    onSuccess: async (response) => {
+    onSuccess: async (response, input) => {
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["lead", leadId] }),
-        queryClient.invalidateQueries({ queryKey: ["leads"] }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.detail(leadId) }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(input.campaignId) }),
       ]);
       toast.success("Prospecto agregado a la campaña correctamente.");
       onAdded(createdMemberIdFrom(response));

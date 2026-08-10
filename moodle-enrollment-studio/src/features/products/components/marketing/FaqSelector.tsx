@@ -4,6 +4,7 @@ import { AlertTriangle, HelpCircle, Plus, X } from "lucide-react";
 import { Button } from "@/core/components/ui/button";
 import EntitySelectorModal from "../shared/EntitySelectorModal";
 import { getFAQs } from "../../services/faqService";
+import { faqKeys } from "../../queryKeys";
 
 interface FaqSelectorProps {
   faqs: Array<{ id?: string; question: string; answer: string }>;
@@ -12,7 +13,7 @@ interface FaqSelectorProps {
 
 const FaqSelector = ({ faqs, onChange }: FaqSelectorProps) => {
   const [open, setOpen] = useState(false);
-  const { data, isLoading, isError } = useQuery({ queryKey: ["faqs"], queryFn: getFAQs });
+  const { data, isLoading, isError } = useQuery({ queryKey: faqKeys.list(), queryFn: getFAQs });
   const catalog = ((data as any)?.data || []).map((item: any) => ({ ...item, title: item.question, description: item.answer }));
   const selectedIds = faqs.map((item) => item.id).filter(Boolean) as string[];
 

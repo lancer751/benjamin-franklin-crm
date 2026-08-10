@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getProfessors, deleteProfessor } from "../services/professorService";
 import { useSearchStore } from "@/store/useSearchStore";
+import { professorKeys } from "../queryKeys";
 
 export const useProfessorsView = () => {
   const queryClient = useQueryClient();
@@ -29,7 +30,7 @@ export const useProfessorsView = () => {
   // QUERY: OBTENER DOCENTES
   // ==========================================================
   const { data: response, isLoading, isError } = useQuery({
-    queryKey: ["professors"],
+    queryKey: professorKeys.list(),
     queryFn: getProfessors,
   });
 
@@ -46,7 +47,7 @@ export const useProfessorsView = () => {
     onSuccess: (res: any) => {
       if (res?.success) {
         toast.success("Docente eliminado correctamente");
-        queryClient.invalidateQueries({ queryKey: ["professors"] });
+        queryClient.invalidateQueries({ queryKey: professorKeys.lists() });
         setProfessorToDelete(null);
       } else {
         toast.error("Error al eliminar docente");

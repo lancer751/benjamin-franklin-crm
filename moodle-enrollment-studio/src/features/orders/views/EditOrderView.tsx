@@ -20,6 +20,7 @@ import type { OrderFormValues } from "../types";
 import { getSellers } from "@/features/users/services/userService";
 import { adaptSellerOptions } from "@/features/leads/adapters/campaignAssignmentAdapter";
 import { orderQueryKeys } from "../queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
 
 export default function EditOrderView() {
   const { id } = useParams();
@@ -30,7 +31,7 @@ export default function EditOrderView() {
     queryFn: getOrderProducts,
   });
   const sellersQuery = useQuery({
-    queryKey: ["users", "sellers", "order-edit"],
+    queryKey: sellerKeys.list(),
     queryFn: getSellers,
   });
   const mutation = useUpdateOrder(id ?? "");

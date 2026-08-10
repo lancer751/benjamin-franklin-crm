@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { createProfessor, updateProfessor, getProfessorById, deactivateProfessor, restoreProfessor } from "../services/professorService";
 import { professorFormSchema, type ProfessorFormValues } from "../schemas/professorFormSchema";
 import { professorAdapter } from "../adapters/professorAdapter";
+import { professorKeys } from "../queryKeys";
 
 export const useProfessorForm = () => {
   const queryClient = useQueryClient();
@@ -21,7 +22,7 @@ export const useProfessorForm = () => {
   });
 
   const { data: fullProfessorRes, isLoading: isLoadingProfessor, isError } = useQuery({
-    queryKey: ["professor", id],
+    queryKey: professorKeys.detail(id ?? ""),
     queryFn: () => getProfessorById(id as string),
     enabled: isEditMode,
     staleTime: 5 * 60 * 1000,
@@ -58,9 +59,9 @@ export const useProfessorForm = () => {
       }
     },
     onSuccess: (actionType) => {
-      queryClient.invalidateQueries({ queryKey: ["professors"] });
+      queryClient.invalidateQueries({ queryKey: professorKeys.lists() });
       if (id) {
-        queryClient.invalidateQueries({ queryKey: ["professor", id] });
+        queryClient.invalidateQueries({ queryKey: professorKeys.detail(id) });
       }
       
       if (actionType === "create") {

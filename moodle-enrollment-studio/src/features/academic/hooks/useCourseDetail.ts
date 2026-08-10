@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCourseById, deleteCourseEdition } from "../services/courseService";
 import { toast } from "sonner";
 import { addMinutes } from "date-fns";
+import { courseKeys, editionKeys } from "../queryKeys";
 
 export const useCourseDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,7 +20,7 @@ export const useCourseDetail = () => {
   const [editionIdToEdit, setEditionIdToEdit] = useState<string | null>(null);
 
   const { data: response, isLoading, isError } = useQuery({
-    queryKey: ["course", id],
+    queryKey: courseKeys.detail(id ?? ""),
     queryFn: () => getCourseById(id as string),
     enabled: !!id,
     select: (res: any) => {
@@ -35,7 +36,8 @@ export const useCourseDetail = () => {
   const deleteMutation = useMutation({
     mutationFn: deleteCourseEdition,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["course", id] });
+      if (id) queryClient.invalidateQueries({ queryKey: courseKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: editionKeys.lists() });
       setShowDeleteAlert(false);
       setSelectedEditionId(null);
       toast.success("Edición eliminada exitosamente");

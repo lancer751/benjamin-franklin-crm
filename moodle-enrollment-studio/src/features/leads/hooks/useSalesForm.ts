@@ -17,6 +17,8 @@ import {
 } from "../services/leadService";
 import { leadFormSchema, type LeadFormValues, defaultLeadFormValues } from "../schemas/leadFormSchema";
 import { mapInteractionFormToPayload } from "../utils/leadActionPayloadMappers";
+import { campaignQueryKeys } from "@/features/campaigns/queryKeys";
+import { leadKeys } from "../queryKeys";
 
 export const useSalesForm = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,14 +39,14 @@ export const useSalesForm = () => {
 
   // 1. Fetch lead details if editing
   const { data: leadRes, isLoading: isLoadingLead, isError: isErrorLead } = useQuery({
-    queryKey: ["lead", id],
+    queryKey: leadKeys.detail(id ?? ""),
     queryFn: () => getLeadById(id as string),
     enabled: !!id,
   });
 
   // 2. Fetch campaigns list
   const { data: campaignsRes, isLoading: isLoadingCampaigns } = useQuery({
-    queryKey: ["campaigns"],
+    queryKey: campaignQueryKeys.list(),
     queryFn: () => getCampaigns(),
   });
 
@@ -189,7 +191,7 @@ export const useSalesForm = () => {
       toast.promise(creationPromise, {
         loading: "Registrando y asignando prospecto...",
         success: () => {
-          queryClient.invalidateQueries({ queryKey: ["leads"] });
+          queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
           navigate("/prospectos");
           return "Prospecto registrado y asignado exitosamente.";
         },
@@ -215,8 +217,8 @@ export const useSalesForm = () => {
       toast.promise(updatePromise, {
         loading: "Actualizando datos del prospecto...",
         success: () => {
-          queryClient.invalidateQueries({ queryKey: ["leads"] });
-          if (id) queryClient.invalidateQueries({ queryKey: ["lead", id] });
+          queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
+          if (id) queryClient.invalidateQueries({ queryKey: leadKeys.detail(id) });
           navigate("/prospectos");
           return "Prospecto actualizado correctamente.";
         },

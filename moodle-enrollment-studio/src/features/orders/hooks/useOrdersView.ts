@@ -25,6 +25,9 @@ import {
 } from "../utils/orderPermissions";
 import { orderQueryKeys } from "../queryKeys";
 import { buildOrderListQuery, resolveOrderListScope } from "../orderListScope";
+import { paymentsKeys } from "@/features/payments/queryKeys";
+import { campaignMemberKeys, leadKeys } from "@/features/leads/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
 
 const EMPTY_ORDERS: OrderListItem[] = [];
 
@@ -111,14 +114,16 @@ export function useOrdersView(): OrdersViewController {
 
   const cancelMutation = useMutation({
     mutationFn: deleteOrder,
-    onSuccess: async () => {
+    onSuccess: async (_, orderId) => {
       toast.success("Orden anulada correctamente");
       setPendingAction(null);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: orderQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: ["payments"] }),
-        queryClient.invalidateQueries({ queryKey: ["seller-detail"] }),
-        queryClient.invalidateQueries({ queryKey: ["team-follow-up"] }),
+        queryClient.invalidateQueries({ queryKey: orderQueryKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: orderQueryKeys.detail(orderId) }),
+        queryClient.invalidateQueries({ queryKey: paymentsKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: sellerKeys.details() }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
       ]);
     },
     onError: (error) => {

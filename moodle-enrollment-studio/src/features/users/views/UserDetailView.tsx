@@ -14,6 +14,7 @@ import { Badge } from "@/core/components/ui/badge";
 import { Skeleton } from "@/core/components/ui/skeleton";
 import { Progress } from "@/core/components/ui/progress";
 import { translateEnum, RoleTranslationsMap } from "@/core/utils/dictionaries";
+import { sellerKeys, supervisorKeys, userKeys } from "../queryKeys";
 
 export default function UserDetailView() {
   const { id } = useParams();
@@ -21,7 +22,7 @@ export default function UserDetailView() {
 
   // 1. Consulta del usuario base
   const { data: userResponse, isLoading: isLoadingUser } = useQuery({
-    queryKey: ["user", id],
+    queryKey: userKeys.detail(id ?? ""),
     queryFn: () => getUserById(id as string),
     enabled: !!id,
   });
@@ -32,14 +33,14 @@ export default function UserDetailView() {
 
   // 2. Consulta del perfil de vendedor (Solo si es SALES_REP y hay id)
   const { data: sellerResponse, isLoading: isLoadingSeller } = useQuery({
-    queryKey: ["sellerProfile", id],
+    queryKey: sellerKeys.detail(id ?? ""),
     queryFn: () => getSellerProfileById(id as string),
     enabled: !!id && isSales,
   });
 
   // 3. Consulta del perfil de supervisor (Solo si es SALES_SUPERVISOR y hay id)
   const { data: supervisorResponse, isLoading: isLoadingSupervisor } = useQuery({
-    queryKey: ["supervisorProfile", id],
+    queryKey: supervisorKeys.detail(id ?? ""),
     queryFn: () => getSupervisorById(id as string),
     enabled: !!id && isSupervisor,
   });

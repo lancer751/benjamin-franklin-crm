@@ -13,6 +13,9 @@ import {
   normalizeLeadPhone,
   type ManualLeadData,
 } from "../schemas/manualLeadSchema";
+import { campaignMemberKeys, leadKeys } from "../queryKeys";
+import { campaignQueryKeys } from "@/features/campaigns/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
 
 export class ManualLeadRegistrationError extends Error {
   constructor(
@@ -89,13 +92,12 @@ export function useManualLeadLookup(
   }, [campaignId, sellerProfileId, enabled, canLookup, validPhone, validEmail]);
 
   const lookupQuery = useQuery({
-    queryKey: [
-      "manual-lead-lookup",
+    queryKey: leadKeys.lookup({
       campaignId,
-      sellerProfileId,
-      debouncedLookup?.phone ?? "",
-      debouncedLookup?.email ?? "",
-    ],
+      sellerProfileId: sellerProfileId ?? "",
+      phone: debouncedLookup?.phone,
+      email: debouncedLookup?.email,
+    }),
     queryFn: ({ signal }) => lookupLeadExact({
       phone: debouncedLookup?.phone,
       email: debouncedLookup?.email,
@@ -220,8 +222,12 @@ export function useManualLeadRegistration(
       return { mode, member: memberResponse.data };
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", campaignId, assignedUserId] });
-      await queryClient.invalidateQueries({ queryKey: ["campaign-members", campaignId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(campaignId) }),
+        queryClient.invalidateQueries({ queryKey: sellerKeys.details() }),
+      ]);
     },
   });
 }

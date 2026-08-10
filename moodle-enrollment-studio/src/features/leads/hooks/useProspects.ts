@@ -15,6 +15,9 @@ import {
   serializeLocalDate,
   type ProspectDateRange,
 } from "../utils/prospectDateRange";
+import { campaignQueryKeys } from "@/features/campaigns/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
+import { leadKeys } from "../queryKeys";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -57,29 +60,19 @@ export function useProspects() {
   }), [assignedTo, dateRange.from, dateRange.to, debouncedSearch, leadStatus, requestedPage]);
 
   const allowedCampaignsQuery = useQuery({
-    queryKey: ["campaigns", "prospects-selector", 1, 100],
+    queryKey: campaignQueryKeys.list({ page: "1", limit: "100" }),
     queryFn: () => getCampaigns({ page: "1", limit: "100" }),
     enabled: Boolean(user) && canViewSeller,
   });
 
   const sellersQuery = useQuery({
-    queryKey: ["users", "sellers", "prospects-selector"],
+    queryKey: sellerKeys.list(),
     queryFn: getSellers,
     enabled: Boolean(user) && canViewSeller,
   });
 
   const leadsQuery = useQuery({
-    queryKey: [
-      "leads",
-      "crm",
-      requestedPage,
-      PAGE_SIZE,
-      debouncedSearch,
-      leadStatus,
-      assignedTo || "all-advisors",
-      dateRange.from ? serializeLocalDate(dateRange.from) : "no-from-date",
-      dateRange.to ? serializeLocalDate(dateRange.to) : "no-to-date",
-    ],
+    queryKey: leadKeys.list(leadQuery),
     queryFn: () => getAllLeads(leadQuery),
     enabled: Boolean(user),
     placeholderData: keepPreviousData,

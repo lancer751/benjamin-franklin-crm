@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getSellerProfileById } from "../services/userService";
 import { adaptSellerProfile } from "../adapters/seller.adapter";
+import { sellerKeys } from "../queryKeys";
 
 export function useSellerDetail(sellerUserId?: string) {
   const { id: routeId } = useParams<{ id: string }>();
@@ -10,7 +11,7 @@ export function useSellerDetail(sellerUserId?: string) {
   const hasSellerId = Boolean(id);
 
   const sellerQuery = useQuery({
-    queryKey: ["seller-detail", id],
+    queryKey: sellerKeys.detail(id ?? ""),
     queryFn: () => {
       if (!id) throw new Error("Seller user ID is required");
       return getSellerProfileById(id);

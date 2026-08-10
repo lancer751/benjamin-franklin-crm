@@ -5,10 +5,11 @@ import { adaptLeadInteraction, adaptLeadInteractionsResponse } from "../adapters
 import type { InteractionFormValues } from "../schemas/interactionFormSchema";
 import { createMemberInteraction, getMemberInteractions } from "../services/leadService";
 import { mapInteractionFormToPayload } from "../utils/leadActionPayloadMappers";
+import { campaignMemberKeys } from "../queryKeys";
 
 export function useLeadInteractions(campaignId: string, memberId: string, creatorUserId: string) {
   const queryClient = useQueryClient();
-  const queryKey = ["lead-interactions", campaignId, memberId] as const;
+  const queryKey = campaignMemberKeys.interactions(campaignId, memberId);
   const query = useQuery({
     queryKey,
     queryFn: () => getMemberInteractions(campaignId, memberId),
