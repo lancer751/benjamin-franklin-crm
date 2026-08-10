@@ -5,11 +5,77 @@ import { assertEvidenceExists } from "@/lib/storage";
 
 type Tx = Prisma.TransactionClient;
 
-const paymentInclude: PaymentInclude = {
-    order: { select: { id: true, order_code: true, member_id: true, assigned_to: true } },
-    schedulePayment: true,
-    orderDetail: { include: { product: true } },
-} as const;
+const paymentInclude = {
+    order: {
+        select: {
+            id: true,
+            order_code: true,
+            total_amount: true,
+            member: {
+                select: {
+                    id: true,
+                    lead: {
+                        select: {
+                            id: true,
+                            first_name: true,
+                            middle_name: true,
+                            last_name: true,
+                            email: true,
+                            phones: {
+                                where: { isPrincipal: true },
+                                select: { number: true, type: true },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    schedulePayment: {
+        select: {
+            id: true,
+            number: true,
+            due_date: true,
+            due_amount: true,
+            status: true,
+            payment_plan_id: true,
+            payment_plan: {
+                select: {
+                    orderDetail: {
+                        select: {
+                            id: true,
+                            payment_modality: true,
+                            product: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    image_url: true,
+                                    enrollment_fee: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    orderDetail: {
+        select: {
+            id: true,
+            payment_modality: true,
+            product: {
+                select: {
+                    id: true,
+                    name: true,
+                    image_url: true,
+                    enrollment_fee: true,
+                },
+            },
+        },
+    },
+    creator: { select: { id: true, first_name: true, last_name: true } },
+    reviewer: { select: { id: true, first_name: true, last_name: true } },
+} as const satisfies PaymentInclude;
 
 // decidir entre pagar una orden o una cuota ya sea por medio de order_detail_null o scheduled_payment_id respectivamente
 async function resolveTarget(prisma: PrismaClient, orderId: string, target: CreatePaymentInput["target"]) {

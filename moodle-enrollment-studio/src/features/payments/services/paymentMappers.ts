@@ -6,18 +6,39 @@ export function moneyString(value: string | number): string {
   return Number.isFinite(parsed) ? parsed.toFixed(2) : "0.00";
 }
 
-export function personName(person?: { first_name?: string | null; last_name?: string | null } | null): string {
-  return [person?.first_name, person?.last_name]
+export function personName(person?: {
+  first_name?: string | null;
+  middle_name?: string | null;
+  last_name?: string | null;
+} | null): string {
+  return [person?.first_name, person?.middle_name, person?.last_name]
     .filter((part): part is string => typeof part === "string" && Boolean(part.trim()))
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
+function getPaymentLead(payment: PaymentResponse) {
+  return payment.order?.member?.lead ?? null;
+}
+
+function getPaymentOrderDetail(payment: PaymentResponse) {
+  return payment.orderDetail
+    ?? payment.schedulePayment?.payment_plan?.orderDetail
+    ?? null;
+}
+
+function getPaymentCreator(payment: PaymentResponse) {
+  return payment.creator ?? null;
+}
+
+function getPaymentReviewer(payment: PaymentResponse) {
+  return payment.reviewer ?? null;
+}
+
 export function mapPaymentResponseToListItem(payment: PaymentResponse): PaymentListItem {
-  const lead = payment.order?.member?.lead;
-  const orderDetail = payment.orderDetail
-    ?? payment.schedulePayment?.payment_plan?.orderDetail;
+  const lead = getPaymentLead(payment);
+  const orderDetail = getPaymentOrderDetail(payment);
   const enrollmentFee = orderDetail?.product?.enrollment_fee ?? 0;
   return {
     id: payment.id,
@@ -30,7 +51,7 @@ export function mapPaymentResponseToListItem(payment: PaymentResponse): PaymentL
     productName: orderDetail?.product?.name || "Producto no disponible",
     installmentLabel: payment.schedulePayment
       ? scheduledObligationLabel(payment.schedulePayment.number, enrollmentFee)
-      : null,
+      : payment.type === "FULL" ? "Pago al contado" : null,
     method: payment.payment_method,
     status: payment.payment_status,
     type: payment.type,
@@ -38,8 +59,8 @@ export function mapPaymentResponseToListItem(payment: PaymentResponse): PaymentL
     currency: payment.currency?.trim() || "PEN",
     paymentDate: payment.payment_date,
     createdAt: payment.created_at,
-    registeredBy: personName(payment.creator) || "Usuario no disponible",
-    reviewedBy: personName(payment.reviewer) || null,
+    registeredBy: personName(getPaymentCreator(payment)) || "Usuario no disponible",
+    reviewedBy: personName(getPaymentReviewer(payment)) || null,
   };
 }
 

@@ -17,8 +17,13 @@ export interface PaymentPersonResponse {
 }
 
 export interface PaymentLeadResponse extends PaymentPersonResponse {
+  middle_name?: string | null;
   email?: string | null;
   dni?: string | null;
+  phones?: Array<{
+    number: string;
+    type: "WHATSAPP" | "TELEPHONE";
+  }>;
 }
 
 export interface ScheduledPaymentResponse {
@@ -58,9 +63,11 @@ export interface PaymentOrderResponse {
 
 export interface PaymentOrderDetailResponse {
   id: string;
+  payment_modality?: PaymentType;
   product?: {
     id: string;
     name: string;
+    image_url?: string | null;
     enrollment_fee?: string | number | null;
   } | null;
 }
