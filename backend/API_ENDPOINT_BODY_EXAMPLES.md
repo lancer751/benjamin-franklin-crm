@@ -462,27 +462,47 @@ Sin body JSON. Se reutiliza la cookie de refresh.
 ### POST /api/orders
 ```json
 {
-  "lead_id": "24242424-2424-2424-2424-242424242424",
+  "member_id": "24242424-2424-2424-2424-242424242424",
+  "related_campaign": "26262626-2626-2626-2626-262626262626",
+  "assigned_to": "28282828-2828-2828-2828-282828282828",
   "order_items": [
     {
       "product_id": "25252525-2525-2525-2525-252525252525",
       "attendance_mode": "HEREDADO",
-      "payment_modality": "CASH",
+      "payment_modality": "FULL",
       "discount_code": "BF2026"
     }
-  ],
-  "related_campaign": "26262626-2626-2626-2626-262626262626",
-  "generated_by": "27272727-2727-2727-2727-272727272727",
-  "assigned_to": "28282828-2828-2828-2828-282828282828"
+  ]
+}
+```
+
+> Nota: el endpoint ahora espera `member_id` y `related_campaign`, no `lead_id`. El campo `generated_by` se establece en el backend a partir del usuario autenticado.
+
+### POST /api/payments
+```json
+{
+  "order_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "payment_date": "2026-07-18T15:30:00Z",
+  "amount": "300.00",
+  "payment_method": "ONLINE",
+  "currency": "PEN",
+  "transaccion_id": "TXN123456789",
+  "payment_receipt": "uploads/payments/receipt-12345.pdf",
+  "target": {
+    "type": "SCHEDULED_INSTALLMENT",
+    "scheduled_payment_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+  }
 }
 ```
 
 ### PATCH /api/payments/:id
 ```json
 {
-  "payment_status": "COMPLETED"
+  "payment_status": "CONFIRMED"
 }
 ```
+
+> Nota: el servidor aplica `payment_status = "PENDING"` al crear el pago y valida el recibo de pago (`payment_receipt`). Luego actualiza la cuota programada y el estado de la orden cuando el pago es confirmado.
 
 ---
 

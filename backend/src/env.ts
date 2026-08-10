@@ -57,6 +57,22 @@ const envSchema = z.object({
     message: "META_APP_SECRET must be a 32-character hexadecimal string",
   }),
   META_WEBHOOK_VERIFY_TOKEN: z.string().min(32).max(128),
+  // Railway Bucket (S3 compatible)
+  RAILWAY_BUCKET_ACCESS_KEY_ID: z
+    .string()
+    .min(20, "RAILWAY_BUCKET_ACCESS_KEY_ID is required"),
+  RAILWAY_BUCKET_SECRET_ACCESS_KEY: z
+    .string()
+    .min(40, "RAILWAY_BUCKET_SECRET_ACCESS_KEY is required"),
+  RAILWAY_BUCKET_REGION: z.string().min(1, "RAILWAY_BUCKET_REGION is required"),
+  RAILWAY_BUCKET_ENDPOINT: z.url("RAILWAY_BUCKET_ENDPOINT must be a valid URL"),
+  RAILWAY_BUCKET_NAME: z
+    .string()
+    .min(3)
+    .max(63)
+    .regex(/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/, {
+      message: "RAILWAY_BUCKET_NAME must be a valid S3 bucket name",
+    }),
 });
 // Validate at startup — fail fast if anything is missing or wrong
 const parsed = envSchema.safeParse(process.env);
@@ -64,9 +80,7 @@ const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
   console.error("❌ Invalid environment variables:\n");
   for (const issue of parsed.error.issues) {
-    console.error(
-      `- ${issue.path.join(".") || "root"}: ${issue.message}`,
-    );
+    console.error(`- ${issue.path.join(".") || "root"}: ${issue.message}`);
   }
   process.exit(1);
 }
