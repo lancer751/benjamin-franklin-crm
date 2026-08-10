@@ -15,6 +15,9 @@ import { adaptTeamFollowUpMemberPage } from "../adapters/teamFollowUpAdapter";
 import { getAllLeads, type LeadListQuery } from "../services/leadService";
 import { calculateSupervisorKPIs } from "../utils/leadLogic";
 import type { LeadStatus } from "../utils/prospectDisplay";
+import { campaignQueryKeys } from "@/features/campaigns/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
+import { campaignMemberKeys, leadKeys } from "../queryKeys";
 
 export type TeamFollowUpMode = "ALL" | "UNASSIGNED" | "CAMPAIGN";
 export type SellerStatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
@@ -62,14 +65,14 @@ export const useSupervisorFollowUp = () => {
   }, [leadSearch]);
 
   const campaignsQuery = useQuery({
-    queryKey: ["campaigns", "team-follow-up", "ACTIVE", 1, 100],
+    queryKey: campaignQueryKeys.list({ page: "1", limit: "100", status: "ACTIVE" }),
     queryFn: () => getCampaigns({ page: "1", limit: "100", status: "ACTIVE" }),
     enabled: Boolean(user),
     staleTime: 5 * 60 * 1000,
   });
 
   const sellersQuery = useQuery({
-    queryKey: ["users", "sellers", "team-follow-up"],
+    queryKey: sellerKeys.list(),
     queryFn: getSellers,
     enabled: Boolean(user),
     staleTime: 10 * 60 * 1000,
@@ -109,16 +112,7 @@ export const useSupervisorFollowUp = () => {
   }), [debouncedLeadSearch, effectiveLeadAdvisorId, leadPage, leadStatus]);
 
   const leadsQuery = useQuery({
-    queryKey: [
-      "team-follow-up",
-      "leads",
-      mode,
-      effectiveLeadAdvisorId || "all-advisors",
-      debouncedLeadSearch,
-      leadStatus,
-      leadPage,
-      PAGE_SIZE,
-    ],
+    queryKey: leadKeys.list(leadQuery),
     queryFn: () => getAllLeads(leadQuery),
     enabled: Boolean(user) && mode !== "CAMPAIGN",
     placeholderData: keepPreviousData,
@@ -144,15 +138,10 @@ export const useSupervisorFollowUp = () => {
   }), [campaignMemberStatus, campaignPage, effectiveCampaignAdvisorId]);
 
   const membersQuery = useQuery({
-    queryKey: [
-      "team-follow-up",
-      "campaign-members",
-      selectedCampaignId || "no-campaign",
-      effectiveCampaignAdvisorId || "all-advisors",
-      campaignMemberStatus,
-      campaignPage,
-      PAGE_SIZE,
-    ],
+    queryKey: campaignMemberKeys.list({
+      campaignId: selectedCampaignId,
+      filters: memberQuery,
+    }),
     queryFn: () => getCampaignMembers(selectedCampaignId, memberQuery),
     enabled: Boolean(user) && mode === "CAMPAIGN" && Boolean(selectedCampaign),
   });

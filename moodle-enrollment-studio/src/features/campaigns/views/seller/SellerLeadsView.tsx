@@ -23,6 +23,8 @@ import { adaptLeadInteraction, adaptLeadInteractionsResponse } from "@/features/
 import { useManualLeadRegistration } from "@/features/leads/hooks/useManualLeadRegistration";
 import type { ManualLeadData } from "@/features/leads/schemas/manualLeadSchema";
 import { getApiErrorMessage } from "@/features/leads/utils/getApiErrorMessage";
+import { campaignMemberKeys } from "@/features/leads/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
 import { mapInteractionFormToPayload, mapTaskFormToPayload } from "@/features/leads/utils/leadActionPayloadMappers";
 import { Button } from "@/core/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
@@ -117,7 +119,7 @@ const SellerLeadsView = () => {
 
   // 1. Obtener campañas asignadas con el ID del perfil vendedor.
   const { data: sellerCampaignsRes, isLoading: isLoadingCampaigns } = useQuery({
-    queryKey: ["seller-assigned-campaigns", sellerProfileId],
+    queryKey: sellerKeys.campaigns(sellerProfileId ?? ""),
     queryFn: () => {
       if (!sellerProfileId) throw new Error("Seller profile ID is required");
       return getSellerCampaigns(sellerProfileId);
@@ -138,7 +140,10 @@ const SellerLeadsView = () => {
 
   // 2. Obtener los leads asignados al User.id autenticado.
   const { data: membersRes, isLoading: isLoadingLeads, isError: isErrorLeads } = useQuery({
-    queryKey: ["campaign-members-seller", selectedCampaignId, creatorUserId],
+    queryKey: campaignMemberKeys.list({
+      campaignId: selectedCampaignId,
+      filters: { assigned_to: creatorUserId },
+    }),
     queryFn: () => getCampaignMembers(selectedCampaignId, { assigned_to: creatorUserId }),
     enabled: !!selectedCampaignId && !!creatorUserId,
   });
@@ -150,7 +155,7 @@ const SellerLeadsView = () => {
 
   // 3. Consultas e interacciones
   const { data: interactionsRes, isLoading: isLoadingInteractions } = useQuery({
-    queryKey: ["member-interactions", selectedCampaignId, selectedMemberId],
+    queryKey: campaignMemberKeys.interactions(selectedCampaignId, selectedMemberId),
     queryFn: () => getMemberInteractions(selectedCampaignId, selectedMemberId),
     enabled: !!selectedCampaignId && !!selectedMemberId,
   });
@@ -161,7 +166,7 @@ const SellerLeadsView = () => {
 
   // 4. Consultas de tareas
   const { data: tasksRes, isLoading: isLoadingTasks } = useQuery({
-    queryKey: ["member-tasks", selectedCampaignId, selectedMemberId],
+    queryKey: campaignMemberKeys.tasks(selectedCampaignId, selectedMemberId),
     queryFn: () => getMemberTasks(selectedCampaignId, selectedMemberId),
     enabled: !!selectedCampaignId && !!selectedMemberId,
   });
@@ -185,7 +190,7 @@ const SellerLeadsView = () => {
     },
     onSuccess: () => {
       toast.success("Interacción registrada correctamente");
-      queryClient.invalidateQueries({ queryKey: ["member-interactions", selectedCampaignId, selectedMemberId] });
+      queryClient.invalidateQueries({ queryKey: campaignMemberKeys.interactions(selectedCampaignId, selectedMemberId) });
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, "No se pudo registrar la gestión. Inténtalo nuevamente."));
@@ -214,7 +219,7 @@ const SellerLeadsView = () => {
     },
     onSuccess: () => {
       toast.success("Tarea registrada correctamente");
-      queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedCampaignId, selectedMemberId] });
+      queryClient.invalidateQueries({ queryKey: campaignMemberKeys.tasks(selectedCampaignId, selectedMemberId) });
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, "No se pudo crear la tarea. Inténtalo nuevamente."));
@@ -227,7 +232,7 @@ const SellerLeadsView = () => {
       updateMemberTask(selectedCampaignId, selectedMemberId, taskId, payload),
     onSuccess: () => {
       toast.success("Tarea actualizada correctamente");
-      queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedCampaignId, selectedMemberId] });
+      queryClient.invalidateQueries({ queryKey: campaignMemberKeys.tasks(selectedCampaignId, selectedMemberId) });
     },
     onError: () => {
       toast.error("Error al actualizar la tarea");
@@ -240,7 +245,7 @@ const SellerLeadsView = () => {
       deleteMemberTask(campaignId, memberId, taskId),
     onSuccess: () => {
       toast.success("Tarea registrada correctamente");
-      queryClient.invalidateQueries({ queryKey: ["member-tasks", selectedCampaignId, selectedMemberId] });
+      queryClient.invalidateQueries({ queryKey: campaignMemberKeys.tasks(selectedCampaignId, selectedMemberId) });
     },
     onError: () => {
       toast.error("Error al eliminar la tarea");
@@ -253,8 +258,7 @@ const SellerLeadsView = () => {
       updateMemberStatus(selectedCampaignId, memberId, status),
     onSuccess: () => {
       toast.success("Tipificación de lead actualizada exitosamente.");
-      queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", selectedCampaignId, creatorUserId] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-members", selectedCampaignId] });
+      queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() });
     },
     onError: () => {
       toast.error("Ocurrió un error al actualizar el estado del lead.");
@@ -435,7 +439,7 @@ const SellerLeadsView = () => {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["campaign-members-seller"] })}
+            onClick={() => queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() })}
             className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground"
             title="Refrescar leads"
             disabled={isLoadingLeads}

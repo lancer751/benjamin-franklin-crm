@@ -7,6 +7,7 @@ import { createCourse, updateCourse } from "../services/courseService";
 import { uploadImageToCloudinary } from "@/core/lib/uploadService";
 import { courseFormSchema, type CourseFormValues } from "../schemas/courseFormSchema";
 import { courseAdapter } from "../adapters/courseAdapter";
+import { courseKeys } from "../queryKeys";
 
 function generateCourseCode(name: string): string {
   const cleanName = name
@@ -92,7 +93,7 @@ export const useCourseFormModal = (open: boolean, onClose: () => void, initialDa
     mutationFn: createCourse,
     onSuccess: () => {
       toast.success("Curso creado exitosamente");
-      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
       onClose();
     },
     onError: () => {
@@ -104,7 +105,7 @@ export const useCourseFormModal = (open: boolean, onClose: () => void, initialDa
     mutationFn: ({ id, data }: { id: string; data: any }) => updateCourse(id, data),
     onSuccess: () => {
       toast.success("Curso actualizado exitosamente");
-      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
       onClose();
     },
     onError: () => {

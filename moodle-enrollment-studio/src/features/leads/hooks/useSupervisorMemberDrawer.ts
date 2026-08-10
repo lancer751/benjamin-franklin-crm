@@ -19,6 +19,7 @@ import {
 import { useCampaignMemberStatus } from "./useCampaignMemberStatus";
 import { mapInteractionFormToPayload, mapTaskFormToPayload } from "../utils/leadActionPayloadMappers";
 import { getApiErrorMessage } from "../utils/getApiErrorMessage";
+import { campaignMemberKeys } from "../queryKeys";
 
 type InteractionPayload = ReturnType<typeof mapInteractionFormToPayload>;
 type TaskPayload = ReturnType<typeof mapTaskFormToPayload>;
@@ -34,8 +35,8 @@ export function useSupervisorMemberDrawer(member: TeamFollowUpMemberRow | null) 
     () => leadDrawerCapabilities(user?.role?.name),
     [user?.role?.name],
   );
-  const interactionsKey = ["lead-interactions", campaignId, memberId] as const;
-  const tasksKey = ["lead-tasks", campaignId, memberId] as const;
+  const interactionsKey = campaignMemberKeys.interactions(campaignId, memberId);
+  const tasksKey = campaignMemberKeys.tasks(campaignId, memberId);
 
   const interactionsQuery = useQuery({
     queryKey: interactionsKey,
@@ -50,9 +51,7 @@ export function useSupervisorMemberDrawer(member: TeamFollowUpMemberRow | null) 
 
   const refreshMemberLists = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["team-follow-up", "campaign-members"] }),
-      queryClient.invalidateQueries({ queryKey: ["campaign-members", campaignId] }),
-      queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", campaignId] }),
+      queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
     ]);
   };
 

@@ -7,6 +7,7 @@ import { es } from "date-fns/locale";
 import { adaptProductToUI } from "../adapters/product.adapter";
 import { UIProduct, BackendProductResponse } from "../types/product.types";
 import { toast } from "sonner";
+import { productKeys } from "../queryKeys";
 
 export const useProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,7 +16,7 @@ export const useProductDetail = () => {
   const [modalMode, setModalMode] = useState<'MARKETING' | 'PRICING' | 'LINK' | null>(null);
 
   const { data: productRes, isLoading, isError } = useQuery({
-    queryKey: ["product", id],
+    queryKey: productKeys.detail(id ?? ""),
     queryFn: () => getProductById(id as string),
     enabled: !!id,
   });
@@ -53,8 +54,8 @@ export const useProductDetail = () => {
       return await updateProduct(product.id, parsedPayload as any);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product", product?.id] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      if (product?.id) queryClient.invalidateQueries({ queryKey: productKeys.detail(product.id) });
+      queryClient.invalidateQueries({ queryKey: productKeys.lists() });
       toast.success("Edición académica vinculada exitosamente");
       setModalMode(null);
     },

@@ -31,6 +31,9 @@ import {
 import { buildCreateLeadPayload } from "../adapters/leadQuickFormAdapter";
 import { mapInteractionFormToPayload } from "../utils/leadActionPayloadMappers";
 import { interpretLeadLookup, useManualLeadLookup } from "./useManualLeadRegistration";
+import { campaignQueryKeys } from "@/features/campaigns/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
+import { campaignMemberKeys, leadKeys } from "../queryKeys";
 
 interface MutationResponse {
   success?: boolean;
@@ -92,7 +95,7 @@ export function useLeadCreationFlow() {
 
   // Contextual Campaign Fetch
   const contextualCampaignQuery = useQuery({
-    queryKey: ["campaign", urlCampaignId],
+    queryKey: campaignQueryKeys.detail(urlCampaignId),
     queryFn: () => getCampaignById(urlCampaignId),
     enabled: isContextualMode && Boolean(user),
   });
@@ -142,17 +145,17 @@ export function useLeadCreationFlow() {
 
   // Global Queries (only if not in contextual mode)
   const sellerCampaignsQuery = useQuery({
-    queryKey: ["seller-campaigns", authenticatedSellerProfileId],
+    queryKey: sellerKeys.campaigns(authenticatedSellerProfileId),
     queryFn: () => getSellerCampaigns(authenticatedSellerProfileId),
     enabled: !isContextualMode && isSalesRep && Boolean(authenticatedSellerProfileId),
   });
   const allowedCampaignsQuery = useQuery({
-    queryKey: ["campaigns", "lead-quick-form", 1, 100],
+    queryKey: campaignQueryKeys.list({ page: "1", limit: "100" }),
     queryFn: () => getCampaigns({ page: "1", limit: "100" }),
     enabled: !isContextualMode && Boolean(user) && !isSalesRep,
   });
   const sellersQuery = useQuery({
-    queryKey: ["users", "sellers", "campaign-assignment"],
+    queryKey: sellerKeys.list(),
     queryFn: getSellers,
     enabled: !isContextualMode && Boolean(user) && canChooseSeller && !isSalesRep,
   });
@@ -356,15 +359,11 @@ export function useLeadCreationFlow() {
     onSuccess: async ({ leadId, mode }) => {
       const targetCampaignId = campaignId || urlCampaignId;
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["leads"] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-members", targetCampaignId] }),
-        queryClient.invalidateQueries({ queryKey: ["team-follow-up", "campaign-members", targetCampaignId] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", targetCampaignId, selectedSellerProfileId] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign", targetCampaignId] }),
-        urlAdvisorUserId
-          ? queryClient.invalidateQueries({ queryKey: ["seller-detail", urlAdvisorUserId] })
-          : Promise.resolve(),
-        queryClient.invalidateQueries({ queryKey: ["lead", leadId] }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(targetCampaignId) }),
+        queryClient.invalidateQueries({ queryKey: sellerKeys.details() }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.detail(leadId) }),
       ]);
       toast.success(mode === "created"
         ? "Prospecto registrado y asociado a la campaña."

@@ -3,6 +3,9 @@ import { toast } from "sonner";
 import type { CampaignMemberStatus } from "@/core/constants/campaignMemberStatus";
 import { requireSuccess } from "../adapters/leadDetailAdapter";
 import { updateCampaignMemberStatus } from "../services/leadService";
+import { campaignQueryKeys } from "@/features/campaigns/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
+import { campaignMemberKeys, leadKeys } from "../queryKeys";
 
 interface ChangeCampaignStageInput {
   campaignId: string;
@@ -26,18 +29,14 @@ export function useCampaignMemberStatus(leadId: string) {
     },
     onSuccess: async ({ campaignId, memberId }) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["lead", leadId] }),
-        queryClient.invalidateQueries({ queryKey: ["leads"] }),
-        queryClient.invalidateQueries({ queryKey: ["all-leads"] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-members", campaignId] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-members-seller", campaignId] }),
-        queryClient.invalidateQueries({ queryKey: ["seller-assigned-campaigns"] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] }),
-        queryClient.invalidateQueries({ queryKey: ["campaigns"] }),
-        queryClient.invalidateQueries({ queryKey: ["lead-interactions", campaignId, memberId] }),
-        queryClient.invalidateQueries({ queryKey: ["lead-tasks", campaignId, memberId] }),
-        queryClient.invalidateQueries({ queryKey: ["member-interactions", memberId] }),
-        queryClient.invalidateQueries({ queryKey: ["member-tasks", memberId] }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.detail(leadId) }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: sellerKeys.all }),
+        queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(campaignId) }),
+        queryClient.invalidateQueries({ queryKey: campaignQueryKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.interactions(campaignId, memberId) }),
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.tasks(campaignId, memberId) }),
       ]);
       toast.success("Etapa actualizada correctamente.");
     },

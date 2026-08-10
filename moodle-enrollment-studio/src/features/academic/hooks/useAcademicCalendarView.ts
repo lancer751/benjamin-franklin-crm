@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getCourseEditions } from '../services/courseService';
+import { editionKeys } from '../queryKeys';
 
 export const useAcademicCalendarView = () => {
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['calendar-editions'],
+    queryKey: editionKeys.list(),
     queryFn: getCourseEditions,
   });
 

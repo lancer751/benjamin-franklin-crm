@@ -31,7 +31,9 @@ import {
 import { MultiSellerSelect, type SellerOption } from "./MultiSellerSelect";
 import { SearchableCombobox, type ComboboxOption } from "./SearchableCombobox";
 import { formatCampaignCurrency } from "../utils/campaignCurrency";
-import { campaignQueryKeys } from "../queryKeys";
+import { campaignQueryKeys, metaCampaignKeys, metaFormKeys } from "../queryKeys";
+import { productKeys } from "@/features/products/queryKeys";
+import { sellerKeys, supervisorKeys } from "@/features/users/queryKeys";
 
 interface CampaignFormProps {
   onCancel: () => void;
@@ -142,27 +144,27 @@ export default function CampaignForm({ onCancel, onSuccess, initialData }: Campa
   const initialSellerIds = useMemo(() => getInitialSellerIds(initialData), [initialData]);
 
   const productsQuery = useQuery({
-    queryKey: ["products"],
+    queryKey: productKeys.list(),
     queryFn: getProducts,
     enabled: true,
   });
   const supervisorsQuery = useQuery({
-    queryKey: ["supervisors"],
+    queryKey: supervisorKeys.list(),
     queryFn: getSupervisors,
     enabled: true,
   });
   const sellersQuery = useQuery({
-    queryKey: ["sellers"],
+    queryKey: sellerKeys.list(),
     queryFn: getSellers,
     enabled: true,
   });
   const metaCampaignsQuery = useQuery({
-    queryKey: ["meta-campaigns"],
+    queryKey: metaCampaignKeys.list(),
     queryFn: getMetaCampaigns,
     enabled: channel === "META_FORM" && supportsMeta,
   });
   const metaFormsQuery = useQuery({
-    queryKey: ["meta-forms", values.meta_campaign_id],
+    queryKey: metaFormKeys.list(values.meta_campaign_id ?? ""),
     queryFn: () => getMetaForms(values.meta_campaign_id!),
     enabled: channel === "META_FORM" && supportsMeta && Boolean(values.meta_campaign_id),
   });
@@ -321,6 +323,7 @@ export default function CampaignForm({ onCancel, onSuccess, initialData }: Campa
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: campaignQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: sellerKeys.all }),
         ...(initialData?.id
           ? [queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(initialData.id) })]
           : []),

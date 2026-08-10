@@ -8,6 +8,8 @@ import { ProductFormValues, productCommercialFormSchema, productFormSchema, prod
 import { getCertificationDefaultText, INSTITUTIONAL_FAQS } from "../utils/productTemplates";
 import { adaptProductToUI, mapProductFormToPayload } from "../adapters/product.adapter";
 import { BackendProductResponse } from "../types/product.types";
+import { editionKeys } from "@/features/academic/queryKeys";
+import { benefitKeys, productKeys } from "../queryKeys";
 
 const createEmptyPrice = (mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO" = "HEREDADO") => ({
   attendance_mode: mode,
@@ -145,13 +147,13 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
   }, [initialData, open]);
 
   const { data: editionsRes, isLoading: isLoadingEditions, isError: isEditionsError } = useQuery({
-    queryKey: ["editions"],
+    queryKey: editionKeys.list(),
     queryFn: getCourseEditions,
     enabled: open,
   });
 
   const { data: benefitsRes, isLoading: isLoadingBenefits, isError: isBenefitsError } = useQuery({
-    queryKey: ["benefits"],
+    queryKey: benefitKeys.list(),
     queryFn: getBenefits,
     enabled: open,
   });
@@ -297,9 +299,9 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
       }
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: productKeys.lists() });
       if (isEdit && initialData?.id) {
-        queryClient.invalidateQueries({ queryKey: ["product", initialData.id] });
+        queryClient.invalidateQueries({ queryKey: productKeys.detail(initialData.id) });
       }
       toast.success(isEdit ? "Producto actualizado exitosamente" : "Producto creado exitosamente");
       onClose(data);

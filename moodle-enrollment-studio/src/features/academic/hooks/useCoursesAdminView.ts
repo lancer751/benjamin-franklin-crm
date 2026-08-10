@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useSearchStore } from "@/store/useSearchStore";
 import { getCourses, deleteCourse } from "../services/courseService";
+import { courseKeys } from "../queryKeys";
 
 export const useCoursesAdminView = () => {
   const queryClient = useQueryClient();
@@ -24,7 +25,7 @@ export const useCoursesAdminView = () => {
 
   // Petición (GET)
   const { data: coursesRes, isLoading, isError } = useQuery({
-    queryKey: ["courses"],
+    queryKey: courseKeys.list(),
     queryFn: getCourses,
   });
 
@@ -32,7 +33,7 @@ export const useCoursesAdminView = () => {
   const deleteMutation = useMutation({
     mutationFn: deleteCourse,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
       setShowDeleteAlert(false);
       setSelectedCourse(null);
       toast.success("Curso eliminado exitosamente");

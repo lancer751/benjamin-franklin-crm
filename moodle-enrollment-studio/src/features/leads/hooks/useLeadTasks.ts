@@ -5,10 +5,11 @@ import type { LeadTaskViewModel } from "../components/lead-detail/leadDetail.typ
 import type { TaskFormValues } from "../schemas/taskFormSchema";
 import { createMemberTask, deleteMemberTask, getMemberTasks, updateMemberTask, type MemberTaskUpdatePayload } from "../services/leadService";
 import { mapTaskFormToPayload } from "../utils/leadActionPayloadMappers";
+import { campaignMemberKeys } from "../queryKeys";
 
 export function useLeadTasks(campaignId: string, memberId: string, creatorUserId: string) {
   const queryClient = useQueryClient();
-  const queryKey = ["lead-tasks", campaignId, memberId] as const;
+  const queryKey = campaignMemberKeys.tasks(campaignId, memberId);
   const query = useQuery({ queryKey, queryFn: () => getMemberTasks(campaignId, memberId), enabled: Boolean(campaignId && memberId) });
   const refresh = () => queryClient.invalidateQueries({ queryKey });
   const createMutation = useMutation({

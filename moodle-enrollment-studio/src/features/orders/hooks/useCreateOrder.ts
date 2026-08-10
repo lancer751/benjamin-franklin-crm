@@ -7,6 +7,8 @@ import {
 } from "../services/orderService";
 import type { CreateOrderPayload } from "../types";
 import { orderQueryKeys } from "../queryKeys";
+import { campaignMemberKeys, leadKeys } from "@/features/leads/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
 
 export function useCreateOrder() {
   const queryClient = useQueryClient();
@@ -16,11 +18,10 @@ export function useCreateOrder() {
     mutationFn: (payload: CreateOrderPayload) => createOrder(payload),
     onSuccess: async (response) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: orderQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: ["lead"] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-members"] }),
-        queryClient.invalidateQueries({ queryKey: ["seller-detail"] }),
-        queryClient.invalidateQueries({ queryKey: ["team-follow-up"] }),
+        queryClient.invalidateQueries({ queryKey: orderQueryKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.all }),
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: sellerKeys.details() }),
         queryClient.invalidateQueries({ queryKey: orderQueryKeys.leadContexts() }),
       ]);
       queryClient.setQueryData(orderQueryKeys.detail(response.data.id), response);

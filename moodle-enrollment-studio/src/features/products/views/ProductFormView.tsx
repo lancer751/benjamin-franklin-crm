@@ -17,6 +17,7 @@ import ProductReviewSummary from "../components/form/ProductReviewSummary";
 import ProductCommercialSection from "../components/commercial/ProductCommercialSection";
 import ProductMarketingSection from "../components/marketing/ProductMarketingSection";
 import ProductWebContentSection from "../components/web-content/ProductWebContentSection";
+import { productKeys } from "../queryKeys";
 
 const ALL_STEPS: ProductFormStep[] = [
   { id: "commercial", label: "Información comercial", description: "Cohorte, categoría y precios" },
@@ -35,7 +36,7 @@ const ProductFormView = () => {
   const [activeStep, setActiveStep] = useState<ProductFormStepId>(role === "MARKETING" ? "marketing" : "commercial");
 
   const { data: productResponse, isLoading: isLoadingProduct } = useQuery({
-    queryKey: ["product", id],
+    queryKey: productKeys.detail(id ?? ""),
     queryFn: () => getProductById(id as string),
     enabled: Boolean(id),
   });

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { requireSuccess } from "../adapters/leadDetailAdapter";
 import { deleteLead } from "../services/leadService";
+import { leadKeys } from "../queryKeys";
 
 export function useDeleteLead(leadId: string) {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export function useDeleteLead(leadId: string) {
       requireSuccess(response, "No fue posible eliminar el prospecto.");
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["leads"] });
+      await queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
       toast.success("Prospecto eliminado correctamente.");
       navigate("/prospectos");
     },

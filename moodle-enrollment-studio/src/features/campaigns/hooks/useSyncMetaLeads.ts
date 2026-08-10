@@ -5,6 +5,8 @@ import {
   syncMetaLeads,
   type SyncMetaLeadsResponse,
 } from "../services/campaignService";
+import { campaignQueryKeys } from "../queryKeys";
+import { campaignMemberKeys, leadKeys } from "@/features/leads/queryKeys";
 
 const getSuccessMessage = (response?: SyncMetaLeadsResponse | null) => {
   const checked = response?.data?.checked;
@@ -55,14 +57,9 @@ export const useSyncMetaLeads = (
     mutationFn: () => syncMetaLeads(campaignId),
     onSuccess: async (response) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] }),
-        queryClient.invalidateQueries({
-          queryKey: ["campaign-members", campaignId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["campaign-members-seller", campaignId],
-        }),
-        queryClient.invalidateQueries({ queryKey: ["leads"] }),
+        queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(campaignId) }),
+        queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() }),
       ]);
       toast.success(getSuccessMessage(response));
       onSuccess?.();

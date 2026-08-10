@@ -8,6 +8,7 @@ import { Gift, Info, Plus, Loader2, Trash2, Search } from "lucide-react";
 import { cn } from "@/core/lib/utils";
 import { createBenefit } from "../../services/benefitService";
 import { toast } from "sonner";
+import { benefitKeys } from "../../queryKeys";
 
 interface BenefitsCardProps {
   availableBenefits: any[];
@@ -45,7 +46,7 @@ const BenefitsCard = ({
         // Agregar al array form.benefit_ids
         setFieldValue("benefit_ids", [...benefitIds, newId]);
         // Invalidar query "benefits" para refrescar el catálogo
-        queryClient.invalidateQueries({ queryKey: ["benefits"] });
+        queryClient.invalidateQueries({ queryKey: benefitKeys.lists() });
         toast.success("Beneficio creado y seleccionado automáticamente");
         setNewBenefitText("");
         setShowAddForm(false);

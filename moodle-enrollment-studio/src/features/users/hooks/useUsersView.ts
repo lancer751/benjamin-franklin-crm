@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getUsers, deleteUser } from "../services/userService";
 import { useSearchStore } from "@/store/useSearchStore";
+import { userKeys } from "../queryKeys";
 
 export const useUsersView = () => {
   const queryClient = useQueryClient();
@@ -33,7 +34,7 @@ export const useUsersView = () => {
   // QUERY: OBTENER USUARIOS (Corregido para la estructura de Hono)
   // ==========================================================
   const { data: response, isLoading, isError } = useQuery({
-    queryKey: ["users"],
+    queryKey: userKeys.list(),
     queryFn: getUsers,
   });
 
@@ -49,7 +50,7 @@ export const useUsersView = () => {
     onSuccess: (res) => {
       if (res.success) {
         toast.success("Usuario eliminado correctamente");
-        queryClient.invalidateQueries({ queryKey: ["users"] });
+        queryClient.invalidateQueries({ queryKey: userKeys.lists() });
         setUserToDelete(null);
       }
     },

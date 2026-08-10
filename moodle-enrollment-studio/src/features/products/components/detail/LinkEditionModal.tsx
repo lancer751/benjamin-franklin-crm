@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from "@/core/components/ui/dialog";
 import { cn } from "@/core/lib/utils";
+import { editionKeys } from "@/features/academic/queryKeys";
 
 interface LinkEditionModalProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ const LinkEditionModal = ({ isOpen, onClose, onLink, isPending }: LinkEditionMod
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: editionsRes, isLoading } = useQuery({
-    queryKey: ["course-editions"],
+    queryKey: editionKeys.list(),
     queryFn: getCourseEditions,
     enabled: isOpen,
   });

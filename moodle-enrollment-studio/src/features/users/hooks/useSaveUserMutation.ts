@@ -9,6 +9,7 @@ import {
 } from "../services/userService";
 import { UserFormValues } from "../schemas/userFormSchema";
 import { userAdapter } from "../adapters/user.adapter";
+import { sellerKeys, supervisorKeys, userKeys } from "../queryKeys";
 
 export const useSaveUserMutation = (
   user: any | null,
@@ -85,13 +86,13 @@ export const useSaveUserMutation = (
     },
 
     onSuccess: async (actionType) => {
-      await queryClient.invalidateQueries({ queryKey: ["users"] });
-      await queryClient.invalidateQueries({ queryKey: ["supervisors"] });
-      await queryClient.invalidateQueries({ queryKey: ["sellers"] });
+      await queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      await queryClient.invalidateQueries({ queryKey: supervisorKeys.lists() });
+      await queryClient.invalidateQueries({ queryKey: sellerKeys.lists() });
       if (user?.id) {
-        await queryClient.invalidateQueries({ queryKey: ["user", user.id] });
-        await queryClient.invalidateQueries({ queryKey: ["sellerProfile", user.id] });
-        await queryClient.invalidateQueries({ queryKey: ["supervisorProfile", user.id] });
+        await queryClient.invalidateQueries({ queryKey: userKeys.detail(user.id) });
+        await queryClient.invalidateQueries({ queryKey: sellerKeys.detail(user.id) });
+        await queryClient.invalidateQueries({ queryKey: supervisorKeys.detail(user.id) });
       }
 
       if (actionType === "create") {

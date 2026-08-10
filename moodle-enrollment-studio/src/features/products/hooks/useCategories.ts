@@ -5,13 +5,14 @@ import {
   getCategories,
   updateCategory,
 } from "../services/categoryService";
+import { categoryKeys } from "../queryKeys";
 import type {
   CategoryMutationVariables,
   CreateCategoryPayload,
   ProductCategory,
 } from "../types/category.types";
 
-export const CATEGORIES_QUERY_KEY = ["products", "categories"] as const;
+export const CATEGORIES_QUERY_KEY = categoryKeys.list();
 
 const upsertCategory = (
   categories: ProductCategory[] | undefined,

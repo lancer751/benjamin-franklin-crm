@@ -27,6 +27,7 @@ import { useSupervisorMemberDrawer } from "@/features/leads/hooks/useSupervisorM
 import { useCampaignMemberReassignment } from "@/features/leads/hooks/useCampaignMemberReassignment";
 import { CampaignMemberReassignmentDialog } from "@/features/leads/components/CampaignMemberReassignmentDialog";
 import LeadDetailsSheet from "@/features/campaigns/views/seller/components/LeadDetailsSheet";
+import { campaignMemberKeys } from "@/features/leads/queryKeys";
 
 const PAGE_SIZE = 20;
 
@@ -120,15 +121,7 @@ export const CampaignMembersPanel = ({
   }), [campaignMemberStatus, campaignPage, effectiveCampaignAdvisorId]);
 
   const membersQuery = useQuery({
-    queryKey: [
-      "team-follow-up",
-      "campaign-members",
-      campaignId || "no-campaign",
-      effectiveCampaignAdvisorId || "all-advisors",
-      campaignMemberStatus,
-      campaignPage,
-      PAGE_SIZE,
-    ],
+    queryKey: campaignMemberKeys.list({ campaignId, filters: memberQuery }),
     queryFn: () => getCampaignMembers(campaignId, memberQuery),
     enabled: Boolean(user) && Boolean(campaignId),
     placeholderData: keepPreviousData,

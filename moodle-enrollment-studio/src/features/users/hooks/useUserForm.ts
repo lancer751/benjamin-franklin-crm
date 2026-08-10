@@ -6,6 +6,7 @@ import { getRoles, createUser, updateUser, getUserById, getSupervisors, updateSu
 import { userFormSchema, type UserFormValues } from "../schemas/userFormSchema";
 import { userAdapter } from "../adapters/user.adapter";
 import { useSaveUserMutation } from "./useSaveUserMutation";
+import { roleKeys, sellerKeys, supervisorKeys, userKeys } from "../queryKeys";
 
 export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: any | null) => {
 
@@ -21,7 +22,7 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
 
   // 1. Fetch de Roles
   const { data: rolesRes, isLoading: loadingRoles } = useQuery({
-    queryKey: ["roles"],
+    queryKey: roleKeys.list(),
     queryFn: getRoles,
     enabled: isOpen,
   });
@@ -29,7 +30,7 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
 
   // Fetch de Supervisores
   const { data: supervisorsRes, isLoading: loadingSupervisors } = useQuery({
-    queryKey: ["supervisors"],
+    queryKey: supervisorKeys.list(),
     queryFn: getSupervisors,
     enabled: isOpen,
   });
@@ -41,7 +42,7 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
 
   // A) Query Base del Usuario
   const { data: fullUserRes, isLoading: isLoadingBase } = useQuery({
-    queryKey: ["user", user?.id],
+    queryKey: userKeys.detail(user?.id ?? ""),
     queryFn: () => getUserById(user!.id),
     enabled: isOpen && !!user?.id,
     staleTime: 5 * 60 * 1000,
@@ -65,7 +66,7 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
 
   // B) Query Perfil Vendedor
   const { data: sellerProfileRes, isLoading: isLoadingSellerProfile } = useQuery({
-    queryKey: ["sellerProfile", user?.id],
+    queryKey: sellerKeys.detail(user?.id ?? ""),
     queryFn: () => getSellerProfileById(user.id),
     enabled: isOpen && !!user?.id && isEditingSeller,
     staleTime: 5 * 60 * 1000,
@@ -74,7 +75,7 @@ export const useUserFormModal = (isOpen: boolean, onClose: () => void, user?: an
 
   // C) Query Perfil Supervisor
   const { data: supervisorProfileRes, isLoading: isLoadingSupervisorProfile } = useQuery({
-    queryKey: ["supervisorProfile", user?.id],
+    queryKey: supervisorKeys.detail(user?.id ?? ""),
     queryFn: () => getSupervisorById(user.id),
     enabled: isOpen && !!user?.id && isEditingSupervisor,
     staleTime: 5 * 60 * 1000,

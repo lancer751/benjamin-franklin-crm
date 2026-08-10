@@ -7,6 +7,7 @@ import type { PendingProductFilesController, PendingProductFileKey } from "./use
 import { createCertification, updateCertification } from "../services/certificationService";
 import { createFAQ, updateFAQ } from "../services/faqService";
 import { updateProductCommercialContent } from "../services/productService";
+import { certificationKeys, faqKeys, productKeys } from "../queryKeys";
 
 type ValidationSection = "commercial" | "marketing" | "web" | "complete";
 
@@ -225,7 +226,9 @@ export const useProductContentActions = ({ productId, form, setFieldValue, valid
       });
       if (!response.success) throw new Error(response.message || "No se pudo guardar el material comercial");
       applySuccessfulUrls(urls);
-      void queryClient.invalidateQueries({ queryKey: ["product", productId] });
+      void queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      void queryClient.invalidateQueries({ queryKey: certificationKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: faqKeys.lists() });
       toast.success("Material comercial guardado");
       return true;
     } catch (error) {
@@ -256,7 +259,9 @@ export const useProductContentActions = ({ productId, form, setFieldValue, valid
       });
       if (!response.success) throw new Error(response.message || "No se pudo guardar la publicación web");
       applySuccessfulUrls(urls);
-      void queryClient.invalidateQueries({ queryKey: ["product", productId] });
+      void queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      void queryClient.invalidateQueries({ queryKey: certificationKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: faqKeys.lists() });
       toast.success("Publicación web guardada");
       return true;
     } catch (error) {
@@ -285,7 +290,8 @@ export const useProductContentActions = ({ productId, form, setFieldValue, valid
       });
       if (!response.success) throw new Error(response.message || "No se pudo guardar el borrador");
       applySuccessfulUrls(urls);
-      void queryClient.invalidateQueries({ queryKey: ["product", productId] });
+      void queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      void queryClient.invalidateQueries({ queryKey: certificationKeys.lists() });
       toast.success("Borrador guardado");
       return true;
     } catch (error) {

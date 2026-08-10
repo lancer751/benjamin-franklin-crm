@@ -11,6 +11,8 @@ import {
 } from "../services/campaignService";
 import { toast } from "sonner";
 import { campaignQueryKeys } from "../queryKeys";
+import { leadKeys } from "@/features/leads/queryKeys";
+import { sellerKeys } from "@/features/users/queryKeys";
 
 export const useCampaignDetail = (id: string | undefined) => {
   const navigate = useNavigate();
@@ -43,10 +45,10 @@ export const useCampaignDetail = (id: string | undefined) => {
     onSuccess: (res) => {
       if (res.success) {
         toast.success("Asesores asignados con éxito");
-        queryClient.invalidateQueries({ queryKey: ["campaign", id] });
-        queryClient.invalidateQueries({ queryKey: ["campaigns"] });
-        queryClient.invalidateQueries({ queryKey: ["leads"] });
-        queryClient.invalidateQueries({ queryKey: ["all-leads"] });
+        queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(id ?? "") });
+        queryClient.invalidateQueries({ queryKey: campaignQueryKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: sellerKeys.all });
         setShowAssignSeller(false);
       } else {
         toast.error(res.message || "Error al asignar asesores");
@@ -130,10 +132,10 @@ export const useCampaignDetail = (id: string | undefined) => {
     },
     onSuccess: () => {
       toast.success("Asesor retirado y leads reasignados correctamente.");
-      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      queryClient.invalidateQueries({ queryKey: ["all-leads"] });
+      queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(id ?? "") });
+      queryClient.invalidateQueries({ queryKey: campaignQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: sellerKeys.all });
     },
     onError: (err: any) => {
       toast.error(err?.message || "Error en el proceso de retiro y reasignación.");

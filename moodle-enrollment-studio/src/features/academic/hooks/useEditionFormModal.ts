@@ -9,6 +9,7 @@ import { getProfessors } from "../services/professorService";
 import { editionFormSchema, type EditionFormValues, defaultEditionFormValues } from "../schemas/editionFormSchema";
 import { editionAdapter } from "../adapters/editionAdapter";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { courseKeys, editionKeys, professorKeys } from "../queryKeys";
 
 export const useEditionFormModal = (
   open = true,
@@ -48,19 +49,19 @@ export const useEditionFormModal = (
 
 
   const { data: editionRes, isLoading: isLoadingEdition, isError: isErrorEdition } = useQuery({
-    queryKey: ["edition", actualEditionId],
+    queryKey: editionKeys.detail(actualEditionId ?? ""),
     queryFn: () => getCourseEditionById(actualEditionId as string),
     enabled: !!actualEditionId && open,
   });
 
   const { data: coursesRes, isLoading: isLoadingCourses } = useQuery({
-    queryKey: ["courses"],
+    queryKey: courseKeys.list(),
     queryFn: getCourses,
     enabled: mode !== "edit" && open,
   });
 
   const { data: professorsRes, isLoading: isLoadingProfessors } = useQuery({
-    queryKey: ["professors"],
+    queryKey: professorKeys.list(),
     queryFn: getProfessors,
     enabled: open,
   });
@@ -187,11 +188,11 @@ export const useEditionFormModal = (
     toast.promise(mutationPromise, {
       loading: mode === "create" ? "Programando edición..." : "Actualizando edición...",
       success: () => {
-        queryClient.invalidateQueries({ queryKey: ["editions"] });
-        if (actualEditionId) queryClient.invalidateQueries({ queryKey: ["edition", actualEditionId] });
+        queryClient.invalidateQueries({ queryKey: editionKeys.lists() });
+        if (actualEditionId) queryClient.invalidateQueries({ queryKey: editionKeys.detail(actualEditionId) });
         const relevantCourseId = actualCourseId || values.course_id;
-        if (relevantCourseId) queryClient.invalidateQueries({ queryKey: ["course", relevantCourseId] });
-        else queryClient.invalidateQueries({ queryKey: ["courses"] });
+        if (relevantCourseId) queryClient.invalidateQueries({ queryKey: courseKeys.detail(relevantCourseId) });
+        else queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
 
         if (onClose) {
           onClose();

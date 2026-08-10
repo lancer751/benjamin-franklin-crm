@@ -5,6 +5,7 @@ import { getProfessorById } from "../services/professorService";
 import { Badge } from "@/core/components/ui/badge";
 import { Button } from "@/core/components/ui/button";
 import { Card, CardContent } from "@/core/components/ui/card";
+import { professorKeys } from "../queryKeys";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/core/components/ui/tabs";
 import { 
   GraduationCap, 
@@ -24,7 +25,7 @@ export default function ProfessorDetailView() {
   const navigate = useNavigate();
 
   const { data: professorRes, isLoading, isError } = useQuery({
-    queryKey: ["professor", id],
+    queryKey: professorKeys.detail(id ?? ""),
     queryFn: () => getProfessorById(id as string),
     enabled: !!id,
     staleTime: 0,

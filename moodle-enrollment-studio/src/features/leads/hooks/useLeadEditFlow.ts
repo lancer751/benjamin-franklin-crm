@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { buildUpdateLeadPayload, hasLeadChanges, mapLeadToFormValues, unwrapLeadForEdit } from "../adapters/leadQuickFormAdapter";
 import { getLeadById, updateLead } from "../services/leadService";
 import { defaultLeadFieldValues, leadFieldsSchema, type LeadFieldsData, type LeadFieldsInput } from "../schemas/leadFieldsSchema";
+import { leadKeys } from "../queryKeys";
 
 const responseError = (response: unknown, fallback: string) => {
   if (!response || typeof response !== "object") return fallback;
@@ -33,7 +34,7 @@ export function useLeadEditFlow(id: string) {
   });
 
   const leadQuery = useQuery({
-    queryKey: ["lead", id],
+    queryKey: leadKeys.detail(id),
     queryFn: () => getLeadById(id),
     select: (response) => unwrapLeadForEdit(response),
     enabled: Boolean(id),
@@ -78,8 +79,8 @@ export function useLeadEditFlow(id: string) {
     onSuccess: async ({ unchanged }) => {
       if (unchanged) return;
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["lead", id] }),
-        queryClient.invalidateQueries({ queryKey: ["leads"] }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.detail(id) }),
+        queryClient.invalidateQueries({ queryKey: leadKeys.lists() }),
       ]);
       toast.success("Prospecto actualizado correctamente.");
       navigate(returnTo);
