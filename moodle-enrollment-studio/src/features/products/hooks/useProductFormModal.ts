@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCourseEditions } from "@/features/academic/services/courseService";
 import { createProduct, updateProduct } from "../services/productService";
@@ -6,8 +6,8 @@ import { getBenefits } from "../services/benefitService";
 import { toast } from "sonner";
 import { ProductFormValues, productCommercialFormSchema, productFormSchema, productMarketingFormSchema, productWebContentFormSchema } from "../schemas";
 import { getCertificationDefaultText, INSTITUTIONAL_FAQS } from "../utils/productTemplates";
-import { adaptProductToUI, mapProductFormToPayload } from "../adapters/product.adapter";
-import { BackendProductResponse } from "../types/product.types";
+import { adaptProductToUI, mapProductFormToPayload, normalizeAsynchronousPrice } from "../adapters/product.adapter";
+import type { BackendProductResponse, EditionModality, ProductEditionOption } from "../types/product.types";
 import { editionKeys } from "@/features/academic/queryKeys";
 import { benefitKeys, productKeys } from "../queryKeys";
 
@@ -19,8 +19,14 @@ const createEmptyPrice = (mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO" = "HEREDAD
 
 const getPricesForModality = (
   prices: ProductFormValues["prices"],
-  modality?: string,
+  modality?: EditionModality,
+  isAsynchronous = false,
 ): ProductFormValues["prices"] => {
+  if (isAsynchronous) {
+    const inheritedPrice = prices.find((price) => price.attendance_mode === "HEREDADO") || prices[0];
+    return [normalizeAsynchronousPrice(inheritedPrice)];
+  }
+
   if (modality === "HIBRIDO") {
     return [
       prices.find((price) => price.attendance_mode === "PRESENCIAL") || createEmptyPrice("PRESENCIAL"),
@@ -84,11 +90,23 @@ const emptyData: ProductFormValues = {
   },
 };
 
-export const useProductFormModal = (open: boolean, onClose: (data?: any) => void, initialData?: any) => {
+export const useProductFormModal = (
+  open: boolean,
+  onClose: (data?: any) => void,
+  initialData?: any,
+  persistedProductId?: string,
+) => {
   const isEdit = !!initialData;
   const [form, setForm] = useState<ProductFormValues>(emptyData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
+  const submittingRef = useRef(false);
+  const previousIsAsynchronousRef = useRef<boolean>();
+  const nonAsynchronousFinancingRef = useRef<Pick<
+    ProductFormValues,
+    "prices" | "enrollment_fee" | "installments_min_number" | "installments_max_number"
+  >>();
+  const targetProductId = initialData?.id || persistedProductId;
 
   useEffect(() => {
     if (initialData && open) {
@@ -181,8 +199,9 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     }
   }, [availableBenefits, open, isEdit]);
 
-  const editions = (editionsRes as any)?.success ? (editionsRes as any).data : [];
-  const selectedEdition = editions.find((e: any) => e.id === form.edition_id);
+  const editions: ProductEditionOption[] = editionsRes?.success ? editionsRes.data : [];
+  const selectedEdition = editions.find((edition) => edition.id === form.edition_id);
+  const isAsynchronous = selectedEdition?.modality === "ASINCRONICO";
 
   // Dynamic Modality, Name, Image, Certification and FAQs Auto-fill logic
   useEffect(() => {
@@ -190,8 +209,9 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
 
     const courseName = selectedEdition.course?.name || "";
     const cleanCourseName = courseName.trim();
-    const modalityRaw = (selectedEdition as any).modality;
-    const editionModality = typeof modalityRaw === 'object' ? modalityRaw.name : modalityRaw;
+    const editionModality = selectedEdition.modality;
+    const previousIsAsynchronous = previousIsAsynchronousRef.current;
+    previousIsAsynchronousRef.current = isAsynchronous;
 
     const generatedName = `Curso de ${cleanCourseName} — Edición ${selectedEdition.edition_number}`;
     const generatedSlug = generateSlug(generatedName);
@@ -200,6 +220,21 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
 
     setForm(prev => {
       let nextForm = { ...prev };
+      let prices = prev.prices;
+
+      if (isAsynchronous && previousIsAsynchronous === false) {
+        nonAsynchronousFinancingRef.current = {
+          prices: prev.prices,
+          enrollment_fee: prev.enrollment_fee,
+          installments_min_number: prev.installments_min_number,
+          installments_max_number: prev.installments_max_number,
+        };
+      } else if (!isAsynchronous && previousIsAsynchronous === true && nonAsynchronousFinancingRef.current) {
+        prices = nonAsynchronousFinancingRef.current.prices;
+        nextForm.enrollment_fee = nonAsynchronousFinancingRef.current.enrollment_fee;
+        nextForm.installments_min_number = nonAsynchronousFinancingRef.current.installments_min_number;
+        nextForm.installments_max_number = nonAsynchronousFinancingRef.current.installments_max_number;
+      }
 
       // 1. Pestaña 1 & 3: Nombre Comercial y Slug (Auto-fill)
       if (!isEdit || !prev.name) {
@@ -261,11 +296,26 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
       }
 
       // 4. La modalidad define una sola estructura de precios para creación y edición.
-      nextForm.prices = getPricesForModality(prev.prices, editionModality);
+      nextForm.prices = getPricesForModality(prices, editionModality, isAsynchronous);
+      if (isAsynchronous) {
+        nextForm.enrollment_fee = "0.00";
+        nextForm.installments_min_number = 1;
+        nextForm.installments_max_number = 1;
+      }
 
       return nextForm;
     });
-  }, [selectedEdition, isEdit]);
+    if (isAsynchronous) {
+      setErrors((current) => Object.fromEntries(
+        Object.entries(current).filter(([field]) => (
+          field !== "prices" &&
+          !field.includes("installment_price") &&
+          !field.startsWith("installments_") &&
+          field !== "enrollment_fee"
+        )),
+      ));
+    }
+  }, [selectedEdition, isAsynchronous, isEdit]);
 
   const handleLoadDefaultFAQs = useCallback(() => {
     setFieldValue("faqs", INSTITUTIONAL_FAQS.map(faq => ({
@@ -278,39 +328,40 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
   const mutation = useMutation({
     mutationFn: async (payload: ProductFormValues) => {
       // Obtener la modalidad de la edición seleccionada
-      const targetEdition = editions.find((e: any) => e.id === payload?.edition_id);
-      const modalityRaw = targetEdition?.modality;
-      const modality = typeof modalityRaw === 'object' ? modalityRaw.name : modalityRaw;
+      const targetEdition = editions.find((edition) => edition.id === payload?.edition_id);
+      const modality = targetEdition?.modality;
 
-      const parsedPayload = mapProductFormToPayload(payload, modality);
+      const parsedPayload = mapProductFormToPayload(payload, modality, isAsynchronous);
 
       try {
         let res;
-        if (isEdit && initialData?.id) {
-          res = await updateProduct(initialData.id, parsedPayload);
+        if (targetProductId) {
+          res = await updateProduct(targetProductId, parsedPayload);
         } else {
           res = await createProduct(parsedPayload);
         }
-        console.log("RESPUESTA COMPLETA DEL BACKEND:", res);
+        if (!res?.success) throw new Error(res?.message || "No se pudo guardar el producto");
         return res;
       } catch (err) {
-        console.error("ERROR DE PETICIÓN EN EL BACKEND:", err);
         throw err;
       }
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: productKeys.lists() });
-      if (isEdit && initialData?.id) {
-        queryClient.invalidateQueries({ queryKey: productKeys.detail(initialData.id) });
+      const savedProductId = data?.success ? data.data?.id : targetProductId;
+      if (savedProductId) {
+        queryClient.setQueryData(productKeys.detail(savedProductId), data);
       }
-      toast.success(isEdit ? "Producto actualizado exitosamente" : "Producto creado exitosamente");
+      void queryClient.invalidateQueries({ queryKey: productKeys.lists() });
+      toast.success(targetProductId ? "Cambios guardados" : "Producto creado");
       onClose(data);
-      if (!isEdit) setForm(emptyData);
     },
     onError: (error) => {
       console.error(error);
-      toast.error(isEdit ? "Error al actualizar el producto." : "Error al crear el producto.");
-    }
+      toast.error(targetProductId ? "Error al guardar los cambios." : "Error al crear el producto.");
+    },
+    onSettled: () => {
+      submittingRef.current = false;
+    },
   });
 
   const setFieldValue = (field: string, value: any) => {
@@ -352,7 +403,10 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
 
     setForm(prev => {
       const newPrices = [...prev.prices];
-      newPrices[index] = { ...newPrices[index], [field]: cleanValue };
+      const updatedPrice = { ...newPrices[index], [field]: cleanValue };
+      newPrices[index] = isAsynchronous && field === "cash_price"
+        ? normalizeAsynchronousPrice(updatedPrice)
+        : updatedPrice;
       return { ...prev, prices: newPrices };
     });
 
@@ -375,7 +429,16 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
         ? productWebContentFormSchema
         : productFormSchema;
 
-    const result = schemaToValidate.safeParse(form);
+    const validationForm = isAsynchronous
+      ? {
+          ...form,
+          enrollment_fee: "0.00",
+          installments_min_number: 1,
+          installments_max_number: 1,
+          prices: [normalizeAsynchronousPrice(form.prices[0])],
+        }
+      : form;
+    const result = schemaToValidate.safeParse(validationForm);
     if (!result.success) {
       const formattedErrors: Record<string, string> = {};
       result.error.issues.forEach(issue => {
@@ -393,10 +456,15 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     return true;
   };
 
-  const onSubmit = (section: "commercial" | "general" = "commercial") => {
-    if (!validateForm("commercial")) return false;
-    mutation.mutate(form);
-    return true;
+  const onSubmit = async () => {
+    if (submittingRef.current || mutation.isPending) return null;
+    if (!validateForm("commercial")) return null;
+    submittingRef.current = true;
+    try {
+      return await mutation.mutateAsync(form);
+    } catch {
+      return null;
+    }
   };
 
   return {
@@ -410,6 +478,7 @@ export const useProductFormModal = (open: boolean, onClose: (data?: any) => void
     isEditionsError,
     editions,
     selectedEdition,
+    isAsynchronous,
     isPending: mutation.isPending,
     isEdit,
     handleLoadDefaultFAQs,

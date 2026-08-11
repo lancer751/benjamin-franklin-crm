@@ -19,29 +19,38 @@ const validAmount = (value: string | number) => {
     Number(normalized) >= 0
   );
 };
-const validPrices = (form: ProductFormValues) =>
-  form.prices.length > 0 &&
-  form.prices.every((price) =>
-    validAmount(price.cash_price) &&
-    validAmount(price.installment_price) &&
-    Number(price.installment_price) > Number(price.cash_price),
-  );
+const validPrices = (form: ProductFormValues, isAsynchronous: boolean) => {
+  if (isAsynchronous) {
+    return form.prices.length === 1 &&
+      form.prices[0].attendance_mode === "HEREDADO" &&
+      validAmount(form.prices[0].cash_price);
+  }
 
-export const getProductRequirements = (form: ProductFormValues) => {
+  return form.prices.length > 0 &&
+    form.prices.every((price) =>
+      validAmount(price.cash_price) &&
+      validAmount(price.installment_price) &&
+      Number(price.installment_price) > Number(price.cash_price),
+    );
+};
+
+export const getProductRequirements = (form: ProductFormValues, isAsynchronous = false) => {
   const commercial: ProductRequirement[] = [
     { id: "edition_id", label: "Edición seleccionada", state: form.edition_id ? "complete" : "pending" },
     { id: "category_id", label: "Categoría seleccionada", state: form.category_id ? "complete" : "pending" },
     { id: "name", label: "Nombre comercial", state: filled(form.name) ? "complete" : "pending" },
-    { id: "prices", label: "Precios válidos", state: validPrices(form) ? "complete" : "error" },
+    { id: "prices", label: "Precios válidos", state: validPrices(form, isAsynchronous) ? "complete" : "error" },
     {
       id: "enrollment_fee",
       label: "Matrícula global válida",
-      state: validAmount(form.enrollment_fee) ? "complete" : "error",
+      state: isAsynchronous ? "optional" : validAmount(form.enrollment_fee) ? "complete" : "error",
     },
     {
       id: "installments",
       label: "Rango de cuotas válido",
-      state: form.installments_max_number >= form.installments_min_number ? "complete" : "error",
+      state: isAsynchronous
+        ? "optional"
+        : form.installments_max_number >= form.installments_min_number ? "complete" : "error",
     },
     {
       id: "discount_expires_at",

@@ -46,7 +46,7 @@ const ProductFormStepper = ({ steps, activeStep, states, onStepChange }: Product
               </span>
               <span className="min-w-0">
                 <span className={cn("block text-xs font-bold", active ? "text-primary" : "text-slate-800")}>{step.label}</span>
-                <span className="block truncate text-[10px] font-medium text-slate-400">{meta.label}</span>
+                <span className="block truncate text-[10px] font-medium text-slate-400">{active ? "Actual" : meta.label}</span>
               </span>
             </button>
           </li>
