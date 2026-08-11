@@ -48,6 +48,6 @@
     "typescript": "^5"
   },
   "prisma": {
-    "seed": "bun ./src/seed.ts"
+    "seed": "bun ./src/seed/index.ts"
   }
 }

@@ -47,12 +47,140 @@ A common business flow for this platform looks like this:
 ## Repository structure
 
 ```text
-backend/                # Hono API and business logic
-commercial-website/     # Astro storefront and marketing site
-management-dashboard/   # React admin dashboard
-moodle-enrollment-studio/ # React enrollment experience UI
-packages/               # Internal packages such as the database layer
-shared/                 # Shared types, schemas, and utilities
+backend/                        # Hono API and business logic
+  API_ENDPOINT_BODY_EXAMPLES.md
+  eslint.config.ts
+  package.json
+  README.md
+  seed-data-bodies.json
+  tsconfig.json
+  ULTIMOS_CAMBIOS.md
+  src/
+    app.ts
+    client.ts
+    env.ts
+    index.ts
+    helpers/
+      constants.ts
+      params-validator.ts
+    lib/
+      contextVariables.ts
+      prisma.ts
+      storage.ts
+    middlewares/
+      auth.middleware.ts
+    repositories/
+      campaign.repository.ts
+      lead.repository.ts
+      order.repository.ts
+      payment-plan.repository.ts
+      payment.repository.ts
+      report.repository.ts
+    routes/
+      api.route.ts
+      bulk.route.ts
+      report.route.ts
+      webhooks.ts
+      academics/
+      auth/
+      campaing/
+      content/
+      integrations/
+      lead/
+      orders/
+      payments/
+      products/
+      storefront/
+      users/
+    scripts/
+      simulate-webhook.ts
+    services/
+      leadAssigmentService.ts
+      leadgenProcessor.ts
+      metaservice.ts
+    utils/
+      cookie.ts
+      jwt.ts
+commercial-website/             # Astro storefront and marketing site
+  astro.config.mjs
+  package.json
+  README.md
+  tsconfig.json
+  vercel.json
+  public/
+  src/
+    assets/
+    components/
+      Header.astro
+      ProductsSection.astro
+    layouts/
+      Layout.astro
+    lib/
+      api.ts
+    pages/
+      index.astro
+    styles/
+      global.css
+management-dashboard/           # React admin dashboard
+moodle-enrollment-studio/       # React enrollment experience UI
+  components.json
+  eslint.config.js
+  index.html
+  package.json
+  playwright-fixture.ts
+  playwright.config.ts
+  postcss.config.js
+  stats.html
+  tailwind.config.ts
+  tsconfig.app.json
+  tsconfig.json
+  tsconfig.node.json
+  vercel.json
+  vite.config.ts
+  vite.config.ts.timestamp-1778166029597-0637e18479b048.mjs
+  vitest.config.ts
+  public/
+    robots.txt
+  src/
+    App.css
+    App.tsx
+    index.css
+    main.tsx
+    core/
+      components/
+      config/
+      constants/
+      hooks/
+      lib/
+      utils/
+      views/
+    features/
+      academic/
+      auth/
+      campaigns/
+      dashboard/
+      leads/
+      ...
+    store/
+      ...
+    test/
+packages/
+  db/
+    package.json
+    prisma.config.prod.ts
+    prisma.config.ts
+    tsconfig.json
+    generated/
+    prisma/
+    src/
+shared/
+  package.json
+  tsconfig.json
+  src/
+    index.ts
+    schemas/
+    types/
+    utils/
 ```
 
 ## Getting started
