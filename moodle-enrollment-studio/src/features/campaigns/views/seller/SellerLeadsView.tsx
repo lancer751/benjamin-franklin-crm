@@ -3,8 +3,11 @@ import { useSearchParams, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getSellerCampaigns } from "@/features/users/services/userService";
-import { getCampaignMembers } from "@/features/campaigns/services/campaignService";
-import { 
+import {
+  getCampaignMembers,
+  type CampaignMembersQueryReq,
+} from "@/features/campaigns/services/campaignService";
+import {
   updateMemberStatus,
   getMemberInteractions,
   createMemberInteraction,
@@ -21,6 +24,7 @@ import {
 import { requireSuccess } from "@/features/leads/adapters/leadDetailAdapter";
 import { adaptLeadInteraction, adaptLeadInteractionsResponse } from "@/features/leads/adapters/leadInteractionAdapter";
 import { useManualLeadRegistration } from "@/features/leads/hooks/useManualLeadRegistration";
+import { useLeadSearch } from "@/features/leads/hooks/useLeadSearch";
 import type { ManualLeadData } from "@/features/leads/schemas/manualLeadSchema";
 import { getApiErrorMessage } from "@/features/leads/utils/getApiErrorMessage";
 import { campaignMemberKeys } from "@/features/leads/queryKeys";
@@ -89,9 +93,21 @@ const normalizeAssignedCampaigns = (response: unknown): AssignedCampaign[] => {
 
 const getMemberStatus = (lead: NormalizedLead) => lead.campaignsEngaging[0]?.status;
 
+const getLeadSearchName = (lead: NormalizedLead) => (
+  [lead.first_name, lead.middle_name, lead.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim()
+);
+
 const STATUS_GROUP_ORDER = Array.from(
   new Set(CAMPAIGN_MEMBER_STATUS_LIST.map((status) => status.group)),
 ) as CampaignMemberStatusGroup[];
+
+const MEMBER_PAGE_SIZE = 20;
+const LEAD_SEARCH_PAGE_SIZE = 20;
+const LEAD_SEARCH_VISIBLE_LIMIT = 10;
 
 const SellerLeadsView = () => {
   const navigate = useNavigate();
@@ -106,7 +122,9 @@ const SellerLeadsView = () => {
   const [searchParams] = useSearchParams();
   const selectedCampaignId = campaignId || searchParams.get("campaignId") || "";
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<CampaignMemberStatus | "ALL">("ALL");
+  const [campaignPage, setCampaignPage] = useState(1);
   const [activeStage, setActiveStage] = useState<CampaignMemberStatus>("NUEVO");
   const [hasMoreColumns, setHasMoreColumns] = useState(true);
   const boardRef = useRef<HTMLDivElement>(null);
@@ -138,13 +156,20 @@ const SellerLeadsView = () => {
     }
   }, [assignedCampaignList, selectedCampaignId, navigate]);
 
+  const memberFilters = useMemo<CampaignMembersQueryReq>(() => ({
+    page: String(campaignPage),
+    limit: String(MEMBER_PAGE_SIZE),
+    assigned_to: creatorUserId ?? "",
+    ...(statusFilter !== "ALL" && { campaign_member_status: statusFilter }),
+  }), [campaignPage, creatorUserId, statusFilter]);
+
   // 2. Obtener los leads asignados al User.id autenticado.
   const { data: membersRes, isLoading: isLoadingLeads, isError: isErrorLeads } = useQuery({
     queryKey: campaignMemberKeys.list({
       campaignId: selectedCampaignId,
-      filters: { assigned_to: creatorUserId },
+      filters: memberFilters,
     }),
-    queryFn: () => getCampaignMembers(selectedCampaignId, { assigned_to: creatorUserId }),
+    queryFn: () => getCampaignMembers(selectedCampaignId, memberFilters),
     enabled: !!selectedCampaignId && !!creatorUserId,
   });
 
@@ -152,6 +177,17 @@ const SellerLeadsView = () => {
     const memberPage = unpackCampaignMembers(membersRes);
     return adaptCampaignMembers(memberPage.members);
   }, [membersRes]);
+
+  const leadSearch = useLeadSearch({
+    search: searchQuery,
+    campaignId: selectedCampaignId,
+    assignedTo: creatorUserId,
+    page: 1,
+    limit: LEAD_SEARCH_PAGE_SIZE,
+    enabled: Boolean(creatorUserId),
+  });
+
+  const leadSearchResults = leadSearch.data.slice(0, LEAD_SEARCH_VISIBLE_LIMIT);
 
   // 3. Consultas e interacciones
   const { data: interactionsRes, isLoading: isLoadingInteractions } = useQuery({
@@ -314,30 +350,20 @@ const SellerLeadsView = () => {
   const handleCampaignChange = (val: string) => {
     setSelectedLead(null);
     setStatusFilter("ALL");
+    setCampaignPage(1);
     setActiveStage("NUEVO");
     setHasMoreColumns(true);
     setSearchQuery("");
+    setIsSearchPanelOpen(false);
     navigate(`/admin/campaigns/seller/leads/${val}`);
   };
-
-  const filteredLeads = useMemo(() => {
-    if (!leads) return [];
-    return leads.filter((lead) => {
-      if (statusFilter !== "ALL" && getMemberStatus(lead) !== statusFilter) return false;
-      const fullName = lead.fullName.toLowerCase();
-      const email = lead.email.toLowerCase();
-      const phone = (getPreferredPhone(lead.phones)?.number || "").toLowerCase();
-      const query = searchQuery.toLowerCase();
-      return fullName.includes(query) || email.includes(query) || phone.includes(query);
-    });
-  }, [leads, searchQuery, statusFilter]);
 
   const leadsByStage = useMemo(() => {
     const groups = Object.fromEntries(
       CAMPAIGN_MEMBER_STATUS_LIST.map(({ value }) => [value, [] as NormalizedLead[]]),
     ) as Record<CampaignMemberStatus, NormalizedLead[]>;
 
-    filteredLeads.forEach((lead) => {
+    leads.forEach((lead) => {
       const memberStatus = getMemberStatus(lead);
       if (isCampaignMemberStatus(memberStatus)) {
         groups[memberStatus].push(lead);
@@ -345,16 +371,21 @@ const SellerLeadsView = () => {
     });
 
     return groups;
-  }, [filteredLeads]);
+  }, [leads]);
 
   const selectedCampaignName = useMemo(() => {
     return assignedCampaignList.find((campaign) => campaign.id === selectedCampaignId)?.name || "Campaña";
   }, [assignedCampaignList, selectedCampaignId]);
 
   const unsupportedStatusCount = useMemo(
-    () => filteredLeads.filter((lead) => !isCampaignMemberStatus(getMemberStatus(lead))).length,
-    [filteredLeads],
+    () => leads.filter((lead) => !isCampaignMemberStatus(getMemberStatus(lead))).length,
+    [leads],
   );
+
+  const selectedStatusLabel = useMemo(() => {
+    if (statusFilter === "ALL") return "";
+    return CAMPAIGN_MEMBER_STATUS_LIST.find((status) => status.value === statusFilter)?.label ?? "";
+  }, [statusFilter]);
 
   const visibleMemberCount = useMemo(
     () => Object.values(leadsByStage).reduce((total, stageLeads) => total + stageLeads.length, 0),
@@ -439,7 +470,12 @@ const SellerLeadsView = () => {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => queryClient.invalidateQueries({ queryKey: campaignMemberKeys.lists() })}
+            onClick={() => queryClient.invalidateQueries({
+              queryKey: campaignMemberKeys.list({
+                campaignId: selectedCampaignId,
+                filters: memberFilters,
+              }),
+            })}
             className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground"
             title="Refrescar leads"
             disabled={isLoadingLeads}
@@ -451,21 +487,106 @@ const SellerLeadsView = () => {
 
       <div className="space-y-3 rounded-xl border border-border bg-card p-3 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative min-w-0 flex-1 sm:max-w-md">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <div
+            className="relative min-w-0 flex-1 sm:max-w-md"
+            onFocusCapture={() => setIsSearchPanelOpen(true)}
+            onBlurCapture={(event) => {
+              const nextTarget = event.relatedTarget;
+              if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+                setIsSearchPanelOpen(false);
+              }
+            }}
+          >
+            {leadSearch.isLoading ? (
+              <RefreshCw className="absolute left-3 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+            ) : (
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            )}
             <Input
               placeholder="Buscar por nombre, email o celular..."
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event) => {
+                const nextSearch = event.target.value;
+                setSearchQuery(nextSearch);
+                if (!nextSearch.trim()) {
+                  setIsSearchPanelOpen(false);
+                } else {
+                  setIsSearchPanelOpen(true);
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setIsSearchPanelOpen(false);
+              }}
+              role="combobox"
+              aria-busy={leadSearch.isLoading}
+              aria-autocomplete="list"
+              aria-expanded={leadSearch.isSearchActive && isSearchPanelOpen}
+              aria-controls={leadSearch.isSearchActive && isSearchPanelOpen ? "seller-lead-search-results" : undefined}
               className="h-9 rounded-xl border-border bg-slate-50/20 pl-9 text-xs focus:bg-card"
             />
+
+            {leadSearch.isSearchActive && isSearchPanelOpen && (
+              <div
+                id="seller-lead-search-results"
+                role="listbox"
+                aria-label="Resultados de búsqueda de prospectos"
+                className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-border bg-popover p-1.5 text-popover-foreground shadow-lg"
+              >
+                {leadSearch.isLoading ? (
+                  <div className="flex items-center justify-center gap-2 px-3 py-5 text-xs text-muted-foreground">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Buscando prospectos...
+                  </div>
+                ) : leadSearch.isError ? (
+                  <p role="alert" className="px-3 py-5 text-center text-xs text-destructive">
+                    No se pudo consultar los prospectos. Inténtalo nuevamente.
+                  </p>
+                ) : leadSearch.total === 0 || leadSearchResults.length === 0 ? (
+                  <p className="px-3 py-5 text-center text-xs text-muted-foreground">
+                    No se encontraron prospectos en esta campaña.
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {leadSearchResults.map((lead) => {
+                      const leadName = getLeadSearchName(lead) || "Prospecto sin nombre";
+                      const phone = getPreferredPhone(lead.phones)?.number;
+                      return (
+                        <button
+                          key={lead.id}
+                          type="button"
+                          role="option"
+                          aria-selected="false"
+                          aria-label={`Ver prospecto ${leadName}`}
+                          onClick={() => navigate(`/prospectos/${lead.id}`)}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left outline-none transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-foreground">
+                              {leadName}
+                            </p>
+                            {(phone || lead.email) && (
+                              <p className="truncate text-xs text-muted-foreground">
+                                {[phone, lead.email].filter(Boolean).join(" · ")}
+                              </p>
+                            )}
+                          </div>
+                          <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-primary">
+                            Ver prospecto <ChevronRight className="h-3.5 w-3.5" />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="h-9 gap-2 rounded-xl text-xs">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
-                Filtros
+                {selectedStatusLabel ? `Filtros: ${selectedStatusLabel}` : "Filtros"}
                 {statusFilter !== "ALL" && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
               </Button>
             </PopoverTrigger>
@@ -481,8 +602,10 @@ const SellerLeadsView = () => {
                   onValueChange={(value) => {
                     if (value === "ALL") {
                       setStatusFilter("ALL");
+                      setCampaignPage(1);
                     } else if (isCampaignMemberStatus(value)) {
                       setStatusFilter(value);
+                      setCampaignPage(1);
                       scrollToStage(value);
                     }
                   }}
@@ -499,7 +622,17 @@ const SellerLeadsView = () => {
                 </Select>
               </div>
               {statusFilter !== "ALL" && (
-                <Button variant="ghost" size="sm" className="w-full" onClick={() => setStatusFilter("ALL")}>Limpiar filtro</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    setStatusFilter("ALL");
+                    setCampaignPage(1);
+                  }}
+                >
+                  Limpiar filtro
+                </Button>
               )}
             </PopoverContent>
           </Popover>
