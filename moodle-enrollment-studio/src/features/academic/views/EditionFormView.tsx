@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Button } from "@/core/components/ui/button";
 import { Input } from "@/core/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/core/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/core/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/core/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/core/components/ui/popover";
 import { Calendar } from "@/core/components/ui/calendar";
@@ -61,6 +61,7 @@ export default function EditionFormView() {
   const watchClasses = form.watch("classes_number");
   const watchDurationVal = form.watch("duration_value");
   const watchDurationUnit = form.watch("duration_unit");
+  const isMeetRequired = mode === "create" && (watchModality === "VIRTUAL" || watchModality === "HIBRIDO");
 
   const selectedCourseName = useMemo(() => {
     return courses.find((c: any) => c.id === (watchCourseId || actualCourseId))?.name || "Sin curso seleccionado";
@@ -543,17 +544,22 @@ export default function EditionFormView() {
                             <FormField control={form.control} name="meet_link" render={({ field }) => (
                               <FormItem className="md:col-span-2">
                                 <FormLabel className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 block">
-                                  {watchModality === "VIRTUAL" || watchModality === "HIBRIDO" ? (
+                                  {isMeetRequired ? (
                                     <>
                                       ENLACE VIRTUAL (MEET) <span className="text-destructive">*</span>
                                     </>
                                   ) : (
-                                    "Enlace Virtual (Meet) (Opcional)"
+                                    <>
+                                      ENLACE VIRTUAL (MEET) <span className="font-normal normal-case text-muted-foreground">Opcional</span>
+                                    </>
                                   )}
                                 </FormLabel>
                                 <FormControl>
                                   <Input type="url" placeholder="https://meet.google.com/..." className="h-11 rounded-xl border-slate-200 dark:border-slate-800 shadow-sm focus:ring-primary" {...field} />
                                 </FormControl>
+                                {!isMeetRequired && (
+                                  <FormDescription>Puedes agregarlo ahora o configurarlo posteriormente.</FormDescription>
+                                )}
                                 <FormMessage />
                               </FormItem>
                             )} />

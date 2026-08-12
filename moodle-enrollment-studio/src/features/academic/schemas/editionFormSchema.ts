@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-export const editionFormSchema = z.object({
+const editionFormBaseSchema = z.object({
   course_id: z.string().min(1, "Debes seleccionar un curso base"),
   // 🧠 Exigimos explícitamente un número del 1 al 9 para mantener el dígito único
   edition_number: z.coerce.number({
@@ -38,7 +38,9 @@ export const editionFormSchema = z.object({
       end_time: z.string()
     }))
   }))
-}).refine((data) => {
+});
+
+export const createEditionFormSchema = editionFormBaseSchema.refine((data) => {
   if (data.modality === "VIRTUAL" || data.modality === "HIBRIDO") {
     return !!data.meet_link && data.meet_link.trim() !== "";
   }
@@ -48,7 +50,9 @@ export const editionFormSchema = z.object({
   path: ["meet_link"]
 });
 
-export type EditionFormValues = z.infer<typeof editionFormSchema>;
+export const updateEditionFormSchema = editionFormBaseSchema;
+
+export type EditionFormValues = z.infer<typeof editionFormBaseSchema>;
 
 export const defaultEditionFormValues: Partial<EditionFormValues> = {
   edition_number: "" as unknown as number,

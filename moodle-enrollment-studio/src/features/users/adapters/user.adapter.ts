@@ -16,9 +16,7 @@ export const userAdapter = {
           sales_target: 0, assigned_supervisor_id: "",
         },
         sales_supervisor_profile: {
-          team_name: "", max_sellers: 0, discount_limit_percent: "0",
-          can_assign_leads: false, can_approve_discounts: false,
-          can_reassign_leads: false, can_cancel_orders: false, can_view_all_team_sales: false,
+          max_sellers: 10,
         },
         marketing_profile: {}
       } as any;
@@ -50,14 +48,7 @@ export const userAdapter = {
       },
       
       sales_supervisor_profile: {
-        team_name: supervisor?.team_name || "",
-        max_sellers: supervisor?.max_sellers || 0,
-        discount_limit_percent: String(supervisor?.discount_limit_percent || 0),
-        can_assign_leads: supervisor?.can_assign_leads || false,
-        can_approve_discounts: supervisor?.can_approve_discounts || false,
-        can_reassign_leads: supervisor?.can_reassign_leads || false,
-        can_cancel_orders: supervisor?.can_cancel_orders || false,
-        can_view_all_team_sales: supervisor?.can_view_all_team_sales || false,
+        max_sellers: supervisor?.max_sellers || 10,
       },
       marketing_profile: user.marketing_profile || {}
     } as any;
@@ -97,14 +88,7 @@ export const userAdapter = {
     if (isSupervisor) {
       const supervisorProfile = (values as any).sales_supervisor_profile;
       payload.sales_supervisor_profile = {
-        team_name: supervisorProfile?.team_name || "Equipo Sin Nombre",
-        max_sellers: Number(supervisorProfile?.max_sellers) || 0,
-        discount_limit_percent: Number(supervisorProfile?.discount_limit_percent) || 0,
-        can_assign_leads: supervisorProfile?.can_assign_leads ?? false,
-        can_approve_discounts: supervisorProfile?.can_approve_discounts ?? false,
-        can_reassign_leads: supervisorProfile?.can_reassign_leads ?? false,
-        can_cancel_orders: supervisorProfile?.can_cancel_orders ?? false,
-        can_view_all_team_sales: supervisorProfile?.can_view_all_team_sales ?? false,
+        max_sellers: Number(supervisorProfile?.max_sellers) || 10,
       };
     }
 

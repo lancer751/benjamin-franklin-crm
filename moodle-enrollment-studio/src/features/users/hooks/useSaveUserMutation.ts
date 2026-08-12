@@ -27,18 +27,6 @@ export const useSaveUserMutation = (
       const roleName = roles.find((r: any) => r.id === values.role_id)?.name || "";
       const userData = userAdapter.toPayload(values, roleName, isSeller, isSupervisor, !!user);
 
-      // Coerción de datos de Supervisor
-      if (userData.sales_supervisor_profile) {
-        userData.sales_supervisor_profile.discount_limit_percent = String(
-          userData.sales_supervisor_profile.discount_limit_percent || "0"
-        );
-        if (userData.sales_supervisor_profile.max_manual_discount !== undefined) {
-          userData.sales_supervisor_profile.max_manual_discount = String(
-            userData.sales_supervisor_profile.max_manual_discount || "0"
-          );
-        }
-      }
-
       // =============================================
       // MODO CREACIÓN
       // =============================================

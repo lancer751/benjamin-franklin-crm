@@ -45,16 +45,9 @@ export const userFormSchema = z.discriminatedUnion("role", [
     cellphone: z.preprocess((val) => (val === "" ? null : val), z.string().regex(/^\d{9}$/, "El celular debe tener 9 dígitos").nullable().optional()),
     is_active: z.boolean().default(true),
     
-    // 🌟 REPARADO: Forzamos la validación estricta del perfil para la UI
+    // Perfil de supervisor alineado con SalesSupervisorProfile.
     sales_supervisor_profile: z.object({
-      team_name: z.string().min(2, "El nombre del equipo es obligatorio"),
       max_sellers: z.coerce.number().min(1, "Debe tener al menos 1 vendedor").default(10),
-      can_assign_leads: z.boolean().default(true),
-      can_reassign_leads: z.boolean().default(true),
-      can_approve_discounts: z.boolean().default(true),
-      can_cancel_orders: z.boolean().default(true),
-      can_view_all_team_sales: z.boolean().default(true),
-      discount_limit_percent: z.string().default("10"),
     }),
   }),
 

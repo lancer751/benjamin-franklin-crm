@@ -6,7 +6,12 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { getCourses, createCourseEdition, getCourseEditionById, updateCourseEdition } from "../services/courseService";
 import { getProfessors } from "../services/professorService";
-import { editionFormSchema, type EditionFormValues, defaultEditionFormValues } from "../schemas/editionFormSchema";
+import {
+  createEditionFormSchema,
+  updateEditionFormSchema,
+  type EditionFormValues,
+  defaultEditionFormValues,
+} from "../schemas/editionFormSchema";
 import { editionAdapter } from "../adapters/editionAdapter";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { courseKeys, editionKeys, professorKeys } from "../queryKeys";
@@ -38,7 +43,9 @@ export const useEditionFormModal = (
   const [endMonth, setEndMonth] = useState<Date>(new Date());
 
   const form = useForm<EditionFormValues>({
-    resolver: standardSchemaResolver(editionFormSchema) as any,
+    resolver: standardSchemaResolver(
+      mode === "create" ? createEditionFormSchema : updateEditionFormSchema,
+    ) as any,
     mode: "onTouched",
     defaultValues: {
       ...defaultEditionFormValues,
