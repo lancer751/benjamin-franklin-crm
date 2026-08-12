@@ -5,6 +5,7 @@ import AcademicDetailsCard from "../form/AcademicDetailsCard";
 import PricingCard from "../form/PricingCard";
 import type { ProductFormValues } from "../../schemas";
 import { CategorySelect } from "../categories/CategorySelect";
+import type { ProductEditionOption } from "../../types/product.types";
 
 interface ProductCommercialSectionProps {
   form: ProductFormValues;
@@ -15,11 +16,12 @@ interface ProductCommercialSectionProps {
     key: "cash_price" | "installment_price",
     value: string,
   ) => void;
-  editions: any[];
+  editions: ProductEditionOption[];
   isLoadingEditions: boolean;
   isEditionsError: boolean;
-  selectedEdition: any;
+  selectedEdition?: ProductEditionOption;
   isEdit: boolean;
+  isAsynchronous: boolean;
   disabled?: boolean;
 }
 
@@ -110,6 +112,7 @@ const ProductCommercialSection = (props: ProductCommercialSectionProps) => {
             setPriceValue={props.setPriceValue}
             selectedEdition={props.selectedEdition}
             isEdit={props.isEdit}
+            isAsynchronous={props.isAsynchronous}
           />
         </div>
       )}

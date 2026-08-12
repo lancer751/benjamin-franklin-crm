@@ -1,3 +1,21 @@
+import { ModalitySchema } from "shared";
+import type { z } from "zod";
+
+export type EditionModality = z.infer<typeof ModalitySchema>;
+
+export interface ProductEditionOption {
+  id: string;
+  modality: EditionModality;
+  edition_number: number;
+  edition_status: string;
+  start_date: string | Date;
+  course?: {
+    id: string;
+    name: string;
+    image_url?: string | null;
+  } | null;
+}
+
 export type ProductSalesStatus =
   | "DRAFT"
   | "PUBLISHED"
@@ -73,7 +91,7 @@ export interface BackendProductResponse {
     edition_number?: number | null;
     edition_status?: string | null;
     teacher_fullname?: string | null;
-    modality?: string | null;
+    modality?: EditionModality | null;
     start_date?: string | null;
     end_date?: string | null;
     duration_value?: number | null;
@@ -89,7 +107,7 @@ export interface BackendProductResponse {
   prices?: {
     attendance_mode: "VIRTUAL" | "PRESENCIAL" | "HEREDADO";
     cash_price: number | string;
-    installment_price: number | string;
+    installment_price: number | string | null;
   }[];
   relatedBenefits?: {
     id?: string;

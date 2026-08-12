@@ -47,13 +47,14 @@ export function leadRepository(prisma: PrismaClient) {
   };
   return {
     //  Leads generated from any source without being assigned to a campaign or a seller
-    async findMany({ page, limit, search, status, assigned_to, from_date, to_date }: LeadQuery) {
+    async findMany({ page, limit, search, status, campaign_id, assigned_to, from_date, to_date }: LeadQuery) {
       const skip = (page - 1) * limit;
-      const existsCampaignMembers = await prisma.campaignMember.count({})
 
-      const endOfDay = to_date
-        ? new Date(to_date.setHours(23, 59, 59, 999))
-        : undefined;
+      const fromDate = from_date ? new Date(from_date) : undefined;
+      const toDateExclusive = to_date ? new Date(to_date) : undefined;
+      if (toDateExclusive) {
+        toDateExclusive.setUTCDate(toDateExclusive.getUTCDate() + 1);
+      }
 
       const where: LeadWhereInput = {
         lead_status: status ?? "ACTIVE",
@@ -65,17 +66,18 @@ export function leadRepository(prisma: PrismaClient) {
             { phones: { some: { number: { contains: search } } } }
           ],
         }),
-        ...((existsCampaignMembers > 0 || assigned_to) && {
+        ...((campaign_id || assigned_to) && {
           campaignsEngaging: {
             some: {
-              assigned_to
+              ...(campaign_id && { campaing_id: campaign_id }),
+              ...(assigned_to && { assigned_to }),
             }
           }
         }),
-        ...((from_date || endOfDay) && {
+        ...((fromDate || toDateExclusive) && {
           created_at: {
-            ...(from_date && { gte: from_date }),
-            ...(endOfDay && { lte: endOfDay }),
+            ...(fromDate && { gte: fromDate }),
+            ...(toDateExclusive && { lt: toDateExclusive }),
           },
         }),
       };
@@ -433,12 +435,25 @@ export function leadRepository(prisma: PrismaClient) {
       return { members, total, page, limit };
     },
     async findMembersOnCampaign(campaignId: string, query: CampaignMemberQuery) {
-      const { page, limit, campaign_member_status, assigned_to } = query;
+      const { page, limit, campaign_member_status, assigned_to, from_date, to_date } = query;
       const skip = (page - 1) * limit;
+
+      const fromDate = from_date ? new Date(from_date) : undefined;
+      const toDateExclusive = to_date ? new Date(to_date) : undefined;
+      if (toDateExclusive) {
+        toDateExclusive.setUTCDate(toDateExclusive.getUTCDate() + 1);
+      }
+
       const where: CampaignMemberWhereInput = {
         campaing_id: campaignId,
         ...(campaign_member_status && { status: campaign_member_status }),
         ...(assigned_to && { assigned_to }),
+        ...((fromDate || toDateExclusive) && {
+          created_at: {
+            ...(fromDate && { gte: fromDate }),
+            ...(toDateExclusive && { lt: toDateExclusive }),
+          },
+        }),
       };
 
       const [members, total] = await Promise.all([

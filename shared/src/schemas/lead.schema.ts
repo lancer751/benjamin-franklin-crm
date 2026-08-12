@@ -171,7 +171,14 @@ export const CampaignMemberQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   campaign_member_status: CampaignMemberStatusSchema.optional(),
   assigned_to: UUIDField.optional(), // assigned_to is the user ID of the person assigned to the campaign member, if any
-});
+  from_date: z.coerce.date().optional(),
+  to_date: z.coerce.date().optional(),
+}).refine(data => {
+  if (data.from_date && data.to_date) {
+    return data.from_date <= data.to_date;
+  }
+  return true;
+}, {error: "from_date must be less than or equal to to_date", path: ["from_date", "to_date"]});
 
 export type LeadStatus = z.infer<typeof LeadStatusSchema>;
 export type CreateLeadInput = z.infer<typeof CreateLeadSchema>;

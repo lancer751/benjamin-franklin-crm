@@ -4,31 +4,32 @@ import { Button } from "@/core/components/ui/button";
 interface ProductFormActionsProps {
   isSaving: boolean;
   readonly?: boolean;
-  isLastStep?: boolean;
-  primaryLabel?: string;
-  primaryDisabled?: boolean;
-  onSaveDraft: () => void;
-  onContinue: () => void;
+  label: string;
+  loadingLabel: string;
+  disabled?: boolean;
+  showContinueIcon?: boolean;
+  onClick: () => void;
 }
 
 const ProductFormActions = ({
   isSaving,
   readonly,
-  isLastStep,
-  primaryLabel,
-  primaryDisabled,
-  onSaveDraft,
-  onContinue,
+  label,
+  loadingLabel,
+  disabled,
+  showContinueIcon,
+  onClick,
 }: ProductFormActionsProps) => {
   if (readonly) return null;
   return (
-    <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
-      <Button type="button" variant="outline" onClick={onSaveDraft} disabled={isSaving} className="rounded-xl">
-        <Save size={15} className="mr-2" /> Guardar borrador
-      </Button>
-      <Button type="button" onClick={onContinue} disabled={isSaving || primaryDisabled} className="rounded-xl">
-        {isSaving ? <Loader2 size={15} className="mr-2 animate-spin" /> : isLastStep ? <Save size={15} className="mr-2" /> : <ArrowRight size={15} className="mr-2" />}
-        {primaryLabel || (isLastStep ? "Guardar cambios" : "Guardar y continuar")}
+    <div className="flex w-full sm:w-auto">
+      <Button type="button" onClick={onClick} disabled={isSaving || disabled} className="w-full rounded-xl sm:w-auto">
+        {isSaving
+          ? <Loader2 size={15} className="mr-2 animate-spin" />
+          : showContinueIcon
+            ? <ArrowRight size={15} className="mr-2" />
+            : <Save size={15} className="mr-2" />}
+        {isSaving ? loadingLabel : label}
       </Button>
     </div>
   );

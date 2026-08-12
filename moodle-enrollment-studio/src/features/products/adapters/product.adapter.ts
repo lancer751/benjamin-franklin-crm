@@ -1,7 +1,8 @@
 import type { CreateProductInput } from "../services/productService";
 import type { ProductFormValues } from "../schemas";
-import {
+import type {
   BackendProductResponse,
+  EditionModality,
   ProductAssignedProfessor,
   UIProduct,
 } from "../types/product.types";
@@ -132,21 +133,38 @@ const parseOptionalAmount = (value: string | number | null | undefined) => {
   return Number.isFinite(amount) ? amount : null;
 };
 
+export const normalizeAsynchronousPrice = (
+  price?: ProductFormValues["prices"][number],
+): ProductFormValues["prices"][number] => {
+  const cashPrice = price?.cash_price ?? "0.00";
+  const parsedCashPrice = Number(cashPrice);
+  const installmentPrice = Number.isFinite(parsedCashPrice) && parsedCashPrice >= 0
+    ? (parsedCashPrice + 0.01).toFixed(2)
+    : "0.01";
+
+  return {
+    attendance_mode: "HEREDADO",
+    cash_price: cashPrice,
+    installment_price: installmentPrice,
+  };
+};
+
 export const mapProductFormToPayload = (
   form: ProductFormValues,
-  editionModality?: string,
+  editionModality?: EditionModality,
+  isAsynchronous = false,
 ): CreateProductInput => ({
   name: form.name,
   edition_id: form.edition_id,
   category_id: form.category_id,
-  enrollment_fee: Number(form.enrollment_fee),
-  installments_min_number: Number(form.installments_min_number),
-  installments_max_number: Number(form.installments_max_number),
+  enrollment_fee: isAsynchronous ? null : Number(form.enrollment_fee),
+  installments_min_number: isAsynchronous ? 1 : Number(form.installments_min_number),
+  installments_max_number: isAsynchronous ? 1 : Number(form.installments_max_number),
   discount_price: parseOptionalAmount(form.discount_price),
   discount_expires_at: form.discount_expires_at
     ? new Date(`${form.discount_expires_at}T00:00:00`).toISOString()
     : null,
-  prices: form.prices.map((price) => ({
+  prices: (isAsynchronous ? [normalizeAsynchronousPrice(form.prices[0])] : form.prices).map((price) => ({
     attendance_mode: editionModality === "HIBRIDO" ? price.attendance_mode : "HEREDADO",
     cash_price: Number(price.cash_price),
     installment_price: Number(price.installment_price),

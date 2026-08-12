@@ -210,7 +210,7 @@ export const useProductContentActions = ({ productId, form, setFieldValue, valid
     }
   };
 
-  const saveMarketing = async () => {
+  const saveMarketing = async (successMessage = "Material comercial guardado") => {
     if (!ensureProduct() || !validateBeforeUpload("marketing") || !startSaving("marketing")) return false;
     let uploadsCompleted = false;
     try {
@@ -226,10 +226,11 @@ export const useProductContentActions = ({ productId, form, setFieldValue, valid
       });
       if (!response.success) throw new Error(response.message || "No se pudo guardar el material comercial");
       applySuccessfulUrls(urls);
-      void queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      queryClient.setQueryData(productKeys.detail(productId as string), response);
+      void queryClient.invalidateQueries({ queryKey: productKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: certificationKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: faqKeys.lists() });
-      toast.success("Material comercial guardado");
+      toast.success(successMessage);
       return true;
     } catch (error) {
       notifySaveError(error, uploadsCompleted);
@@ -239,7 +240,10 @@ export const useProductContentActions = ({ productId, form, setFieldValue, valid
     }
   };
 
-  const saveWebContent = async (validationSection: "web" | "complete" = "complete") => {
+  const saveWebContent = async (
+    validationSection: "web" | "complete" = "complete",
+    successMessage = "Publicación web guardada",
+  ) => {
     if (!ensureProduct() || !validateBeforeUpload(validationSection) || !startSaving("web")) return false;
     let uploadsCompleted = false;
     try {
@@ -259,10 +263,11 @@ export const useProductContentActions = ({ productId, form, setFieldValue, valid
       });
       if (!response.success) throw new Error(response.message || "No se pudo guardar la publicación web");
       applySuccessfulUrls(urls);
-      void queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      queryClient.setQueryData(productKeys.detail(productId as string), response);
+      void queryClient.invalidateQueries({ queryKey: productKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: certificationKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: faqKeys.lists() });
-      toast.success("Publicación web guardada");
+      toast.success(successMessage);
       return true;
     } catch (error) {
       notifySaveError(error, uploadsCompleted);
@@ -290,7 +295,8 @@ export const useProductContentActions = ({ productId, form, setFieldValue, valid
       });
       if (!response.success) throw new Error(response.message || "No se pudo guardar el borrador");
       applySuccessfulUrls(urls);
-      void queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) });
+      queryClient.setQueryData(productKeys.detail(productId as string), response);
+      void queryClient.invalidateQueries({ queryKey: productKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: certificationKeys.lists() });
       toast.success("Borrador guardado");
       return true;

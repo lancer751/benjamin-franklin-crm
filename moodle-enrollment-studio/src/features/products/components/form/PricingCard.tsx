@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/core/components/ui/card";
 import { cn } from "@/core/lib/utils";
 import type { ProductFormValues } from "../../schemas";
+import type { ProductEditionOption } from "../../types/product.types";
 import DiscountSection from "./DiscountSection";
 
 interface PricingCardProps {
@@ -21,8 +22,9 @@ interface PricingCardProps {
     key: "cash_price" | "installment_price",
     value: string,
   ) => void;
-  selectedEdition: any;
+  selectedEdition?: ProductEditionOption;
   isEdit: boolean;
+  isAsynchronous: boolean;
 }
 
 const priceFields = [
@@ -112,6 +114,7 @@ const PricingCard = ({
   setPriceValue,
   selectedEdition,
   isEdit,
+  isAsynchronous,
 }: PricingCardProps) => {
   const isHybrid = form.prices.length > 1;
 
@@ -152,7 +155,9 @@ const PricingCard = ({
         <section className="rounded-xl border border-slate-200 bg-white p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <h5 className="text-xs font-semibold text-slate-800">Configuración de modalidades</h5>
+              <h5 className="text-xs font-semibold text-slate-800">
+                {isAsynchronous ? "Modalidad de pago" : "Configuración de modalidades"}
+              </h5>
               {isHybrid && (
                 <p className="mt-0.5 text-[10px] text-slate-500">Comparación de precios por modalidad</p>
               )}
@@ -164,7 +169,32 @@ const PricingCard = ({
             )}
           </div>
 
-          {!selectedEdition && !isEdit ? (
+          {isAsynchronous ? (
+            <div className="space-y-3">
+              <div className="flex flex-col gap-3 rounded-lg border border-blue-100 bg-blue-50/60 p-3 sm:flex-row sm:items-end">
+                <div className="sm:w-40">
+                  <p className="mb-1 text-[9px] font-medium text-slate-500">Modalidad de pago</p>
+                  <div className="flex h-9 items-center rounded-lg border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-700">
+                    Pago único
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <label className="mb-1 block text-[9px] font-medium text-slate-500">
+                    Precio al contado
+                  </label>
+                  <PriceInput
+                    error={errors["prices.0.cash_price"]}
+                    value={form.prices[0]?.cash_price ?? ""}
+                    onChange={(value) => setPriceValue(0, "cash_price", value)}
+                  />
+                </div>
+              </div>
+              <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[10px] leading-relaxed text-slate-600">
+                <Info size={14} className="mt-0.5 shrink-0 text-blue-600" />
+                Los productos asincrónicos se comercializan mediante pago único.
+              </div>
+            </div>
+          ) : !selectedEdition && !isEdit ? (
             <div className="flex min-h-20 items-center gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-3">
               <Info size={17} className="shrink-0 text-slate-400" />
               <p className="text-[11px] leading-relaxed text-slate-500">
@@ -262,7 +292,7 @@ const PricingCard = ({
           )}
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+        {!isAsynchronous && <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
           <div className="mb-2">
             <h5 className="text-xs font-semibold text-slate-800">Matrícula y financiamiento</h5>
             <p className="mt-0.5 text-[10px] text-slate-500">
@@ -317,7 +347,7 @@ const PricingCard = ({
               )}
             </div>
           </div>
-        </section>
+        </section>}
       </CardContent>
     </Card>
   );

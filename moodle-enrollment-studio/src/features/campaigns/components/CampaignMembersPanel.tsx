@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { BookOpen, Calendar, ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Phone, Plus } from "lucide-react";
+import { BookOpen, Calendar, ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Phone, Plus, Search } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -25,6 +25,13 @@ import type { NormalizedLead } from "@/features/leads/adapters/leadAdapter";
 import { canReassignCampaignMembers, mapCampaignMemberReassignmentError } from "@/features/leads/utils/campaignMemberReassignment";
 import { useSupervisorMemberDrawer } from "@/features/leads/hooks/useSupervisorMemberDrawer";
 import { useCampaignMemberReassignment } from "@/features/leads/hooks/useCampaignMemberReassignment";
+import { useLeadSearch } from "@/features/leads/hooks/useLeadSearch";
+import { ProspectsDateRangeFilter } from "@/features/leads/components/prospects/ProspectsDateRangeFilter";
+import {
+  EMPTY_PROSPECT_DATE_RANGE,
+  serializeLocalDate,
+  type ProspectDateRange,
+} from "@/features/leads/utils/prospectDateRange";
 import { CampaignMemberReassignmentDialog } from "@/features/leads/components/CampaignMemberReassignmentDialog";
 import LeadDetailsSheet from "@/features/campaigns/views/seller/components/LeadDetailsSheet";
 import { campaignMemberKeys } from "@/features/leads/queryKeys";
@@ -99,6 +106,8 @@ export const CampaignMembersPanel = ({
   const [campaignAdvisorUserId, setCampaignAdvisorUserId] = useState(initialAdvisorUserId ?? "ALL");
   const [campaignMemberStatus, setCampaignMemberStatus] = useState<CampaignMemberStatus | "ALL">("ALL");
   const [campaignPage, setCampaignPage] = useState(1);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [dateRange, setDateRange] = useState<ProspectDateRange>(EMPTY_PROSPECT_DATE_RANGE);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [selectedMember, setSelectedMember] = useState<TeamFollowUpMemberRow | null>(null);
   const [drawerLead, setDrawerLead] = useState<NormalizedLead | null>(null);
@@ -113,12 +122,23 @@ export const CampaignMembersPanel = ({
       ? campaignAdvisorUserId
       : "";
 
+  const leadSearch = useLeadSearch({
+    search: memberSearch,
+    campaignId,
+    assignedTo: effectiveCampaignAdvisorId || undefined,
+    page: 1,
+    limit: PAGE_SIZE,
+    enabled: Boolean(user),
+  });
+
   const memberQuery = useMemo<CampaignMembersQueryReq>(() => ({
     page: String(campaignPage),
     limit: String(PAGE_SIZE),
     ...(effectiveCampaignAdvisorId && { assigned_to: effectiveCampaignAdvisorId }),
     ...(campaignMemberStatus !== "ALL" && { campaign_member_status: campaignMemberStatus }),
-  }), [campaignMemberStatus, campaignPage, effectiveCampaignAdvisorId]);
+    ...(dateRange.from && { from_date: serializeLocalDate(dateRange.from) }),
+    ...(dateRange.to && { to_date: serializeLocalDate(dateRange.to) }),
+  }), [campaignMemberStatus, campaignPage, dateRange.from, dateRange.to, effectiveCampaignAdvisorId]);
 
   const membersQuery = useQuery({
     queryKey: campaignMemberKeys.list({ campaignId, filters: memberQuery }),
@@ -139,10 +159,20 @@ export const CampaignMembersPanel = ({
   const memberTotalPages = Math.max(1, Math.ceil(memberPageData.total / Math.max(1, memberPageData.limit)));
   const memberRows = memberPageData.members;
 
+  const matchingLeadIds = useMemo(
+    () => new Set(leadSearch.data.map((lead) => lead.id)),
+    [leadSearch.data],
+  );
+  const visibleMemberRows = useMemo(() => {
+    if (!leadSearch.isSearchActive) return memberRows;
+    if (leadSearch.isLoading || leadSearch.isError) return [];
+    return memberRows.filter((member) => matchingLeadIds.has(member.leadId));
+  }, [leadSearch.isError, leadSearch.isLoading, leadSearch.isSearchActive, matchingLeadIds, memberRows]);
+
   const selectedMembers = memberRows.filter((member) => selectedMemberIds.includes(member.memberId));
-  const areAllVisibleMembersSelected = memberRows.length > 0 && memberRows.every((member) => selectedMemberIds.includes(member.memberId));
+  const areAllVisibleMembersSelected = visibleMemberRows.length > 0 && visibleMemberRows.every((member) => selectedMemberIds.includes(member.memberId));
   const hasPartialSelection = selectedMemberIds.length > 0 && !areAllVisibleMembersSelected;
-  const hasActiveFilters = campaignAdvisorUserId !== "ALL" || campaignMemberStatus !== "ALL";
+  const hasActiveFilters = campaignAdvisorUserId !== "ALL" || campaignMemberStatus !== "ALL" || leadSearch.isSearchActive || Boolean(dateRange.from || dateRange.to);
 
   const handleCampaignAdvisorChange = (advisorUserId: string) => {
     setCampaignAdvisorUserId(advisorUserId);
@@ -158,6 +188,12 @@ export const CampaignMembersPanel = ({
     }
   };
 
+  const handleDateRangeApply = (range: ProspectDateRange) => {
+    setDateRange(range);
+    setCampaignPage(1);
+    setSelectedMemberIds([]);
+  };
+
   const handlePageChange = (page: number) => {
     setCampaignPage(page);
     setSelectedMemberIds([]);
@@ -170,7 +206,7 @@ export const CampaignMembersPanel = ({
   };
 
   const toggleVisibleSelection = (checked: boolean) => {
-    setSelectedMemberIds(checked ? memberRows.map((member) => member.memberId) : []);
+    setSelectedMemberIds(checked ? visibleMemberRows.map((member) => member.memberId) : []);
   };
 
   const openMemberDrawer = (member: TeamFollowUpMemberRow) => {
@@ -273,8 +309,24 @@ export const CampaignMembersPanel = ({
       <div className="grid grid-cols-1 gap-3 border-b bg-slate-50/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1">
           <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Buscar prospecto</label>
-          <Input disabled placeholder="No disponible en este endpoint" className="bg-white" />
-          <p className="text-[10px] text-muted-foreground">La API de miembros no admite búsqueda.</p>
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={memberSearch}
+              onChange={(event) => {
+                setMemberSearch(event.target.value);
+                setCampaignPage(1);
+                setSelectedMemberIds([]);
+              }}
+              placeholder="Nombre, correo, DNI o celular"
+              aria-busy={leadSearch.isLoading}
+              disabled={!campaignId}
+              className="bg-white pl-9 pr-9"
+            />
+            {leadSearch.isLoading && (
+              <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-primary" aria-label="Buscando prospectos" />
+            )}
+          </div>
         </div>
         <div className="space-y-1">
           <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Asesor</label>
@@ -298,8 +350,11 @@ export const CampaignMembersPanel = ({
         </div>
         <div className="space-y-1">
           <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Rango de fecha</label>
-          <Select disabled><SelectTrigger className="bg-white"><SelectValue placeholder="No disponible" /></SelectTrigger></Select>
-          <p className="text-[10px] text-muted-foreground">La API de miembros no admite fechas.</p>
+          <ProspectsDateRangeFilter
+            value={dateRange}
+            onApply={handleDateRangeApply}
+            isApplyDisabled={!campaignId || membersQuery.isFetching}
+          />
         </div>
       </div>
 
@@ -331,13 +386,29 @@ export const CampaignMembersPanel = ({
                 <TableHead>Tipificación</TableHead><TableHead>Asesor actual</TableHead><TableHead>Acciones</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {memberRows.length === 0 ? (
+                {leadSearch.isSearchActive && leadSearch.isLoading ? (
                   <TableRow>
                     <TableCell colSpan={canReassign ? 8 : 7} className="py-12 text-center text-muted-foreground">
-                      {hasActiveFilters ? "No se encontraron prospectos con los filtros actuales." : "No hay prospectos asociados a esta campaña."}
+                      <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Buscando prospectos...</span>
                     </TableCell>
                   </TableRow>
-                ) : memberRows.map((member) => (
+                ) : leadSearch.isSearchActive && leadSearch.isError ? (
+                  <TableRow>
+                    <TableCell colSpan={canReassign ? 8 : 7} className="py-12 text-center text-destructive">
+                      No se pudo completar la búsqueda de prospectos.
+                    </TableCell>
+                  </TableRow>
+                ) : visibleMemberRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={canReassign ? 8 : 7} className="py-12 text-center text-muted-foreground">
+                      {leadSearch.isSearchActive
+                        ? "No se encontraron prospectos con esta búsqueda."
+                        : hasActiveFilters
+                          ? "No se encontraron prospectos con los filtros actuales."
+                          : "No hay prospectos asociados a esta campaña."}
+                    </TableCell>
+                  </TableRow>
+                ) : visibleMemberRows.map((member) => (
                   <TableRow
                     key={member.id}
                     tabIndex={0}
