@@ -43,6 +43,7 @@ export const EditionSchema = z.object({
   moodle_course_id: z.number().int().positive().optional().nullable(),
   meet_link: OptionalUrl,
   syllabus_url: OptionalUrl,
+  demo_date: z.coerce.date().optional(),
   whatsapp_group_link: OptionalUrl,
   edition_status: EditionStatusSchema.default("DRAFT"),
   // Char(13) in DB  — e.g. "LP-001-25-01"

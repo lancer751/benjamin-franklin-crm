@@ -3,18 +3,19 @@ import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { HTTPException } from "hono/http-exception";
 import { randomUUID } from "crypto";
+import { envParsed } from "@/env";
 
 const s3 = new S3Client({
-    endpoint: process.env.RAILWAY_BUCKET_ENDPOINT,
-    region: process.env.RAILWAY_BUCKET_REGION,
+    endpoint: envParsed.RAILWAY_BUCKET_ENDPOINT,
+    region: envParsed.RAILWAY_BUCKET_REGION,
     forcePathStyle: true, // requerido por la mayoría de proveedores S3-compatibles
     credentials: {
-        accessKeyId: process.env.RAILWAY_BUCKET_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.RAILWAY_BUCKET_SECRET_ACCESS_KEY!,
+        accessKeyId: envParsed.RAILWAY_BUCKET_ACCESS_KEY_ID,
+        secretAccessKey: envParsed.RAILWAY_BUCKET_SECRET_ACCESS_KEY,
     },
 });
 
-const BUCKET = process.env.RAILWAY_BUCKET_NAME!;
+const BUCKET = envParsed.RAILWAY_BUCKET_NAME;
 const MAX_EVIDENCE_BYTES = 8 * 1024 * 1024; // 8MB
 
 export async function createEvidenceUploadUrl(fileName: string, contentType: string) {
