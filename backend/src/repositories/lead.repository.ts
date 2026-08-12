@@ -435,12 +435,25 @@ export function leadRepository(prisma: PrismaClient) {
       return { members, total, page, limit };
     },
     async findMembersOnCampaign(campaignId: string, query: CampaignMemberQuery) {
-      const { page, limit, campaign_member_status, assigned_to } = query;
+      const { page, limit, campaign_member_status, assigned_to, from_date, to_date } = query;
       const skip = (page - 1) * limit;
+
+      const fromDate = from_date ? new Date(from_date) : undefined;
+      const toDateExclusive = to_date ? new Date(to_date) : undefined;
+      if (toDateExclusive) {
+        toDateExclusive.setUTCDate(toDateExclusive.getUTCDate() + 1);
+      }
+
       const where: CampaignMemberWhereInput = {
         campaing_id: campaignId,
         ...(campaign_member_status && { status: campaign_member_status }),
         ...(assigned_to && { assigned_to }),
+        ...((fromDate || toDateExclusive) && {
+          created_at: {
+            ...(fromDate && { gte: fromDate }),
+            ...(toDateExclusive && { lt: toDateExclusive }),
+          },
+        }),
       };
 
       const [members, total] = await Promise.all([
