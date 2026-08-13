@@ -17,9 +17,19 @@ export default tseslint.config(
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
     },
+    languageOptions: {
+      globals: globals.node,
+      parserOptions: {
+        project: ["./tsconfig.json"],
+        tsconfigRootDir: path.resolve(__dirname),
+      },
+    },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true },
+      ],
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
